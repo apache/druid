@@ -1089,18 +1089,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final Set<DataSegment> upgradedSegments = new HashSet<>();
-    for (String upgradeVersion : committedVersionToIntervals.keySet()) {
+    for (Map.Entry<String, Set<Interval>> entry : committedVersionToIntervals.entrySet()) {
+      final String upgradeVersion = entry.getKey();
       Map<Interval, Set<DataSegment>> segmentsToUpgrade = getSegmentsWithVersionLowerThan(
           upgradeVersion,
-          committedVersionToIntervals.get(upgradeVersion),
+          entry.getValue(),
           appendVersionToSegments
       );
-      for (Map.Entry<Interval, Set<DataSegment>> entry : segmentsToUpgrade.entrySet()) {
+      for (Map.Entry<Interval, Set<DataSegment>> upgradeEntry : segmentsToUpgrade.entrySet()) {
         Set<DataSegment> segmentsUpgradedToVersion = upgradeSegmentsToVersion(
             handle,
             upgradeVersion,
-            entry.getKey(),
-            entry.getValue(),
+            upgradeEntry.getKey(),
+            upgradeEntry.getValue(),
             committedIntervalToSegments
         );
         log.info("Upgraded [%d] segments to version[%s].", segmentsUpgradedToVersion.size(), upgradeVersion);

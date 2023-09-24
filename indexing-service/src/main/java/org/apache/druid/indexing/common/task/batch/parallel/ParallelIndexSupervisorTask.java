@@ -1171,25 +1171,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> {
-      final TaskLockType lockType = TaskLockType.valueOf(
-          getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name())
-      );
-      switch (lockType) {
-        case REPLACE:
-          return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalReplaceAction.create(segmentsToPublish)
-          );
-        case APPEND:
-          return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalAppendAction.create(segmentsToPublish)
-          );
-        default:
-          return toolbox.getTaskActionClient().submit(
-              SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
-          );
-      }
-    };
+    final TransactionalSegmentPublisher publisher =
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+            toolbox.getTaskActionClient().submit(buildPublishAction(segmentsToBeOverwritten, segmentsToPublish));
+
     final boolean published =
         newSegments.isEmpty()
         || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();

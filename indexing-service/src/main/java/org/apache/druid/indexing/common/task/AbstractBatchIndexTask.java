@@ -36,6 +36,10 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -43,6 +47,7 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.InputRowSchemas;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -394,6 +399,27 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
+  /**
+   * Builds a TaskAction to publish segments based on the type of locks that this
+   * task acquires (determined by context property {@link Tasks#TASK_LOCK_TYPE}).
+   */
+  protected TaskAction<SegmentPublishResult> buildPublishAction(
+      Set<DataSegment> segmentsToBeOverwritten,
+      Set<DataSegment> segmentsToPublish
+  )
+  {
+    TaskLockType lockType = TaskLockType.valueOf(
+        getContextValue(Tasks.TASK_LOCK_TYPE, Tasks.DEFAULT_TASK_LOCK_TYPE.name())
+    );
+    switch (lockType) {
+      case REPLACE:
+        return SegmentTransactionalReplaceAction.create(segmentsToPublish);
+      case APPEND:
+        return SegmentTransactionalAppendAction.create(segmentsToPublish);
+      default:
+        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish);
+    }
+  }
 
   protected boolean tryTimeChunkLock(TaskActionClient client, List<Interval> intervals) throws IOException
   {

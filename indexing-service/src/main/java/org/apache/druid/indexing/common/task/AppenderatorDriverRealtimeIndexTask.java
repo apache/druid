@@ -55,6 +55,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
@@ -293,9 +294,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
-    final TaskLockType lockType = TaskLockType.valueOf(
-        getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name())
-    );
+    final TaskLockType lockType = TaskLocks.determineLockTypeForAppend(getContext());
     StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics, lockType);
 
     try {
