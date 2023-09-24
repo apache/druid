@@ -55,24 +55,26 @@ public class SqlSegmentsMetadataManagerProviderTest
     Assert.assertTrue(manager instanceof SqlSegmentsMetadataManager);
 
     final MetadataStorageTablesConfig storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
-    final String segmentsTable = storageConfig.getSegmentsTable().toUpperCase(Locale.ENGLISH);
-    final String segmentTaskLockTable = storageConfig.getUpgradeSegmentsTable().toUpperCase(Locale.ENGLISH);
+    final String segmentsTable = storageConfig.getSegmentsTable();
+    final String upgradeSegmentsTable = storageConfig.getUpgradeSegmentsTable();
 
     // Verify that the tables do not exist yet
     Assert.assertFalse(tableExists(segmentsTable, connector));
-    Assert.assertFalse(tableExists(segmentTaskLockTable, connector));
+    Assert.assertFalse(tableExists(upgradeSegmentsTable, connector));
 
     lifecycle.start();
 
     // Verify that tables have now been created
     Assert.assertTrue(tableExists(segmentsTable, connector));
-    Assert.assertTrue(tableExists(segmentTaskLockTable, connector));
+    Assert.assertTrue(tableExists(upgradeSegmentsTable, connector));
 
     lifecycle.stop();
   }
 
   private boolean tableExists(String tableName, TestDerbyConnector connector)
   {
-    return connector.retryWithHandle(handle -> connector.tableExists(handle, tableName));
+    return connector.retryWithHandle(
+        handle -> connector.tableExists(handle, tableName.toUpperCase(Locale.ENGLISH))
+    );
   }
 }

@@ -340,7 +340,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  private void createUpgradeSegments(final String tableName)
+  private void createUpgradeSegmentsTable(final String tableName)
   {
     createTable(
         tableName,
@@ -696,7 +696,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void createUpgradeSegmentsTable()
   {
     if (config.get().isCreateTables()) {
-      createUpgradeSegments(tablesConfigSupplier.get().getUpgradeSegmentsTable());
+      createUpgradeSegmentsTable(tablesConfigSupplier.get().getUpgradeSegmentsTable());
     }
   }
 

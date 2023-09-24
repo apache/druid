@@ -165,7 +165,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     replaceTask.commitReplaceSegments(segmentV10);
     verifyIntervalHasUsedSegments(FIRST_OF_JAN_23, segmentV10);
 
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(segmentV10.getVersion(), pendingSegment.getVersion());
@@ -182,7 +181,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     final String v1 = replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23).getVersion();
 
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23).getVersion();
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
@@ -209,7 +207,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     final String v1 = replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23).getVersion();
 
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23).getVersion();
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
@@ -234,7 +231,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateLockReplaceDayAppendDay()
   {
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23).getVersion();
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
@@ -261,7 +257,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateLockAppendDayReplaceDay()
   {
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23).getVersion();
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
@@ -289,7 +284,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateAppendDayLockReplaceDay()
   {
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23).getVersion();
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(SEGMENT_V0, pendingSegment.getVersion());
@@ -321,7 +315,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(FIRST_OF_JAN_23, segmentV10);
 
     // Verify that the allocated segment takes the version and interval of previous replace
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(JAN_23, pendingSegment.getInterval());
@@ -339,7 +332,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     final String v1 = replaceTask.acquireReplaceLockOn(JAN_23).getVersion();
 
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(FIRST_OF_JAN_23, pendingSegment.getInterval());
@@ -369,7 +361,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   {
     final String v1 = replaceTask.acquireReplaceLockOn(JAN_23).getVersion();
 
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(FIRST_OF_JAN_23, pendingSegment.getInterval());
@@ -397,7 +388,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateLockReplaceMonthAppendDay()
   {
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(FIRST_OF_JAN_23, pendingSegment.getInterval());
@@ -427,7 +417,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateLockAppendDayReplaceMonth()
   {
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(FIRST_OF_JAN_23, pendingSegment.getInterval());
@@ -457,7 +446,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateAppendDayLockReplaceMonth()
   {
-    appendTask.acquireAppendLockOn(FIRST_OF_JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY);
     Assert.assertEquals(FIRST_OF_JAN_23, pendingSegment.getInterval());
@@ -577,7 +565,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateLockReplaceDayAppendMonth()
   {
-    appendTask.acquireAppendLockOn(JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
     Assert.assertEquals(JAN_23, pendingSegment.getInterval());
@@ -608,7 +595,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   @Test
   public void testAllocateAppendMonthLockReplaceDay()
   {
-    appendTask.acquireAppendLockOn(JAN_23);
     final SegmentIdWithShardSpec pendingSegment
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
     Assert.assertEquals(JAN_23, pendingSegment.getInterval());

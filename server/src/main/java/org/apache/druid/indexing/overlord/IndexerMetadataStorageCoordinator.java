@@ -279,16 +279,15 @@ public interface IndexerMetadataStorageCoordinator
   ) throws IOException;
 
   /**
-   * Commits segments created by an APPEND task. This method also handles the
-   * segment upgrade scenarios that may result from concurrent append and replace.
+   * Commits segments created by an APPEND task. This method also handles segment
+   * upgrade scenarios that may result from concurrent append and replace.
    * <ul>
    * <li>If a REPLACE task committed a segment that overlaps with any of the
    * appendSegments while this APPEND task was in progress, the appendSegments
-   * are upgraded to the version of the replace segment too.</li>
+   * are upgraded to the version of the replace segment.</li>
    * <li>If an appendSegment is covered by a currently active REPLACE lock, then
    * an entry is created for it in the upgrade_segments table, so that when the
-   * REPLACE task finishes, it can upgrade the appendSegment to the version of
-   * the REPLACE lock.</li>
+   * REPLACE task finishes, it can upgrade the appendSegment as required.</li>
    * </ul>
    *
    * @param appendSegments             All segments created by an APPEND task that
@@ -305,11 +304,10 @@ public interface IndexerMetadataStorageCoordinator
    * Commits segments created by a REPLACE task. This method also handles the
    * segment upgrade scenarios that may result from concurrent append and replace.
    * <ul>
-   * <li>If an APPEND task committed a segment covered by a REPLACE lock of this
-   * task while it was in progress, the append segment is upgraded to the version
-   * of the corresponding lock. This is done with the help of entries created in
-   * upgrade_segments table in {@link #commitAppendSegments}</li>
-   * <li></li>
+   * <li>If an APPEND task committed a segment to an interval locked by this task,
+   * the append segment is upgraded to the version of the corresponding lock.
+   * This is done with the help of entries created in the upgrade_segments table
+   * in {@link #commitAppendSegments}</li>
    * </ul>
    *
    * @param replaceSegments        All segments created by a REPLACE task that

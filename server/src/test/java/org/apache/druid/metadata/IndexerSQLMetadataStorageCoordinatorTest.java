@@ -641,7 +641,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock));
 
     Assert.assertEquals(
-        2 * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
+        2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
         retrieveUsedSegmentIds().size()
     );
 
