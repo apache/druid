@@ -139,6 +139,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       for (String fileName : files) {
         cases.cases.add(new DrillTestCaseFixture(fileName, null));
       }
+      cases.cases.sort((l, r) -> l.filename.compareTo(r.filename));
       CalciteWindowQueryTest.YAML_JACKSON.writeValue(new File("new_cases.yml"), cases);
 
       System.out.println(files);
@@ -151,16 +152,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   private final DrillTestCase testCase;
 
   @Rule
-  public
-  DecoupledIgnoreProcessor2 ignoreProcessor;
+  public DecoupledIgnoreProcessor2 ignoreProcessor;
 
   public DrillWindowQueryTest(DrillTestCaseFixture fixture) throws IOException
   {
     this.testCase = new DrillTestCase(fixture);
-    this.ignoreProcessor=new DecoupledIgnoreProcessor2(fixture.ignoreMode);
+    this.ignoreProcessor = new DecoupledIgnoreProcessor2(fixture.ignoreMode);
   }
-
-
 
   static class DrillTestCaseFixture
   {
@@ -290,6 +288,48 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         new DoubleDimensionSchema("col_dbl"),
         // "col_tm": 33109170
         new LongDimensionSchema("col_tm"));
+    attachIndex(
+        retVal,
+        "fewRowsAllData.parquet",
+        // "col0":12024,
+        new LongDimensionSchema("col0"),
+        // "col1":307168,
+        new LongDimensionSchema("col1"),
+        // "col2":"VT",
+        new StringDimensionSchema("col2"),
+        // "col3":"DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF",
+        new StringDimensionSchema("col3"),
+        // "col4":1338596882419,
+        new LongDimensionSchema("col4"),
+        // "col5":422705433600000,
+        new LongDimensionSchema("col5"),
+        // "col6":true,
+        new StringDimensionSchema("col6"),
+        // "col7":3.95110006277E8,
+        new DoubleDimensionSchema("col7"),
+        // "col8":67465430
+        new LongDimensionSchema("col8"));
+    attachIndex(
+        retVal,
+        "t_alltype.parquet",
+        // "c1":1,
+        new LongDimensionSchema("c1"),
+        // "c2":592475043,
+        new LongDimensionSchema("c2"),
+        // "c3":616080519999272,
+        new LongDimensionSchema("c3"),
+        // "c4":"ObHeWTDEcbGzssDwPwurfs",
+        new StringDimensionSchema("c4"),
+        // "c5":"0sZxIfZ CGwTOaLWZ6nWkUNx",
+        new StringDimensionSchema("c5"),
+        // "c6":1456290852307,
+        new LongDimensionSchema("c6"),
+        // "c7":421426627200000,
+        new LongDimensionSchema("c7"),
+        // "c8":true,
+        new StringDimensionSchema("c8"),
+        // "c9":0.626179100469
+        new DoubleDimensionSchema("c9"));
 
     return retVal;
   }
