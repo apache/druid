@@ -94,6 +94,12 @@ public class TaskLocks
            : DateTimes.nowUtc().toString();
   }
 
+  /**
+   * Checks if the segments are covered by a non revoked lock
+   * @param taskLockMap task locks for a task
+   * @param segments segments to be checked
+   * @return true if each of the segments is covered by a non-revoked lock
+   */
   public static boolean isLockCoversSegments(
       NavigableMap<DateTime, List<TaskLock>> taskLockMap,
       Collection<DataSegment> segments
@@ -106,6 +112,7 @@ public class TaskLocks
             return false;
           }
 
+          // taskLockMap may contain revoked locks which need to be filtered
           final List<TaskLock> locks = entry.getValue()
                                             .stream()
                                             .filter(lock -> !lock.isRevoked())
