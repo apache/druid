@@ -20,10 +20,10 @@
 package org.apache.druid.msq.input.table;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.function.TriFunction;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
@@ -38,7 +38,7 @@ import java.util.function.Supplier;
 public class SegmentWithDescriptor
 {
   private final Supplier<? extends ResourceHolder<Segment>> segmentSupplier;
-  private final TriFunction<Query<Object>, Function<Sequence<Object>, Sequence<Object>>, Closer, Sequence<Object>> servedSegmentRowsFunction;
+  private final LoadedSegmentDataProvider loadedSegmentDataProvider;
   private final SegmentDescriptor descriptor;
 
   /**
@@ -46,18 +46,17 @@ public class SegmentWithDescriptor
    *
    * @param segmentSupplier           supplier of a {@link ResourceHolder} of segment. The {@link ResourceHolder#close()}
    *                                  logic must include a delegated call to {@link Segment#close()}.
-   * @param servedSegmentRowsFunction function which accepts a {@link Query} and fetches a {@link Sequence} of results
-   *                                  from a server where the segment is served.
+   * @param loadedSegmentDataProvider
    * @param descriptor                segment descriptor
    */
   public SegmentWithDescriptor(
       final Supplier<? extends ResourceHolder<Segment>> segmentSupplier,
-      final TriFunction<Query<Object>, Function<Sequence<Object>, Sequence<Object>>, Closer, Sequence<Object>> servedSegmentRowsFunction,
+      final LoadedSegmentDataProvider loadedSegmentDataProvider,
       final SegmentDescriptor descriptor
   )
   {
     this.segmentSupplier = Preconditions.checkNotNull(segmentSupplier, "segment");
-    this.servedSegmentRowsFunction = servedSegmentRowsFunction;
+    this.loadedSegmentDataProvider = loadedSegmentDataProvider;
     this.descriptor = Preconditions.checkNotNull(descriptor, "descriptor");
   }
 
@@ -74,9 +73,13 @@ public class SegmentWithDescriptor
   {
     return segmentSupplier.get();
   }
-  public Sequence getServedSegmentFromServer(Query query, Function mappingFunction, Closer closer)
+  public <T, U> Sequence<U> getServedSegmentFromServer(
+      Query<T> query,
+      Function<Sequence<T>, Sequence<U>> mappingFunction,
+      Closer closer
+  )
   {
-    return servedSegmentRowsFunction.apply(query, mappingFunction, closer);
+    return loadedSegmentDataProvider.fetchServedSegmentInternal(query, mappingFunction, closer);
   }
   /**
    * The segment descriptor associated with this physical segment.

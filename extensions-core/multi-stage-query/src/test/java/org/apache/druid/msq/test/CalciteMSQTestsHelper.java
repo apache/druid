@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
-import org.apache.commons.lang3.function.TriFunction;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -39,17 +38,13 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -89,7 +84,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
@@ -167,28 +161,7 @@ public class CalciteMSQTestsHelper
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
-                .toInstance(new DataSegmentProvider()
-                {
-                  @Override
-                  public Supplier<ResourceHolder<Segment>> fetchSegment(
-                      SegmentId segmentId,
-                      ChannelCounters channelCounters,
-                      boolean isReindex
-                  )
-                  {
-                    return getSupplierForSegment(segmentId);
-                  }
-
-                  @Override
-                  public <ReturnType, QueryReturn> TriFunction<Query<QueryReturn>, Function<Sequence<QueryReturn>, Sequence<ReturnType>>, Closer, Sequence<ReturnType>> fetchLoadedSegment(
-                      RichSegmentDescriptor richSegmentDescriptor,
-                      String dataSource,
-                      ChannelCounters channelCounters
-                  )
-                  {
-                    throw new AssertionError();
-                  }
-                });
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
           GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(

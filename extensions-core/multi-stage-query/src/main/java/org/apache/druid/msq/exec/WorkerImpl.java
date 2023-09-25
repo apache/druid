@@ -1102,7 +1102,7 @@ public class WorkerImpl implements Worker
                       .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
                       .put(SegmentsInputSlice.class,
                            new SegmentsInputSliceReader(
-                               frameContext.dataSegmentProvider(),
+                               frameContext,
                                MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
                            )
                       )

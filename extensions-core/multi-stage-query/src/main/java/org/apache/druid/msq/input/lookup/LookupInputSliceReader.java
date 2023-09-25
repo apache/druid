@@ -99,9 +99,7 @@ public class LookupInputSliceReader implements InputSliceReader
 
                       return ResourceHolder.fromCloseable(segment);
                     },
-                    (query, function, closer) -> {
-                      throw new AssertionError("Should not be called");
-                    },
+                    null,
                     SegmentId.dummy(lookupName).toDescriptor()
                 )
             )

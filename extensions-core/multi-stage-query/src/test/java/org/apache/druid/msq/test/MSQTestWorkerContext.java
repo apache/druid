@@ -153,10 +153,12 @@ public class MSQTestWorkerContext implements WorkerContext
             injector,
             indexIO,
             null,
+            null,
             null
         ),
         indexIO,
         injector.getInstance(DataSegmentProvider.class),
+        null,
         workerMemoryParameters
     );
   }

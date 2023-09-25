@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.TaskDataSegmentProvider;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -69,6 +70,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final Injector injector;
   private final IndexIO indexIO;
   private final TaskDataSegmentProvider dataSegmentProvider;
+  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
   private final ServiceClientFactory clientFactory;
 
   @GuardedBy("this")
@@ -82,6 +84,7 @@ public class IndexerWorkerContext implements WorkerContext
       final Injector injector,
       final IndexIO indexIO,
       final TaskDataSegmentProvider dataSegmentProvider,
+      final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory,
       final ServiceClientFactory clientFactory
   )
   {
@@ -89,6 +92,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.injector = injector;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
+    this.loadedSegmentDataProviderFactory = loadedSegmentDataProviderFactory;
     this.clientFactory = clientFactory;
   }
 
@@ -109,7 +113,10 @@ public class IndexerWorkerContext implements WorkerContext
         new TaskDataSegmentProvider(
             toolbox.getCoordinatorClient(),
             segmentCacheManager,
-            indexIO,
+            indexIO
+        ),
+        new LoadedSegmentDataProviderFactory(
+            toolbox.getCoordinatorClient(),
             serviceClientFactory,
             toolbox.getJsonMapper(),
             smileMapper
@@ -236,6 +243,7 @@ public class IndexerWorkerContext implements WorkerContext
         this,
         indexIO,
         dataSegmentProvider,
+        loadedSegmentDataProviderFactory,
         WorkerMemoryParameters.createProductionInstanceForWorker(injector, queryDef, stageNumber)
     );
   }

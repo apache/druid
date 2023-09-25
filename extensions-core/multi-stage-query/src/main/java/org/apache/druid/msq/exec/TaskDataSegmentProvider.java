@@ -19,28 +19,16 @@
 
 package org.apache.druid.msq.exec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.commons.lang3.function.TriFunction;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.query.Queries;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.DefaultResponseContext;
-import org.apache.druid.rpc.FixedSetServiceLocator;
-import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -57,7 +45,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -68,27 +55,18 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManager segmentCacheManager;
   private final IndexIO indexIO;
-  private final ServiceClientFactory serviceClientFactory;
-  private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<SegmentId, SegmentHolder> holders;
-  private final ObjectMapper smileMapper;
 
   public TaskDataSegmentProvider(
       CoordinatorClient coordinatorClient,
       SegmentCacheManager segmentCacheManager,
-      IndexIO indexIO,
-      ServiceClientFactory serviceClientFactory,
-      ObjectMapper objectMapper,
-      ObjectMapper smileMapper
+      IndexIO indexIO
   )
   {
     this.coordinatorClient = coordinatorClient;
     this.segmentCacheManager = segmentCacheManager;
     this.indexIO = indexIO;
-    this.serviceClientFactory = serviceClientFactory;
-    this.objectMapper = objectMapper;
     this.holders = new ConcurrentHashMap<>();
-    this.smileMapper = smileMapper;
   }
 
   @Override
@@ -163,57 +141,6 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
           closer
       );
     }
-  }
-
-  @Override
-  public <ReturnType, QueryReturn> TriFunction<Query<QueryReturn>, Function<Sequence<QueryReturn>, Sequence<ReturnType>>, Closer, Sequence<ReturnType>> fetchLoadedSegment(
-      RichSegmentDescriptor segmentDescriptor,
-      String dataSource,
-      ChannelCounters channelCounters
-  )
-  {
-    return (query, mappingFunction, closer) -> fetchServedSegmentInternal(
-        segmentDescriptor,
-        dataSource,
-        channelCounters,
-        query,
-        mappingFunction,
-        closer
-    );
-  }
-
-  private <ReturnType, QueryReturn> Sequence<ReturnType> fetchServedSegmentInternal(
-      RichSegmentDescriptor segmentDescriptor,
-      String dataSource,
-      ChannelCounters channelCounters,
-      Query<QueryReturn> query,
-      Function<Sequence<QueryReturn>, Sequence<ReturnType>> mappingFunction,
-      Closer closer
-  )
-  {
-    query = query.withDataSource(new TableDataSource(dataSource));
-    query = Queries.withSpecificSegments(
-        query,
-        ImmutableList.of(segmentDescriptor)
-    );
-
-    DataServerClient<QueryReturn> dataServerClient = new DataServerClient<>(
-        serviceClientFactory,
-        new FixedSetServiceLocator(segmentDescriptor.getServers()),
-        objectMapper,
-        smileMapper
-    );
-    DefaultResponseContext responseContext = new DefaultResponseContext();
-    ResourceHolder<Sequence<QueryReturn>> clientResponseResourceHolder = dataServerClient.run(query, responseContext);
-    closer.register(clientResponseResourceHolder);
-
-    Sequence<QueryReturn> queryReturnSequence = clientResponseResourceHolder.get();
-    Sequence<ReturnType> parsedResponse = mappingFunction.apply(queryReturnSequence);
-
-    return parsedResponse.map(row -> {
-      channelCounters.incrementRowCount();
-      return row;
-    });
   }
 
   private static class SegmentHolder implements Supplier<ResourceHolder<Segment>>
