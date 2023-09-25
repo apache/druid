@@ -31,6 +31,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -5059,6 +5060,36 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"d"},
             new Object[]{"d"},
             new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithLookup()
+  {
+    testQuery(
+        "SELECT * FROM lookup.lookyloo, unnest(mv_to_array(v)) as u(d) where k='a'",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      FilteredDataSource.create(
+                          new LookupDataSource("lookyloo"),
+                          equality("k", "a", ColumnType.STRING)
+                      ),
+                      expressionVirtualColumn("j0.unnest", "\"v\"", ColumnType.STRING),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .virtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest", "v", "v0"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", "xa", "xa"}
         )
     );
   }

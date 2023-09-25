@@ -696,7 +696,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               exception,
-                              "Query planning failed for unknown reason, our best guess is this [%s]",
+                              "Query could not be planned. A possible reason is [%s]",
                               errorMessage
                           );
     }

@@ -801,6 +801,15 @@ public class DruidQuery
       );
       return Pair.of(dataSource, pair.rhs);
     } else if (dataSource instanceof FilteredDataSource) {
+      // A filteredDS is created only inside the rel for Unnest, ensuring it only grabs the outermost filter
+      // and, if possible, pushes it down inside the data source.
+      // So a chain of Filter->Unnest->Filter is typically impossible when the query is done through SQL.
+      // Also, Calcite has filter reduction rules that push filters deep into base data sources for better query planning.
+      // Hence, the case that can be seen is a bunch of unnests followed by a terminal filteredDS like Unnest->Unnest->FilteredDS.
+      // A base table with a chain of filters is synonymous with a filteredDS.
+      // In case there are filters present in the getFiltration call we still update the interval by:
+      // 1) creating a filtration from the filteredDS's filter and
+      // 2) Updating the interval of the outer filter with the intervals in step 1, and you'll see these 2 calls in the code
       final FilteredDataSource filteredDataSource = (FilteredDataSource) dataSource;
       final boolean useIntervalFiltering = canUseIntervalFiltering(filteredDataSource);
       final Filtration baseFiltration = toFiltration(
