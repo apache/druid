@@ -56,7 +56,9 @@ public @interface DecoupledIgnore
 
 
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
-    NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)");
+    NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
+    BIGINT_TO_DATE(DruidException.class, "BIGINT to type DATE"),
+    NPE(DruidException.class, "java.lang.NullPointerException");
 
 
     public Class<? extends Throwable> throwableClass;
