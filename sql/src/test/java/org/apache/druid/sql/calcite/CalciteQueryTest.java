@@ -2470,6 +2470,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
 
     requireMergeBuffers(3);
+
+    if (NullHandling.sqlCompatible()) {
+      // Cannot vectorize due to "istrue" operator.
+      cannotVectorize();
+    }
+
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
@@ -2489,9 +2495,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setGranularity(Granularities.ALL)
                                             .setVirtualColumns(expressionVirtualColumn(
                                                 "v0",
-                                                NullHandling.replaceWithDefault()
-                                                ? "(\"cnt\" == 1)"
-                                                : "istrue((\"cnt\" == 1))",
+                                                NullHandling.sqlCompatible()
+                                                ? "istrue((\"cnt\" == 1))"
+                                                : "(\"cnt\" == 1)",
                                                 ColumnType.LONG
                                             ))
                                             .setDimensions(dimensions(
