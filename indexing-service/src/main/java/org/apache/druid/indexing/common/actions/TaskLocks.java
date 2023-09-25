@@ -46,6 +46,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public class TaskLocks
 {
@@ -93,6 +94,12 @@ public class TaskLocks
            : DateTimes.nowUtc().toString();
   }
 
+  /**
+   * Checks if the segments are covered by a non revoked lock
+   * @param taskLockMap task locks for a task
+   * @param segments segments to be checked
+   * @return true if each of the segments is covered by a non-revoked lock
+   */
   public static boolean isLockCoversSegments(
       NavigableMap<DateTime, List<TaskLock>> taskLockMap,
       Collection<DataSegment> segments
@@ -105,7 +112,11 @@ public class TaskLocks
             return false;
           }
 
-          final List<TaskLock> locks = entry.getValue();
+          // taskLockMap may contain revoked locks which need to be filtered
+          final List<TaskLock> locks = entry.getValue()
+                                            .stream()
+                                            .filter(lock -> !lock.isRevoked())
+                                            .collect(Collectors.toList());
           return locks.stream().anyMatch(
               lock -> {
                 if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {

@@ -832,7 +832,7 @@ public class TaskLockbox
    * @param lock   lock to be revoked
    */
   @VisibleForTesting
-  protected void revokeLock(String taskId, TaskLock lock)
+  public void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();
 
