@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -232,6 +233,16 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
     return Optional.absent();
   }
 
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    TaskLocation taskLocation = kubernetesTaskRunner.getTaskLocation(taskId);
+    if (taskLocation == null || taskLocation.equals(TaskLocation.unknown())) {
+      return workerTaskRunner.getTaskLocation(taskId);
+    }
+    return taskLocation;
+  }
+  
   @Nullable
   @Override
   public RunnerTaskState getRunnerTaskState(String taskId)
