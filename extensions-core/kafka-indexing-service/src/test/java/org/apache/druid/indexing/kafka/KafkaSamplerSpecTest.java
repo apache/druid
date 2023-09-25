@@ -198,7 +198,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, 5_000, 5_000,null, null),
+        new SamplerConfig(5, 5_000, 5_000, null, null),
         new InputSourceSampler(OBJECT_MAPPER),
         OBJECT_MAPPER
     );
@@ -416,7 +416,7 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
 
     KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
         supervisorSpec,
-        new SamplerConfig(5, 5_000, 5_000,  null, null),
+        new SamplerConfig(5, 5_000, 5_000, null, null),
         new InputSourceSampler(new DefaultObjectMapper()),
         OBJECT_MAPPER
     );
