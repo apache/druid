@@ -56,6 +56,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -388,31 +389,39 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
   {
     List<Object[]> ret = new ArrayList<>();
-    for (Object[] row : results) {
+    for (String[] row : results) {
       Object[] newRow = new Object[row.length];
       List<String> cc = rs.getColumnNames();
       for (int i = 0; i < cc.size(); i++) {
-        ColumnType t = rs.getColumnType(i).get();
-        assertNull(t.getComplexTypeName());
-        Object val = row[i];
+        ColumnType type = rs.getColumnType(i).get();
+        assertNull(type.getComplexTypeName());
+        final String val = row[i];
+        final Object newVal;
         if ("null".equals(val)) {
-          val = null;
+          newVal = null;
         } else {
-          switch (t.getType())
+          switch (type.getType())
           {
           case STRING:
+            newVal = val;
             break;
           case LONG:
-            val = Numbers.parseLong(val);
+            if(val.matches("[0-9]+")){
+              newVal = Numbers.parseLong(val);
+            }else
+          {
+            DateTime tt = DateTime.parse(val);
+            newVal = tt.toInstant().getMillis();
+          }
             break;
           case DOUBLE:
-            val = Numbers.parseDoubleObject((String) val);
+            newVal = Numbers.parseDoubleObject(val);
             break;
           default:
             throw new RuntimeException("unimplemented");
           }
         }
-        newRow[i] = val;
+        newRow[i] = newVal;
       }
       ret.add(newRow);
     }
