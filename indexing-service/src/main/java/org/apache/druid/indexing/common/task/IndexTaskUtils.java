@@ -33,6 +33,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
 
@@ -140,5 +141,15 @@ public class IndexTaskUtils
   {
     metricBuilder.setDimension(DruidMetrics.TASK_ID, taskStatus.getId());
     metricBuilder.setDimension(DruidMetrics.TASK_STATUS, taskStatus.getStatusCode().toString());
+  }
+
+  public static void setSegmentDimensions(
+      ServiceMetricEvent.Builder metricBuilder,
+      DataSegment segment
+  )
+  {
+    final String partitionType = segment.getShardSpec() == null ? null : segment.getShardSpec().getType();
+    metricBuilder.setDimension(DruidMetrics.PARTITIONING_TYPE, partitionType);
+    metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
   }
 }

@@ -34,9 +34,11 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskLocks;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -198,6 +200,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       if (nextBatchSize <= 0) {
         break;
       }
+
       unusedSegments = toolbox
           .getTaskActionClient()
           .submit(new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), nextBatchSize));
@@ -218,7 +221,22 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       // abandoned.
 
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-      toolbox.getDataSegmentKiller().kill(unusedSegments);
+
+      // Fetch the load specs of all segments overlapping with the given interval
+      final Set<Map<String, Object>> usedSegmentLoadSpecs = toolbox
+          .getTaskActionClient()
+          .submit(new RetrieveUsedSegmentsAction(getDataSource(), getInterval(), null, Segments.INCLUDING_OVERSHADOWED))
+          .stream()
+          .map(DataSegment::getLoadSpec)
+          .collect(Collectors.toSet());
+
+      // Kill segments from the deep storage only if their load specs are not being used by any used segments
+      final List<DataSegment> segmentsToBeKilled = unusedSegments
+          .stream()
+          .filter(unusedSegment -> !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
+          .collect(Collectors.toList());
+
+      toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
       numBatchesProcessed++;
       numSegmentsKilled += unusedSegments.size();
 
