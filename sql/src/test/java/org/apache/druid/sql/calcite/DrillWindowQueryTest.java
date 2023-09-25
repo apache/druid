@@ -417,7 +417,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     return ret;
   }
 
-  // @Test
   public void windowQueryTest() throws Exception
   {
     Thread thread = null;
