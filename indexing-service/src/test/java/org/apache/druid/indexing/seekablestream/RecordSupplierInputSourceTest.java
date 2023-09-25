@@ -67,6 +67,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
 {
   private static final int NUM_COLS = 16;
   private static final int NUM_ROWS = 128;
+  private static final int MAX_RECORDS_PER_POLL_EXCLUSIVE = 8;
   private static final String TIMESTAMP_STRING = "2019-01-01";
 
   @Rule
@@ -107,10 +108,10 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testReadTimeout() throws IOException
+  public void testIteratorTimeoutExceeded() throws IOException
   {
     final RandomCsvSupplier supplier = new RandomCsvSupplier();
-    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, -1000, -1000);
+    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, -1000, null);
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());
@@ -134,6 +135,38 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     }
     Assert.assertEquals(0, inputStats.getProcessedBytes());
     Assert.assertEquals(0, read);
+    Assert.assertTrue(supplier.isClosed());
+  }
+
+  @Test
+  public void testNextRecordTimeoutExceeded() throws IOException
+  {
+    int numRecordsPerPoll = 1;
+    final RandomCsvSupplier supplier = new RandomCsvSupplier(numRecordsPerPoll);
+    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, null, -1000);
+    final List<String> colNames = IntStream.range(0, NUM_COLS)
+        .mapToObj(i -> StringUtils.format("col_%d", i))
+        .collect(Collectors.toList());
+    final InputFormat inputFormat = new CsvInputFormat(colNames, null, null, false, 0);
+    final InputSourceReader reader = inputSource.reader(
+        new InputRowSchema(
+            new TimestampSpec("col_0", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(colNames.subList(1, colNames.size()))),
+            ColumnsFilter.all()
+        ),
+        inputFormat,
+        temporaryFolder.newFolder()
+    );
+
+    int read = 0;
+    final InputStats inputStats = new InputStatsImpl();
+    try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
+      for (; read < NUM_ROWS && iterator.hasNext(); read++) {
+        iterator.next();
+      }
+    }
+
+    Assert.assertTrue(numRecordsPerPoll + 1 >= read);
     Assert.assertTrue(supplier.isClosed());
   }
 
@@ -162,6 +195,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     private final Random random = ThreadLocalRandom.current();
     private final Map<Integer, Integer> partitionToOffset;
 
+    private final Integer numRecordsPerPoll;
+
     private volatile boolean closed = false;
 
     private RandomCsvSupplier()
@@ -170,6 +205,16 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
       for (int i = 0; i < 3; i++) {
         partitionToOffset.put(i, 0);
       }
+      numRecordsPerPoll = null;
+    }
+
+    private RandomCsvSupplier(int numRecords)
+    {
+      partitionToOffset = Maps.newHashMapWithExpectedSize(3);
+      for (int i = 0; i < 3; i++) {
+        partitionToOffset.put(i, 0);
+      }
+      numRecordsPerPoll = numRecords;
     }
 
     @Override
@@ -204,7 +249,9 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
       if (sleepTime == timeout) {
         return Collections.emptyList();
       } else {
-        final int numRecords = random.nextInt(8); // can be 0
+        final int numRecords = numRecordsPerPoll != null
+            ? numRecordsPerPoll
+            : random.nextInt(MAX_RECORDS_PER_POLL_EXCLUSIVE); // can be 0
         final List<OrderedPartitionableRecord<Integer, Integer, ByteEntity>> records = new ArrayList<>(numRecords);
         for (int i = 0; i < numRecords; i++) {
           final int partitionId = random.nextInt(partitionToOffset.size());
