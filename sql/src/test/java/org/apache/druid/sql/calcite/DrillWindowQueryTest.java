@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexBuilder;
@@ -406,13 +407,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
             newVal = val;
             break;
           case LONG:
-            if(val.matches("-?[0-9]+")){
+            if (val.matches("-?[0-9]+")) {
               newVal = Numbers.parseLong(val);
-            }else
-          {
-            DateTime tt = DateTime.parse(val);
-            newVal = tt.toInstant().getMillis();
-          }
+            } else {
+              Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
+              newVal=parser.apply(val);
+//              DateTime tt = DateTime.parse(val);
+//              newVal = tt.toInstant().getMillis();
+            }
             break;
           case DOUBLE:
             newVal = Numbers.parseDoubleObject(val);
