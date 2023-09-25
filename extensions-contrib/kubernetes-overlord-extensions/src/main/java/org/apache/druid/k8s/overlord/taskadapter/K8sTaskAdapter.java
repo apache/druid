@@ -43,6 +43,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.druid.error.InternalError;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ForkingTaskRunner;
@@ -150,7 +151,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   {
     com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
     if (!taskBody.isPresent()) {
-      throw new IOE("Could not load task payload for job [%s]", from.getMetadata().getName());
+      throw InternalError.exception("Could not load task payload for job [%s]", from.getMetadata().getName());
     }
     String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
     return mapper.readValue(task, Task.class);

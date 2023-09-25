@@ -72,9 +72,9 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, long, long, Boolean)} or {@link #join(long)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long, boolean)} or {@link #join(long)} is called. */
     NOT_STARTED,
-    /** Lifecycle's state since {@link #run(Job, long, long, Boolean)} is called. */
+    /** Lifecycle's state since {@link #run(Job, long, long, boolean)} is called. */
     PENDING,
     /** Lifecycle's state since {@link #join(long)} is called. */
     RUNNING,
@@ -119,7 +119,7 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, boolean useDeepStorageForTaskPayload) throws IllegalStateException
+  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, boolean useDeepStorageForTaskPayload) throws IllegalStateException, IOException
   {
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
@@ -148,25 +148,22 @@ public class KubernetesPeonLifecycle
     }
   }
 
-  private void writeTaskPayload(Task task)
+  private void writeTaskPayload(Task task) throws IOException
   {
+    Path file = null;
     try {
-      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "task.json");
-      try {
-        FileUtils.writeStringToFile(file.toFile(), mapper.writeValueAsString(task), Charset.defaultCharset());
-        taskLogs.pushTaskPayload(task.getId(), file.toFile());
-      }
-      catch (Exception e) {
-        log.error("Failed to write task payload for task: %s", taskId.getOriginalTaskId());
-        throw new RuntimeException(e);
-      }
-      finally {
-        Files.deleteIfExists(file);
-      }
+      file = Files.createTempFile(taskId.getOriginalTaskId(), "task.json");
+      FileUtils.writeStringToFile(file.toFile(), mapper.writeValueAsString(task), Charset.defaultCharset());
+      taskLogs.pushTaskPayload(task.getId(), file.toFile());
     }
-    catch (IOException e) {
+    catch (Exception e) {
       log.error("Failed to write task payload for task: %s", taskId.getOriginalTaskId());
       throw new RuntimeException(e);
+    }
+    finally {
+      if (file != null) {
+        Files.deleteIfExists(file);
+      }
     }
   }
 
