@@ -67,6 +67,7 @@ import javax.annotation.Nullable;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+
 import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
@@ -106,16 +107,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   private static final Logger log = new Logger(DrillWindowQueryTest.class);
 
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  private DrillTestCase testCase = null;
+  private DrillTestCase testCase=null;
 
   static {
-    NullHandling.initializeForTests();
-  }
+    NullHandling.initializeForTests();}
 
-  // @Parameterized.Parameters(name = "{0}")
+//  @Parameterized.Parameters(name = "{0}")
   @Test
-  public void ensureAllDeclared() throws Exception
-  {
+  public void ensureAllDeclared() throws Exception {
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
 
@@ -131,14 +130,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       if (method.getAnnotation(Test.class) == null || ann == null) {
         continue;
       }
-      if (allCases.remove(ann.value() + ".q")) {
+      if(allCases.remove(ann.value()+".q")) {
         continue;
       }
       fail("found testcase referencing invalid file: " + method.getName());
     }
 
     for (String string : allCases) {
-      string = string.replaceFirst("..$", "");
+      string=string.replaceFirst("..$","");
       System.out.printf("@%s( \"%s\" )\n"
           + "@Test\n"
           + "public void test_%s() throws Exception {\n"
@@ -147,37 +146,38 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           + "}\n",
           DrillTestCase1.class.getSimpleName(),
           string,
-          string.replace('/', '_'));
+          string.replace('/', '_')
+          );
     }
-    assertEquals("found some non-declared tests; please add the above!", 0, allCases.size());
-
-  }
+    assertEquals("found some non-declared tests; please add the above!",0, allCases.size());
+}
 
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD})
-  public @interface DrillTestCase1
-  {
+  public @interface DrillTestCase1 {
 
     String value();
+}
 
-  }
-
-  @Rule
-  public DecoupledIgnoreProcessor ignoreProcessor = new DecoupledIgnoreProcessor();
 
   @Rule
-  public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
+  public DecoupledIgnoreProcessor ignoreProcessor=new DecoupledIgnoreProcessor();
 
+  @Rule
+  public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule ();
   class DrillTestCaseLoaderRule implements TestRule
   {
+
     @Override
     public Statement apply(Statement base, Description description)
     {
       DrillTestCase1 annotation = description.getAnnotation(DrillTestCase1.class);
       testCase = (annotation == null) ? null : new DrillTestCase(annotation.value());
       return base;
-    }
-  }
+    }}
+
+
+
 
   static class DrillTestCase
   {
@@ -199,6 +199,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         }
       } catch (Exception e) {
         throw new RuntimeException("Encountered exception while loading testcase", e);
+
       }
     }
 
@@ -222,8 +223,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         query = new String(ByteStreams.toByteArray(queryIn), StandardCharsets.UTF_8);
       }
       return query;
-    }
-  }
+    }}
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
@@ -321,8 +321,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         // "c9":0.626179100469
         new DoubleDimensionSchema("c9"));
 
-    return retVal;
-  }
+    return retVal;}
 
   public class TextualResultsVerifier implements ResultsVerifier
   {
@@ -370,8 +369,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         displayResults(results);
         throw e;
       }
-    }
-  }
+    }}
 
   static class ArrayRowCmp implements Comparator<Object[]>
   {
@@ -381,8 +379,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       String s0 = Arrays.toString(arg0);
       String s1 = Arrays.toString(arg1);
       return s0.compareTo(s1);
-    }
-  }
+    }}
 
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
   {
@@ -415,10 +412,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       }
       ret.add(newRow);
     }
-    return ret;
-  }
+    return ret;}
 
-  // @Test
+//  @Test
   public void windowQueryTest() throws Exception
   {
     Thread thread = null;
@@ -442,8 +438,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       if (thread != null && oldName != null) {
         thread.setName(oldName);
       }
-    }
-  }
+    }}
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void attachIndex(SpecificSegmentsQuerySegmentWalker texasRanger, String dataSource, DimensionSchema... dims)
@@ -485,18 +480,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
             .shardSpec(new NumberedShardSpec(0, 0))
             .size(0)
             .build(),
-        queryableIndex);
-  }
+        queryableIndex);}
   //
 
-  @DrillTestCase1("aggregates/winFnQry_77")
+  @DrillTestCase1( "aggregates/winFnQry_77" )
   @Test
-  public void test_aggregates_winFnQry_77() throws Exception
-  {
-    windowQueryTest(new Object()
-    {
-    }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-  }
+  public void test_aggregates_winFnQry_77() throws Exception {
+    windowQueryTest(new Object() {}.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());}
+
 
   private void windowQueryTest(String value) throws Exception
   {
@@ -510,7 +501,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_10")
@@ -520,7 +510,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_20")
@@ -530,7 +519,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bgint_1")
@@ -540,7 +528,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_33")
@@ -550,7 +537,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_30")
@@ -560,7 +546,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_chr_5")
@@ -570,7 +555,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_1")
@@ -580,7 +564,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_35")
@@ -590,7 +573,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_vchr_5")
@@ -600,7 +582,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_100")
@@ -610,7 +591,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_7")
@@ -620,7 +600,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutPrtnBy_7")
@@ -630,7 +609,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_6")
@@ -640,7 +618,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_22")
@@ -650,7 +627,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_68")
@@ -660,7 +636,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_chr_1")
@@ -670,7 +645,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_63")
@@ -680,7 +654,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_46")
@@ -690,7 +663,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_21")
@@ -700,7 +672,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_44")
@@ -710,7 +681,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_25")
@@ -720,7 +690,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/rnkNoFrm01")
@@ -730,7 +699,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_7")
@@ -740,7 +708,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause07")
@@ -750,7 +717,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_33")
@@ -760,7 +726,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_79")
@@ -770,7 +735,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_5")
@@ -780,7 +744,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_74")
@@ -790,7 +753,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_46")
@@ -800,7 +762,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_10")
@@ -810,7 +771,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_10")
@@ -820,7 +780,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_78")
@@ -830,7 +789,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_13")
@@ -840,7 +798,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_13")
@@ -850,7 +807,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_59")
@@ -860,7 +816,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dbl_3")
@@ -870,7 +825,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_5")
@@ -880,7 +834,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/max_mulwds")
@@ -890,7 +843,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_15")
@@ -900,7 +852,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_3")
@@ -910,7 +861,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_6")
@@ -920,7 +870,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_43")
@@ -930,7 +879,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int7")
@@ -940,7 +888,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_35")
@@ -950,7 +897,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_44")
@@ -960,7 +906,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_109")
@@ -970,7 +915,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_35")
@@ -980,7 +924,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_2")
@@ -990,7 +933,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_89")
@@ -1000,7 +942,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_45")
@@ -1010,7 +951,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg23")
@@ -1020,7 +960,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_24")
@@ -1030,7 +969,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dbl_2")
@@ -1040,7 +978,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_26")
@@ -1050,7 +987,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_6")
@@ -1060,7 +996,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_54")
@@ -1070,7 +1005,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_54")
@@ -1080,7 +1014,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_24")
@@ -1090,7 +1023,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_55")
@@ -1100,7 +1032,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_59")
@@ -1110,7 +1041,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_34")
@@ -1120,7 +1050,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_12")
@@ -1130,7 +1059,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dbl_6")
@@ -1140,7 +1068,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_22")
@@ -1150,7 +1077,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_35")
@@ -1160,7 +1086,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg10")
@@ -1170,7 +1095,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_102")
@@ -1180,7 +1104,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/avg_mulwds")
@@ -1190,7 +1113,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_3")
@@ -1200,7 +1122,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_37")
@@ -1210,7 +1131,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_41")
@@ -1220,7 +1140,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_8")
@@ -1230,7 +1149,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutPrtnBy_5")
@@ -1240,7 +1158,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/cte_win_01")
@@ -1250,7 +1167,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_chr_3")
@@ -1260,7 +1176,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_20")
@@ -1270,7 +1185,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_9")
@@ -1280,7 +1194,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_vchar_4")
@@ -1290,7 +1203,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_65")
@@ -1300,7 +1212,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_66")
@@ -1310,7 +1221,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_8")
@@ -1320,7 +1230,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_13")
@@ -1330,7 +1239,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int3")
@@ -1340,7 +1248,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/rnkNoFrm03")
@@ -1350,7 +1257,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_48")
@@ -1360,7 +1266,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_2")
@@ -1370,7 +1275,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_23")
@@ -1380,7 +1284,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_23")
@@ -1390,7 +1293,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_11")
@@ -1400,7 +1302,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_46")
@@ -1410,7 +1311,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_5")
@@ -1420,7 +1320,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause09")
@@ -1430,7 +1329,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_char_1")
@@ -1440,7 +1338,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_30")
@@ -1450,7 +1347,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_10")
@@ -1460,7 +1356,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bgint_6")
@@ -1470,7 +1365,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_31")
@@ -1480,7 +1374,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_3")
@@ -1490,7 +1383,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_30")
@@ -1500,7 +1392,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_38")
@@ -1510,7 +1401,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_8")
@@ -1520,7 +1410,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_28")
@@ -1530,7 +1419,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_81")
@@ -1540,7 +1428,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_59")
@@ -1550,7 +1437,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_2")
@@ -1560,7 +1446,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_13")
@@ -1570,7 +1455,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_12")
@@ -1580,7 +1464,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_58")
@@ -1590,7 +1473,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_30")
@@ -1600,7 +1482,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_33")
@@ -1610,7 +1491,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bgint_3")
@@ -1620,7 +1500,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_19")
@@ -1630,7 +1509,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dbl_6")
@@ -1640,7 +1518,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_vchr_3")
@@ -1650,7 +1527,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_39")
@@ -1660,7 +1536,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_17")
@@ -1670,7 +1545,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/cte_win_05")
@@ -1680,7 +1554,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/fval_mulwds")
@@ -1690,7 +1563,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_27")
@@ -1700,7 +1572,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutPrtnBy_1")
@@ -1710,7 +1581,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_70")
@@ -1720,7 +1590,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_4")
@@ -1730,7 +1599,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_17")
@@ -1740,7 +1608,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_24")
@@ -1750,7 +1617,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_23")
@@ -1760,7 +1626,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_69")
@@ -1770,7 +1635,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int12")
@@ -1780,7 +1644,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bgint_2")
@@ -1790,7 +1653,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dt_1")
@@ -1800,7 +1662,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_08")
@@ -1810,7 +1671,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_vchr_1")
@@ -1820,7 +1680,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_6")
@@ -1830,7 +1689,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_char_5")
@@ -1840,7 +1698,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_9")
@@ -1850,7 +1707,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_16")
@@ -1860,7 +1716,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/lval_mulwds")
@@ -1870,7 +1725,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_7")
@@ -1880,7 +1734,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_35")
@@ -1890,7 +1743,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bln_1")
@@ -1900,7 +1752,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_11")
@@ -1910,7 +1761,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_33")
@@ -1920,7 +1770,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_79")
@@ -1930,7 +1779,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_107")
@@ -1940,7 +1788,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_44")
@@ -1950,7 +1797,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_12")
@@ -1960,7 +1806,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_11")
@@ -1970,7 +1815,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_3")
@@ -1980,7 +1824,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_57")
@@ -1990,7 +1833,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_13")
@@ -2000,7 +1842,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dbl_5")
@@ -2010,7 +1851,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_18")
@@ -2020,7 +1860,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause18")
@@ -2030,7 +1869,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_2")
@@ -2040,7 +1878,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_46")
@@ -2050,7 +1887,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_1")
@@ -2060,7 +1896,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_87")
@@ -2070,7 +1905,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int5")
@@ -2080,7 +1914,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_8")
@@ -2090,7 +1923,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_41")
@@ -2100,7 +1932,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int5")
@@ -2110,7 +1941,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_63")
@@ -2120,7 +1950,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_22")
@@ -2130,7 +1959,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_68")
@@ -2140,7 +1968,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_43")
@@ -2150,7 +1977,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_13")
@@ -2160,7 +1986,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_33")
@@ -2170,7 +1995,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_22")
@@ -2180,7 +2004,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg21")
@@ -2190,7 +2013,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_24")
@@ -2200,7 +2022,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_4")
@@ -2210,7 +2031,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_52")
@@ -2220,7 +2040,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/min_mulwds")
@@ -2230,7 +2049,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_8")
@@ -2240,7 +2058,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_11")
@@ -2250,7 +2067,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_57")
@@ -2260,7 +2076,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bln_2")
@@ -2270,7 +2085,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_98")
@@ -2280,7 +2094,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_52")
@@ -2290,7 +2103,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_11")
@@ -2300,7 +2112,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_57")
@@ -2310,7 +2121,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_32")
@@ -2320,7 +2130,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_37")
@@ -2330,7 +2139,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_19")
@@ -2340,7 +2148,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/cte_win_03")
@@ -2350,7 +2157,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_6")
@@ -2360,7 +2166,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_vchar_4")
@@ -2370,7 +2175,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutPrtnBy_3")
@@ -2380,7 +2184,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_9")
@@ -2390,7 +2193,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_26")
@@ -2400,7 +2202,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_15")
@@ -2410,7 +2211,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_21")
@@ -2420,7 +2220,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/rnkNoFrm05")
@@ -2430,7 +2229,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_21")
@@ -2440,7 +2238,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int1")
@@ -2450,7 +2247,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_67")
@@ -2460,7 +2256,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dt_3")
@@ -2470,7 +2265,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_06")
@@ -2480,7 +2274,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_25")
@@ -2490,7 +2283,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int14")
@@ -2500,7 +2292,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bgint_4")
@@ -2510,7 +2301,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_48")
@@ -2520,7 +2310,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_51")
@@ -2530,7 +2319,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_8")
@@ -2540,7 +2328,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_char_3")
@@ -2550,7 +2337,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_37")
@@ -2560,7 +2346,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_32")
@@ -2570,7 +2355,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_9")
@@ -2580,7 +2364,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_11")
@@ -2590,7 +2373,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_2")
@@ -2600,7 +2382,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_36")
@@ -2610,7 +2391,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_42")
@@ -2620,7 +2400,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_14")
@@ -2630,7 +2409,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_17")
@@ -2640,7 +2418,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_16")
@@ -2650,7 +2427,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_4")
@@ -2660,7 +2436,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_1")
@@ -2670,7 +2445,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int3")
@@ -2680,7 +2454,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_39")
@@ -2690,7 +2463,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_92")
@@ -2700,7 +2472,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_48")
@@ -2710,7 +2481,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_49")
@@ -2720,7 +2490,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_61")
@@ -2730,7 +2499,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_47")
@@ -2740,7 +2508,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_22")
@@ -2750,7 +2517,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_31")
@@ -2760,7 +2526,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_22")
@@ -2770,7 +2535,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_2")
@@ -2780,7 +2544,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_28")
@@ -2790,7 +2553,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_11")
@@ -2800,7 +2562,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bgint_7")
@@ -2810,7 +2571,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_50")
@@ -2820,7 +2580,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_4")
@@ -2830,7 +2589,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_1")
@@ -2840,7 +2598,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_64")
@@ -2850,7 +2607,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_5")
@@ -2860,7 +2616,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_88")
@@ -2870,7 +2625,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int6")
@@ -2880,7 +2634,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_43")
@@ -2890,7 +2643,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_4")
@@ -2900,7 +2652,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_42")
@@ -2910,7 +2661,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_3")
@@ -2920,7 +2670,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_46")
@@ -2930,7 +2679,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_34")
@@ -2940,7 +2688,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/sum_mulwds")
@@ -2950,7 +2697,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_23")
@@ -2960,7 +2706,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg22")
@@ -2970,7 +2715,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_25")
@@ -2980,7 +2724,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dbl_3")
@@ -2990,7 +2733,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bgint_1")
@@ -3000,7 +2742,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_99")
@@ -3010,7 +2751,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_7")
@@ -3020,7 +2760,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bln_3")
@@ -3030,7 +2769,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_25")
@@ -3040,7 +2778,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_54")
@@ -3050,7 +2787,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_53")
@@ -3060,7 +2796,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_53")
@@ -3070,7 +2805,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_48")
@@ -3080,7 +2814,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_53")
@@ -3090,7 +2823,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_17")
@@ -3100,7 +2832,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg13")
@@ -3110,7 +2841,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_105")
@@ -3120,7 +2850,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_12")
@@ -3130,7 +2859,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_50")
@@ -3140,7 +2868,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dbl_1")
@@ -3150,7 +2877,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause14")
@@ -3160,7 +2886,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_16")
@@ -3170,7 +2895,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_chr_4")
@@ -3180,7 +2904,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_60")
@@ -3190,7 +2913,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int9")
@@ -3200,7 +2922,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_52")
@@ -3210,7 +2931,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_98")
@@ -3220,7 +2940,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_8")
@@ -3230,7 +2949,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_5")
@@ -3240,7 +2958,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_65")
@@ -3250,7 +2967,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int9")
@@ -3260,7 +2976,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_21")
@@ -3270,7 +2985,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_37")
@@ -3280,7 +2994,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dt_4")
@@ -3290,7 +3003,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_1")
@@ -3300,7 +3012,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_28")
@@ -3310,7 +3021,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_8")
@@ -3320,7 +3030,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg02")
@@ -3330,7 +3039,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_4")
@@ -3340,7 +3048,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dt_3")
@@ -3350,7 +3057,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_71")
@@ -3360,7 +3066,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/mtyOvrCluse_03")
@@ -3370,7 +3075,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_10")
@@ -3380,7 +3084,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_56")
@@ -3390,7 +3093,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_41")
@@ -3400,7 +3102,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_87")
@@ -3410,7 +3111,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_76")
@@ -3420,7 +3120,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_104")
@@ -3430,7 +3129,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_30")
@@ -3440,7 +3138,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_1")
@@ -3450,7 +3147,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dbl_4")
@@ -3460,7 +3156,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_18")
@@ -3470,7 +3165,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_14")
@@ -3480,7 +3174,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_39")
@@ -3490,7 +3183,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_5")
@@ -3500,7 +3192,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_34")
@@ -3510,7 +3201,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_chr_1")
@@ -3520,7 +3210,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_3")
@@ -3530,7 +3219,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_15")
@@ -3540,7 +3228,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_82")
@@ -3550,7 +3237,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_41")
@@ -3560,7 +3246,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_vchar_2")
@@ -3570,7 +3255,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_43")
@@ -3580,7 +3264,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_76")
@@ -3590,7 +3273,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dbl_5")
@@ -3600,7 +3282,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_40")
@@ -3610,7 +3291,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_13")
@@ -3620,7 +3300,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_4")
@@ -3630,7 +3309,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_29")
@@ -3640,7 +3318,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg24")
@@ -3650,7 +3327,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_23")
@@ -3660,7 +3336,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bln_1")
@@ -3670,7 +3345,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause03")
@@ -3680,7 +3354,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_29")
@@ -3690,7 +3363,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bgint_3")
@@ -3700,7 +3372,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_52")
@@ -3710,7 +3381,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_93")
@@ -3720,7 +3390,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dt_1")
@@ -3730,7 +3399,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_32")
@@ -3740,7 +3408,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_65")
@@ -3750,7 +3417,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_55")
@@ -3760,7 +3426,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_14")
@@ -3770,7 +3435,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_107")
@@ -3780,7 +3444,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_10")
@@ -3790,7 +3453,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_19")
@@ -3800,7 +3462,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dbl_7")
@@ -3810,7 +3471,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg15")
@@ -3820,7 +3480,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause16")
@@ -3830,7 +3489,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_62")
@@ -3840,7 +3498,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_63")
@@ -3850,7 +3507,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_7")
@@ -3860,7 +3516,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int7")
@@ -3870,7 +3525,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_23")
@@ -3880,7 +3534,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_39")
@@ -3890,7 +3543,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_54")
@@ -3900,7 +3552,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_41")
@@ -3910,7 +3561,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_89")
@@ -3920,7 +3570,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dt_2")
@@ -3930,7 +3579,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dt_1")
@@ -3940,7 +3588,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_20")
@@ -3950,7 +3597,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_3")
@@ -3960,7 +3606,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_2")
@@ -3970,7 +3615,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_6")
@@ -3980,7 +3624,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg04")
@@ -3990,7 +3633,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_73")
@@ -4000,7 +3642,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_58")
@@ -4010,7 +3651,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/mtyOvrCluse_05")
@@ -4020,7 +3660,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_74")
@@ -4030,7 +3669,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_12")
@@ -4040,7 +3678,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_43")
@@ -4050,7 +3687,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_30")
@@ -4060,7 +3696,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_106")
@@ -4070,7 +3705,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_32")
@@ -4080,7 +3714,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_78")
@@ -4090,7 +3723,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dbl_2")
@@ -4100,7 +3732,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_10")
@@ -4110,7 +3741,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_31")
@@ -4120,7 +3750,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_3")
@@ -4130,7 +3759,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_chr_3")
@@ -4140,7 +3768,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_32")
@@ -4150,7 +3777,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_7")
@@ -4160,7 +3786,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_char_2")
@@ -4170,7 +3795,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_5")
@@ -4180,7 +3804,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_17")
@@ -4190,7 +3813,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_45")
@@ -4200,7 +3822,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_85")
@@ -4210,7 +3831,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_84")
@@ -4220,7 +3840,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_21")
@@ -4230,7 +3849,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_67")
@@ -4240,7 +3858,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_50")
@@ -4250,7 +3867,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dbl_7")
@@ -4260,7 +3876,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_15")
@@ -4270,7 +3885,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_42")
@@ -4280,7 +3894,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bln_2")
@@ -4290,7 +3903,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_21")
@@ -4300,7 +3912,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg26")
@@ -4310,7 +3921,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause05")
@@ -4320,7 +3930,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_21")
@@ -4330,7 +3939,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_27")
@@ -4340,7 +3948,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_34")
@@ -4350,7 +3957,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bgint_5")
@@ -4360,7 +3966,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_95")
@@ -4370,7 +3975,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_6")
@@ -4380,7 +3984,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_4")
@@ -4390,7 +3993,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_1")
@@ -4400,7 +4002,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_61")
@@ -4410,7 +4011,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_9")
@@ -4420,7 +4020,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_38")
@@ -4430,7 +4029,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dbl_5")
@@ -4440,7 +4038,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause10")
@@ -4450,7 +4047,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg17")
@@ -4460,7 +4056,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_16")
@@ -4470,7 +4065,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int12")
@@ -4480,7 +4074,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_1")
@@ -4490,7 +4083,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_10")
@@ -4500,7 +4092,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_94")
@@ -4510,7 +4101,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_28")
@@ -4520,7 +4110,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_25")
@@ -4530,7 +4119,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_72")
@@ -4540,7 +4128,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bgint_1")
@@ -4550,7 +4137,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_111")
@@ -4560,7 +4146,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_49")
@@ -4570,7 +4155,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg06")
@@ -4580,7 +4164,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_vchr_2")
@@ -4590,7 +4173,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_19")
@@ -4600,7 +4182,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bgint_1")
@@ -4610,7 +4191,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_24")
@@ -4620,7 +4200,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_14")
@@ -4630,7 +4209,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_83")
@@ -4640,7 +4218,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_17")
@@ -4650,7 +4227,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dt_5")
@@ -4660,7 +4236,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_14")
@@ -4670,7 +4245,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_83")
@@ -4680,7 +4254,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_9")
@@ -4690,7 +4263,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_100")
@@ -4700,7 +4272,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/multiWin_8")
@@ -4710,7 +4281,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_11")
@@ -4720,7 +4290,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_18")
@@ -4730,7 +4299,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_38")
@@ -4740,7 +4308,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_5")
@@ -4750,7 +4317,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_19")
@@ -4760,7 +4326,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_47")
@@ -4770,7 +4335,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_72")
@@ -4780,7 +4344,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_17")
@@ -4790,7 +4353,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_01")
@@ -4800,7 +4362,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_8")
@@ -4810,7 +4371,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_25")
@@ -4820,7 +4380,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_char_4")
@@ -4830,7 +4389,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int10")
@@ -4840,7 +4398,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_29")
@@ -4850,7 +4407,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_23")
@@ -4860,7 +4416,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_27")
@@ -4870,7 +4425,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bln_3")
@@ -4880,7 +4434,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_12")
@@ -4890,7 +4443,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_36")
@@ -4900,7 +4452,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_61")
@@ -4910,7 +4461,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bgint_7")
@@ -4920,7 +4470,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_8")
@@ -4930,7 +4479,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_51")
@@ -4940,7 +4488,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_3")
@@ -4950,7 +4497,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_30")
@@ -4960,7 +4506,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause12")
@@ -4970,7 +4515,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_14")
@@ -4980,7 +4524,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int14")
@@ -4990,7 +4533,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_12")
@@ -5000,7 +4542,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg19")
@@ -5010,7 +4551,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dbl_3")
@@ -5020,7 +4560,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_27")
@@ -5030,7 +4569,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_18")
@@ -5040,7 +4578,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_50")
@@ -5050,7 +4587,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_96")
@@ -5060,7 +4596,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_6")
@@ -5070,7 +4605,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_70")
@@ -5080,7 +4614,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_9")
@@ -5090,7 +4623,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_50")
@@ -5100,7 +4632,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_vchr_4")
@@ -5110,7 +4641,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/mulwind_06")
@@ -5120,7 +4650,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_17")
@@ -5130,7 +4659,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg08")
@@ -5140,7 +4668,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bgint_3")
@@ -5150,7 +4677,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dt_5")
@@ -5160,7 +4686,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_26")
@@ -5170,7 +4695,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_16")
@@ -5180,7 +4704,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_19")
@@ -5190,7 +4713,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_85")
@@ -5200,7 +4722,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/multiWin_6")
@@ -5210,7 +4731,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_81")
@@ -5220,7 +4740,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_vchar_2")
@@ -5230,7 +4749,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_102")
@@ -5240,7 +4758,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_16")
@@ -5250,7 +4767,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_36")
@@ -5260,7 +4776,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_28")
@@ -5270,7 +4785,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_1")
@@ -5280,7 +4794,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_80")
@@ -5290,7 +4803,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_13")
@@ -5300,7 +4812,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_03")
@@ -5310,7 +4821,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_49")
@@ -5320,7 +4830,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_7")
@@ -5330,7 +4839,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_6")
@@ -5340,7 +4848,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_74")
@@ -5350,7 +4857,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_19")
@@ -5360,7 +4866,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dt_5")
@@ -5370,7 +4875,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_27")
@@ -5380,7 +4884,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_10")
@@ -5390,7 +4893,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause01")
@@ -5400,7 +4902,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_25")
@@ -5410,7 +4911,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_39")
@@ -5420,7 +4920,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_25")
@@ -5430,7 +4929,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_91")
@@ -5440,7 +4938,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bln_3")
@@ -5450,7 +4947,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_38")
@@ -5460,7 +4956,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dt_3")
@@ -5470,7 +4965,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_63")
@@ -5480,7 +4974,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_5")
@@ -5490,7 +4983,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_34")
@@ -5500,7 +4992,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_12")
@@ -5510,7 +5001,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int1")
@@ -5520,7 +5010,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/count_mulwds")
@@ -5530,7 +5019,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_40")
@@ -5540,7 +5028,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dbl_1")
@@ -5550,7 +5037,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_15")
@@ -5560,7 +5046,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_7")
@@ -5570,7 +5055,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_14")
@@ -5580,7 +5064,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_90")
@@ -5590,7 +5073,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_3")
@@ -5600,7 +5082,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_4")
@@ -5610,7 +5091,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_37")
@@ -5620,7 +5100,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_20")
@@ -5630,7 +5109,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_45")
@@ -5640,7 +5118,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_20")
@@ -5650,7 +5127,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_47")
@@ -5660,7 +5136,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_26")
@@ -5670,7 +5145,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bgint_5")
@@ -5680,7 +5154,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/mulwind_08")
@@ -5690,7 +5163,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_26")
@@ -5700,7 +5172,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_15")
@@ -5710,7 +5181,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_10")
@@ -5720,7 +5190,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_6")
@@ -5730,7 +5199,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_4")
@@ -5740,7 +5208,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_32")
@@ -5750,7 +5217,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_31")
@@ -5760,7 +5226,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_56")
@@ -5770,7 +5235,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_vchr_1")
@@ -5780,7 +5244,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_17")
@@ -5790,7 +5253,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_36")
@@ -5800,7 +5262,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_9")
@@ -5810,7 +5271,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bgint_5")
@@ -5830,7 +5290,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/rnkNoFrm06")
@@ -5840,7 +5299,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_68")
@@ -5850,7 +5308,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_20")
@@ -5860,7 +5317,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_07")
@@ -5870,7 +5326,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_49")
@@ -5880,7 +5335,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dt_2")
@@ -5890,7 +5344,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_24")
@@ -5900,7 +5353,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int13")
@@ -5910,7 +5362,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_49")
@@ -5920,7 +5371,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_7")
@@ -5930,7 +5380,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_26")
@@ -5940,7 +5389,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_char_2")
@@ -5950,7 +5398,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_38")
@@ -5960,7 +5407,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bgint_5")
@@ -5970,7 +5416,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_8")
@@ -5980,7 +5425,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_33")
@@ -5990,7 +5434,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_79")
@@ -6000,7 +5443,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_13")
@@ -6010,7 +5452,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dbl_2")
@@ -6020,7 +5461,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_14")
@@ -6030,7 +5470,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_10")
@@ -6040,7 +5479,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_15")
@@ -6050,7 +5488,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_6")
@@ -6060,7 +5497,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_4")
@@ -6070,7 +5506,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_49")
@@ -6080,7 +5515,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_91")
@@ -6090,7 +5524,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_3")
@@ -6100,7 +5533,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_48")
@@ -6110,7 +5542,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_05")
@@ -6120,7 +5551,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_38")
@@ -6130,7 +5560,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_44")
@@ -6140,7 +5569,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_1")
@@ -6150,7 +5578,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_29")
@@ -6160,7 +5587,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_25")
@@ -6170,7 +5596,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_10")
@@ -6180,7 +5605,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg09")
@@ -6190,7 +5614,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bgint_6")
@@ -6200,7 +5623,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/mulwind_09")
@@ -6210,7 +5632,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_80")
@@ -6220,7 +5641,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_37")
@@ -6230,7 +5650,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_14")
@@ -6240,7 +5659,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_55")
@@ -6250,7 +5668,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_5")
@@ -6260,7 +5677,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_7")
@@ -6270,7 +5686,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_13")
@@ -6280,7 +5695,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_59")
@@ -6290,7 +5704,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_vchr_2")
@@ -6300,7 +5713,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_34")
@@ -6310,7 +5722,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_10")
@@ -6320,7 +5731,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dbl_7")
@@ -6330,7 +5740,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bgint_4")
@@ -6340,7 +5749,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_18")
@@ -6350,7 +5758,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/cte_win_04")
@@ -6360,7 +5767,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_3")
@@ -6370,7 +5776,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int10")
@@ -6380,7 +5785,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_26")
@@ -6390,7 +5794,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_vchar_5")
@@ -6400,7 +5803,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_16")
@@ -6410,7 +5812,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_24")
@@ -6420,7 +5821,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int11")
@@ -6430,7 +5830,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bgint_3")
@@ -6440,7 +5839,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_09")
@@ -6450,7 +5848,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_13")
@@ -6460,7 +5857,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_char_4")
@@ -6470,7 +5866,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_15")
@@ -6480,7 +5875,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_6")
@@ -6490,7 +5884,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_36")
@@ -6500,7 +5893,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_35")
@@ -6510,7 +5902,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_10")
@@ -6520,7 +5911,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_8")
@@ -6530,7 +5920,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_1")
@@ -6540,7 +5929,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_41")
@@ -6550,7 +5938,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_16")
@@ -6560,7 +5947,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_17")
@@ -6570,7 +5956,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_5")
@@ -6580,7 +5965,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_2")
@@ -6590,7 +5974,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int2")
@@ -6600,7 +5983,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_47")
@@ -6610,7 +5992,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_93")
@@ -6620,7 +6001,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_60")
@@ -6630,7 +6010,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_21")
@@ -6640,7 +6019,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_46")
@@ -6650,7 +6028,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_21")
@@ -6660,7 +6037,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_1")
@@ -6670,7 +6046,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_30")
@@ -6680,7 +6055,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_110")
@@ -6690,7 +6064,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_27")
@@ -6700,7 +6073,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_12")
@@ -6710,7 +6082,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_29")
@@ -6720,7 +6091,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_29")
@@ -6730,7 +6100,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_9")
@@ -6740,7 +6109,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_58")
@@ -6750,7 +6118,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_39")
@@ -6760,7 +6127,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_82")
@@ -6770,7 +6136,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_3")
@@ -6780,7 +6145,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/multiWin_1")
@@ -6790,7 +6154,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_12")
@@ -6800,7 +6163,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_11")
@@ -6810,7 +6172,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_10")
@@ -6820,7 +6181,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_56")
@@ -6830,7 +6190,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_31")
@@ -6840,7 +6199,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_21")
@@ -6850,7 +6208,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bgint_2")
@@ -6860,7 +6217,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_34")
@@ -6870,7 +6226,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_11")
@@ -6880,7 +6235,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_31")
@@ -6890,7 +6244,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_chr_4")
@@ -6900,7 +6253,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_vchr_4")
@@ -6910,7 +6262,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_36")
@@ -6920,7 +6271,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_101")
@@ -6930,7 +6280,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_40")
@@ -6940,7 +6289,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_5")
@@ -6950,7 +6298,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_6")
@@ -6960,7 +6307,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutPrtnBy_6")
@@ -6970,7 +6316,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_vchar_5")
@@ -6980,7 +6325,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_69")
@@ -6990,7 +6334,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_64")
@@ -7000,7 +6343,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_23")
@@ -7010,7 +6352,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_9")
@@ -7020,7 +6361,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int4")
@@ -7030,7 +6370,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_45")
@@ -7040,7 +6379,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_20")
@@ -7050,7 +6388,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_10")
@@ -7060,7 +6397,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_24")
@@ -7070,7 +6406,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/rnkNoFrm02")
@@ -7080,7 +6415,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_45")
@@ -7090,7 +6424,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_20")
@@ -7100,7 +6433,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_8")
@@ -7110,7 +6442,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause06")
@@ -7120,7 +6451,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_4")
@@ -7130,7 +6460,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_75")
@@ -7140,7 +6469,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_34")
@@ -7150,7 +6478,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_12")
@@ -7160,7 +6487,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_12")
@@ -7170,7 +6496,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_10")
@@ -7180,7 +6505,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_56")
@@ -7190,7 +6514,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_43")
@@ -7200,7 +6523,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_13")
@@ -7210,7 +6532,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_19")
@@ -7220,7 +6541,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_2")
@@ -7230,7 +6550,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dbl_6")
@@ -7240,7 +6559,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause19")
@@ -7250,7 +6568,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_3")
@@ -7260,7 +6577,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_45")
@@ -7270,7 +6586,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_2")
@@ -7280,7 +6595,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_40")
@@ -7290,7 +6604,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_86")
@@ -7300,7 +6613,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int4")
@@ -7310,7 +6622,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_7")
@@ -7320,7 +6631,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_19")
@@ -7330,7 +6640,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int6")
@@ -7340,7 +6649,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_62")
@@ -7350,7 +6658,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_108")
@@ -7360,7 +6667,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_34")
@@ -7370,7 +6676,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_69")
@@ -7380,7 +6685,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_23")
@@ -7390,7 +6694,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg20")
@@ -7400,7 +6703,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_21")
@@ -7410,7 +6712,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_44")
@@ -7420,7 +6721,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_32")
@@ -7430,7 +6730,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_5")
@@ -7440,7 +6739,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dbl_1")
@@ -7450,7 +6748,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_51")
@@ -7460,7 +6757,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_10")
@@ -7470,7 +6766,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_56")
@@ -7480,7 +6775,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_51")
@@ -7490,7 +6784,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_97")
@@ -7500,7 +6793,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_9")
@@ -7510,7 +6802,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bln_1")
@@ -7520,7 +6811,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_23")
@@ -7530,7 +6820,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_58")
@@ -7540,7 +6829,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_23")
@@ -7550,7 +6838,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_33")
@@ -7560,7 +6847,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_33")
@@ -7570,7 +6856,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dbl_7")
@@ -7580,7 +6865,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_36")
@@ -7590,7 +6874,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_13")
@@ -7600,7 +6883,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg11")
@@ -7610,7 +6892,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_103")
@@ -7620,7 +6901,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_2")
@@ -7630,7 +6910,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_38")
@@ -7640,7 +6919,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutPrtnBy_4")
@@ -7650,7 +6928,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_7")
@@ -7660,7 +6937,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_21")
@@ -7670,7 +6946,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_67")
@@ -7680,7 +6955,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_7")
@@ -7690,7 +6964,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_vchar_3")
@@ -7700,7 +6973,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_chr_2")
@@ -7710,7 +6982,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_8")
@@ -7720,7 +6991,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_20")
@@ -7730,7 +7000,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_66")
@@ -7740,7 +7009,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_12")
@@ -7750,7 +7018,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_42")
@@ -7760,7 +7027,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int2")
@@ -7770,7 +7036,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/rnkNoFrm04")
@@ -7780,7 +7045,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_47")
@@ -7790,7 +7054,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_1")
@@ -7800,7 +7063,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_22")
@@ -7810,7 +7072,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_22")
@@ -7820,7 +7081,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_12")
@@ -7830,7 +7090,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_6")
@@ -7840,7 +7099,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_47")
@@ -7850,7 +7108,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause08")
@@ -7860,7 +7117,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/mtyOvrCluse_01")
@@ -7870,7 +7126,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_32")
@@ -7880,7 +7135,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_78")
@@ -7890,7 +7144,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bgint_7")
@@ -7900,7 +7153,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_31")
@@ -7910,7 +7162,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_77")
@@ -7920,7 +7171,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_31")
@@ -7930,7 +7180,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_2")
@@ -7940,7 +7189,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_11")
@@ -7950,7 +7198,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_45")
@@ -7960,7 +7207,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_11")
@@ -7970,7 +7216,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_14")
@@ -7980,7 +7225,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_12")
@@ -7990,7 +7234,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dbl_4")
@@ -8000,7 +7243,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_58")
@@ -8010,7 +7252,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_14")
@@ -8030,7 +7271,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dbl_5")
@@ -8040,7 +7280,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_103")
@@ -8050,7 +7289,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_19")
@@ -8060,7 +7298,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_4")
@@ -8070,7 +7307,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_35")
@@ -8080,7 +7316,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_2")
@@ -8090,7 +7325,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_char_1")
@@ -8100,7 +7334,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_83")
@@ -8110,7 +7343,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_16")
@@ -8120,7 +7352,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_vchar_1")
@@ -8130,7 +7361,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_75")
@@ -8140,7 +7370,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_42")
@@ -8150,7 +7379,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_44")
@@ -8160,7 +7388,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_14")
@@ -8170,7 +7397,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_41")
@@ -8180,7 +7406,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_3")
@@ -8190,7 +7415,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bln_3")
@@ -8200,7 +7424,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause02")
@@ -8210,7 +7433,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_24")
@@ -8220,7 +7442,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dbl_4")
@@ -8230,7 +7451,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg25")
@@ -8240,7 +7460,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_28")
@@ -8250,7 +7469,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bgint_2")
@@ -8260,7 +7478,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_33")
@@ -8270,7 +7487,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_64")
@@ -8280,7 +7496,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_53")
@@ -8290,7 +7505,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_94")
@@ -8300,7 +7514,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dt_2")
@@ -8310,7 +7523,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_52")
@@ -8320,7 +7532,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_47")
@@ -8330,7 +7541,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdWinView01")
@@ -8340,7 +7550,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg12")
@@ -8350,7 +7559,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_11")
@@ -8360,7 +7568,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_104")
@@ -8370,7 +7577,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_16")
@@ -8380,7 +7586,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause15")
@@ -8390,7 +7595,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_17")
@@ -8400,7 +7604,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_64")
@@ -8410,7 +7613,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_6")
@@ -8420,7 +7622,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_53")
@@ -8430,7 +7631,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_99")
@@ -8440,7 +7640,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_7")
@@ -8450,7 +7649,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_int8")
@@ -8460,7 +7658,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_20")
@@ -8470,7 +7667,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_chr_5")
@@ -8480,7 +7676,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_40")
@@ -8490,7 +7685,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_36")
@@ -8500,7 +7694,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_9")
@@ -8510,7 +7703,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg01")
@@ -8520,7 +7712,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dt_5")
@@ -8530,7 +7721,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_2")
@@ -8540,7 +7730,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_3")
@@ -8550,7 +7739,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_27")
@@ -8560,7 +7748,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dt_4")
@@ -8570,7 +7757,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/mtyOvrCluse_02")
@@ -8580,7 +7766,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_70")
@@ -8590,7 +7775,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_75")
@@ -8600,7 +7784,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/mulwind_01")
@@ -8610,7 +7793,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_55")
@@ -8620,7 +7802,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_42")
@@ -8630,7 +7811,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_88")
@@ -8640,7 +7820,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_1")
@@ -8650,7 +7829,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_31")
@@ -8660,7 +7838,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_40")
@@ -8670,7 +7847,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dbl_3")
@@ -8680,7 +7856,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_105")
@@ -8690,7 +7865,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_32")
@@ -8700,7 +7874,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_2")
@@ -8710,7 +7883,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_chr_2")
@@ -8720,7 +7892,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_1")
@@ -8730,7 +7901,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_33")
@@ -8740,7 +7910,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_6")
@@ -8750,7 +7919,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_int_4")
@@ -8760,7 +7928,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_9")
@@ -8770,7 +7937,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_85")
@@ -8780,7 +7946,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_46")
@@ -8790,7 +7955,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_18")
@@ -8800,7 +7964,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_77")
@@ -8810,7 +7973,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_5")
@@ -8820,7 +7982,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dbl_6")
@@ -8830,7 +7991,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_16")
@@ -8840,7 +8000,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_20")
@@ -8850,7 +8009,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_51")
@@ -8860,7 +8018,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_43")
@@ -8870,7 +8027,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_char_3")
@@ -8880,7 +8036,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_22")
@@ -8890,7 +8045,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bln_1")
@@ -8900,7 +8054,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause04")
@@ -8910,7 +8063,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_20")
@@ -8920,7 +8072,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bgint_4")
@@ -8930,7 +8081,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_50")
@@ -8940,7 +8090,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_96")
@@ -8950,7 +8099,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_26")
@@ -8960,7 +8108,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_35")
@@ -8970,7 +8117,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_66")
@@ -8980,7 +8126,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_49")
@@ -8990,7 +8135,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_62")
@@ -9000,7 +8144,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_8")
@@ -9010,7 +8153,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_54")
@@ -9020,7 +8162,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_18")
@@ -9030,7 +8171,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_106")
@@ -9040,7 +8180,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg14")
@@ -9050,7 +8189,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause17")
@@ -9060,7 +8198,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_4")
@@ -9070,7 +8207,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_15")
@@ -9080,7 +8216,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_61")
@@ -9090,7 +8225,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_9")
@@ -9100,7 +8234,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int8")
@@ -9110,7 +8243,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_22")
@@ -9120,7 +8252,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutOby_9")
@@ -9130,7 +8261,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_55")
@@ -9140,7 +8270,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_38")
@@ -9150,7 +8279,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_73")
@@ -9160,7 +8288,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_42")
@@ -9170,7 +8297,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dt_3")
@@ -9180,7 +8306,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_29")
@@ -9190,7 +8315,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wPrtnOrdrBy_7")
@@ -9200,7 +8324,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg03")
@@ -9210,7 +8333,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_1")
@@ -9220,7 +8342,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_72")
@@ -9230,7 +8351,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dt_2")
@@ -9240,7 +8360,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_57")
@@ -9250,7 +8369,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/mtyOvrCluse_04")
@@ -9260,7 +8378,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_11")
@@ -9270,7 +8387,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_44")
@@ -9280,7 +8396,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_dbl_1")
@@ -9290,7 +8405,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_84")
@@ -9300,7 +8414,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_15")
@@ -9310,7 +8423,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_8")
@@ -9320,7 +8432,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_4")
@@ -9330,7 +8441,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_12")
@@ -9340,7 +8450,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/multiWin_7")
@@ -9350,7 +8459,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_19")
@@ -9360,7 +8468,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_39")
@@ -9370,7 +8477,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_71")
@@ -9380,7 +8486,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_02")
@@ -9390,7 +8495,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_48")
@@ -9400,7 +8504,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_18")
@@ -9410,7 +8513,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_18")
@@ -9420,7 +8522,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_7")
@@ -9430,7 +8531,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_char_5")
@@ -9440,7 +8540,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_28")
@@ -9450,7 +8549,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_22")
@@ -9460,7 +8558,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_90")
@@ -9470,7 +8567,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_11")
@@ -9480,7 +8576,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_37")
@@ -9490,7 +8585,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_60")
@@ -9500,7 +8594,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bgint_6")
@@ -9510,7 +8603,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_bln_2")
@@ -9520,7 +8612,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_7")
@@ -9530,7 +8621,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_60")
@@ -9540,7 +8630,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_3")
@@ -9550,7 +8639,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_37")
@@ -9560,7 +8648,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_2")
@@ -9570,7 +8657,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause11")
@@ -9580,7 +8666,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg16")
@@ -9590,7 +8675,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_15")
@@ -9600,7 +8684,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_11")
@@ -9610,7 +8693,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_2")
@@ -9620,7 +8702,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int11")
@@ -9630,7 +8711,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dbl_4")
@@ -9640,7 +8720,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_95")
@@ -9650,7 +8729,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_29")
@@ -9660,7 +8738,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_24")
@@ -9670,7 +8747,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_71")
@@ -9680,7 +8756,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_48")
@@ -9690,7 +8765,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_dt_1")
@@ -9700,7 +8774,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_23")
@@ -9710,7 +8783,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_112")
@@ -9720,7 +8792,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg05")
@@ -9730,7 +8801,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_vchr_3")
@@ -9740,7 +8810,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_18")
@@ -9750,7 +8819,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/emtyOvrCls_1")
@@ -9760,7 +8828,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bgint_2")
@@ -9770,7 +8837,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_13")
@@ -9780,7 +8846,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_59")
@@ -9790,7 +8855,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_84")
@@ -9800,7 +8864,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_18")
@@ -9810,7 +8873,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_82")
@@ -9820,7 +8882,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/multiWin_5")
@@ -9830,7 +8891,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_vchar_1")
@@ -9840,7 +8900,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_17")
@@ -9850,7 +8909,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_39")
@@ -9860,7 +8918,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_101")
@@ -9870,7 +8927,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_37")
@@ -9880,7 +8936,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_29")
@@ -9890,7 +8945,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_6")
@@ -9900,7 +8954,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_14")
@@ -9910,7 +8963,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_73")
@@ -9920,7 +8972,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_04")
@@ -9930,7 +8981,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_81")
@@ -9940,7 +8990,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_5")
@@ -9950,7 +8999,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_dt_4")
@@ -9960,7 +9008,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_28")
@@ -9970,7 +9017,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_28")
@@ -9980,7 +9026,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_26")
@@ -9990,7 +9035,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_bln_2")
@@ -10000,7 +9044,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_24")
@@ -10010,7 +9053,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_62")
@@ -10020,7 +9062,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_92")
@@ -10030,7 +9071,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/basic_4")
@@ -10040,7 +9080,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_9")
@@ -10050,7 +9089,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dt_4")
@@ -10060,7 +9098,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_5")
@@ -10070,7 +9107,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_50")
@@ -10080,7 +9116,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_39")
@@ -10090,7 +9125,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bgint_7")
@@ -10100,7 +9134,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/frmclause13")
@@ -10110,7 +9143,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_13")
@@ -10120,7 +9152,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg18")
@@ -10130,7 +9161,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/wPbOb_13")
@@ -10140,7 +9170,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_int13")
@@ -10150,7 +9179,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_dbl_2")
@@ -10160,7 +9188,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_26")
@@ -10170,7 +9197,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_51")
@@ -10180,7 +9206,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_19")
@@ -10190,7 +9215,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_97")
@@ -10200,7 +9224,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_vchr_5")
@@ -10210,7 +9233,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_16")
@@ -10220,7 +9242,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/multipl_wnwds/mulwind_07")
@@ -10230,7 +9251,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/nstdagg07")
@@ -10240,7 +9260,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPACR/RBUPACR_bgint_4")
@@ -10250,7 +9269,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/wo_OrdrBy_25")
@@ -10260,7 +9278,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_15")
@@ -10270,7 +9287,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_40")
@@ -10280,7 +9296,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_86")
@@ -10290,7 +9305,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("first_val/firstValFn_31")
@@ -10300,7 +9314,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("last_val/lastValFn_32")
@@ -10310,7 +9323,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lead_func/lead_Fn_57")
@@ -10320,7 +9332,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/subQueries/frmInSubQry_18")
@@ -10330,7 +9341,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/winFnQry_80")
@@ -10340,7 +9350,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/woPrtnBy_35")
@@ -10350,7 +9359,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/defaultFrame/RBUPACR_bgint_6")
@@ -10360,7 +9368,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("ntile_func/ntileFn_38")
@@ -10370,7 +9377,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/aggOWnFn_9")
@@ -10380,7 +9386,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/cte_win_02")
@@ -10390,7 +9395,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("aggregates/testW_Nulls_8")
@@ -10400,7 +9404,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBCRACR/RBCRACR_int_5")
@@ -10410,7 +9413,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("frameclause/RBUPAUF/RBUPAUF_vchar_3")
@@ -10420,7 +9422,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("nestedAggs/woutPrtnBy_2")
@@ -10430,7 +9431,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
   @DrillTestCase1("lag_func/lag_Fn_14")
@@ -10440,7 +9440,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest(new Object()
     {
     }.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());
-
   }
 
 }
