@@ -114,8 +114,8 @@ public class MSQTaskSqlEngine implements SqlEngine
       case TIME_BOUNDARY_QUERY:
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
-      case UNNEST:
         return false;
+      case UNNEST:
       case CAN_SELECT:
       case CAN_INSERT:
       case CAN_REPLACE:
