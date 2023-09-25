@@ -50,6 +50,7 @@ import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.BrokerProcessingModule;
+import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
@@ -220,7 +221,7 @@ public class CliCoordinator extends ServerRunnable
             }
 
             if (isSegmentMetadataCacheEnabled()) {
-              binder.install(new CoordinatorSegmentMetadataCacheModule());
+              binder.install(new CoordinatorSegmentMetadataCacheModule(beOverlord));
             } else {
               binder.bind(CoordinatorTimeline.class).to(CoordinatorServerView.class).in(LazySingleton.class);
               LifecycleModule.register(binder, CoordinatorServerView.class);
@@ -458,6 +459,13 @@ public class CliCoordinator extends ServerRunnable
 
   private static class CoordinatorSegmentMetadataCacheModule implements Module
   {
+    private final boolean beOverlord;
+
+    public CoordinatorSegmentMetadataCacheModule(boolean beOverlord)
+    {
+      this.beOverlord = beOverlord;
+    }
+
     @Override
     public void configure(Binder binder)
     {
@@ -469,6 +477,9 @@ public class CliCoordinator extends ServerRunnable
       binder.install(new QueryableModule());
       binder.install(new BrokerProcessingModule());
       binder.install(new JoinableFactoryModule());
+      if (!beOverlord) {
+        binder.install(new CacheModule());
+      }
 
       JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.query.select", TierSelectorStrategy.class);
