@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Mechanism by which Druid expressions can define new functions for the Druid expression language. When
@@ -53,9 +52,19 @@ public class ExprMacroTable
 
   public ExprMacroTable(final List<ExprMacro> macros)
   {
-    this.macroMap = Maps.newHashMapWithExpectedSize(BUILT_IN.size() + macros.size());
-    macroMap.putAll(BUILT_IN.stream().collect(Collectors.toMap(m -> StringUtils.toLowerCase(m.name()), m -> m)));
-    macroMap.putAll(macros.stream().collect(Collectors.toMap(m -> StringUtils.toLowerCase(m.name()), m -> m)));
+    this.macroMap = Maps.newHashMapWithExpectedSize(BUILT_IN.size() + 1 + macros.size());
+    BUILT_IN.forEach(m -> {
+      macroMap.put(StringUtils.toLowerCase(m.name()), m);
+      if (m.alias().isPresent()) {
+        macroMap.put(StringUtils.toLowerCase(m.alias().get()), m);
+      }
+    });
+    for (ExprMacro macro : macros) {
+      macroMap.put(StringUtils.toLowerCase(macro.name()), macro);
+      if (macro.alias().isPresent()) {
+        macroMap.put(StringUtils.toLowerCase(macro.alias().get()), macro);
+      }
+    }
   }
 
   public static ExprMacroTable nil()

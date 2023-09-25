@@ -28,6 +28,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 
 public interface SqlOperatorConversion
 {
@@ -37,6 +38,16 @@ public interface SqlOperatorConversion
    * @return operator
    */
   SqlOperator calciteOperator();
+
+  /**
+   * Returns the Alias SQL operator corresponding to this function. Should be a singleton.
+   *
+   * @return operator
+   */
+  default Optional<SqlOperator> aliasCalciteOperator()
+  {
+    return Optional.empty();
+  }
 
   /**
    * Translate a Calcite {@code RexNode} to a Druid expression.

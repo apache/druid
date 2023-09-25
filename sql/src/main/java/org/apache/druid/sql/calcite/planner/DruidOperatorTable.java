@@ -445,6 +445,13 @@ public class DruidOperatorTable implements SqlOperatorTable
           || this.operatorConversions.put(operatorKey, operatorConversion) != null) {
         throw new ISE("Cannot have two operators with key [%s]", operatorKey);
       }
+      if (operatorConversion.aliasCalciteOperator().isPresent()) {
+        final OperatorKey aliasOperatorKey = OperatorKey.of(operatorConversion.aliasCalciteOperator().get());
+        if (this.aggregators.containsKey(aliasOperatorKey)
+            || this.operatorConversions.put(aliasOperatorKey, operatorConversion) != null) {
+          throw new ISE("Cannot have two operators with alias key [%s]", aliasOperatorKey);
+        }
+      }
     }
 
     for (SqlOperatorConversion operatorConversion : STANDARD_OPERATOR_CONVERSIONS) {
@@ -456,6 +463,15 @@ public class DruidOperatorTable implements SqlOperatorTable
       }
 
       this.operatorConversions.putIfAbsent(operatorKey, operatorConversion);
+
+      if (operatorConversion.aliasCalciteOperator().isPresent()) {
+        final OperatorKey aliasOperatorKey = OperatorKey.of(operatorConversion.aliasCalciteOperator().get());
+        // Don't complain if the alias already exists; we allow standard operators alias to be overridden as well.
+        if (this.aggregators.containsKey(aliasOperatorKey)) {
+          continue;
+        }
+        this.operatorConversions.put(aliasOperatorKey, operatorConversion);
+      }
     }
   }
 

@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.TypeStrategy;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class BuiltInExprMacros
@@ -32,11 +33,18 @@ public class BuiltInExprMacros
   public static class ComplexDecodeBase64ExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "complex_decode_base64";
+    public static final String ALIAS_NAME = "decode_base64_complex";
 
     @Override
     public String name()
     {
       return NAME;
+    }
+
+    @Override
+    public Optional<String> alias()
+    {
+      return Optional.of(ALIAS_NAME);
     }
 
     @Override

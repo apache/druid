@@ -952,6 +952,15 @@ public class FunctionTest extends InitializedNullHandlingTest
         ),
         expected
     );
+    // test with alias
+    assertExpr(
+        StringUtils.format(
+            "decode_base64_complex('%s', '%s')",
+            TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+            StringUtils.encodeBase64String(bytes)
+        ),
+        expected
+    );
   }
 
   @Test
@@ -960,6 +969,13 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr(
         StringUtils.format(
             "complex_decode_base64('%s', null)",
+            TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
+        ),
+        null
+    );
+    assertExpr(
+        StringUtils.format(
+            "decode_base64_complex('%s', null)",
             TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
         ),
         null
