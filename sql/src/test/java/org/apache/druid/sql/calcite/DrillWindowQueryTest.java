@@ -107,14 +107,15 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   private static final Logger log = new Logger(DrillWindowQueryTest.class);
 
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  private DrillTestCase testCase=null;
+  private DrillTestCase testCase = null;
 
   static {
-    NullHandling.initializeForTests();}
+    NullHandling.initializeForTests();
+  }
 
-//  @Parameterized.Parameters(name = "{0}")
   @Test
-  public void ensureAllDeclared() throws Exception {
+  public void ensureAllDeclared() throws Exception
+  {
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
 
@@ -130,41 +131,40 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       if (method.getAnnotation(Test.class) == null || ann == null) {
         continue;
       }
-      if(allCases.remove(ann.value()+".q")) {
+      if (allCases.remove(ann.value() + ".q")) {
         continue;
       }
       fail("found testcase referencing invalid file: " + method.getName());
     }
 
     for (String string : allCases) {
-      string=string.replaceFirst("..$","");
+      string = string.replaceFirst("..$", "");
       System.out.printf("@%s( \"%s\" )\n"
           + "@Test\n"
           + "public void test_%s() throws Exception {\n"
-          + "    windowQueryTest(new Object() {}.getClass().getEnclosingMethod().getDeclaredAnnotation(DrillTestCase1.class).value());\n"
-          + "\n"
+          + "    windowQueryTest();\n"
           + "}\n",
           DrillTestCase1.class.getSimpleName(),
           string,
-          string.replace('/', '_')
-          );
+          string.replace('/', '_'));
     }
-    assertEquals("found some non-declared tests; please add the above!",0, allCases.size());
-}
+    assertEquals("found some non-declared tests; please add the above!", 0, allCases.size());
+  }
 
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD})
-  public @interface DrillTestCase1 {
+  public @interface DrillTestCase1
+  {
 
     String value();
-}
-
-
-  @Rule
-  public DecoupledIgnoreProcessor ignoreProcessor=new DecoupledIgnoreProcessor();
+  }
 
   @Rule
-  public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule ();
+  public DecoupledIgnoreProcessor ignoreProcessor = new DecoupledIgnoreProcessor();
+
+  @Rule
+  public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
+
   class DrillTestCaseLoaderRule implements TestRule
   {
 
@@ -174,10 +174,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       DrillTestCase1 annotation = description.getAnnotation(DrillTestCase1.class);
       testCase = (annotation == null) ? null : new DrillTestCase(annotation.value());
       return base;
-    }}
-
-
-
+    }
+  }
 
   static class DrillTestCase
   {
@@ -223,7 +221,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         query = new String(ByteStreams.toByteArray(queryIn), StandardCharsets.UTF_8);
       }
       return query;
-    }}
+    }
+  }
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
@@ -321,7 +320,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         // "c9":0.626179100469
         new DoubleDimensionSchema("c9"));
 
-    return retVal;}
+    return retVal;
+  }
 
   public class TextualResultsVerifier implements ResultsVerifier
   {
@@ -369,7 +369,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         displayResults(results);
         throw e;
       }
-    }}
+    }
+  }
 
   static class ArrayRowCmp implements Comparator<Object[]>
   {
@@ -379,7 +380,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       String s0 = Arrays.toString(arg0);
       String s1 = Arrays.toString(arg1);
       return s0.compareTo(s1);
-    }}
+    }
+  }
 
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
   {
@@ -412,9 +414,10 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       }
       ret.add(newRow);
     }
-    return ret;}
+    return ret;
+  }
 
-//  @Test
+  // @Test
   public void windowQueryTest() throws Exception
   {
     Thread thread = null;
@@ -438,7 +441,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       if (thread != null && oldName != null) {
         thread.setName(oldName);
       }
-    }}
+    }
+  }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void attachIndex(SpecificSegmentsQuerySegmentWalker texasRanger, String dataSource, DimensionSchema... dims)
@@ -480,7 +484,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
             .shardSpec(new NumberedShardSpec(0, 0))
             .size(0)
             .build(),
-        queryableIndex);}
+        queryableIndex);
+  }
   //
 
   @DrillTestCase1("aggregates/winFnQry_77")
