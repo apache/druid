@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
@@ -61,6 +62,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.management.RuntimeErrorException;
 
 import static org.junit.Assert.assertNull;
 
@@ -77,33 +79,54 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * These test cases are borrowed from the drill-test-framework at https://github.com/apache/drill-test-framework
+ * These test cases are borrowed from the drill-test-framework at
+ * https://github.com/apache/drill-test-framework
  * <p>
- * The Drill data sources are just accessing parquet files directly, we ingest and index the data first via JSON
- * (so that we avoid pulling in the parquet dependencies here) and then run the queries over that.
+ * The Drill data sources are just accessing parquet files directly, we ingest
+ * and index the data first via JSON (so that we avoid pulling in the parquet
+ * dependencies here) and then run the queries over that.
  * <p>
- * The setup of the ingestion is done via code in this class, so any new data source needs to be added through that
- * manner.  That said, these tests are primarily being added to bootstrap our own test coverage of window
- * functions, so it is believed that most iteration on tests will happen through the CalciteWindowQueryTest
- * instead of this class.
+ * The setup of the ingestion is done via code in this class, so any new data
+ * source needs to be added through that manner. That said, these tests are
+ * primarily being added to bootstrap our own test coverage of window functions,
+ * so it is believed that most iteration on tests will happen through the
+ * CalciteWindowQueryTest instead of this class.
  */
 @RunWith(Parameterized.class)
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
   private static final Logger log = new Logger(DrillWindowQueryTest.class);
 
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+
   static {
     NullHandling.initializeForTests();
   }
-
-
-
 
   @Parameterized.Parameters(name = "{0}")
   public static Object parametersForWindowQueryTest() throws Exception
   {
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
+
+    DrillTestCaseList val = new DrillTestCaseList();
+    val.cases = new ArrayList<>();
+    // val.cases.add(new DrillTestCaseFixture("asd",null));
+    // val.cases.add(new DrillTestCaseFixture("asd2",Modes.NOT_ENOUGH_RULES));
+
+    String aa = CalciteWindowQueryTest.YAML_JACKSON.writeValueAsString(
+        val);
+    System.out.println(aa);
+
+    DrillTestCaseList caseList = CalciteWindowQueryTest.YAML_JACKSON.readValue(
+        DrillWindowQueryTest.class.getClassLoader().getResource("drill/window/queries/cases.yaml").openStream(),
+        DrillTestCaseList.class);
+
+    System.out.println(caseList.cases);
+
+    if (true) {
+      throw new RuntimeErrorException(null);
+    }
 
     return FileUtils
         .streamFiles(windowFolder.toFile(), true, "q")
@@ -115,12 +138,31 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         .toArray();
   }
 
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private final DrillTestCase testCase;
 
   public DrillWindowQueryTest(String filename) throws IOException
   {
     this.testCase = new DrillTestCase(filename);
+  }
+
+  static class DrillTestCaseFixture
+  {
+    @JsonProperty
+    public String filename;
+    @JsonProperty
+    public DecoupledIgnore.Modes ignoreMode;
+
+    @Override
+    public String toString()
+    {
+      return "filename:" + filename + ", ignoreMode:" + ignoreMode;
+    }
+  }
+
+  static class DrillTestCaseList
+  {
+    @JsonProperty
+    public List<DrillTestCaseFixture> cases;
   }
 
   static class DrillTestCase
@@ -200,25 +242,25 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     attachIndex(
         retVal,
         "smlTbl.parquet",
-        //"col_int": 8122,
+        // "col_int": 8122,
         new LongDimensionSchema("col_int"),
-        //"col_bgint": 817200,
+        // "col_bgint": 817200,
         new LongDimensionSchema("col_bgint"),
-        //"col_char_2": "IN",
+        // "col_char_2": "IN",
         new StringDimensionSchema("col_char_2"),
-        //"col_vchar_52": "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB",
+        // "col_vchar_52":
+        // "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB",
         new StringDimensionSchema("col_vchar_52"),
-        //"col_tmstmp": 1409617682418,
+        // "col_tmstmp": 1409617682418,
         new LongDimensionSchema("col_tmstmp"),
-        //"col_dt": 422717616000000,
+        // "col_dt": 422717616000000,
         new LongDimensionSchema("col_dt"),
-        //"col_booln": false,
+        // "col_booln": false,
         new StringDimensionSchema("col_booln"),
-        //"col_dbl": 12900.48,
+        // "col_dbl": 12900.48,
         new DoubleDimensionSchema("col_dbl"),
-        //"col_tm": 33109170
-        new LongDimensionSchema("col_tm")
-        );
+        // "col_tm": 33109170
+        new LongDimensionSchema("col_tm"));
 
     return retVal;
   }

@@ -1,0 +1,7 @@
+---
+cases:
+- filename: "asd"
+  ignoreMode: "NOT_ENOUGH_RULES"
+- filename: "asd2"
+  ignoreMode: "NOT_ENOUGH_RULES"
+  

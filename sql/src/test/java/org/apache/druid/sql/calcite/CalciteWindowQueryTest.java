@@ -73,7 +73,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     NullHandling.initializeForTests();
   }
 
-  private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
+  public static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
   @Parameterized.Parameters(name = "{0}")
   public static Object parametersForWindowQueryTest() throws Exception
