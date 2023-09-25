@@ -246,7 +246,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         inputSource,
         createInputFormat(),
         null,
-        new SamplerConfig(3, null, null, null)
+        new SamplerConfig(3, null, null, null, null)
     );
 
     Assert.assertEquals(3, response.getNumRowsRead());
@@ -1228,10 +1228,10 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     );
 
     SamplerResponse response = inputSourceSampler.sample(
-        new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true, 3000),
+        new RecordSupplierInputSource("topicName", new TestRecordSupplier(jsonBlockList), true, 3000, 3000),
         createInputFormat(),
         dataSchema,
-        new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/, null, null)
+        new SamplerConfig(200, 3000/*default timeout is 10s, shorten it to speed up*/, 3000, null, null)
     );
 
     //
@@ -1353,7 +1353,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         inputSource,
         inputFormat,
         dataSchema,
-        new SamplerConfig(4, null, null, null)
+        new SamplerConfig(4, null, null, null, null)
     );
 
     Assert.assertEquals(4, response.getNumRowsRead());
@@ -1388,7 +1388,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         inputSource,
         inputFormat,
         dataSchema,
-        new SamplerConfig(null, null, HumanReadableBytes.valueOf(256), null)
+        new SamplerConfig(null, null, null, HumanReadableBytes.valueOf(256), null)
     );
 
     Assert.assertEquals(4, response.getNumRowsRead());
@@ -1422,7 +1422,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
         inputSource,
         inputFormat,
         dataSchema,
-        new SamplerConfig(null, null, null, HumanReadableBytes.valueOf(300))
+        new SamplerConfig(null, null, null, null, HumanReadableBytes.valueOf(300))
     );
 
     Assert.assertEquals(4, response.getNumRowsRead());

@@ -34,6 +34,7 @@ public class SamplerConfig
 
   private final int numRows;
   private final int timeoutMs;
+  private final int nextRecordTimeoutMs;
   private final long maxBytesInMemory;
   private final long maxClientResponseBytes;
 
@@ -41,12 +42,14 @@ public class SamplerConfig
   public SamplerConfig(
       @JsonProperty("numRows") @Nullable Integer numRows,
       @JsonProperty("timeoutMs") @Nullable Integer timeoutMs,
+      @JsonProperty("nextRecordTimeoutMs") @Nullable Integer nextRecordTimeoutMs,
       @JsonProperty("maxBytesInMemory") @Nullable HumanReadableBytes maxBytesInMemory,
       @JsonProperty("maxClientResponseBytes") @Nullable HumanReadableBytes maxClientResponseBytes
   )
   {
     this.numRows = numRows != null ? numRows : DEFAULT_NUM_ROWS;
     this.timeoutMs = timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS;
+    this.nextRecordTimeoutMs = nextRecordTimeoutMs != null ? nextRecordTimeoutMs : this.timeoutMs;
     this.maxBytesInMemory = maxBytesInMemory != null ? maxBytesInMemory.getBytes() : Long.MAX_VALUE;
     this.maxClientResponseBytes = maxClientResponseBytes != null ? maxClientResponseBytes.getBytes() : 0;
 
@@ -84,6 +87,17 @@ public class SamplerConfig
   }
 
   /**
+   * Time to wait in milliseconds for the next record before closing the sampler and returning the data which has
+   * already been read. This timeout is only used once we have read at least one record from the input source.
+   *
+   * @return timeout in milliseconds
+   */
+  public int getNextRecordTimeoutMs()
+  {
+    return nextRecordTimeoutMs;
+  }
+
+  /**
    * Maximum number of bytes in memory that the {@link org.apache.druid.segment.incremental.IncrementalIndex} used by
    * {@link InputSourceSampler#sample(org.apache.druid.data.input.InputSource, org.apache.druid.data.input.InputFormat, org.apache.druid.segment.indexing.DataSchema, SamplerConfig)}
    * will be allowed to accumulate before aborting sampling. Particularly useful for limiting footprint of sample
@@ -111,6 +125,6 @@ public class SamplerConfig
 
   public static SamplerConfig empty()
   {
-    return new SamplerConfig(null, null, null, null);
+    return new SamplerConfig(null, null, null, null, null);
   }
 }

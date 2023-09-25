@@ -76,7 +76,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   public void testRead() throws IOException
   {
     final RandomCsvSupplier supplier = new RandomCsvSupplier();
-    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, null);
+    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, null, null);
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());
@@ -110,7 +110,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   public void testReadTimeout() throws IOException
   {
     final RandomCsvSupplier supplier = new RandomCsvSupplier();
-    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, -1000);
+    final InputSource inputSource = new RecordSupplierInputSource<>("topic", supplier, false, -1000, -1000);
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());
@@ -147,7 +147,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     //noinspection ResultOfObjectAllocationIgnored
     final SamplerException exception = Assert.assertThrows(
         SamplerException.class,
-        () -> new RecordSupplierInputSource<>("test-stream", supplier, false, null)
+        () -> new RecordSupplierInputSource<>("test-stream", supplier, false, null, null)
     );
     Assert.assertEquals(
         "Exception while seeking to the [latest] offset of partitions in topic [test-stream]: Something bad happened",
