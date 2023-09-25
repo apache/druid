@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -50,21 +51,23 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.sql.calcite.DecoupledIgnore.DecoupledIgnoreProcessor2;
+import org.apache.druid.sql.calcite.DecoupledIgnore.Modes;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.management.RuntimeErrorException;
-
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,6 +80,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * These test cases are borrowed from the drill-test-framework at
@@ -109,48 +114,72 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
 
-    DrillTestCaseList val = new DrillTestCaseList();
-    val.cases = new ArrayList<>();
-    // val.cases.add(new DrillTestCaseFixture("asd",null));
-    // val.cases.add(new DrillTestCaseFixture("asd2",Modes.NOT_ENOUGH_RULES));
-
-    String aa = CalciteWindowQueryTest.YAML_JACKSON.writeValueAsString(
-        val);
-    System.out.println(aa);
-
-    DrillTestCaseList caseList = CalciteWindowQueryTest.YAML_JACKSON.readValue(
+    DrillTestCaseList cases = CalciteWindowQueryTest.YAML_JACKSON.readValue(
         DrillWindowQueryTest.class.getClassLoader().getResource("drill/window/queries/cases.yaml").openStream(),
         DrillTestCaseList.class);
-
-    System.out.println(caseList.cases);
-
-    if (true) {
-      throw new RuntimeErrorException(null);
+    if (cases.cases == null) {
+      cases.cases = new ArrayList<>();
     }
 
-    return FileUtils
+    Set<String> files = FileUtils
         .streamFiles(windowFolder.toFile(), true, "q")
         .map(file -> {
           Path rel = windowFolder.relativize(file.toPath());
           return rel.toString().replaceFirst("..$", "");
         })
-        .sorted()
-        .toArray();
+        .collect(Collectors.toSet());
+
+    for (DrillTestCaseFixture c : cases.cases) {
+      if (!files.remove(c.filename)) {
+        fail("invalid testcase: " + c.filename);
+      }
+    }
+
+    if (!files.isEmpty()) {
+      for (String fileName : files) {
+        cases.cases.add(new DrillTestCaseFixture(fileName, null));
+      }
+      CalciteWindowQueryTest.YAML_JACKSON.writeValue(new File("new_cases.yml"), cases);
+
+      System.out.println(files);
+      fail("missing cases from cases.yml!");
+    }
+
+    return cases.cases.toArray();
   }
 
   private final DrillTestCase testCase;
 
-  public DrillWindowQueryTest(String filename) throws IOException
+  @Rule
+  public
+  DecoupledIgnoreProcessor2 ignoreProcessor;
+
+  public DrillWindowQueryTest(DrillTestCaseFixture fixture) throws IOException
   {
-    this.testCase = new DrillTestCase(filename);
+    this.testCase = new DrillTestCase(fixture);
+    this.ignoreProcessor=new DecoupledIgnoreProcessor2(fixture.ignoreMode);
   }
+
+
 
   static class DrillTestCaseFixture
   {
     @JsonProperty
     public String filename;
     @JsonProperty
-    public DecoupledIgnore.Modes ignoreMode;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Modes ignoreMode;
+
+    DrillTestCaseFixture()
+    {
+    }
+
+    public DrillTestCaseFixture(String fileName, Modes ignoreMode)
+    {
+      this.filename = fileName;
+      this.ignoreMode = ignoreMode;
+
+    }
 
     @Override
     public String toString()
@@ -167,13 +196,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   static class DrillTestCase
   {
-    private final String filename;
+    private final DrillTestCaseFixture fixture;
     private final String query;
     private final List<String[]> results;
 
-    public DrillTestCase(String filename) throws IOException
+    public DrillTestCase(DrillTestCaseFixture fixture) throws IOException
     {
-      this.filename = filename;
+      this.fixture = fixture;
       this.query = readStringFromResource(".q");
       String resultsStr = readStringFromResource(".e");
       String[] lines = resultsStr.split("\n");
@@ -201,7 +230,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     private String readStringFromResource(String s) throws IOException
     {
       final String query;
-      try (InputStream queryIn = ClassLoader.getSystemResourceAsStream("drill/window/queries/" + filename + s)) {
+      try (InputStream queryIn = ClassLoader.getSystemResourceAsStream("drill/window/queries/" + fixture.filename + s)) {
         query = new String(ByteStreams.toByteArray(queryIn), StandardCharsets.UTF_8);
       }
       return query;
@@ -267,14 +296,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   public class TextualResultsVerifier implements ResultsVerifier
   {
-    protected final List<String[]> expectedResults;
+    protected final List<String[]> expectedResultsText;
     @Nullable
     protected final RowSignature expectedResultRowSignature;
     private RowSignature currentRowSignature;
 
-    public TextualResultsVerifier(List<String[]> expectedResults, RowSignature expectedSignature)
+    public TextualResultsVerifier(List<String[]> expectedResultsString, RowSignature expectedSignature)
     {
-      this.expectedResults = expectedResults;
+      this.expectedResultsText = expectedResultsString;
       this.expectedResultRowSignature = expectedSignature;
     }
 
@@ -290,32 +319,23 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     @Override
     public void verify(String sql, List<Object[]> results)
     {
-      // SqlToRelConverter.isOrdered(null)
-
+      // FIXME: SqlToRelConverter.isOrdered(null) would be better
       boolean unsorted = !sql.toLowerCase()
           .replaceAll("\n", " ")
           .replaceFirst(".*\\)", "")
           .contains("order");
 
-      List<Object[]> parsedExpectedResults = parseResults(currentRowSignature, expectedResults);
+      List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
       try {
-        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
+        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
         if (unsorted) {
-          // Set<Object[]> resultsSet = new TreeSet<>(results);
-          // Set<Object[]> expectedSet = new TreeSet<>(parsedExpectedResults);
-          //// // FIXME: incorrectly handles multiset issue
-          ////
-          //// if(resultsSet)
-          ////
           results.sort(new ArrayRowCmp());
-          parsedExpectedResults.sort(new ArrayRowCmp());
-          ;
-
+          expectedResults.sort(new ArrayRowCmp());
         } else {
-          assertResultsEquals(sql, parsedExpectedResults, results);
+          assertResultsEquals(sql, expectedResults, results);
         }
       } catch (AssertionError e) {
-        displayResults(parsedExpectedResults);
+        displayResults(expectedResults);
         System.out.println("query: " + sql);
         displayResults(results);
         throw e;
@@ -325,7 +345,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   static class ArrayRowCmp implements Comparator<Object[]>
   {
-
     @Override
     public int compare(Object[] arg0, Object[] arg1)
     {
@@ -333,7 +352,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       String s1 = Arrays.toString(arg1);
       return s0.compareTo(s1);
     }
-
   }
 
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
@@ -345,9 +363,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       for (int i = 0; i < cc.size(); i++) {
         ColumnType t = rs.getColumnType(i).get();
         assertNull(t.getComplexTypeName());
-
         Object val = row[i];
-
         if ("null".equals(val)) {
           val = null;
         } else {
@@ -366,7 +382,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           }
         }
         newRow[i] = val;
-
       }
       ret.add(newRow);
     }
@@ -381,7 +396,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     try {
       thread = Thread.currentThread();
       oldName = thread.getName();
-      thread.setName("drillWindowQuery-" + testCase.filename);
+      thread.setName("drillWindowQuery-" + testCase.fixture.filename);
 
       testBuilder()
           .skipVectorize(true)
@@ -391,8 +406,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
               QueryContexts.ENABLE_DEBUG, true,
               PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
           .sql(testCase.getQueryString())
-          // .queryContext(ImmutableMap.of("windowsAreForClosers", true,
-          // "windowsAllTheWayDown", true))
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
           .run();
     } finally {

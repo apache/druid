@@ -106,6 +106,46 @@ public @interface DecoupledIgnore
       };
     }
   }
+  class DecoupledIgnoreProcessor2 implements TestRule
+  {
+    private Modes mode;
+
+    public DecoupledIgnoreProcessor2(Modes ignoreMode)
+    {
+      mode=ignoreMode;
+    }
+
+    @Override
+    public Statement apply(Statement base, Description description)
+    {
+//      DecoupledIgnore annotation = mode;
+    Modes mode2 = mode;
+      if (mode == null) {
+        return base;
+      }
+      return new Statement()
+      {
+        @Override
+        public void evaluate()
+        {
+          Throwable e = assertThrows(
+              "Expected that this testcase will fail - it might got fixed?",
+              mode.throwableClass,
+              base::evaluate
+              );
+
+          String trace = Throwables.getStackTraceAsString(e);
+//          Modes mode2 = annotation.mode();
+          Matcher m = mode2.getPattern().matcher(trace);
+
+          if (!m.find()) {
+            throw new AssertionError("Exception stactrace doesn't match regex: " + mode.regex, e);
+          }
+          throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
+        }
+      };
+    }
+  }
 
 
 }
