@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -254,7 +255,7 @@ public interface IndexerMetadataStorageCoordinator
    * commit metadata.
    *
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
-   * {@param segments} and dropping {@param segmentsToDrop}
+   * {@param segments} and dropping {@param segmentsToDrop}.
    *
    * @param segments       set of segments to add, must all be from the same dataSource
    * @param startMetadata  dataSource metadata pre-insert must match this startMetadata according to
@@ -276,6 +277,47 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
   ) throws IOException;
+
+  /**
+   * Commits segments created by an APPEND task. This method also handles segment
+   * upgrade scenarios that may result from concurrent append and replace.
+   * <ul>
+   * <li>If a REPLACE task committed a segment that overlaps with any of the
+   * appendSegments while this APPEND task was in progress, the appendSegments
+   * are upgraded to the version of the replace segment.</li>
+   * <li>If an appendSegment is covered by a currently active REPLACE lock, then
+   * an entry is created for it in the upgrade_segments table, so that when the
+   * REPLACE task finishes, it can upgrade the appendSegment as required.</li>
+   * </ul>
+   *
+   * @param appendSegments             All segments created by an APPEND task that
+   *                                   must be committed in a single transaction.
+   * @param appendSegmentToReplaceLock Map from append segment to the currently
+   *                                   active REPLACE lock (if any) covering it
+   */
+  SegmentPublishResult commitAppendSegments(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+  );
+
+  /**
+   * Commits segments created by a REPLACE task. This method also handles the
+   * segment upgrade scenarios that may result from concurrent append and replace.
+   * <ul>
+   * <li>If an APPEND task committed a segment to an interval locked by this task,
+   * the append segment is upgraded to the version of the corresponding lock.
+   * This is done with the help of entries created in the upgrade_segments table
+   * in {@link #commitAppendSegments}</li>
+   * </ul>
+   *
+   * @param replaceSegments        All segments created by a REPLACE task that
+   *                               must be committed in a single transaction.
+   * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
+   */
+  SegmentPublishResult commitReplaceSegments(
+      Set<DataSegment> replaceSegments,
+      Set<ReplaceTaskLock> locksHeldByReplaceTask
+  );
 
   /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.

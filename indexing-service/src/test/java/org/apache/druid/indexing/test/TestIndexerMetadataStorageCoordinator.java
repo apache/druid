@@ -30,6 +30,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -154,6 +155,24 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   )
   {
     return Collections.emptyMap();
+  }
+
+  @Override
+  public SegmentPublishResult commitReplaceSegments(
+      Set<DataSegment> replaceSegments,
+      Set<ReplaceTaskLock> locksHeldByReplaceTask
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(replaceSegments));
+  }
+
+  @Override
+  public SegmentPublishResult commitAppendSegments(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(appendSegments));
   }
 
   @Override

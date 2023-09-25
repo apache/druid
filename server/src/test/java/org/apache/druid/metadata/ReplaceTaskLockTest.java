@@ -19,26 +19,18 @@
 
 package org.apache.druid.metadata;
 
-/**
- * A config object for tests, use by overriding the specific getter methods and returning what you want
- */
-public class TestMetadataStorageTablesConfig extends MetadataStorageTablesConfig
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
+
+public class ReplaceTaskLockTest
 {
-  public TestMetadataStorageTablesConfig()
+
+  @Test
+  public void testEqualsAndHashCode()
   {
-    super(
-        "test",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    EqualsVerifier.forClass(ReplaceTaskLock.class)
+                  .usingGetClass()
+                  .withNonnullFields("supervisorTaskId", "interval", "version")
+                  .verify();
   }
 }
