@@ -573,7 +573,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         new ArrayList<>()
     );
 
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory).withBaggage(cursor);
 
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }

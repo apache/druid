@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.CloseableCursor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
@@ -726,12 +727,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     );
 
 
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+    CloseableCursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
     );
 
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory).withBaggage(cursor);
 
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }

@@ -227,7 +227,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Ignore("Merge buffers exceed the prescribed limit when the results are materialized as frames")
+//  @Ignore("Merge buffers exceed the prescribed limit when the results are materialized as frames")
   @Test
   public void testTwoExactCountDistincts()
   {

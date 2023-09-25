@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.CloseableCursor;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
@@ -474,7 +475,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final RowSignature rowSignature = resultArraySignature(query);
-    final Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+    final CloseableCursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
     );
@@ -489,7 +490,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         new ArrayList<>()
     );
 
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory).withBaggage(cursor);
 
     // All frames are generated with the same signature therefore we can attach the row signature
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
