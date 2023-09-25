@@ -59,7 +59,6 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
