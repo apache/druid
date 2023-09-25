@@ -45,7 +45,7 @@ import static org.junit.Assert.assertThrows;
 @Target({ElementType.METHOD})
 public @interface DecoupledIgnore
 {
-  Modes mode() default Modes.NOT_ENOUGH_RULES;
+  Modes value() default Modes.NOT_ENOUGH_RULES;
 
   enum Modes
   {
@@ -58,7 +58,9 @@ public @interface DecoupledIgnore
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type DATE"),
-    NPE(DruidException.class, "java.lang.NullPointerException");
+    NPE(DruidException.class, "java.lang.NullPointerException"),
+    NUMBER_FORMAT_EXCEPTION(NumberFormatException.class, "java.lang.NumberFormatException"),
+    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class,"Aggregation \\[(MIN)\\] does not support type");
 
 
     public Class<? extends Throwable> throwableClass;
@@ -96,17 +98,18 @@ public @interface DecoupledIgnore
         @Override
         public void evaluate()
         {
+          Modes ignoreMode = annotation.value();
           Throwable e = assertThrows(
               "Expected that this testcase will fail - it might got fixed?",
-              annotation.mode().throwableClass,
+              ignoreMode.throwableClass,
               base::evaluate
               );
 
           String trace = Throwables.getStackTraceAsString(e);
-          Matcher m = annotation.mode().getPattern().matcher(trace);
+          Matcher m = annotation.value().getPattern().matcher(trace);
 
           if (!m.find()) {
-            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.mode().regex, e);
+            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.value().regex, e);
           }
           throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
         }
