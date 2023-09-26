@@ -1385,9 +1385,8 @@ public class DruidQuery
 
     final DataSource myDataSource;
     if (dataSource instanceof TableDataSource) {
-      // In this case, we first plan a scan query to pull the results up for us before applying the window
+      // ensure that we first plan a scan query to pull the results up for us before applying the window
       return null;
-//      myDataSource = new QueryDataSource(toScanQuery());
     } else {
       myDataSource = dataSource;
     }

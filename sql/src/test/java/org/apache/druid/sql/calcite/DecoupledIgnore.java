@@ -61,8 +61,7 @@ public @interface DecoupledIgnore
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
     RESULT_PARSE_EXCEPTION(Exception.class, "parseResults"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class,"Aggregation \\[(MIN|MAX)\\] does not support type"),
-    CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
+    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),    CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
     MISSING_DESC(DruidException.class, "function signature DESC");
 
 
@@ -120,46 +119,4 @@ public @interface DecoupledIgnore
       };
     }
   }
-  class DecoupledIgnoreProcessor2 implements TestRule
-  {
-    private Modes mode;
-
-    public DecoupledIgnoreProcessor2(Modes ignoreMode)
-    {
-      mode=ignoreMode;
-    }
-
-    @Override
-    public Statement apply(Statement base, Description description)
-    {
-//      DecoupledIgnore annotation = mode;
-    Modes mode2 = mode;
-      if (mode == null) {
-        return base;
-      }
-      return new Statement()
-      {
-        @Override
-        public void evaluate()
-        {
-          Throwable e = assertThrows(
-              "Expected that this testcase will fail - it might got fixed?",
-              mode.throwableClass,
-              base::evaluate
-              );
-
-          String trace = Throwables.getStackTraceAsString(e);
-//          Modes mode2 = annotation.mode();
-          Matcher m = mode2.getPattern().matcher(trace);
-
-          if (!m.find()) {
-            throw new AssertionError("Exception stactrace doesn't match regex: " + mode.regex, e);
-          }
-          throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
-        }
-      };
-    }
-  }
-
-
 }
