@@ -54,17 +54,18 @@ public @interface DecoupledIgnore
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
     CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
     ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
-
-
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
+    NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
     RESULT_PARSE_EXCEPTION(Exception.class, "parseResults"),
     AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),
     CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
     MISSING_DESC(DruidException.class, "function signature DESC"),
-    RESULT_COUNT_MISMATCH(AssertionError.class, "result count:");
+    RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
+    ALLDATA_CSV(DruidException.class, "allData.csv"),
+    BIGINT_TIME_COMPARE(DruidException.class,"Cannot apply '.' to arguments of type");
 
 
     public Class<? extends Throwable> throwableClass;
@@ -105,7 +106,7 @@ public @interface DecoupledIgnore
         {
           Modes ignoreMode = annotation.value();
           Throwable e = assertThrows(
-              "Expected that this testcase will fail - it might got fixed?",
+              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
               ignoreMode.throwableClass,
               base::evaluate
               );
