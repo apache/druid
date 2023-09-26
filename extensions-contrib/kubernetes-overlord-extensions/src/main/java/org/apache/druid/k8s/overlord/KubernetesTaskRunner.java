@@ -318,7 +318,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void start()
   {
     log.info("Starting K8sTaskRunner...");
-    // Load tasks fromcom.google.common.util.concurrent.Futures create futurewa previously running jobs and wait for their statuses to be updated asynchronously.
+    // Load tasks from previously running jobs and wait for their statuses to be updated asynchronously.
     for (Job job : client.getPeonJobs()) {
       try {
         joinAsync(adapter.toTask(job));
@@ -359,13 +359,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
             return pendingWorkItems;
           },
           e -> e instanceof ISE,
-          6,
-          6
+          5,
+          5
 
       );
     }
     catch (Exception e) {
-      log.error("Kubernetes took too long to initialize, continuing startup.", e);
+      log.info("Kubernetes took too long to initialize, continuing startup. %s", e);
     }
   }
 

@@ -231,7 +231,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertEquals(0, runner.tasks.size());
   }
 
-
   @Test
   public void test_streamTaskLog_withoutExistingTask_returnsEmptyOptional()
   {
