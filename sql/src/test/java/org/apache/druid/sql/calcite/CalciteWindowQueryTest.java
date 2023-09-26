@@ -54,9 +54,9 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
  * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
@@ -216,10 +216,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     if (false && query instanceof ScanQuery) {
       DataSource ds = ((ScanQuery) query).getDataSource();
-      assertInstanceOf(QueryDataSource.class, ds);
+      assertTrue(ds instanceof QueryDataSource);
       query = ((QueryDataSource) ds).getQuery();
     }
-    assertInstanceOf(WindowOperatorQuery.class, query);
+    assertTrue(query instanceof WindowOperatorQuery);
     return (WindowOperatorQuery) query;
   }
 
