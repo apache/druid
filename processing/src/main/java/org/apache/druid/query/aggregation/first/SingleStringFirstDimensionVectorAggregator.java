@@ -57,7 +57,7 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
         position + NumericFirstVectorAggregator.NULL_OFFSET,
         useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
     );
-    buf.putLong(position + NumericFirstVectorAggregator.VALUE_OFFSET, 0);
+    buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, 0);
   }
 
   @Override

@@ -119,7 +119,8 @@ public class MSQTestWorkerContext implements WorkerContext
     IndexMergerV9 indexMerger = new IndexMergerV9(
         mapper,
         indexIO,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        true
     );
     final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
     {

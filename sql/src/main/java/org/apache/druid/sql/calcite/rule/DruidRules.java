@@ -118,6 +118,7 @@ public class DruidRules
       retVal.add(DruidOuterQueryRule.WINDOW);
     }
 
+    // Adding unnest specific rules
     if (plannerContext.featureAvailable(EngineFeature.UNNEST)) {
       retVal.add(new DruidUnnestRule(plannerContext));
       retVal.add(new DruidCorrelateUnnestRule(plannerContext));

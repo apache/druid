@@ -160,7 +160,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               1024 * 1024
           );
           try {
-            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
+            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment));
             announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
           catch (IOException e) {
@@ -185,7 +185,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               1024
           );
           try {
-            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
+            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment));
             announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
           catch (IOException e) {

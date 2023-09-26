@@ -304,6 +304,11 @@ public class WorkerSketchFetcher implements AutoCloseable
   @Override
   public void close()
   {
-    executorService.shutdownNow();
+    try {
+      executorService.shutdownNow();
+    }
+    catch (Throwable suppressed) {
+      log.warn(suppressed, "Error while shutting down WorkerSketchFetcher");
+    }
   }
 }

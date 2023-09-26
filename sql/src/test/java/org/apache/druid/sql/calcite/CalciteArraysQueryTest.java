@@ -60,7 +60,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
 import org.junit.Test;
@@ -78,7 +77,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   private static final Map<String, Object> QUERY_CONTEXT_UNNEST =
       ImmutableMap.<String, Object>builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(PlannerContext.CTX_ENABLE_UNNEST, true)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .build();
 
@@ -87,6 +85,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantArrayExpressionFromTable()
   {
+    notMsqCompatible();
     testQuery(
         "SELECT ARRAY[1,2] as arr, dim1 FROM foo LIMIT 1",
         ImmutableList.of(
@@ -168,6 +167,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectNonConstantArrayExpressionFromTableForMultival()
   {
+    notMsqCompatible();
     final String sql = "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5";
     final Query<?> scanQuery = newScanQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE1)
@@ -207,6 +207,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Yes these outputs are strange sometimes, arrays are in a partial state of existence so end up a bit
     // stringy for now this is because virtual column selectors are coercing values back to stringish so that
     // multi-valued string dimensions can be grouped on.
+    notMsqCompatible();
     List<Object[]> expectedResults;
     if (useDefault) {
       expectedResults = ImmutableList.of(
@@ -386,6 +387,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // which will still always be stringified to ultimately adhere to the varchar type
     // as array support increases in the engine this will likely change since using explict array functions should
     // probably kick it into an array
+    notMsqCompatible();
     List<Object[]> expectedResults;
     if (useDefault) {
       expectedResults = ImmutableList.of(
@@ -1017,6 +1019,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsLongArray()
   {
+    notMsqCompatible();
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
     cannotVectorize();
     testQuery(
@@ -1068,6 +1071,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
+    notMsqCompatible();
     testQuery(
         "SELECT ARRAY[d1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
@@ -1115,6 +1119,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsFloatArray()
   {
+    notMsqCompatible();
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
     testQuery(
@@ -1605,6 +1610,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggNumeric()
   {
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_AGG(l1), ARRAY_AGG(DISTINCT l1), ARRAY_AGG(d1), ARRAY_AGG(DISTINCT d1), ARRAY_AGG(f1), ARRAY_AGG(DISTINCT f1) FROM numfoo",
@@ -1741,6 +1747,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggQuantile()
   {
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_QUANTILE(ARRAY_AGG(l1), 0.9) FROM numfoo",
@@ -1784,6 +1791,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggArrays()
   {
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_AGG(ARRAY[l1, l2]), ARRAY_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
@@ -1880,6 +1888,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayConcatAggArrays()
   {
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_CONCAT_AGG(ARRAY[l1, l2]), ARRAY_CONCAT_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
@@ -2028,6 +2037,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testArrayAggMaxBytes()
   {
     cannotVectorize();
+    notMsqCompatible();
     testQuery(
         "SELECT ARRAY_AGG(l1, 128), ARRAY_AGG(DISTINCT l1, 128) FROM numfoo",
         ImmutableList.of(
@@ -2227,6 +2237,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
+    notMsqCompatible();
     requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
@@ -2366,6 +2377,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {
+    notMsqCompatible();
     requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
@@ -2883,6 +2895,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
   {
+    notMsqCompatible();
     cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
@@ -2981,6 +2994,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {
+    notMsqCompatible();
     cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
@@ -4804,6 +4818,54 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestVirtualWithColumnsAndNullIf()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "select c,m2 from druid.foo, unnest(ARRAY[\"m1\", \"m2\"]) as u(c) where NULLIF(c,m2) IS NULL",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE1),
+                      expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .filters(
+                      useDefault ? expressionFilter("(\"j0.unnest\" == \"m2\")") :
+                      or(
+                          expressionFilter("(\"j0.unnest\" == \"m2\")"),
+                          and(
+                              isNull("j0.unnest"),
+                              not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
+                          )
+                      ))
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("j0.unnest", "m2"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0f, 1.0D},
+            new Object[]{1.0f, 1.0D},
+            new Object[]{2.0f, 2.0D},
+            new Object[]{2.0f, 2.0D},
+            new Object[]{3.0f, 3.0D},
+            new Object[]{3.0f, 3.0D},
+            new Object[]{4.0f, 4.0D},
+            new Object[]{4.0f, 4.0D},
+            new Object[]{5.0f, 5.0D},
+            new Object[]{5.0f, 5.0D},
+            new Object[]{6.0f, 6.0D},
+            new Object[]{6.0f, 6.0D}
         )
     );
   }

@@ -792,4 +792,13 @@
     <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@1..*$</packageUrl>
     <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
   </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: grpc-context-1.27.2.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
+    <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
+    <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
+  </suppress>
 </suppressions>

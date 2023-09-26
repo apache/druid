@@ -22,7 +22,6 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -166,14 +165,6 @@ public class QueryStackTests
           }
         },
         lookupManager,
-        new DruidHttpClientConfig()
-        {
-          @Override
-          public int getNumConnections()
-          {
-            return 1;
-          }
-        },
         new SubqueryCountStatsProvider()
     );
   }
