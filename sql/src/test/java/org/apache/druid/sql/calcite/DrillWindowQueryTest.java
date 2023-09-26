@@ -416,7 +416,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
               newVal = val;
               break;
             case LONG:
-              if (val.equals("")) {
+              if ("".equals(val)) {
                 newVal = null;
               } else if (longPattern.test(val)) {
                 newVal = Numbers.parseLong(val);
@@ -554,7 +554,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_30")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_30")
   @Test
   public void test_aggregates_testW_Nulls_30() throws Exception
   {
@@ -575,7 +576,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES) @DrillTest("last_val/lastValFn_35")
+  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)
+  @DrillTest("last_val/lastValFn_35")
   @Test
   public void test_last_val_lastValFn_35() throws Exception
   {
@@ -1358,7 +1360,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_17")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_17")
   @Test
   public void test_aggregates_testW_Nulls_17() throws Exception
   {
@@ -1842,7 +1845,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_19")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_19")
   @Test
   public void test_aggregates_testW_Nulls_19() throws Exception
   {
@@ -2390,7 +2394,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
- @DrillTest("last_val/lastValFn_17")
+  @DrillTest("last_val/lastValFn_17")
   @Test
   public void test_last_val_lastValFn_17() throws Exception
   {
@@ -2411,7 +2415,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_12")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_12")
   @Test
   public void test_aggregates_testW_Nulls_12() throws Exception
   {
@@ -2639,7 +2644,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.RESULT_COUNT_MISMATCH) @DrillTest("aggregates/testW_Nulls_1")
+  @DecoupledIgnore(Modes.RESULT_COUNT_MISMATCH)
+  @DrillTest("aggregates/testW_Nulls_1")
   @Test
   public void test_aggregates_testW_Nulls_1() throws Exception
   {
@@ -2668,7 +2674,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)@DrillTest("last_val/lastValFn_39")
+  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)
+  @DrillTest("last_val/lastValFn_39")
   @Test
   public void test_last_val_lastValFn_39() throws Exception
   {
@@ -2683,7 +2690,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_34")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_34")
   @Test
   public void test_aggregates_testW_Nulls_34() throws Exception
   {
@@ -2792,7 +2800,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_23")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_23")
   @Test
   public void test_aggregates_testW_Nulls_23() throws Exception
   {
@@ -2886,14 +2895,16 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_10")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_10")
   @Test
   public void test_aggregates_testW_Nulls_10() throws Exception
   {
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)@DrillTest("last_val/lastValFn_19")
+  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
+  @DrillTest("last_val/lastValFn_19")
   @Test
   public void test_last_val_lastValFn_19() throws Exception
   {
@@ -2951,7 +2962,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
- @DrillTest("frameclause/subQueries/frmInSubQry_23")
+  @DrillTest("frameclause/subQueries/frmInSubQry_23")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_23() throws Exception
   {
@@ -3129,7 +3140,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_3")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_3")
   @Test
   public void test_aggregates_testW_Nulls_3() throws Exception
   {
@@ -3143,7 +3155,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_32")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_32")
   @Test
   public void test_aggregates_testW_Nulls_32() throws Exception
   {
@@ -3181,7 +3194,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-@DrillTest("frameclause/subQueries/frmInSubQry_45")
+  @DrillTest("frameclause/subQueries/frmInSubQry_45")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_45() throws Exception
   {
@@ -3253,7 +3266,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_21")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_21")
   @Test
   public void test_aggregates_testW_Nulls_21() throws Exception
   {
@@ -3376,7 +3390,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_16")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_16")
   @Test
   public void test_aggregates_testW_Nulls_16() throws Exception
   {
@@ -3571,14 +3586,16 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_38")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_38")
   @Test
   public void test_aggregates_testW_Nulls_38() throws Exception
   {
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)  @DrillTest("aggregates/testW_Nulls_5")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_5")
   @Test
   public void test_aggregates_testW_Nulls_5() throws Exception
   {
@@ -3666,7 +3683,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_27")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_27")
   @Test
   public void test_aggregates_testW_Nulls_27() throws Exception
   {
@@ -3744,7 +3762,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_14")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_14")
   @Test
   public void test_aggregates_testW_Nulls_14() throws Exception
   {
@@ -3950,7 +3969,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_36")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_36")
   @Test
   public void test_aggregates_testW_Nulls_36() throws Exception
   {
@@ -4059,7 +4079,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_25")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_25")
   @Test
   public void test_aggregates_testW_Nulls_25() throws Exception
   {
@@ -4168,7 +4189,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)@DrillTest("ntile_func/ntileFn_15")
+  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
+  @DrillTest("ntile_func/ntileFn_15")
   @Test
   public void test_ntile_func_ntileFn_15() throws Exception
   {
@@ -4711,7 +4733,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)@DrillTest("last_val/lastValFn_34")
+  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)
+  @DrillTest("last_val/lastValFn_34")
   @Test
   public void test_last_val_lastValFn_34() throws Exception
   {
@@ -4739,7 +4762,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_18")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_18")
   @Test
   public void test_aggregates_testW_Nulls_18() throws Exception
   {
@@ -4833,7 +4857,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION) @DrillTest("aggregates/woPrtnBy_15")
+  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
+  @DrillTest("aggregates/woPrtnBy_15")
   @Test
   public void test_aggregates_woPrtnBy_15() throws Exception
   {
@@ -5005,7 +5030,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_29")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_29")
   @Test
   public void test_aggregates_testW_Nulls_29() throws Exception
   {
@@ -5129,7 +5155,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)  @DrillTest("aggregates/testW_Nulls_31")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_31")
   @Test
   public void test_aggregates_testW_Nulls_31() throws Exception
   {
@@ -5282,7 +5309,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_20")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_20")
   @Test
   public void test_aggregates_testW_Nulls_20() throws Exception
   {
@@ -5671,7 +5699,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)@DrillTest("last_val/lastValFn_38")
+  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)
+  @DrillTest("last_val/lastValFn_38")
   @Test
   public void test_last_val_lastValFn_38() throws Exception
   {
@@ -5994,7 +6023,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_35")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_35")
   @Test
   public void test_aggregates_testW_Nulls_35() throws Exception
   {
@@ -6096,7 +6126,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_24")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_24")
   @Test
   public void test_aggregates_testW_Nulls_24() throws Exception
   {
@@ -6198,7 +6229,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_11")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_11")
   @Test
   public void test_aggregates_testW_Nulls_11() throws Exception
   {
@@ -6206,7 +6238,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-@DrillTest("lead_func/lead_Fn_104")
+  @DrillTest("lead_func/lead_Fn_104")
   @Test
   public void test_lead_func_lead_Fn_104() throws Exception
   {
@@ -6453,7 +6485,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_2")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_2")
   @Test
   public void test_aggregates_testW_Nulls_2() throws Exception
   {
@@ -6475,7 +6508,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_33")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_33")
   @Test
   public void test_aggregates_testW_Nulls_33() throws Exception
   {
@@ -6512,7 +6546,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
- @DrillTest("frameclause/subQueries/frmInSubQry_46")
+  @DrillTest("frameclause/subQueries/frmInSubQry_46")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_46() throws Exception
   {
@@ -6585,7 +6619,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_22")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_22")
   @Test
   public void test_aggregates_testW_Nulls_22() throws Exception
   {
@@ -6687,7 +6722,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)@DrillTest("last_val/lastValFn_18")
+  @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
+  @DrillTest("last_val/lastValFn_18")
   @Test
   public void test_last_val_lastValFn_18() throws Exception
   {
@@ -6804,7 +6840,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)@DrillTest("last_val/lastValFn_29")
+  @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)
+  @DrillTest("last_val/lastValFn_29")
   @Test
   public void test_last_val_lastValFn_29() throws Exception
   {
@@ -6904,7 +6941,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_4")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_4")
   @Test
   public void test_aggregates_testW_Nulls_4() throws Exception
   {
@@ -6933,7 +6971,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)  @DrillTest("aggregates/testW_Nulls_39")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_39")
   @Test
   public void test_aggregates_testW_Nulls_39() throws Exception
   {
@@ -6993,7 +7032,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)@DrillTest("aggregates/testW_Nulls_28")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_28")
   @Test
   public void test_aggregates_testW_Nulls_28() throws Exception
   {
@@ -7100,7 +7140,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)  @DrillTest("aggregates/testW_Nulls_15")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_15")
   @Test
   public void test_aggregates_testW_Nulls_15() throws Exception
   {
@@ -7303,7 +7344,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)  @DrillTest("aggregates/testW_Nulls_37")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_37")
   @Test
   public void test_aggregates_testW_Nulls_37() throws Exception
   {
@@ -7382,7 +7424,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_26")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_26")
   @Test
   public void test_aggregates_testW_Nulls_26() throws Exception
   {
@@ -7477,7 +7520,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.NULLS_FIRST_LAST) @DrillTest("aggregates/testW_Nulls_13")
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
+  @DrillTest("aggregates/testW_Nulls_13")
   @Test
   public void test_aggregates_testW_Nulls_13() throws Exception
   {
