@@ -507,7 +507,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("aggregates/winFnQry_77")
   @Test
   public void test_aggregates_winFnQry_77() throws Exception
@@ -637,7 +636,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_63")
   @Test
   public void test_lead_func_lead_Fn_63() throws Exception
@@ -696,7 +694,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_33")
   @Test
   public void test_aggregates_winFnQry_33() throws Exception
@@ -705,7 +702,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_79")
   @Test
   public void test_aggregates_winFnQry_79() throws Exception
@@ -812,7 +808,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.AGGREGATION_NOT_SUPPORT_TYPE)
-
   @DrillTest("nestedAggs/woutOby_6")
   @Test
   public void test_nestedAggs_woutOby_6() throws Exception
@@ -842,7 +837,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_44")
   @Test
   public void test_aggregates_winFnQry_44() throws Exception
@@ -851,7 +845,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lag_func/lag_Fn_109")
   @Test
   public void test_lag_func_lag_Fn_109() throws Exception
@@ -923,7 +916,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
-
   @DrillTest("lead_func/lead_Fn_54")
   @Test
   public void test_lead_func_lead_Fn_54() throws Exception
@@ -1066,7 +1058,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("aggregates/winFnQry_20")
   @Test
   public void test_aggregates_winFnQry_20() throws Exception
@@ -1089,7 +1080,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_65")
   @Test
   public void test_lead_func_lead_Fn_65() throws Exception
@@ -1284,7 +1274,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("aggregates/winFnQry_13")
   @Test
   public void test_aggregates_winFnQry_13() throws Exception
@@ -1293,7 +1282,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_12")
   @Test
   public void test_lead_func_lead_Fn_12() throws Exception
@@ -1423,7 +1411,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_23")
   @Test
   public void test_lead_func_lead_Fn_23() throws Exception
@@ -1432,7 +1419,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-
   @DrillTest("lead_func/lead_Fn_69")
   @Test
   public void test_lead_func_lead_Fn_69() throws Exception
@@ -1518,7 +1504,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_35")
   @Test
   public void test_aggregates_winFnQry_35() throws Exception
@@ -1761,7 +1746,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("frameclause/multipl_wnwds/min_mulwds")
   @Test
   public void test_frameclause_multipl_wnwds_min_mulwds() throws Exception
@@ -1798,7 +1782,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_98")
   @Test
   public void test_lead_func_lead_Fn_98() throws Exception
@@ -1900,7 +1883,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_21")
   @Test
   public void test_lead_func_lead_Fn_21() throws Exception
@@ -1930,7 +1912,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_67")
   @Test
   public void test_lead_func_lead_Fn_67() throws Exception
@@ -2002,7 +1983,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_37")
   @Test
   public void test_aggregates_winFnQry_37() throws Exception
@@ -2039,7 +2019,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_36")
   @Test
   public void test_lead_func_lead_Fn_36() throws Exception
@@ -2237,7 +2216,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_43")
   @Test
   public void test_aggregates_winFnQry_43() throws Exception
@@ -2492,7 +2470,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_65")
   @Test
   public void test_aggregates_winFnQry_65() throws Exception
@@ -2571,7 +2548,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_71")
   @Test
   public void test_lead_func_lead_Fn_71() throws Exception
@@ -2616,7 +2592,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("aggregates/winFnQry_76")
   @Test
   public void test_aggregates_winFnQry_76() throws Exception
@@ -2653,7 +2628,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_18")
   @Test
   public void test_lead_func_lead_Fn_18() throws Exception
@@ -2690,7 +2664,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("frameclause/RBUPACR/RBUPACR_chr_1")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_chr_1() throws Exception
@@ -2720,7 +2693,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_41")
   @Test
   public void test_aggregates_winFnQry_41() throws Exception
@@ -2926,7 +2898,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-
   @DrillTest("aggregates/winFnQry_63")
   @Test
   public void test_aggregates_winFnQry_63() throws Exception
@@ -3006,7 +2977,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NOT_ENOUGH_RULES)
-
   @DrillTest("aggregates/aggOWnFn_3")
   @Test
   public void test_aggregates_aggOWnFn_3() throws Exception
@@ -3057,7 +3027,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_74")
   @Test
   public void test_aggregates_winFnQry_74() throws Exception
@@ -3300,7 +3269,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_95")
   @Test
   public void test_lead_func_lead_Fn_95() throws Exception
@@ -3330,7 +3298,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_61")
   @Test
   public void test_aggregates_winFnQry_61() throws Exception
@@ -3516,7 +3483,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_14")
   @Test
   public void test_lead_func_lead_Fn_14() throws Exception
@@ -3525,7 +3491,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-
   @DrillTest("aggregates/winFnQry_83")
   @Test
   public void test_aggregates_winFnQry_83() throws Exception
@@ -3541,7 +3506,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lag_func/lag_Fn_100")
   @Test
   public void test_lag_func_lag_Fn_100() throws Exception
@@ -3629,7 +3593,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_25")
   @Test
   public void test_lead_func_lead_Fn_25() throws Exception
@@ -3843,7 +3806,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-
   @DrillTest("frameclause/multipl_wnwds/mulwind_06")
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_06() throws Exception
@@ -3915,7 +3877,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_81")
   @Test
   public void test_aggregates_winFnQry_81() throws Exception
@@ -3931,7 +3892,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lag_func/lag_Fn_102")
   @Test
   public void test_lag_func_lag_Fn_102() throws Exception
@@ -3940,7 +3900,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_16")
   @Test
   public void test_lead_func_lead_Fn_16() throws Exception
@@ -4033,7 +3992,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_27")
   @Test
   public void test_lead_func_lead_Fn_27() throws Exception
@@ -4063,7 +4021,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_39")
   @Test
   public void test_aggregates_winFnQry_39() throws Exception
@@ -4079,7 +4036,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_91")
   @Test
   public void test_lead_func_lead_Fn_91() throws Exception
@@ -4222,7 +4178,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_45")
   @Test
   public void test_lead_func_lead_Fn_45() throws Exception
@@ -4274,7 +4229,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_15")
   @Test
   public void test_aggregates_winFnQry_15() throws Exception
@@ -4283,7 +4237,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_10")
   @Test
   public void test_lead_func_lead_Fn_10() throws Exception
@@ -4348,7 +4301,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_9")
   @Test
   public void test_lead_func_lead_Fn_9() throws Exception
@@ -4365,7 +4317,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_22")
   @Test
   public void test_lead_func_lead_Fn_22() throws Exception
@@ -4381,7 +4332,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_68")
   @Test
   public void test_lead_func_lead_Fn_68() throws Exception
@@ -4460,7 +4410,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_38")
   @Test
   public void test_aggregates_winFnQry_38() throws Exception
@@ -4476,7 +4425,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_8")
   @Test
   public void test_lead_func_lead_Fn_8() throws Exception
@@ -4688,7 +4636,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_13")
   @Test
   public void test_lead_func_lead_Fn_13() throws Exception
@@ -4789,7 +4736,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_24")
   @Test
   public void test_lead_func_lead_Fn_24() throws Exception
@@ -4847,7 +4793,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_36")
   @Test
   public void test_aggregates_winFnQry_36() throws Exception
@@ -5038,7 +4983,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("lag_func/lag_Fn_82")
   @Test
   public void test_lag_func_lag_Fn_82() throws Exception
@@ -5061,7 +5005,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("aggregates/winFnQry_12")
   @Test
   public void test_aggregates_winFnQry_12() throws Exception
@@ -5070,7 +5013,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_11")
   @Test
   public void test_lead_func_lead_Fn_11() throws Exception
@@ -5208,7 +5150,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_64")
   @Test
   public void test_lead_func_lead_Fn_64() throws Exception
@@ -5317,7 +5258,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_34")
   @Test
   public void test_aggregates_winFnQry_34() throws Exception
@@ -5403,7 +5343,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_45")
   @Test
   public void test_aggregates_winFnQry_45() throws Exception
@@ -5440,7 +5379,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.AGGREGATION_NOT_SUPPORT_TYPE)
-
   @DrillTest("nestedAggs/woutOby_7")
   @Test
   public void test_nestedAggs_woutOby_7() throws Exception
@@ -5469,8 +5407,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
+  @DecoupledIgnore(Modes.MISSING_DESC)
   @DrillTest("lag_func/lag_Fn_108")
   @Test
   public void test_lag_func_lag_Fn_108() throws Exception
@@ -5486,7 +5423,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-
   @DrillTest("lag_func/lag_Fn_69")
   @Test
   public void test_lag_func_lag_Fn_69() throws Exception
@@ -5572,7 +5508,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_97")
   @Test
   public void test_lead_func_lead_Fn_97() throws Exception
@@ -5695,7 +5630,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("aggregates/winFnQry_21")
   @Test
   public void test_aggregates_winFnQry_21() throws Exception
@@ -5740,7 +5674,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_20")
   @Test
   public void test_lead_func_lead_Fn_20() throws Exception
@@ -5749,7 +5682,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_66")
   @Test
   public void test_lead_func_lead_Fn_66() throws Exception
@@ -5851,7 +5783,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_32")
   @Test
   public void test_aggregates_winFnQry_32() throws Exception
@@ -5860,7 +5791,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_78")
   @Test
   public void test_aggregates_winFnQry_78() throws Exception
@@ -5975,7 +5905,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lag_func/lag_Fn_103")
   @Test
   public void test_lag_func_lag_Fn_103() throws Exception
@@ -5984,7 +5913,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_19")
   @Test
   public void test_lead_func_lead_Fn_19() throws Exception
@@ -6014,7 +5942,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_char_1")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_char_1() throws Exception
@@ -6051,7 +5978,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_42")
   @Test
   public void test_aggregates_winFnQry_42() throws Exception
@@ -6144,7 +6070,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lag_func/lag_Fn_64")
   @Test
   public void test_lag_func_lag_Fn_64() throws Exception
@@ -6160,7 +6085,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_94")
   @Test
   public void test_lead_func_lead_Fn_94() throws Exception
@@ -6240,7 +6164,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_64")
   @Test
   public void test_aggregates_winFnQry_64() throws Exception
@@ -6369,7 +6292,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_70")
   @Test
   public void test_lead_func_lead_Fn_70() throws Exception
@@ -6378,7 +6300,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_75")
   @Test
   public void test_aggregates_winFnQry_75() throws Exception
@@ -6387,7 +6308,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-
   @DrillTest("frameclause/multipl_wnwds/mulwind_01")
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_01() throws Exception
@@ -6432,7 +6352,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.BIGINT_TO_DATE)
-
   @DrillTest("aggregates/winFnQry_40")
   @Test
   public void test_aggregates_winFnQry_40() throws Exception
@@ -6469,7 +6388,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NPE)
-
   @DrillTest("frameclause/RBUPACR/RBUPACR_chr_2")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_chr_2() throws Exception
@@ -6671,7 +6589,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_62")
   @Test
   public void test_aggregates_winFnQry_62() throws Exception
@@ -6766,7 +6683,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.AGGREGATION_NOT_SUPPORT_TYPE)
-
   @DrillTest("nestedAggs/woutOby_9")
   @Test
   public void test_nestedAggs_woutOby_9() throws Exception
@@ -6838,7 +6754,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_72")
   @Test
   public void test_lead_func_lead_Fn_72() throws Exception
@@ -6896,7 +6811,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("lead_func/lead_Fn_15")
   @Test
   public void test_lead_func_lead_Fn_15() throws Exception
@@ -7013,7 +6927,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
-
   @DrillTest("lead_func/lead_Fn_90")
   @Test
   public void test_lead_func_lead_Fn_90() throws Exception
@@ -7142,7 +7055,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.RESULT_PARSE_EXCEPTION)
-
   @DrillTest("lag_func/lag_Fn_95")
   @Test
   public void test_lag_func_lag_Fn_95() throws Exception
@@ -7264,7 +7176,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_82")
   @Test
   public void test_aggregates_winFnQry_82() throws Exception
@@ -7273,7 +7184,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.CANNOT_APPLY_VIRTUAL_COL)
-
   @DrillTest("nestedAggs/multiWin_5")
   @Test
   public void test_nestedAggs_multiWin_5() throws Exception
@@ -7289,7 +7199,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_17")
   @Test
   public void test_lead_func_lead_Fn_17() throws Exception
@@ -7418,7 +7327,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
-
   @DrillTest("lead_func/lead_Fn_92")
   @Test
   public void test_lead_func_lead_Fn_92() throws Exception
@@ -7562,7 +7470,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.MISSING_DESC)
-
   @DrillTest("frameclause/multipl_wnwds/mulwind_07")
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_07() throws Exception
@@ -7641,7 +7548,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
-
   @DrillTest("aggregates/winFnQry_80")
   @Test
   public void test_aggregates_winFnQry_80() throws Exception
