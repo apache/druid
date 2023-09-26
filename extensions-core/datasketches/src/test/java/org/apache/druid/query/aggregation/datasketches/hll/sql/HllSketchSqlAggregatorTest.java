@@ -824,8 +824,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .postAggregators(
                       ImmutableList.of(
                           new HllSketchToEstimatePostAggregator("p1", new FieldAccessPostAggregator("p0", "a0"), false),
-                          new HllSketchToEstimatePostAggregator("s1", new FieldAccessPostAggregator("s0", "a0"), false),
-                          new HllSketchToStringPostAggregator("s3", new FieldAccessPostAggregator("s2", "a0"))
+                          new HllSketchToEstimatePostAggregator("_p1", new FieldAccessPostAggregator("_p0", "a0"), false),
+                          new HllSketchToStringPostAggregator("_p3", new FieldAccessPostAggregator("_p2", "a0"))
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
