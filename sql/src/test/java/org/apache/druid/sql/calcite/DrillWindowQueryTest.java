@@ -2639,7 +2639,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DrillTest("aggregates/testW_Nulls_1")
+  @DecoupledIgnore(Modes.RESULT_COUNT_MISMATCH) @DrillTest("aggregates/testW_Nulls_1")
   @Test
   public void test_aggregates_testW_Nulls_1() throws Exception
   {
@@ -6183,6 +6183,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @DecoupledIgnore(Modes.INCORRECT_SYNTAX)
   @DrillTest("nestedAggs/nstdWinView01")
   @Test
   public void test_nestedAggs_nstdWinView01() throws Exception

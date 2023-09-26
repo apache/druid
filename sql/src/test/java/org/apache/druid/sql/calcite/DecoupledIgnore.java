@@ -65,7 +65,8 @@ public @interface DecoupledIgnore
     MISSING_DESC(DruidException.class, "function signature DESC"),
     RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
     ALLDATA_CSV(DruidException.class, "allData.csv"),
-    BIGINT_TIME_COMPARE(DruidException.class,"Cannot apply '.' to arguments of type");
+    BIGINT_TIME_COMPARE(DruidException.class,"Cannot apply '.' to arguments of type"),
+    INCORRECT_SYNTAX(DruidException.class,"Incorrect syntax near the keyword");
 
 
     public Class<? extends Throwable> throwableClass;
