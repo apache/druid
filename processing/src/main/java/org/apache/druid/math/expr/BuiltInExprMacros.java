@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -134,6 +135,75 @@ public class BuiltInExprMacros
       public boolean isNullLiteral()
       {
         return args.get(1).isNullLiteral();
+      }
+
+      @Nullable
+      @Override
+      public Object getLiteralValue()
+      {
+        return eval(InputBindings.nilBindings()).value();
+      }
+    }
+  }
+
+  public static class StringDecodeBase64UTFExprMacro implements ExprMacroTable.ExprMacro
+  {
+
+    public static final String NAME = "decode_base64_utf8";
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+      return new StringDecodeBase64UTFExpression(args.get(0));
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    {
+      public StringDecodeBase64UTFExpression(Expr arg)
+      {
+        super(NAME, arg);
+      }
+
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        ExprEval<?> toDecode = arg.eval(bindings);
+        if (toDecode.value() == null) {
+          return ExprEval.of(null);
+        }
+        return new StringExpr(StringUtils.fromUtf8(StringUtils.decodeBase64String(toDecode.asString()))).eval(bindings);
+      }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        return shuttle.visit(apply(shuttle.visitAll(Collections.singletonList(arg))));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
+      }
+
+      @Override
+      public boolean isLiteral()
+      {
+        return arg.isLiteral();
+      }
+
+      @Override
+      public boolean isNullLiteral()
+      {
+        return arg.isNullLiteral();
       }
 
       @Nullable

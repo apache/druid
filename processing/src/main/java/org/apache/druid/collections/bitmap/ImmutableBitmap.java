@@ -47,7 +47,7 @@ public interface ImmutableBitmap
    */
   default BatchIterator batchIterator()
   {
-    return new BatchIteratorAdapter(iterator());
+    return new BatchIteratorAdapter(peekableIterator());
   }
 
   /**
