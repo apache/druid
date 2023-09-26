@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -43,6 +44,7 @@ import org.joda.time.Months;
 import org.joda.time.Period;
 import org.joda.time.Weeks;
 import org.joda.time.Years;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -354,6 +356,27 @@ public class QueryGranularityTest
             hour.bucketStart(DateTimes.of("2012-11-04T01:30:00-08:00")),
             hour.bucketStart(DateTimes.of("2012-11-04T02:30:00-08:00")),
             hour.bucketStart(DateTimes.of("2012-11-04T03:30:00-08:00"))
+        )
+    );
+
+    final PeriodGranularity p7days = new PeriodGranularity(
+        new Period("P7D"),
+        DateTimes.of("2022-03-24T02:35:00.000-07:00"),
+        tz
+    );
+    assertSameDateTime(
+        Lists.newArrayList(
+            new DateTime("2022-03-03T02:35:00.000-08:00", tz),
+            new DateTime("2022-03-10T02:35:00.000-08:00", tz),
+            new DateTime("2022-03-24T02:35:00.000-07:00", tz),
+            new DateTime("2022-03-31T02:35:00.000-07:00", tz)
+
+        ),
+        Lists.newArrayList(
+            p7days.bucketStart(DateTimes.of("2022-03-04T02:35:00.000-08:00")),
+            p7days.bucketStart(DateTimes.of("2022-03-16T02:35:00.000-07:00")),
+            p7days.bucketStart(DateTimes.of("2022-03-26T02:35:00.000-07:00")),
+            p7days.bucketStart(DateTimes.of("2022-03-31T03:35:00.000-07:00"))
         )
     );
   }
@@ -877,7 +900,7 @@ public class QueryGranularityTest
     Assert.assertFalse("actualIter not exhausted!?", actualIter.hasNext());
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
   }
-  
+
   @Test
   public void testTruncateKathmandu()
   {
