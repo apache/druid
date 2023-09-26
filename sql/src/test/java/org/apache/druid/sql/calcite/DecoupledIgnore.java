@@ -93,6 +93,7 @@ public @interface DecoupledIgnore
     public Statement apply(Statement base, Description description)
     {
       DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
+
       if (annotation == null) {
         return base;
       }
