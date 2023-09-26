@@ -55,7 +55,7 @@ public class SamplerConfig
 
     Preconditions.checkArgument(this.numRows <= MAX_NUM_ROWS, "numRows must be <= %s", MAX_NUM_ROWS);
     Preconditions.checkArgument(
-        this.readTimeoutMs != null && this.readTimeoutMs <= this.timeoutMs,
+        this.readTimeoutMs == null || this.readTimeoutMs <= this.timeoutMs,
         "readTimeoutMs must be <= timeoutMs"
     );
   }
