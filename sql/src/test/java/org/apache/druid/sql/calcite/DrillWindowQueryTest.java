@@ -200,8 +200,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           String[] cols = string.split("\t");
           results.add(cols);
         }
-      } catch (Exception e)
-      {
+      }
+      catch (Exception e) {
         throw new RuntimeException("Encountered exception while loading testcase", e);
       }
     }
@@ -368,8 +368,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         } else {
           assertResultsEquals(sql, expectedResults, results);
         }
-      } catch (AssertionError e)
-      {
+      }
+      catch (AssertionError e) {
         displayResults(expectedResults);
         System.out.println("query: " + sql);
         displayResults(results);
@@ -403,24 +403,23 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         if ("null".equals(val)) {
           newVal = null;
         } else {
-          switch (type.getType())
-          {
-          case STRING:
-            newVal = val;
-            break;
-          case LONG:
-            if (val.matches("-?[0-9]+")) {
-              newVal = Numbers.parseLong(val);
-            } else {
-              Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
-              newVal = parser.apply(val);
-            }
-            break;
-          case DOUBLE:
-            newVal = Numbers.parseDoubleObject(val);
-            break;
-          default:
-            throw new RuntimeException("unimplemented");
+          switch (type.getType()) {
+            case STRING:
+              newVal = val;
+              break;
+            case LONG:
+              if (val.matches("-?[0-9]+")) {
+                newVal = Numbers.parseLong(val);
+              } else {
+                Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
+                newVal = parser.apply(val);
+              }
+              break;
+            case DOUBLE:
+              newVal = Numbers.parseDoubleObject(val);
+              break;
+            default:
+              throw new RuntimeException("unimplemented");
           }
         }
         newRow[i] = newVal;
@@ -449,7 +448,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           .sql(testCase.getQueryString())
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
           .run();
-    } finally {
+    }
+    finally {
       if (thread != null && oldName != null) {
         thread.setName(oldName);
       }
@@ -482,7 +482,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
                         .readValues(
                             ClassLoader.getSystemResource("drill/window/datasources/" + dataSource + ".json")),
                     (Function<Map, InputRow>) input -> new MapBasedInputRow(0, dimensionNames, input));
-              } catch (IOException e) {
+              }
+              catch (IOException e) {
                 throw new RE(e, "problem reading file");
               }
             })
