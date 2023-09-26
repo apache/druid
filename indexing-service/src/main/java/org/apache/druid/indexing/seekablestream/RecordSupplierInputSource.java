@@ -168,7 +168,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
             }
             if (nextRecordTerminationTime != null && currentTime > nextRecordTerminationTime) {
               LOG.info(
-                  "Configured sampler poll timeout [%s] has been exceeded, returning without a bytesIterator.",
+                  "Configured sampler next record timeout [%s] has been exceeded, returning without a bytesIterator.",
                   nextRecordTimeoutMs
               );
               bytesIterator = null;
