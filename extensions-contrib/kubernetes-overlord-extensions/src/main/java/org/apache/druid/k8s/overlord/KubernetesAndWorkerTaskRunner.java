@@ -276,4 +276,17 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
     }
     return Math.max(0, k8sCapacity) + Math.max(0, workerCapacity);
   }
+
+  // Worker task runners do not implement these methods
+  @Override
+  public void updateStatus(Task task, TaskStatus status)
+  {
+    kubernetesTaskRunner.updateStatus(task, status);
+  }
+
+  @Override
+  public void updateLocation(Task task, TaskLocation location)
+  {
+    kubernetesTaskRunner.updateLocation(task, location);
+  }
 }
