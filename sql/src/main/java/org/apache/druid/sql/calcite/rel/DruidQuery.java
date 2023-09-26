@@ -42,6 +42,7 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -788,9 +789,7 @@ public class DruidQuery
       JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
-    if (!canUseIntervalFiltering(dataSource)) {
-      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), false));
-    } else if (dataSource instanceof UnnestDataSource) {
+    if (dataSource instanceof UnnestDataSource) {
       // UnnestDataSource can have another unnest data source
       // join datasource, filtered data source, etc as base
       Pair<DataSource, Filtration> pair = getFiltration(
@@ -800,6 +799,8 @@ public class DruidQuery
           joinableFactoryWrapper
       );
       return Pair.of(dataSource, pair.rhs);
+    } else if (!canUseIntervalFiltering(dataSource)) {
+      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), false));
     } else if (dataSource instanceof FilteredDataSource) {
       // A filteredDS is created only inside the rel for Unnest, ensuring it only grabs the outermost filter
       // and, if possible, pushes it down inside the data source.
@@ -811,6 +812,11 @@ public class DruidQuery
       // 1) creating a filtration from the filteredDS's filter and
       // 2) Updating the interval of the outer filter with the intervals in step 1, and you'll see these 2 calls in the code
       final FilteredDataSource filteredDataSource = (FilteredDataSource) dataSource;
+      // Defensive check as in the base of a filter cannot be another filter
+      final DataSource baseOfFilterDataSource = filteredDataSource.getBase();
+      if (baseOfFilterDataSource instanceof FilteredDataSource) {
+        throw DruidException.defensive("Cannot create a filteredDataSource using another filteredDataSource as a base");
+      }
       final boolean useIntervalFiltering = canUseIntervalFiltering(filteredDataSource);
       final Filtration baseFiltration = toFiltration(
           filteredDataSource.getFilter(),
@@ -842,7 +848,6 @@ public class DruidQuery
           leftFiltration.getDimFilter(),
           joinableFactoryWrapper
       );
-
       return Pair.of(newDataSource, queryFiltration);
     } else {
       return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), true));
