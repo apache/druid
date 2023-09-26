@@ -20,12 +20,13 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -40,6 +41,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.rpc.FixedSetServiceLocator;
 import org.apache.druid.rpc.ServiceClientFactory;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.function.Function;
 
@@ -78,7 +80,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
       Query<QueryType> query,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
       Closer closer
-  )
+  ) throws IOException
   {
     final Query<QueryType> preparedQuery = Queries.withSpecificSegments(
         query.withDataSource(new TableDataSource(dataSource)),
@@ -118,8 +120,10 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
           input -> !(input instanceof HandoffException),
           numRetriesOnMissingSegments
       );
-    } catch (Exception e) {
-      throw new RE(e);
+    }
+    catch (Exception e) {
+      Throwables.propagateIfPossible(e, HandoffException.class);
+      throw new IOE(e, "Exception while fetching rows from dataservers.");
     }
 
     return mappingFunction.apply(queryReturnSequence).map(row -> {

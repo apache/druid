@@ -19,6 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-public class HandoffException extends Exception
+public class HandoffException extends RuntimeException
 {
 }

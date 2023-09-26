@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Query;
 
+import java.io.IOException;
 import java.util.function.Function;
 
 public interface LoadedSegmentDataProvider
@@ -31,5 +32,5 @@ public interface LoadedSegmentDataProvider
       Query<QueryType> query,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
       Closer closer
-  );
+  ) throws IOException;
 }

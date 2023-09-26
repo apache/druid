@@ -28,6 +28,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -77,7 +78,7 @@ public class SegmentWithDescriptor
       Query<T> query,
       Function<Sequence<T>, Sequence<S>> mappingFunction,
       Closer closer
-  )
+  ) throws IOException
   {
     return loadedSegmentDataProvider.fetchRowsFromDataServer(query, mappingFunction, closer);
   }

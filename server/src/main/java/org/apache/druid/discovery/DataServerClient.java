@@ -21,6 +21,7 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -78,6 +79,7 @@ public class DataServerClient<T>
   }
 
   public Sequence<T> run(Query<T> query, ResponseContext responseContext, Closer closer)
+      throws Exception
   {
     final String basePath = "/druid/v2/";
     final String cancelPath = basePath + query.getId();
@@ -88,15 +90,14 @@ public class DataServerClient<T>
       queryResultType = objectMapper.getTypeFactory().constructType(ResultRow.class);
     }
 
-    Future<InputStream> resultStreamFuture;
-    resultStreamFuture = serviceClient.asyncRequest(
+    InputStream resultStream = serviceClient.request(
         new RequestBuilder(HttpMethod.POST, basePath)
             .smileContent(smileMapper, query),
         new DataServerResponseHandler(query, responseContext, smileMapper)
     );
     closer.register(
         () -> {
-          if (!resultStreamFuture.isDone()) {
+          if (!resultStream.markSupported()) {
             cancelQuery(query, cancelPath);
           }
         }
@@ -110,7 +111,7 @@ public class DataServerClient<T>
           {
             return new JsonParserIterator<>(
                 queryResultType,
-                resultStreamFuture,
+                Futures.immediateFuture(resultStream),
                 basePath,
                 query,
                 "",
