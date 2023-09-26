@@ -108,7 +108,7 @@ Once you are satisfied with the spec, click `Submit` and an ingestion task will 
 You will be taken to the task view with the focus on the newly created task.
 The task view is set to auto refresh, wait until your task succeeds.
 
-When a tasks succeeds it means that it built one or more segments that will now be picked up by the data servers.
+When a task succeeds it means that it built one or more segments that will now be picked up by the data servers.
 
 Navigate to the `Datasources` view from the header.
  
