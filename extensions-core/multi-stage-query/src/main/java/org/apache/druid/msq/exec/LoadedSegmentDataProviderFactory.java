@@ -52,7 +52,7 @@ public class LoadedSegmentDataProviderFactory
       ChannelCounters channelCounters
   )
   {
-    return new LoadedSegmentDataProvider(
+    return new LoadedSegmentDataProviderImpl(
         segmentDescriptor,
         dataSource,
         channelCounters,

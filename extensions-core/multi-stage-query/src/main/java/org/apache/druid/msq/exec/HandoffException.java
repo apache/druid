@@ -19,17 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.Query;
-
-import java.util.function.Function;
-
-public interface LoadedSegmentDataProvider
+public class HandoffException extends Exception
 {
-  <ReturnType, QueryType> Sequence<ReturnType> fetchRowsFromDataServer(
-      Query<QueryType> query,
-      Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
-      Closer closer
-  );
 }

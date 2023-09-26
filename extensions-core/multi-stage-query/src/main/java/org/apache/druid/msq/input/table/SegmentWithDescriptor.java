@@ -73,14 +73,15 @@ public class SegmentWithDescriptor
   {
     return segmentSupplier.get();
   }
-  public <T, U> Sequence<U> getServedSegmentFromServer(
+  public <T, S> Sequence<S> fetchRowsFromDataServer(
       Query<T> query,
-      Function<Sequence<T>, Sequence<U>> mappingFunction,
+      Function<Sequence<T>, Sequence<S>> mappingFunction,
       Closer closer
   )
   {
-    return loadedSegmentDataProvider.fetchServedSegmentInternal(query, mappingFunction, closer);
+    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, mappingFunction, closer);
   }
+
   /**
    * The segment descriptor associated with this physical segment.
    */

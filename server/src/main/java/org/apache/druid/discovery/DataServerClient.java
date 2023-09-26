@@ -21,12 +21,11 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.JsonParserIterator;
-import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
@@ -78,8 +77,7 @@ public class DataServerClient<T>
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
 
-
-  public ResourceHolder<Sequence<T>> run(Query<T> query, ResponseContext context)
+  public Sequence<T> run(Query<T> query, ResponseContext responseContext, Closer closer)
   {
     final String basePath = "/druid/v2/";
     final String cancelPath = basePath + query.getId();
@@ -91,58 +89,42 @@ public class DataServerClient<T>
     }
 
     Future<InputStream> resultStreamFuture;
-    try {
-      resultStreamFuture = Futures.immediateFuture(serviceClient.request(
-          new RequestBuilder(HttpMethod.POST, basePath)
-              .smileContent(smileMapper, query),
-          new DataServerResponseHandler(query, context, smileMapper)
-      ));
-
-      BaseSequence<T, JsonParserIterator<T>> baseSequence = new BaseSequence<>(
-          new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
-          {
-            @Override
-            public JsonParserIterator<T> make()
-            {
-              return new JsonParserIterator<>(
-                  queryResultType,
-                  resultStreamFuture,
-                  basePath,
-                  query,
-                  "",
-                  smileMapper
-              );
-            }
-
-            @Override
-            public void cleanup(JsonParserIterator<T> iterFromMake)
-            {
-              CloseableUtils.closeAndWrapExceptions(iterFromMake);
-            }
-          }
-      );
-
-      return new ResourceHolder<Sequence<T>>()
-      {
-        @Override
-        public Sequence<T> get()
-        {
-          return baseSequence;
-        }
-
-        @Override
-        public void close()
-        {
+    resultStreamFuture = serviceClient.asyncRequest(
+        new RequestBuilder(HttpMethod.POST, basePath)
+            .smileContent(smileMapper, query),
+        new DataServerResponseHandler(query, responseContext, smileMapper)
+    );
+    closer.register(
+        () -> {
           if (!resultStreamFuture.isDone()) {
             cancelQuery(query, cancelPath);
           }
         }
-      };
-    }
-    catch (Exception e) {
-      cancelQuery(query, cancelPath);
-      throw new RuntimeException(e);
-    }
+    );
+
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
+        {
+          @Override
+          public JsonParserIterator<T> make()
+          {
+            return new JsonParserIterator<>(
+                queryResultType,
+                resultStreamFuture,
+                basePath,
+                query,
+                "",
+                smileMapper
+            );
+          }
+
+          @Override
+          public void cleanup(JsonParserIterator<T> iterFromMake)
+          {
+            CloseableUtils.closeAndWrapExceptions(iterFromMake);
+          }
+        }
+    );
   }
 
   private void cancelQuery(Query<T> query, String cancelPath)

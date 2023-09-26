@@ -58,7 +58,7 @@ public class FixedSetServiceLocator implements ServiceLocator
     return Futures.immediateFuture(
         ServiceLocations.forLocation(
             locationSet.stream()
-                       .skip(new ThreadLocalRandom().nextInt(locationSet.size()))
+                       .skip(ThreadLocalRandom.current().nextInt(locationSet.size()))
                        .findFirst()
                        .orElse(null)
         )

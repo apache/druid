@@ -114,7 +114,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     if (resultYielder == null) {
       Sequence<ResultRow> servedSegmentFromServer =
-          segment.getServedSegmentFromServer(prepareGroupByQuery(query), Function.identity(), closer);
+          segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), closer);
       resultYielder = Yielders.each(servedSegmentFromServer);
     }
 
