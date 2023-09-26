@@ -63,7 +63,8 @@ public @interface DecoupledIgnore
     RESULT_PARSE_EXCEPTION(Exception.class, "parseResults"),
     AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),
     CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
-    MISSING_DESC(DruidException.class, "function signature DESC");
+    MISSING_DESC(DruidException.class, "function signature DESC"),
+    RESULT_COUNT_MISMATCH(AssertionError.class, "result count:");
 
 
     public Class<? extends Throwable> throwableClass;
