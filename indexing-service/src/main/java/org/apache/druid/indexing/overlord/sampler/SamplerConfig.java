@@ -34,7 +34,7 @@ public class SamplerConfig
 
   private final int numRows;
   private final int timeoutMs;
-  private final int nextRecordTimeoutMs;
+  private final Integer readTimeoutMs;
   private final long maxBytesInMemory;
   private final long maxClientResponseBytes;
 
@@ -42,18 +42,22 @@ public class SamplerConfig
   public SamplerConfig(
       @JsonProperty("numRows") @Nullable Integer numRows,
       @JsonProperty("timeoutMs") @Nullable Integer timeoutMs,
-      @JsonProperty("nextRecordTimeoutMs") @Nullable Integer nextRecordTimeoutMs,
+      @JsonProperty("readTimeoutMs") @Nullable Integer readTimeoutMs,
       @JsonProperty("maxBytesInMemory") @Nullable HumanReadableBytes maxBytesInMemory,
       @JsonProperty("maxClientResponseBytes") @Nullable HumanReadableBytes maxClientResponseBytes
   )
   {
     this.numRows = numRows != null ? numRows : DEFAULT_NUM_ROWS;
     this.timeoutMs = timeoutMs != null ? timeoutMs : DEFAULT_TIMEOUT_MS;
-    this.nextRecordTimeoutMs = nextRecordTimeoutMs != null ? nextRecordTimeoutMs : this.timeoutMs;
+    this.readTimeoutMs = readTimeoutMs;
     this.maxBytesInMemory = maxBytesInMemory != null ? maxBytesInMemory.getBytes() : Long.MAX_VALUE;
     this.maxClientResponseBytes = maxClientResponseBytes != null ? maxClientResponseBytes.getBytes() : 0;
 
     Preconditions.checkArgument(this.numRows <= MAX_NUM_ROWS, "numRows must be <= %s", MAX_NUM_ROWS);
+    Preconditions.checkArgument(
+        this.readTimeoutMs != null && this.readTimeoutMs <= this.timeoutMs,
+        "readTimeoutMs must be <= timeoutMs"
+    );
   }
 
   /**
@@ -92,9 +96,10 @@ public class SamplerConfig
    *
    * @return timeout in milliseconds
    */
-  public int getNextRecordTimeoutMs()
+  @Nullable
+  public Integer getReadTimeoutMs()
   {
-    return nextRecordTimeoutMs;
+    return readTimeoutMs;
   }
 
   /**

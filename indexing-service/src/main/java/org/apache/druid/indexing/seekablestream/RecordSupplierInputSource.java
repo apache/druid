@@ -62,21 +62,21 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
    * Maximum amount of time in which the entity iterator will wait for more records when polling. If null, no timeout
    * is applied.
    */
-  private final Integer nextRecordTimeoutMs;
+  private final Integer readTimeoutMs;
 
   public RecordSupplierInputSource(
       String topic,
       RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier,
       boolean useEarliestOffset,
       @Nullable Integer iteratorTimeoutMs,
-      @Nullable Integer nextRecordTimeoutMs
+      @Nullable Integer readTimeoutMs
   )
   {
     this.topic = topic;
     this.recordSupplier = recordSupplier;
     this.useEarliestOffset = useEarliestOffset;
     this.iteratorTimeoutMs = iteratorTimeoutMs;
-    this.nextRecordTimeoutMs = nextRecordTimeoutMs;
+    this.readTimeoutMs = readTimeoutMs;
 
     assignAndSeek(recordSupplier);
   }
@@ -151,7 +151,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       private final long createTime = System.currentTimeMillis();
       private final Long terminationTime = iteratorTimeoutMs != null ? createTime + iteratorTimeoutMs : null;
 
-      private volatile Long nextRecordTerminationTime = null;
+      private volatile Long readTerminationTime = null;
 
       private void waitNextIteratorIfNecessary()
       {
@@ -166,10 +166,10 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
               bytesIterator = null;
               return;
             }
-            if (nextRecordTerminationTime != null && currentTime > nextRecordTerminationTime) {
+            if (readTerminationTime != null && currentTime > readTerminationTime) {
               LOG.info(
                   "Configured sampler next record timeout [%s] has been exceeded, returning without a bytesIterator.",
-                  nextRecordTimeoutMs
+                  readTimeoutMs
               );
               bytesIterator = null;
               return;
@@ -179,8 +179,8 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
 
           if (!closed) {
             bytesIterator = recordIterator.next().getData().iterator();
-            if (nextRecordTimeoutMs != null && bytesIterator.hasNext()) {
-              nextRecordTerminationTime = System.currentTimeMillis() + nextRecordTimeoutMs;
+            if (readTimeoutMs != null && bytesIterator.hasNext()) {
+              readTerminationTime = System.currentTimeMillis() + readTimeoutMs;
             }
           }
         }

@@ -139,7 +139,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNextRecordTimeoutExceeded() throws IOException
+  public void testReadTimeoutExceeded() throws IOException
   {
     int numRecordsPerPoll = 1;
     final RandomCsvSupplier supplier = new RandomCsvSupplier(numRecordsPerPoll);
