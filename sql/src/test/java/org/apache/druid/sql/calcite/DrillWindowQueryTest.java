@@ -1393,6 +1393,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_17")
   @Test
   public void test_lag_func_lag_Fn_17() throws Exception
@@ -2586,7 +2587,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DecoupledIgnore(Modes.COLUMN_NOT_FOUND)
   @DrillTest("aggregates/winFnQry_76")
   @Test
   public void test_aggregates_winFnQry_76() throws Exception
@@ -2821,6 +2821,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_65")
   @Test
   public void test_lag_func_lag_Fn_65() throws Exception
@@ -6055,6 +6056,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @DecoupledIgnore(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_64")
   @Test
   public void test_lag_func_lag_Fn_64() throws Exception
