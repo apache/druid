@@ -214,10 +214,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     assertEquals(1, queries.size());
     Object query = queries.get(0);
 
-    if(false && query instanceof ScanQuery) {
+    if (false && query instanceof ScanQuery) {
       DataSource ds = ((ScanQuery) query).getDataSource();
       assertInstanceOf(QueryDataSource.class, ds);
-      query=((QueryDataSource)ds).getQuery();
+      query = ((QueryDataSource) ds).getQuery();
     }
     assertInstanceOf(WindowOperatorQuery.class, query);
     return (WindowOperatorQuery) query;
@@ -236,7 +236,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   public static class WindowQueryTestInputClass
   {
-    enum TestType {
+    enum TestType
+    {
       failingTest,
       operatorValidation
     }
