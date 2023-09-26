@@ -39,8 +39,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
   /**
    * Workaround to avoid unconditional rewrite of SUM into COUNT+SUM0.
    *
-   * Should be addressed in >Calcite-1.35;
-   * CALCITE-6020
+   * Could be handled differenly after >Calcite-1.35; CALCITE-6020
    */
   private static final SqlAggFunction DRUID_SUM = new SqlSumAggFunction(Nullness.castNonNull(null));
 
