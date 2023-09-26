@@ -25,6 +25,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
@@ -36,6 +37,8 @@ import java.util.Map;
  */
 public interface ControllerContext
 {
+  ServiceEmitter emitter();
+
   ObjectMapper jsonMapper();
 
   /**
