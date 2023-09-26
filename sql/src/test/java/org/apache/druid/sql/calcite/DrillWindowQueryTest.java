@@ -83,8 +83,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
@@ -141,8 +144,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
 
     for (String string : allCases) {
-      string = string.replaceFirst("..$", "");
-      System.out.printf("@%s( \"%s\" )\n"
+      string = string.substring(0, string.lastIndexOf('.'));
+      System.out.printf(Locale.ENGLISH, "@%s( \"%s\" )\n"
           + "@Test\n"
           + "public void test_%s() throws Exception {\n"
           + "    windowQueryTest();\n"
@@ -353,16 +356,10 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     @Override
     public void verify(String sql, List<Object[]> results)
     {
-      // FIXME: SqlToRelConverter.isOrdered(null) would be better
-      boolean unsorted = !sql.toLowerCase()
-          .replaceAll("\n", " ")
-          .replaceFirst(".*\\)", "")
-          .contains("order");
-
       List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
-        if (unsorted) {
+        if (!isOrdered(sql)) {
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         } else {
@@ -375,6 +372,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         displayResults(results);
         throw e;
       }
+    }
+
+    private boolean isOrdered(String sql)
+    {
+      // FIXME: SqlToRelConverter.isOrdered(null) would be better
+      sql = sql.toLowerCase(Locale.ENGLISH).replace('\n', ' ');
+      sql = sql.substring(sql.lastIndexOf(')'));
+      return sql.contains("order");
     }
   }
 
@@ -391,6 +396,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
   {
+    Predicate<String> longPattern = Pattern.compile("-?[0-9]+").asPredicate();
     List<Object[]> ret = new ArrayList<>();
     for (String[] row : results) {
       Object[] newRow = new Object[row.length];
@@ -408,7 +414,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
               newVal = val;
               break;
             case LONG:
-              if (val.matches("-?[0-9]+")) {
+              if (longPattern.test(val)) {
                 newVal = Numbers.parseLong(val);
               } else {
                 Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
