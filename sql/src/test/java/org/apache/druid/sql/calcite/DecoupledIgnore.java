@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.UOE;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -57,10 +58,12 @@ public @interface DecoupledIgnore
 
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
-    BIGINT_TO_DATE(DruidException.class, "BIGINT to type DATE"),
+    BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
-    NUMBER_FORMAT_EXCEPTION(NumberFormatException.class, "java.lang.NumberFormatException"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class,"Aggregation \\[(MIN)\\] does not support type");
+    RESULT_PARSE_EXCEPTION(Exception.class, "parseResults"),
+    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class,"Aggregation \\[(MIN|MAX)\\] does not support type"),
+    CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
+    MISSING_DESC(DruidException.class, "function signature DESC");
 
 
     public Class<? extends Throwable> throwableClass;
