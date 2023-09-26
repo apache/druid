@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
@@ -243,6 +244,25 @@ public class SupervisorManager
     }
     catch (Exception e) {
       log.error(e, "Checkpoint request failed");
+    }
+    return false;
+  }
+
+  public boolean updatePendingSegmentMapping(String supervisorId, SegmentIdWithShardSpec rootPendingSegment)
+  {
+    try {
+      Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
+      Preconditions.checkNotNull(rootPendingSegment, "rootPendingSegment cannot be null");
+
+      Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+
+      Preconditions.checkNotNull(supervisor, "supervisor could not be found");
+
+      supervisor.lhs.updatePendingSegmentMapping(rootPendingSegment);
+      return true;
+    }
+    catch (Exception e) {
+      log.error(e, "Pending segment mapping update request failed");
     }
     return false;
   }

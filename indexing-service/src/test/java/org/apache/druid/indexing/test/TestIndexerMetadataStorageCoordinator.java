@@ -253,6 +253,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
     return null;
   }
 
+  @Override
+  public Set<SegmentIdWithShardSpec> getAllVersionsOfPendingSegment(SegmentIdWithShardSpec rootPendingSegment)
+  {
+    return Collections.emptySet();
+  }
+
   public Set<DataSegment> getPublished()
   {
     return ImmutableSet.copyOf(published);

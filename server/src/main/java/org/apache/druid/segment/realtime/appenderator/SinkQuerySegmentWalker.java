@@ -69,7 +69,10 @@ import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -92,6 +95,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  private final Map<SegmentDescriptor, SegmentDescriptor> newIdToRootPendingSegment = new ConcurrentHashMap<>();
 
   public SinkQuerySegmentWalker(
       String dataSource,
@@ -182,7 +186,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
-        descriptor -> {
+        newDescriptor -> {
+          final SegmentDescriptor descriptor = newIdToRootPendingSegment.getOrDefault(newDescriptor, newDescriptor);
           final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
               descriptor.getInterval(),
               descriptor.getVersion(),
@@ -295,6 +300,19 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         cpuTimeAccumulator,
         true
     );
+  }
+
+  public void updatePendingSegmentMapping(
+      SegmentIdWithShardSpec rootPendingSegment,
+      Set<SegmentIdWithShardSpec> versionsOfPendingSegment
+  )
+  {
+    for (SegmentIdWithShardSpec versionOfPendingSegment : versionsOfPendingSegment) {
+      newIdToRootPendingSegment.put(
+          versionOfPendingSegment.asSegmentId().toDescriptor(),
+          rootPendingSegment.asSegmentId().toDescriptor()
+      );
+    }
   }
 
   @VisibleForTesting

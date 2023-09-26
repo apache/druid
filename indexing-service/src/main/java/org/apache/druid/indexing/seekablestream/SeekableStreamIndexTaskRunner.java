@@ -72,6 +72,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -82,7 +83,9 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Access;
@@ -1538,6 +1541,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return setEndOffsets(sequences, finish);
   }
 
+  @POST
+  @Path("updatePendingSegmentMapping")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response updatePendingSegmentMapping(
+      Pair<SegmentIdWithShardSpec, Set<SegmentIdWithShardSpec>> rootPendingSegmentToVersionMapping,
+      // this field is only for internal purposes, shouldn't be usually set by users
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.WRITE);
+    return updatePendingSegmentMapping(rootPendingSegmentToVersionMapping.lhs, rootPendingSegmentToVersionMapping.rhs);
+  }
+
   public Map<String, Object> doGetRowStats()
   {
     Map<String, Object> returnMap = new HashMap<>();
@@ -1740,6 +1757,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     resume();
 
     return Response.ok(sequenceNumbers).build();
+  }
+
+  private Response updatePendingSegmentMapping(
+      SegmentIdWithShardSpec rootPendingSegment,
+      Set<SegmentIdWithShardSpec> versionsOfPendingSegment
+  )
+  {
+    ((StreamAppenderator) appenderator).updatePendingSegmentMapping(rootPendingSegment, versionsOfPendingSegment);
+    return Response.ok().build();
   }
 
   private void resetNextCheckpointTime()

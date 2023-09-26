@@ -406,4 +406,6 @@ public interface IndexerMetadataStorageCoordinator
    */
   DataSegment retrieveSegmentForId(String id, boolean includeUnused);
 
+  Set<SegmentIdWithShardSpec> getAllVersionsOfPendingSegment(SegmentIdWithShardSpec rootPendingSegment);
+
 }

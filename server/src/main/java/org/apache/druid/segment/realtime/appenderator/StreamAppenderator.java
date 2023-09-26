@@ -1026,6 +1026,17 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
+  public void updatePendingSegmentMapping(
+      SegmentIdWithShardSpec rootPendingSegment,
+      Set<SegmentIdWithShardSpec> versionsOfPendingSegment
+  )
+  {
+    if (!sinks.containsKey(rootPendingSegment) || droppingSinks.contains(rootPendingSegment)) {
+      return;
+    }
+    ((SinkQuerySegmentWalker) texasRanger).updatePendingSegmentMapping(rootPendingSegment, versionsOfPendingSegment);
+  }
+
   private void lockBasePersistDirectory()
   {
     if (basePersistDirLock == null) {

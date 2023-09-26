@@ -49,6 +49,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -285,6 +286,12 @@ public class MaterializedViewSupervisor implements Supervisor
 
   @Override
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
+  {
+    // do nothing
+  }
+
+  @Override
+  public void updatePendingSegmentMapping(SegmentIdWithShardSpec rootPendingSegment)
   {
     // do nothing
   }
