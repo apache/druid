@@ -28,13 +28,10 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
@@ -150,7 +147,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
             // and aggregations=[CountAggregatorFactory{name='w0'}, LongSumAggregatorFactory{fieldName='a0', expression='null', name='w1'}]}}]}
             // These 2 tests are marked as failingTests to unblock testing at this moment
 
-            final WindowOperatorQuery query = extracted(results.recordedQueries);
+            final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
             for (int i = 0; i < input.expectedOperators.size(); ++i) {
               final OperatorFactory expectedOperator = input.expectedOperators.get(i);
               final OperatorFactory actualOperator = query.getOperators().get(i);
@@ -209,16 +206,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  private WindowOperatorQuery extracted(List<Query<?>> queries)
+  private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)
   {
     assertEquals(1, queries.size());
     Object query = queries.get(0);
-
-    if (false && query instanceof ScanQuery) {
-      DataSource ds = ((ScanQuery) query).getDataSource();
-      assertTrue(ds instanceof QueryDataSource);
-      query = ((QueryDataSource) ds).getQuery();
-    }
     assertTrue(query instanceof WindowOperatorQuery);
     return (WindowOperatorQuery) query;
   }
