@@ -396,7 +396,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
   {
-    Predicate<String> longPattern = Pattern.compile("-?[0-9]+").asPredicate();
+    Predicate<String> longPattern = Pattern.compile("^-?[0-9]+$").asPredicate();
     List<Object[]> ret = new ArrayList<>();
     for (String[] row : results) {
       Object[] newRow = new Object[row.length];
