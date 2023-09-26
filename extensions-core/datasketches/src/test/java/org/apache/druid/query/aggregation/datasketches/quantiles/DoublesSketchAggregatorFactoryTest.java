@@ -137,13 +137,16 @@ public class DoublesSketchAggregatorFactoryTest
               .aggregators(
                   new CountAggregatorFactory("count"),
                   new DoublesSketchAggregatorFactory("doublesSketch", "col", 8),
-                  new DoublesSketchMergeAggregatorFactory("doublesSketchMerge", 8)
+                  new DoublesSketchMergeAggregatorFactory("doublesSketchMerge", 8),
+                  new DoublesSketchMergeAggregatorFactory("doublesSketchNoFinalize", 8, null, false)
               )
               .postAggregators(
                   new FieldAccessPostAggregator("doublesSketch-access", "doublesSketch"),
                   new FinalizingFieldAccessPostAggregator("doublesSketch-finalize", "doublesSketch"),
                   new FieldAccessPostAggregator("doublesSketchMerge-access", "doublesSketchMerge"),
-                  new FinalizingFieldAccessPostAggregator("doublesSketchMerge-finalize", "doublesSketchMerge")
+                  new FinalizingFieldAccessPostAggregator("doublesSketchMerge-finalize", "doublesSketchMerge"),
+                  new FieldAccessPostAggregator("doublesSketchNoFinalize-access", "doublesSketchNoFinalize"),
+                  new FinalizingFieldAccessPostAggregator("doublesSketchNoFinalize-finalize", "doublesSketchNoFinalize")
               )
               .build();
 
@@ -153,10 +156,13 @@ public class DoublesSketchAggregatorFactoryTest
                     .add("count", ColumnType.LONG)
                     .add("doublesSketch", null)
                     .add("doublesSketchMerge", null)
+                    .add("doublesSketchNoFinalize", DoublesSketchModule.TYPE)
                     .add("doublesSketch-access", DoublesSketchModule.TYPE)
                     .add("doublesSketch-finalize", ColumnType.LONG)
                     .add("doublesSketchMerge-access", DoublesSketchModule.TYPE)
                     .add("doublesSketchMerge-finalize", ColumnType.LONG)
+                    .add("doublesSketchNoFinalize-access", DoublesSketchModule.TYPE)
+                    .add("doublesSketchNoFinalize-finalize", DoublesSketchModule.TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
