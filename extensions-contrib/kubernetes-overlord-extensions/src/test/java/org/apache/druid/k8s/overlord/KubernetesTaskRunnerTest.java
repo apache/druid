@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
@@ -144,6 +145,54 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
+  public void test_start_withExistingJobs_taskStillRunning() throws IOException
+  {
+    KubernetesWorkItem mockKubernetesWorkItem = EasyMock.createMock(KubernetesWorkItem.class);
+
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(
+            task.getId(),
+            k -> mockKubernetesWorkItem
+        ).getResult();
+      }
+    };
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
+    EasyMock.expect(mockKubernetesWorkItem.getResult()).andReturn(SettableFuture.create()).times(3);
+    EasyMock.expect(mockKubernetesWorkItem.isPending()).andReturn(true);
+    EasyMock.expect(mockKubernetesWorkItem.isPending()).andReturn(false);
+
+    EasyMock.replay(mockKubernetesWorkItem);
+    replayAll();
+
+    runner.start();
+
+    EasyMock.verify(mockKubernetesWorkItem);
+    verifyAll();
+
+    Assert.assertNotNull(runner.tasks);
+    Assert.assertEquals(1, runner.tasks.size());
+  }
+
+  @Test
   public void test_start_whenDeserializationExceptionThrown_isIgnored() throws IOException
   {
     KubernetesTaskRunner runner = new KubernetesTaskRunner(
@@ -181,6 +230,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertNotNull(runner.tasks);
     Assert.assertEquals(0, runner.tasks.size());
   }
+
 
   @Test
   public void test_streamTaskLog_withoutExistingTask_returnsEmptyOptional()

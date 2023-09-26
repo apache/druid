@@ -42,6 +42,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -317,7 +318,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void start()
   {
     log.info("Starting K8sTaskRunner...");
-    // Load tasks from previously running jobs and wait for their statuses to be updated asynchronously.
+    // Load tasks fromcom.google.common.util.concurrent.Futures create futurewa previously running jobs and wait for their statuses to be updated asynchronously.
     for (Job job : client.getPeonJobs()) {
       try {
         joinAsync(adapter.toTask(job));
@@ -326,6 +327,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
     }
+
+    waitForInitialization();
     log.info("Loaded %,d tasks from previous run", tasks.size());
 
     cleanupExecutor.scheduleAtFixedRate(
@@ -339,6 +342,31 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         TimeUnit.MILLISECONDS
     );
     log.debug("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
+  }
+
+  /* Best effort wait to sync state from Kubernetes. */
+  private void waitForInitialization()
+  {
+    try {
+      RetryUtils.retry(
+          () -> {
+            Collection<KubernetesWorkItem> pendingWorkItems = tasks.values().stream()
+                .filter(kubernetesWorkItem -> !kubernetesWorkItem.getResult().isDone() && kubernetesWorkItem.isPending())
+                .collect(Collectors.toSet());
+            if (!pendingWorkItems.isEmpty()) {
+              throw new ISE("Kubernetes state has not initialized yet");
+            }
+            return pendingWorkItems;
+          },
+          e -> e instanceof ISE,
+          6,
+          6
+
+      );
+    }
+    catch (Exception e) {
+      log.error("Kubernetes took too long to initialize, continuing startup.", e);
+    }
   }
 
   @Override
