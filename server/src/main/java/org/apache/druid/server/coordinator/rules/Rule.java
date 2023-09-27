@@ -53,8 +53,8 @@ public interface Rule
 
   /**
    * Returns the interval eligible for this rule. The interval must be computed based on the rule type
-   * optionally using {@code referenceTimestamp}. {@code referenceTimestamp} must be a timestamp
-   * between [{@link org.apache.druid.java.util.common.DateTimes.MIN}, {@link org.apache.druid.java.util.common.DateTimes.MAX}).
+   * optionally using {@code referenceTimestamp}. {@code referenceTimestamp} must be a {@link DateTime}
+   * between [{@link org.apache.druid.java.util.common.DateTimes#MIN}, {@link org.apache.druid.java.util.common.DateTimes#MAX}].
    */
   Interval getEligibleInterval(DateTime referenceTimestamp);
 }
