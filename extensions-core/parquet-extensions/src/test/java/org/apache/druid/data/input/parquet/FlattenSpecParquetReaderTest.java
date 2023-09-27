@@ -93,7 +93,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(objectMapper.readTree(FLAT_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -126,7 +126,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         JSONPathSpec.DEFAULT
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(objectMapper.readTree(FLAT_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -167,7 +167,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(objectMapper.readTree(FLAT_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -204,9 +204,9 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         schema,
         flattenSpec
     );
-    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
 
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    Assert.assertEquals(objectMapper.readTree(FLAT_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
 
@@ -243,7 +243,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(objectMapper.readTree(NESTED_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -276,7 +276,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         JSONPathSpec.DEFAULT
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(objectMapper.readTree(NESTED_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -319,7 +319,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(objectMapper.readTree(NESTED_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -360,7 +360,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(objectMapper.readTree(NESTED_JSON), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test

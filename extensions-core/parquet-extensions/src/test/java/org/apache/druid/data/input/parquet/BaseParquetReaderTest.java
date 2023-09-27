@@ -39,6 +39,7 @@ import java.util.List;
 class BaseParquetReaderTest extends InitializedNullHandlingTest
 {
   ObjectWriter DEFAULT_JSON_WRITER = new ObjectMapper().writerWithDefaultPrettyPrinter();
+  protected final ObjectMapper objectMapper = new ObjectMapper();
 
   InputEntityReader createReader(String parquetFile, InputRowSchema schema, JSONPathSpec flattenSpec)
   {
