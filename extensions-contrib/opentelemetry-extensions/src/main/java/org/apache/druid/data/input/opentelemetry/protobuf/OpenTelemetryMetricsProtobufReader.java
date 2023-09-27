@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.opentelemetry.proto.common.v1.AnyValue;
+import io.opentelemetry.proto.metrics.v1.DataPointFlags;
 import io.opentelemetry.proto.metrics.v1.Metric;
 import io.opentelemetry.proto.metrics.v1.MetricsData;
 import io.opentelemetry.proto.metrics.v1.NumberDataPoint;
@@ -146,14 +147,22 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
         inputRows = new ArrayList<>(metric.getSum().getDataPointsCount());
         metric.getSum()
             .getDataPointsList()
-            .forEach(dataPoint -> inputRows.add(parseNumberDataPoint(dataPoint, resourceAttributes, metricName)));
+            .forEach(dataPoint -> {
+              if (hasRecordedValue(dataPoint)) {
+                inputRows.add(parseNumberDataPoint(dataPoint, resourceAttributes, metricName));
+              }
+            });
         break;
       }
       case GAUGE: {
         inputRows = new ArrayList<>(metric.getGauge().getDataPointsCount());
         metric.getGauge()
             .getDataPointsList()
-            .forEach(dataPoint -> inputRows.add(parseNumberDataPoint(dataPoint, resourceAttributes, metricName)));
+            .forEach(dataPoint -> {
+              if (hasRecordedValue(dataPoint)) {
+                inputRows.add(parseNumberDataPoint(dataPoint, resourceAttributes, metricName));
+              }
+            });
         break;
       }
       // TODO Support HISTOGRAM and SUMMARY metrics
@@ -165,6 +174,11 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
 
     }
     return inputRows;
+  }
+
+  private static boolean hasRecordedValue(NumberDataPoint d)
+  {
+    return (d.getFlags() & DataPointFlags.FLAG_NO_RECORDED_VALUE_VALUE) == 0;
   }
 
   private InputRow parseNumberDataPoint(NumberDataPoint dataPoint,
