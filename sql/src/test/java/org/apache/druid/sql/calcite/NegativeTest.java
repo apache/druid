@@ -45,7 +45,7 @@ import static org.junit.Assert.assertThrows;
 @Target({ElementType.METHOD})
 public @interface NegativeTest
 {
-  Modes mode() default Modes.NOT_ENOUGH_RULES;
+  Modes value() default Modes.NOT_ENOUGH_RULES;
 
   enum Modes
   {
@@ -53,6 +53,7 @@ public @interface NegativeTest
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
     CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
     ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)");
+
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -80,12 +81,8 @@ public @interface NegativeTest
     @Override
     public Statement apply(Statement base, Description description)
     {
-<<<<<<< HEAD:sql/src/test/java/org/apache/druid/sql/calcite/DecoupledIgnore.java
-      DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
-=======
       NegativeTest annotation = description.getAnnotation(NegativeTest.class);
 
->>>>>>> 69dec17749 (negativeTest):sql/src/test/java/org/apache/druid/sql/calcite/NegativeTest.java
       if (annotation == null) {
         return base;
       }
@@ -94,23 +91,22 @@ public @interface NegativeTest
         @Override
         public void evaluate()
         {
+          Modes ignoreMode = annotation.value();
           Throwable e = assertThrows(
-              "Expected that this testcase will fail - it might got fixed?",
-              annotation.mode().throwableClass,
+              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
+              ignoreMode.throwableClass,
               base::evaluate
               );
 
           String trace = Throwables.getStackTraceAsString(e);
-          Matcher m = annotation.mode().getPattern().matcher(trace);
+          Matcher m = annotation.value().getPattern().matcher(trace);
 
           if (!m.find()) {
-            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.mode().regex, e);
+            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.value().regex, e);
           }
           throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
         }
       };
     }
   }
-
-
 }
