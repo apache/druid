@@ -50,10 +50,22 @@ public class Rules
   }
 
   /**
-   * Validate rules. This method throws an exception if a rule contain an interval that
-   * fully covers another subsequent rules' interval in the list. Rules that will be evaluated at some point
-   * are considered to be legitimate.
-   * @param rules Datasource rules.
+   * Validates the given list of retention rules for a datasource (or cluster default).
+   * A rule is considered valid only if it will be evaluated at some point, i.e. its eligible interval
+   * is not fully covered by the eligible interval of any preceding rule in the list.
+   * <p>
+   * Consider two rules r1 and r2. Assume r1 and r2's eligible intervals at the time when the rules are evaluated are
+   * i1 and i2 respectively. r1 and r2 are invalid if:
+   *  <ul>
+   *    <li> i1 is eternity. i.e., eternity fully covers i2 and any other interval that follows it. Or </li>
+   *    <li> i1 fully contains i2 and </li>
+   *    <li> r1's eligible interval at i1's start and end fully contain r2's eligible interval at i1's start and end
+   *    respectively. This boundary check is used to identify rules that will fire at some point. i.e., period based rules
+   *    will return distinct eligible intervals at the boundaries, whereas broadcast and interval based rules will return
+   *    fixed intervals regardless of the boundary.  </li>
+   *  </ul>
+   *  </p>
+   * @throws org.apache.druid.error.DruidException with error code "invalidInput" if any of the given rules is not valid.
    */
   public static void validateRules(final List<Rule> rules)
   {
@@ -70,9 +82,6 @@ public class Rules
         final Rule nextRule = rules.get(j);
         final Interval nextInterval = nextRule.getEligibleInterval(now);
         if (currInterval.contains(nextInterval)) {
-          // If the current rule has eternity, it covers everything following it.
-          // Or if the current rule still covers the next rule at the current interval boundaries, then the
-          // next rule will never fire at any time, so throw an exception.
           if (Intervals.ETERNITY.equals(currInterval) ||
               (currRule.getEligibleInterval(currInterval.getStart())
                        .contains(nextRule.getEligibleInterval(currInterval.getStart()))

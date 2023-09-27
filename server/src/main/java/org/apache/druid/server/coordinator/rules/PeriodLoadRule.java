@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.rules;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -88,7 +87,7 @@ public class PeriodLoadRule extends LoadRule
   @Override
   public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
-    return includeFuture ? new Interval(referenceTimestamp.minus(period), DateTimes.utc(JodaUtils.MAX_INSTANT))
+    return includeFuture ? new Interval(referenceTimestamp.minus(period), DateTimes.MAX)
                          : new Interval(referenceTimestamp.minus(period), referenceTimestamp);
   }
 

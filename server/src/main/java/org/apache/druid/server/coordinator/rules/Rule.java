@@ -52,9 +52,9 @@ public interface Rule
   void run(DataSegment segment, SegmentActionHandler segmentHandler);
 
   /**
-   * Return an eligible interval from the reference timestamp. Implementations
-   * must return a valid interval based on the rule type.
-   * @param referenceTimestamp base timestamp
+   * Returns the interval eligible for this rule. The interval must be computed based on the rule type
+   * optionally using {@code referenceTimestamp}. {@code referenceTimestamp} must be a timestamp
+   * between [{@link org.apache.druid.java.util.common.DateTimes.MIN}, {@link org.apache.druid.java.util.common.DateTimes.MAX}).
    */
   Interval getEligibleInterval(DateTime referenceTimestamp);
 }

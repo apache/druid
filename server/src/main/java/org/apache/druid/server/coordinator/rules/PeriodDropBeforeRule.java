@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.rules;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -69,8 +68,14 @@ public class PeriodDropBeforeRule extends DropRule
   @Override
   public Interval getEligibleInterval(DateTime referenceTimestamp)
   {
-//    return new Interval(DateTimes.utc(JodaUtils.MIN_INSTANT), referenceTimestamp.minus(period));
-    return new Interval(DateTimes.utc(Long.MIN_VALUE), referenceTimestamp.minus(period));
+    final DateTime end = referenceTimestamp.minus(period);
+    if (end.isBefore(DateTimes.MIN)) {
+      // We use Long.MIN_VALUE as the start here (instead of DateTimes.MIN) when end is < DateTimes.MIN because the
+      // resulting interval will be invalid where start > end. This is true for referenceTimestamp = DateTimes.MIN.
+      return new Interval(DateTimes.utc(Long.MIN_VALUE), end);
+    } else {
+      return new Interval(DateTimes.MIN, end);
+    }
   }
 
   @Override

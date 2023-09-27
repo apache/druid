@@ -28,12 +28,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
-import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
-import org.apache.druid.server.coordinator.rules.IntervalBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
-import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.PeriodBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.PeriodDropBeforeRule;
 import org.apache.druid.server.coordinator.rules.PeriodDropRule;
@@ -56,6 +52,17 @@ public class RulesResourceTest
 {
   private MetadataRuleManager databaseRuleManager;
   private AuditManager auditManager;
+
+  private static final PeriodLoadRule LOAD_P3M = new PeriodLoadRule(
+      new Period("P3M"), true, null, null
+  );
+  private final ForeverLoadRule LOAD_FOREVER = new ForeverLoadRule(null, null);
+  private static final PeriodDropRule DROP_P2M = new PeriodDropRule(new Period("P2M"), true);
+  private static final PeriodDropBeforeRule DROP_BEFORE_P6M = new PeriodDropBeforeRule(new Period("P6M"));
+  private static final IntervalDropRule DROP_2010_2020 = new IntervalDropRule(Intervals.of("2010/2020"));
+  private static final PeriodBroadcastDistributionRule BROADCAST_PT2H = new PeriodBroadcastDistributionRule(
+      new Period("PT2H"), true
+  );
 
   @Before
   public void setUp()
@@ -184,282 +191,6 @@ public class RulesResourceTest
   }
 
   @Test
-  public void testSetDatasourceRulesWithInvalidLoadRules()
-  {
-    EasyMock.replay(auditManager);
-
-    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
-    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
-
-    final PeriodLoadRule loadPT1H = new PeriodLoadRule(new Period("PT1H"), true, null, null);
-    final PeriodLoadRule loadPT1HNoFuture = new PeriodLoadRule(new Period("PT1H"), false, null, null);
-    final PeriodLoadRule loadP3M = new PeriodLoadRule(new Period("P3M"), true, null, null);
-    final PeriodLoadRule loadP6M = new PeriodLoadRule(new Period("P6M"), true, null, null);
-    final IntervalLoadRule loadInterval2020To2023 = new IntervalLoadRule(
-        Intervals.of("2020/2023"),
-        null,
-        null
-    );
-    final IntervalLoadRule loadInterval2021To2022 = new IntervalLoadRule(
-        Intervals.of("2021/2022"),
-        null,
-        null
-    );
-    final ForeverLoadRule loadForever = new ForeverLoadRule(null, null);
-
-    final List<Rule> rules = new ArrayList<>();
-    rules.add(loadP6M);
-    rules.add(loadP3M);
-    rules.add(loadForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadP6M, loadP3M)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(loadP3M);
-    rules.add(loadForever);
-    rules.add(loadP6M);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadForever, loadP6M)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(loadForever);
-    rules.add(loadPT1H);
-    rules.add(loadInterval2021To2022);
-    rules.add(loadP6M);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadForever, loadPT1H)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(loadPT1H);
-    rules.add(loadPT1HNoFuture);
-    rules.add(loadP6M);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadPT1H, loadPT1HNoFuture)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(loadPT1H);
-    rules.add(loadPT1H);
-    rules.add(loadP6M);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadPT1H, loadPT1H)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(loadInterval2020To2023);
-    rules.add(loadInterval2021To2022);
-    rules.add(loadP6M);
-    rules.add(loadForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadInterval2020To2023, loadInterval2021To2022)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(loadP6M);
-    rules.add(loadInterval2021To2022);
-    rules.add(loadP3M);
-    rules.add(loadInterval2020To2023);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadP6M, loadP3M)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-
-    rules.clear();
-    rules.add(loadP6M);
-    rules.add(loadInterval2020To2023);
-    rules.add(loadForever);
-    rules.add(loadInterval2021To2022);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadInterval2020To2023, loadInterval2021To2022)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-  }
-
-  @Test
-  public void testDatasourceRulesWithInvalidDropRules()
-  {
-    EasyMock.replay(auditManager);
-
-    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
-    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
-
-    final PeriodDropBeforeRule dropBeforeByP3M = new PeriodDropBeforeRule(new Period("P3M"));
-    final PeriodDropBeforeRule dropBeforeByP6M = new PeriodDropBeforeRule(new Period("P6M"));
-    final PeriodDropRule dropByP1M = new PeriodDropRule(new Period("P1M"), true);
-    final IntervalDropRule dropInterval2000To2020 = new IntervalDropRule(Intervals.of("2000/2020"));
-    final IntervalDropRule dropInterval2010To2020 = new IntervalDropRule(Intervals.of("2010/2020"));
-    final PeriodDropRule dropByP1MNoFuture = new PeriodDropRule(new Period("P1M"), false);
-    final PeriodDropRule dropByP2M = new PeriodDropRule(new Period("P2M"), true);
-    final ForeverDropRule dropForever = new ForeverDropRule();
-
-    final List<Rule> rules = new ArrayList<>();
-    rules.add(dropBeforeByP3M);
-    rules.add(dropBeforeByP6M);
-    rules.add(dropByP1M);
-    rules.add(dropForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", dropBeforeByP3M, dropBeforeByP6M)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(dropByP2M);
-    rules.add(dropByP1M);
-    rules.add(dropForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", dropByP2M, dropByP1M)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(dropInterval2000To2020);
-    rules.add(dropByP1M);
-    rules.add(dropByP2M);
-    rules.add(dropInterval2010To2020);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", dropInterval2000To2020, dropInterval2010To2020)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(dropByP1M);
-    rules.add(dropByP1MNoFuture);
-    rules.add(dropForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", dropByP1M, dropByP1MNoFuture)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-
-    rules.clear();
-    rules.add(dropForever);
-    rules.add(dropByP1M);
-    rules.add(dropByP2M);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", dropForever, dropByP1M)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-  }
-
-  @Test
-  public void testDatasourceRulesWithInvalidBroadcastRules()
-  {
-    EasyMock.replay(auditManager);
-
-    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
-    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
-
-    final ForeverBroadcastDistributionRule broadcastForever = new ForeverBroadcastDistributionRule();
-    final PeriodBroadcastDistributionRule broadcastPT1H = new PeriodBroadcastDistributionRule(new Period("PT1H"), true);
-    final PeriodBroadcastDistributionRule broadcastPT1HNoFuture = new PeriodBroadcastDistributionRule(new Period("PT1H"), false);
-    final PeriodBroadcastDistributionRule broadcastPT2H = new PeriodBroadcastDistributionRule(new Period("PT2H"), true);
-    final IntervalBroadcastDistributionRule broadcastInterval2000To2050 = new IntervalBroadcastDistributionRule(
-        Intervals.of("2000/2050")
-    );
-    final IntervalBroadcastDistributionRule broadcastInterval2010To2020 = new IntervalBroadcastDistributionRule(
-        Intervals.of("2010/2020")
-    );
-
-    final List<Rule> rules = new ArrayList<>();
-    rules.add(broadcastInterval2000To2050);
-    rules.add(broadcastInterval2010To2020);
-    rules.add(broadcastForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", broadcastInterval2000To2050, broadcastInterval2010To2020)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(broadcastPT2H);
-    rules.add(broadcastPT1H);
-    rules.add(broadcastForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", broadcastPT2H, broadcastPT1H)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(broadcastPT1H);
-    rules.add(broadcastPT1H);
-    rules.add(broadcastForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", broadcastPT1H, broadcastPT1H)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    // Same interval with and without future.
-    rules.clear();
-    rules.add(broadcastPT1H);
-    rules.add(broadcastPT1HNoFuture);
-    rules.add(broadcastForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", broadcastPT1H, broadcastPT1HNoFuture)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-
-    rules.clear();
-    rules.add(broadcastPT1H);
-    rules.add(broadcastPT2H);
-    rules.add(broadcastInterval2010To2020);
-    rules.add(broadcastForever);
-    rules.add(broadcastInterval2000To2050);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", broadcastForever, broadcastInterval2000To2050)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-  }
-
-  @Test
-  public void testSetDatasourceRulesWithDifferentInvalidRules()
-  {
-    EasyMock.replay(auditManager);
-
-    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
-    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
-
-    final IntervalLoadRule loadInterval1980To2050 = new IntervalLoadRule(
-        Intervals.of("1980/2050"),
-        null,
-        null
-    );
-    final IntervalLoadRule loadInterval2020To2025 = new IntervalLoadRule(
-        Intervals.of("2020/2025"),
-        null,
-        null
-    );
-    final PeriodLoadRule loadPT1H = new PeriodLoadRule(new Period("PT1H"), null, null, null);
-    final PeriodLoadRule loadP3M = new PeriodLoadRule(new Period("P3M"), null, null, null);
-    final PeriodLoadRule loadP6M = new PeriodLoadRule(new Period("P6M"), null, null, null);
-    final ForeverLoadRule loadForever = new ForeverLoadRule(null, null);
-    final ForeverDropRule dropForever = new ForeverDropRule();
-    final PeriodBroadcastDistributionRule broadcastPT15m = new PeriodBroadcastDistributionRule(new Period("PT15m"), true);
-
-    final List<Rule> rules = new ArrayList<>();
-    rules.add(loadInterval2020To2025);
-    rules.add(broadcastPT15m);
-    rules.add(loadInterval1980To2050);
-    rules.add(loadPT1H);
-    rules.add(loadP3M);
-    rules.add(loadP6M);
-    rules.add(loadForever);
-    rules.add(dropForever);
-
-    DruidExceptionMatcher.invalidInput().expectMessageContains(
-        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", loadForever, dropForever)
-    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
-  }
-
-  @Test
   public void testSetDatasourceRulesWithValidRules()
   {
     EasyMock.expect(databaseRuleManager.overrideRule(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject()))
@@ -467,59 +198,38 @@ public class RulesResourceTest
     EasyMock.replay(databaseRuleManager);
     final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
 
-    final IntervalLoadRule loadLargeInteval = new IntervalLoadRule(
-        Intervals.of("1980-07-29T01:00:00Z/2050-12-30T01:00:00Z"),
-        null,
-        null
-    );
-    final IntervalLoadRule loadSmallInterval = new IntervalLoadRule(
-        Intervals.of("2020-09-29T01:00:00Z/2025-10-30T01:00:00Z"),
-        null,
-        null
-    );
-    final PeriodLoadRule loadPT1H = new PeriodLoadRule(new Period("PT1H"), true, null, null);
-    final PeriodLoadRule loadPT1HNoFuture = new PeriodLoadRule(new Period("PT1H"), false, null, null);
-    final PeriodLoadRule loadP3M = new PeriodLoadRule(new Period("P3M"), true, null, null);
-    final PeriodLoadRule loadP6M = new PeriodLoadRule(new Period("P6M"), true, null, null);
-    final PeriodDropRule dropByP1M = new PeriodDropRule(new Period("P1M"), true);
-    final PeriodDropRule dropByP1MNoFuture = new PeriodDropRule(new Period("P1M"), false);
-    final ForeverLoadRule loadForever = new ForeverLoadRule(null, null);
-    final ForeverDropRule dropForever = new ForeverDropRule();
-    final PeriodBroadcastDistributionRule broadcastPT15m = new PeriodBroadcastDistributionRule(new Period("PT15m"), true);
-    final PeriodBroadcastDistributionRule broadcastPT15mNoFuture = new PeriodBroadcastDistributionRule(new Period("PT15m"), false);
-
     final List<Rule> rules = new ArrayList<>();
-    rules.add(loadSmallInterval);
-    rules.add(loadLargeInteval);
-    rules.add(broadcastPT15m);
-    rules.add(loadPT1HNoFuture);
-    rules.add(loadPT1H);
-    rules.add(dropByP1MNoFuture);
-    rules.add(dropByP1M);
-    rules.add(loadP3M);
-    rules.add(loadP6M);
-    rules.add(loadForever);
+    rules.add(BROADCAST_PT2H);
+    rules.add(DROP_P2M);
+    rules.add(DROP_2010_2020);
+    rules.add(LOAD_P3M);
+    rules.add(DROP_BEFORE_P6M);
+    rules.add(LOAD_FOREVER);
 
     final Response resp = rulesResource.setDatasourceRules("dataSource1", rules, null, null, EasyMock.createMock(HttpServletRequest.class));
     Assert.assertEquals(200, resp.getStatus());
     EasyMock.verify(databaseRuleManager);
+  }
 
-    rules.clear();
-    rules.add(broadcastPT15mNoFuture);
-    rules.add(broadcastPT15m);
-    rules.add(loadPT1HNoFuture);
-    rules.add(loadPT1H);
-    rules.add(dropByP1MNoFuture);
-    rules.add(dropByP1M);
-    rules.add(loadP3M);
-    rules.add(loadP6M);
-    rules.add(loadSmallInterval);
-    rules.add(loadLargeInteval);
-    rules.add(dropForever);
+  @Test
+  public void testSetDatasourceRulesWithInvalidRules()
+  {
+    EasyMock.replay(auditManager);
 
-    final Response resp2 = rulesResource.setDatasourceRules("dataSource1", rules, null, null, EasyMock.createMock(HttpServletRequest.class));
-    Assert.assertEquals(200, resp2.getStatus());
-    EasyMock.verify(databaseRuleManager);
+    final RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    final HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
+
+    final List<Rule> rules = new ArrayList<>();
+    rules.add(DROP_P2M);
+    rules.add(LOAD_P3M);
+    rules.add(DROP_BEFORE_P6M);
+    rules.add(BROADCAST_PT2H);
+    rules.add(DROP_2010_2020);
+    rules.add(LOAD_FOREVER);
+
+    DruidExceptionMatcher.invalidInput().expectMessageContains(
+        StringUtils.format("Rule[%s] has an interval that fully contains the interval for rule[%s].", DROP_P2M, BROADCAST_PT2H)
+    ).assertThrowsAndMatches(() -> rulesResource.setDatasourceRules("dataSource1", rules, null, null, req));
   }
 
   @Test
