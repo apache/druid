@@ -37,14 +37,14 @@ import java.util.regex.Pattern;
 import static org.junit.Assert.assertThrows;
 
 /**
- * Can be used to mark tests which are not-yet supported in decoupled mode.
+ * Can be used to mark tests which are not-yet supported for some reason.
  *
- * In case a testcase marked with this annotation fails - it may mean that the
- * testcase no longer needs that annotation.
+ * In case a testcase marked with this annotation fails - it means that the
+ * testcase no longer fails with the annotated expectation.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface DecoupledIgnore
+public @interface NegativeTest
 {
   Modes value() default Modes.NOT_ENOUGH_RULES;
 
@@ -85,17 +85,17 @@ public @interface DecoupledIgnore
   };
 
   /**
-   * Processes {@link DecoupledIgnore} annotations.
+   * Processes {@link NegativeTest} annotations.
    *
    * Ensures that test cases disabled with that annotation can still not pass.
    * If the error is as expected; the testcase is marked as "ignored".
    */
-  class DecoupledIgnoreProcessor implements TestRule
+  class NegativeTestProcessor implements TestRule
   {
     @Override
     public Statement apply(Statement base, Description description)
     {
-      DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
+      NegativeTest annotation = description.getAnnotation(NegativeTest.class);
 
       if (annotation == null) {
         return base;
@@ -118,7 +118,7 @@ public @interface DecoupledIgnore
           if (!m.find()) {
             throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.value().regex, e);
           }
-          throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
+          throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
         }
       };
     }
