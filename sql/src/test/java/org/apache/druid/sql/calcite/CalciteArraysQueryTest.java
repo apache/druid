@@ -4869,4 +4869,94 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testUnnestWithUnnestedColumnOnInnerValues()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "select * from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select col from (values('a'),('b')) as t(col))",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            new InDimFilter("j0.unnest", ImmutableSet.of("a", "b"), null)
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setDimFilter(equality("j0.unnest", "a", ColumnType.STRING))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithUnnestedColumnOnInnerQuery()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "select * from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select dim1 from numfoo)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            new InDimFilter("j0.unnest", ImmutableSet.of("a", "b"), null)
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setDimFilter(equality("j0.unnest", "a", ColumnType.STRING))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithUnnestedColumnOnInnerQuery1()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "select count(*) from foo, unnest(mv_to_array(dim3)) as u(c) where c is null",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE3),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            new InDimFilter("j0.unnest", ImmutableSet.of("a", "b"), null)
+                        ))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setDimFilter(equality("j0.unnest", "a", ColumnType.STRING))
+                        .setContext(QUERY_CONTEXT_UNNEST)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 1L}
+        )
+    );
+  }
 }

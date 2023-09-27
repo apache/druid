@@ -122,6 +122,7 @@ public class DruidRules
       retVal.add(CoreRules.PROJECT_CORRELATE_TRANSPOSE);
       retVal.add(DruidFilterUnnestRule.instance());
       retVal.add(DruidFilterUnnestRule.DruidProjectOnUnnestRule.instance());
+      retVal.add(new DruidJoinWithUnnestOnLeftRule(plannerContext));
     }
 
     return retVal;

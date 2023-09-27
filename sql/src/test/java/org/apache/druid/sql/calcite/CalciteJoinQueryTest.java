@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -5690,6 +5691,103 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJoinsWithUnnest()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with t1 as (\n"
+        + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
+        + ")\n"
+        + "select * from t1 JOIN \"numfoo\" as t2\n"
+        + "ON t1.d3 = t2.\"dim1\"",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimFilter(
+                                            NullHandling.replaceWithDefault()
+                                            ? in("m1", ImmutableList.of("1", "2"), null)
+                                            : or(
+                                                equality("m1", 1.0, ColumnType.FLOAT),
+                                                equality("m1", 2.0, ColumnType.FLOAT)
+                                            )
+                                        )
+                                        .setDimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT))
+                                        .setAggregatorSpecs(aggregators(new LongMaxAggregatorFactory("a0", "__time")))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "((\"m1\" == \"j0.d0\") && (\"__time\" == \"j0.a0\"))",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "m1")
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f},
+            new Object[]{946771200000L, 2.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinsWithUnnestOnLeft()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with t1 as (\n"
+        + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
+        + ")\n"
+        + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN numfoo as t2\n"
+        + "ON t1.d3 = t2.\"dim2\"",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .columns("dim2")
+                                .legacy(false)
+                                .context(context)
+                                .build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0.dim2\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("_j0.dim2", "dim3", "j0.unnest")
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f},
+            new Object[]{946771200000L, 2.0f}
+        )
+    );
+  }
+
+  @Test
   public void testJoinsWithTwoConditions()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
@@ -5698,6 +5796,55 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         + "FROM foo t1\n"
         + "JOIN (SELECT m1, MAX(__time) as latest_time FROM foo WHERE m1 IN (1,2) GROUP BY m1) t2\n"
         + "ON t1.m1 = t2.m1 AND t1.__time = t2.latest_time\n",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimFilter(
+                                            NullHandling.replaceWithDefault()
+                                            ? in("m1", ImmutableList.of("1", "2"), null)
+                                            : or(
+                                                equality("m1", 1.0, ColumnType.FLOAT),
+                                                equality("m1", 2.0, ColumnType.FLOAT)
+                                            )
+                                        )
+                                        .setDimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT))
+                                        .setAggregatorSpecs(aggregators(new LongMaxAggregatorFactory("a0", "__time")))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "((\"m1\" == \"j0.d0\") && (\"__time\" == \"j0.a0\"))",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "m1")
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f},
+            new Object[]{946771200000L, 2.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinsWithSubQuery()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "SELECT *\n"
+        + " FROM foo t1\n"
+        + " WHERE dim1 IN (select dim1 from numfoo)\n",
         context,
         ImmutableList.of(
             newScanQueryBuilder()

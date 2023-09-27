@@ -28,6 +28,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Correlate;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCorrelVariable;
@@ -40,6 +41,9 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidCorrelateUnnestRel;
+import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
+import org.apache.druid.sql.calcite.rel.DruidJoinUnnestRel;
+import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnnestRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
@@ -80,7 +84,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         operand(
             Correlate.class,
             operand(DruidRel.class, any()),
-            operand(DruidUnnestRel.class, any())
+            operand(DruidRel.class, any())
         )
     );
 
@@ -99,7 +103,16 @@ public class DruidCorrelateUnnestRule extends RelOptRule
   {
     final Correlate correlate = call.rel(0);
     final DruidRel<?> left = call.rel(1);
-    final DruidUnnestRel right = call.rel(2);
+    final DruidUnnestRel right;
+    final DruidRel<?> rightRel = call.rel(2);
+    // Case of select * from t1, UNNEST(dim) where dim IN (select d from t2)
+    // Here left = t1
+    // rightRel = INNER JOIN ( unnestRel , t2) where unnest.dim = t2.d
+    if (rightRel instanceof DruidJoinUnnestRel) {
+      right = ((DruidJoinUnnestRel) rightRel).getUnnestRel();
+    } else {
+      right = (DruidUnnestRel) rightRel;
+    }
     final RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
     final DruidRel<?> newLeft;
     final List<RexNode> pulledUpProjects = new ArrayList<>();
@@ -162,6 +175,39 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         plannerContext
     );
 
+    if (rightRel instanceof DruidJoinUnnestRel) {
+      // create a join rel
+      // with left as druidCorrelateUnnest
+      // and right as rightRel.getRight()
+      // need to fix the condition
+      Join j = ((DruidJoinUnnestRel) rightRel).getJoin();
+      Join updatedJoin = j.copy(
+          correlate.getTraitSet(),
+          j.getCondition(),
+          druidCorrelateUnnest,
+          ((DruidJoinUnnestRel) rightRel).getRightRel(),
+          j.getJoinType(),
+          j.isSemiJoinDone()
+      );
+      final DruidJoinQueryRel druidJoin = DruidJoinQueryRel.create(
+          updatedJoin,
+          null,
+          left.getPlannerContext()
+      );
+      final RelBuilder relBuilder =
+          call.builder()
+              .push(druidJoin)
+              .project(
+                  RexUtil.fixUp(
+                      rexBuilder,
+                      pulledUpProjects,
+                      RelOptUtil.getFieldTypeList(druidCorrelateUnnest.getRowType())
+                  )
+              );
+      RelNode r = relBuilder.build();
+      call.transformTo(r);
+      return;
+    }
     // Now push the Project back on top of the Correlate.
     final RelBuilder relBuilder =
         call.builder()
@@ -174,6 +220,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
                 )
             );
 
+    relBuilder.convert(correlate.getRowType(), false);
     final RelNode build = relBuilder.build();
     call.transformTo(build);
   }

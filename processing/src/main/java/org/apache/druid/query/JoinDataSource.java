@@ -517,6 +517,19 @@ public class JoinDataSource implements DataSource
           )
       );
     }
+    // somu: addition start
+
+    while (current instanceof UnnestDataSource) {
+      final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+      current = unnestDataSource.getBase();
+    }
+
+    while (current instanceof FilteredDataSource) {
+      final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
+      current = filteredDataSource.getBase();
+    }
+
+    // somu: addition end
 
     // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
     // going-up order. So reverse them.
