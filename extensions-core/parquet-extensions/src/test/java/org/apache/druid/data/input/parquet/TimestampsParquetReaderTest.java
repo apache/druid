@@ -34,6 +34,9 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.List;
 
+import org.json.JSONException;
+import org.skyscreamer.jsonassert.JSONAssert;
+
 /**
  * Duplicate of {@link TimestampsParquetInputTest} but for {@link ParquetReader} instead of Hadoop
  */
@@ -91,8 +94,12 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
                                       + "  \"idx\" : 1,\n"
                                       + "  \"date_as_date\" : 1497744000000\n"
                                       + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()));
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()));
+    try{
+        JSONAssert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()), false);
+        JSONAssert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()), false);
+    } catch (JSONException jse){
+        Assert.fail("Not comparing JSON strings");
+    }
   }
 
   @Test
