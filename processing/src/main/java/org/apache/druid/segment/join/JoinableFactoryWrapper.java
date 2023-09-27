@@ -170,7 +170,9 @@ public class JoinableFactoryWrapper
       }
 
       Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag =
-          clause.getJoinable().getNonNullColumnValues(condition.getRightColumn(), maxNumFilterValues);
+          clause.getJoinable()
+                .getMatchableColumnValues(condition.getRightColumn(), condition.isIncludeNull(), maxNumFilterValues);
+
       // For an empty values set, isAllUnique flag will be true only if the column had no non-null values.
       if (columnValuesWithUniqueFlag.getColumnValues().isEmpty()) {
         if (columnValuesWithUniqueFlag.isAllUnique()) {

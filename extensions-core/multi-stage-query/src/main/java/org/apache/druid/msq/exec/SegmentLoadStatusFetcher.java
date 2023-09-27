@@ -24,9 +24,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.sql.http.ResultFormat;
@@ -56,9 +60,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * If the segments are not loaded within {@link #TIMEOUT_DURATION_MILLIS} milliseconds, this logs a warning and exits
  * for the same reason.
  */
-public class SegmentLoadWaiter
+public class SegmentLoadStatusFetcher implements AutoCloseable
 {
-  private static final Logger log = new Logger(SegmentLoadWaiter.class);
+  private static final Logger log = new Logger(SegmentLoadStatusFetcher.class);
   private static final long SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long TIMEOUT_DURATION_MILLIS = TimeUnit.MINUTES.toMillis(10);
 
@@ -68,9 +72,9 @@ public class SegmentLoadWaiter
    * - If a segment is not used, the broker will not have any information about it, hence, a COUNT(*) should return the used count only.
    * - If replication_factor is more than 0, the segment will be loaded on historicals and needs to be waited for.
    * - If replication_factor is 0, that means that the segment will never be loaded on a historical and does not need to
-   *   be waited for.
+   * be waited for.
    * - If replication_factor is -1, the replication factor is not known currently and will become known after a load rule
-   *   evaluation.
+   * evaluation.
    * <br>
    * See https://github.com/apache/druid/pull/14403 for more details about replication_factor
    */
@@ -90,11 +94,15 @@ public class SegmentLoadWaiter
   private final Set<String> versionsToAwait;
   private final int totalSegmentsGenerated;
   private final boolean doWait;
+  // since live reports fetch the value in another thread, we need to use AtomicReference
   private final AtomicReference<SegmentLoadWaiterStatus> status;
 
-  public SegmentLoadWaiter(
+  private final ListeningExecutorService executorService;
+
+  public SegmentLoadStatusFetcher(
       BrokerClient brokerClient,
       ObjectMapper objectMapper,
+      String taskId,
       String datasource,
       Set<String> versionsToAwait,
       int totalSegmentsGenerated,
@@ -107,8 +115,19 @@ public class SegmentLoadWaiter
     this.versionsToAwait = new TreeSet<>(versionsToAwait);
     this.versionToLoadStatusMap = new HashMap<>();
     this.totalSegmentsGenerated = totalSegmentsGenerated;
-    this.status = new AtomicReference<>(new SegmentLoadWaiterStatus(State.INIT, null, 0, totalSegmentsGenerated, 0, 0, 0, 0, totalSegmentsGenerated));
+    this.status = new AtomicReference<>(new SegmentLoadWaiterStatus(
+        State.INIT,
+        null,
+        0,
+        totalSegmentsGenerated,
+        0,
+        0,
+        0,
+        0,
+        totalSegmentsGenerated
+    ));
     this.doWait = doWait;
+    this.executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(taskId + "-segment-load-waiter-%d"));
   }
 
   /**
@@ -122,57 +141,73 @@ public class SegmentLoadWaiter
    */
   public void waitForSegmentsToLoad()
   {
-    DateTime startTime = DateTimes.nowUtc();
-    boolean hasAnySegmentBeenLoaded = false;
-
+    final DateTime startTime = DateTimes.nowUtc();
+    final AtomicReference<Boolean> hasAnySegmentBeenLoaded = new AtomicReference<>(false);
     try {
-      while (!versionsToAwait.isEmpty()) {
-        // Check the timeout and exit if exceeded.
-        long runningMillis = new Interval(startTime, DateTimes.nowUtc()).toDurationMillis();
-        if (runningMillis > TIMEOUT_DURATION_MILLIS) {
-          log.warn("Runtime [%s] exceeded timeout [%s] while waiting for segments to load. Exiting.", runningMillis, TIMEOUT_DURATION_MILLIS);
-          updateStatus(State.TIMED_OUT, startTime);
-          return;
-        }
+      FutureUtils.getUnchecked(executorService.submit(() -> {
+        try {
+          while (!versionsToAwait.isEmpty()) {
+            // Check the timeout and exit if exceeded.
+            long runningMillis = new Interval(startTime, DateTimes.nowUtc()).toDurationMillis();
+            if (runningMillis > TIMEOUT_DURATION_MILLIS) {
+              log.warn(
+                  "Runtime[%d] exceeded timeout[%d] while waiting for segments to load. Exiting.",
+                  runningMillis,
+                  TIMEOUT_DURATION_MILLIS
+              );
+              updateStatus(State.TIMED_OUT, startTime);
+              return;
+            }
 
-        Iterator<String> iterator = versionsToAwait.iterator();
+            Iterator<String> iterator = versionsToAwait.iterator();
+            log.info(
+                "Fetching segment load status for datasource[%s] from broker for segment versions[%s]",
+                datasource,
+                versionsToAwait
+            );
 
-        // Query the broker for all pending versions
-        while (iterator.hasNext()) {
-          String version = iterator.next();
+            // Query the broker for all pending versions
+            while (iterator.hasNext()) {
+              String version = iterator.next();
 
-          // Fetch the load status for this version from the broker
-          VersionLoadStatus loadStatus = fetchLoadStatusForVersion(version);
-          versionToLoadStatusMap.put(version, loadStatus);
+              // Fetch the load status for this version from the broker
+              VersionLoadStatus loadStatus = fetchLoadStatusForVersion(version);
+              versionToLoadStatusMap.put(version, loadStatus);
+              hasAnySegmentBeenLoaded.set(hasAnySegmentBeenLoaded.get() || loadStatus.getUsedSegments() > 0);
 
-          hasAnySegmentBeenLoaded = hasAnySegmentBeenLoaded || loadStatus.getUsedSegments() > 0;
+              // If loading is done for this stage, remove it from future loops.
+              if (hasAnySegmentBeenLoaded.get() && loadStatus.isLoadingComplete()) {
+                iterator.remove();
+              }
+            }
 
-          // If loading is done for this stage, remove it from future loops.
-          if (hasAnySegmentBeenLoaded && loadStatus.isLoadingComplete()) {
-            iterator.remove();
+            if (!versionsToAwait.isEmpty()) {
+              // Update the status.
+              updateStatus(State.WAITING, startTime);
+              // Sleep for a bit before checking again.
+              waitIfNeeded(SLEEP_DURATION_MILLIS);
+            }
           }
         }
-
-        if (!versionsToAwait.isEmpty()) {
-          // Update the status.
-          updateStatus(State.WAITING, startTime);
-
-          // Sleep for a while before retrying.
-          waitIfNeeded(SLEEP_DURATION_MILLIS);
+        catch (Exception e) {
+          log.warn(e, "Exception occurred while waiting for segments to load. Exiting.");
+          // Update the status and return.
+          updateStatus(State.FAILED, startTime);
+          return;
         }
-      }
+        // Update the status.
+        log.info("Segment loading completed for datasource[%s]", datasource);
+        updateStatus(State.SUCCESS, startTime);
+      }), true);
     }
     catch (Exception e) {
       log.warn(e, "Exception occurred while waiting for segments to load. Exiting.");
-
-      // Update the status and return.
       updateStatus(State.FAILED, startTime);
-      return;
     }
-    // Update the status.
-    updateStatus(State.SUCCESS, startTime);
+    finally {
+      executorService.shutdownNow();
+    }
   }
-
   private void waitIfNeeded(long waitTimeMillis) throws Exception
   {
     if (doWait) {
@@ -219,9 +254,9 @@ public class SegmentLoadWaiter
     Request request = brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/");
     SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, version),
                                      ResultFormat.OBJECTLINES,
-                                     false, false, false, null, null);
+                                     false, false, false, null, null
+    );
     request.setContent(MediaType.APPLICATION_JSON, objectMapper.writeValueAsBytes(sqlQuery));
-
     String response = brokerClient.sendQuery(request);
 
     if (response.trim().isEmpty()) {
@@ -240,6 +275,17 @@ public class SegmentLoadWaiter
     return status.get();
   }
 
+  @Override
+  public void close()
+  {
+    try {
+      executorService.shutdownNow();
+    }
+    catch (Throwable suppressed) {
+      log.warn(suppressed, "Error shutting down SegmentLoadStatusFetcher");
+    }
+  }
+
   public static class SegmentLoadWaiterStatus
   {
     private final State state;
@@ -254,7 +300,7 @@ public class SegmentLoadWaiter
 
     @JsonCreator
     public SegmentLoadWaiterStatus(
-        @JsonProperty("state") SegmentLoadWaiter.State state,
+        @JsonProperty("state") SegmentLoadStatusFetcher.State state,
         @JsonProperty("startTime") @Nullable DateTime startTime,
         @JsonProperty("duration") long duration,
         @JsonProperty("totalSegments") int totalSegments,
@@ -277,7 +323,7 @@ public class SegmentLoadWaiter
     }
 
     @JsonProperty
-    public SegmentLoadWaiter.State getState()
+    public SegmentLoadStatusFetcher.State getState()
     {
       return state;
     }
@@ -356,7 +402,12 @@ public class SegmentLoadWaiter
      * The time spent waiting for segments to load exceeded org.apache.druid.msq.exec.SegmentLoadWaiter#TIMEOUT_DURATION_MILLIS.
      * The SegmentLoadWaiter exited without failing the task.
      */
-    TIMED_OUT
+    TIMED_OUT;
+
+    public boolean isFinished()
+    {
+      return this == SUCCESS || this == FAILED || this == TIMED_OUT;
+    }
   }
 
   public static class VersionLoadStatus

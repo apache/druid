@@ -410,7 +410,11 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return ColumnType.LONG;
+    if (shouldFinalize) {
+      return ColumnType.LONG;
+    } else {
+      return getIntermediateType();
+    }
   }
 
   @Override
