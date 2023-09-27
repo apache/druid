@@ -258,8 +258,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  // Test that the integers are getting correctly casted after being passed through a function
-  // when not selecting from a table
+  // Test that the integers are getting correctly casted after being passed through a function when not selecting from
+  // a table
   @Test
   public void testDruidLogicalValuesRule()
   {
