@@ -32,6 +32,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -174,14 +176,20 @@ public class ParametrizedUriEmitterTest
           protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
           {
             Assert.assertEquals("http://example.com/val1/val2", request.getUrl());
-            Assert.assertEquals(
-                StringUtils.format(
-                    "[%s,%s]\n",
-                    JSON_MAPPER.writeValueAsString(events.get(0)),
-                    JSON_MAPPER.writeValueAsString(events.get(1))
+            try {
+              JSONAssert.assertEquals(
+                  StringUtils.format(
+                  "[%s,%s]\n",
+                  JSON_MAPPER.writeValueAsString(events.get(0)),
+                  JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
-                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
-            );
+                  StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString(),
+                  JSONCompareMode.STRICT
+              );
+            } 
+            catch (org.json.JSONException e) {
+              e.printStackTrace();
+            }
 
             return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
