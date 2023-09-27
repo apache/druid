@@ -38,8 +38,7 @@ public class RichSegmentDescriptorTest
         Intervals.of("2000/2001"),
         "2",
         3,
-        null,
-        false
+        null
     );
 
     Assert.assertEquals(
@@ -57,8 +56,7 @@ public class RichSegmentDescriptorTest
         Intervals.of("2000/2001"),
         "2",
         3,
-        null,
-        false
+        null
     );
 
     Assert.assertEquals(
@@ -76,8 +74,7 @@ public class RichSegmentDescriptorTest
         Intervals.of("2000/2001"),
         "2",
         3,
-        null,
-        false
+        null
     );
 
     Assert.assertEquals(

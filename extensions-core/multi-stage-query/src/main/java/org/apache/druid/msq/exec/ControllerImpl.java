@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
@@ -189,6 +190,8 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -1177,8 +1180,19 @@ public class ControllerImpl implements Controller
 
       Set<DataSegment> unifiedSegmentView = new HashSet<>(metadataStoreSegments);
       for (ImmutableSegmentLoadInfo segmentLoadInfo : serverViewSegments) {
-        DataSegmentWithLocation dataSegmentWithLocation = new DataSegmentWithLocation(segmentLoadInfo.getSegment(), segmentLoadInfo.getServers());
-        unifiedSegmentView.add(dataSegmentWithLocation);
+        ImmutableSet<DruidServerMetadata> servers = segmentLoadInfo.getServers();
+        Set<DruidServerMetadata> realtimeServerMetadata = servers.stream()
+                                                                 .filter(druidServerMetadata ->
+                                                                             ServerType.REALTIME.equals(druidServerMetadata.getType()) ||
+                                                                             ServerType.INDEXER_EXECUTOR.equals(druidServerMetadata.getType()))
+                                                                 .collect(Collectors.toSet());
+        if (!realtimeServerMetadata.isEmpty()) {
+          DataSegmentWithLocation dataSegmentWithLocation = new DataSegmentWithLocation(
+              segmentLoadInfo.getSegment(),
+              realtimeServerMetadata
+          );
+          unifiedSegmentView.add(dataSegmentWithLocation);
+        }
       }
 
       if (unifiedSegmentView.isEmpty()) {

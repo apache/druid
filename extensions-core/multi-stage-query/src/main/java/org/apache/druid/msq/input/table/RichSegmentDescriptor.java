@@ -47,21 +47,18 @@ public class RichSegmentDescriptor extends SegmentDescriptor
   @Nullable
   private final Interval fullInterval;
   private final Set<DruidServerMetadata> servers;
-  private final Boolean isRealtime;
 
   public RichSegmentDescriptor(
       final Interval fullInterval,
       final Interval interval,
       final String version,
       final int partitionNumber,
-      final Set<DruidServerMetadata> servers,
-      final boolean isRealtime
+      final Set<DruidServerMetadata> servers
   )
   {
     super(interval, version, partitionNumber);
     this.fullInterval = interval.equals(Preconditions.checkNotNull(fullInterval, "fullInterval")) ? null : fullInterval;
     this.servers = servers;
-    this.isRealtime = isRealtime;
   }
 
   @JsonCreator
@@ -79,8 +76,7 @@ public class RichSegmentDescriptor extends SegmentDescriptor
         interval,
         version,
         partitionNumber,
-        servers == null ? ImmutableSet.of() : servers,
-        isRealtime != null && isRealtime
+        servers == null ? ImmutableSet.of() : servers
     );
   }
 
@@ -90,13 +86,6 @@ public class RichSegmentDescriptor extends SegmentDescriptor
   public Set<DruidServerMetadata> getServers()
   {
     return servers;
-  }
-
-  @JsonProperty("isRealtime")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public boolean isRealtime()
-  {
-    return Boolean.TRUE.equals(isRealtime);
   }
 
   public Interval getFullInterval()

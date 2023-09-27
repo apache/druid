@@ -157,7 +157,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       return ReturnOrAwait.awaitAll(inputChannels.size());
     } else if (baseInput.hasSegment()) {
       SegmentWithDescriptor segment = baseInput.getSegment();
-      if (segment.isRealtimeSegment()) {
+      if (segment.isLoadedOnServer()) {
         return runWithLoadedSegment(baseInput.getSegment());
       } else {
         return runWithSegment(baseInput.getSegment());

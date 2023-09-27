@@ -21,7 +21,6 @@ package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
@@ -76,7 +75,17 @@ public class DataSegmentWithLocation extends DataSegment
       Set<DruidServerMetadata> servers
   )
   {
-    super(dataSegment.getDataSource(), dataSegment.getInterval(), dataSegment.getVersion(), dataSegment.getLoadSpec(), dataSegment.getDimensions(), dataSegment.getMetrics(), dataSegment.getShardSpec(), dataSegment.getBinaryVersion(), dataSegment.getSize());
+    super(
+        dataSegment.getDataSource(),
+        dataSegment.getInterval(),
+        dataSegment.getVersion(),
+        dataSegment.getLoadSpec(),
+        dataSegment.getDimensions(),
+        dataSegment.getMetrics(),
+        dataSegment.getShardSpec(),
+        dataSegment.getBinaryVersion(),
+        dataSegment.getSize()
+    );
     this.servers = servers;
   }
 
@@ -84,11 +93,5 @@ public class DataSegmentWithLocation extends DataSegment
   public Set<DruidServerMetadata> getServers()
   {
     return servers;
-  }
-
-  @JsonIgnore
-  public boolean isRealtime()
-  {
-    return getLoadSpec() == null || getLoadSpec().isEmpty();
   }
 }

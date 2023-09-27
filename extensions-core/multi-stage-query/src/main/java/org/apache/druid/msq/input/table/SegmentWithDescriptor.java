@@ -27,6 +27,7 @@ import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -93,9 +94,12 @@ public class SegmentWithDescriptor
     return descriptor;
   }
 
-  public boolean isRealtimeSegment()
+  public boolean isLoadedOnServer()
   {
-    return descriptor instanceof RichSegmentDescriptor && ((RichSegmentDescriptor) descriptor).isRealtime();
+    if (!(descriptor instanceof RichSegmentDescriptor)) {
+      return false;
+    }
+    return !CollectionUtils.isNullOrEmpty(((RichSegmentDescriptor) descriptor).getServers());
   }
 
   @Override

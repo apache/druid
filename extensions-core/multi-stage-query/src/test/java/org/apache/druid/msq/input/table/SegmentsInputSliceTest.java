@@ -45,8 +45,7 @@ public class SegmentsInputSliceTest
                 Intervals.of("2000/P1M"),
                 "1",
                 0,
-                null,
-                false
+                null
             )
         )
     );

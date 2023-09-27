@@ -167,8 +167,7 @@ public class TableInputSpecSlicer implements InputSpecSlicer
           interval,
           segment.getVersion(),
           segment.getShardSpec().getPartitionNum(),
-          segment instanceof DataSegmentWithLocation ? ((DataSegmentWithLocation) segment).getServers() : null,
-          segment instanceof DataSegmentWithLocation && ((DataSegmentWithLocation) segment).isRealtime()
+          segment instanceof DataSegmentWithLocation ? ((DataSegmentWithLocation) segment).getServers() : null
       );
     }
   }
