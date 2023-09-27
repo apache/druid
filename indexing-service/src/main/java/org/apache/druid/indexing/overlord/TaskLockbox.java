@@ -25,6 +25,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -43,6 +44,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -754,7 +756,7 @@ public class TaskLockbox
     return metadataStorageCoordinator.allocatePendingSegment(
         request.getDataSource(),
         request.getSequenceName(),
-        request.getPrevisousSegmentId(),
+        request.getPreviousSegmentId(),
         request.getInterval(),
         request.getPartialShardSpec(),
         version,
@@ -773,7 +775,7 @@ public class TaskLockbox
    * @param intervals intervals
    * @param action    action to be performed inside of the critical section
    */
-  public <T> T doInCriticalSection(Task task, List<Interval> intervals, CriticalAction<T> action) throws Exception
+  public <T> T doInCriticalSection(Task task, Set<Interval> intervals, CriticalAction<T> action) throws Exception
   {
     giant.lock();
 
@@ -790,7 +792,7 @@ public class TaskLockbox
    * It doesn't check other semantics like acquired locks are enough to overwrite existing segments.
    * This kind of semantic should be checked in each caller of {@link #doInCriticalSection}.
    */
-  private boolean isTaskLocksValid(Task task, List<Interval> intervals)
+  private boolean isTaskLocksValid(Task task, Set<Interval> intervals)
   {
     giant.lock();
     try {
@@ -830,7 +832,7 @@ public class TaskLockbox
    * @param lock   lock to be revoked
    */
   @VisibleForTesting
-  protected void revokeLock(String taskId, TaskLock lock)
+  public void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();
 
@@ -887,6 +889,71 @@ public class TaskLockbox
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Finds the active non-revoked REPLACE locks held by the given task.
+   */
+  public Set<ReplaceTaskLock> findReplaceLocksForTask(Task task)
+  {
+    giant.lock();
+    try {
+      return getNonRevokedReplaceLocks(findLockPossesForTask(task), task.getDataSource());
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Finds all the active non-revoked REPLACE locks for the given datasource.
+   */
+  public Set<ReplaceTaskLock> getAllReplaceLocksForDatasource(String datasource)
+  {
+    giant.lock();
+    try {
+      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> activeLocks = running.get(datasource);
+      if (activeLocks == null) {
+        return ImmutableSet.of();
+      }
+
+      List<TaskLockPosse> lockPosses
+          = activeLocks.values()
+                       .stream()
+                       .flatMap(map -> map.values().stream())
+                       .flatMap(Collection::stream)
+                       .collect(Collectors.toList());
+      return getNonRevokedReplaceLocks(lockPosses, datasource);
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  private Set<ReplaceTaskLock> getNonRevokedReplaceLocks(List<TaskLockPosse> posses, String datasource)
+  {
+    final Set<ReplaceTaskLock> replaceLocks = new HashSet<>();
+    for (TaskLockPosse posse : posses) {
+      final TaskLock lock = posse.getTaskLock();
+      if (lock.isRevoked() || !TaskLockType.REPLACE.equals(posse.getTaskLock().getType())) {
+        continue;
+      }
+
+      // Replace locks are always held by the supervisor task
+      if (posse.taskIds.size() > 1) {
+        throw new ISE(
+            "Replace lock[%s] for datasource[%s] is held by multiple tasks[%s]",
+            lock, datasource, posse.taskIds
+        );
+      }
+
+      String supervisorTaskId = posse.taskIds.iterator().next();
+      replaceLocks.add(
+          new ReplaceTaskLock(supervisorTaskId, lock.getInterval(), lock.getVersion())
+      );
+    }
+
+    return replaceLocks;
   }
 
   /**

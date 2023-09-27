@@ -31,7 +31,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -56,7 +55,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -99,6 +97,89 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
         emitter
     );
+  }
+
+  @Test
+  public void test_start_withExistingJobs() throws IOException
+  {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(
+            task.getId(),
+            k -> new KubernetesWorkItem(
+                task,
+                Futures.immediateFuture(TaskStatus.success(task.getId()))
+            )
+        ).getResult();
+      }
+    };
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
+
+    replayAll();
+
+    runner.start();
+
+    verifyAll();
+
+    Assert.assertNotNull(runner.tasks);
+    Assert.assertEquals(1, runner.tasks.size());
+  }
+
+  @Test
+  public void test_start_whenDeserializationExceptionThrown_isIgnored() throws IOException
+  {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null))
+                    .getResult();
+      }
+    };
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
+
+    replayAll();
+
+    runner.start();
+
+    verifyAll();
+
+    Assert.assertNotNull(runner.tasks);
+    Assert.assertEquals(0, runner.tasks.size());
   }
 
   @Test
@@ -261,80 +342,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   public void test_shutdown_withoutExistingTask()
   {
     runner.shutdown(task.getId(), "");
-  }
-
-  @Test
-  public void test_restore_withExistingJobs() throws IOException
-  {
-    KubernetesTaskRunner runner = new KubernetesTaskRunner(
-        taskAdapter,
-        config,
-        peonClient,
-        httpClient,
-        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
-    ) {
-      @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
-      {
-        return new KubernetesWorkItem(task, null).getResult();
-      }
-    };
-
-    Job job = new JobBuilder()
-        .withNewMetadata()
-        .withName(ID)
-        .endMetadata()
-        .build();
-
-    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
-    EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
-
-    replayAll();
-
-    List<Pair<Task, ListenableFuture<TaskStatus>>> tasks = runner.restore();
-
-    verifyAll();
-
-    Assert.assertNotNull(tasks);
-    Assert.assertEquals(1, tasks.size());
-  }
-
-  @Test
-  public void test_restore_whenDeserializationExceptionThrown_isIgnored() throws IOException
-  {
-    KubernetesTaskRunner runner = new KubernetesTaskRunner(
-        taskAdapter,
-        config,
-        peonClient,
-        httpClient,
-        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
-    ) {
-      @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
-      {
-        return new KubernetesWorkItem(task, null).getResult();
-      }
-    };
-
-    Job job = new JobBuilder()
-        .withNewMetadata()
-        .withName(ID)
-        .endMetadata()
-        .build();
-
-    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
-    EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
-
-    replayAll();
-
-    List<Pair<Task, ListenableFuture<TaskStatus>>> tasks = runner.restore();
-
-    verifyAll();
-
-    Assert.assertNotNull(tasks);
-    Assert.assertEquals(0, tasks.size());
   }
 
   @Test

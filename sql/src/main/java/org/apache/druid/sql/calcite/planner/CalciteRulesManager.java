@@ -164,15 +164,6 @@ public class CalciteRulesManager
       );
 
   /**
-   * Rules from Calcite that are not part of Calcite's standard set, but that we use anyway.
-   */
-  private static final List<RelOptRule> EXTRA_CALCITE_RULES =
-      ImmutableList.of(
-          // Useful for planning funky join conditions as filters on top of cross joins.
-          CoreRules.JOIN_EXTRACT_FILTER
-      );
-
-  /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#ABSTRACT_RELATIONAL_RULES}, minus:
    *
    * 1) {@link CoreRules#AGGREGATE_MERGE} and related {@link CoreRules#PROJECT_AGGREGATE_MERGE}
@@ -350,7 +341,6 @@ public class CalciteRulesManager
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
-    rules.addAll(EXTRA_CALCITE_RULES);
 
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
       rules.addAll(FANCY_JOIN_RULES);
