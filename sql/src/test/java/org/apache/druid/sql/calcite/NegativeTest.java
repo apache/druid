@@ -41,6 +41,20 @@ import static org.junit.Assert.assertThrows;
  *
  * In case a testcase marked with this annotation fails - it means that the
  * testcase no longer fails with the annotated expectation.
+ *
+ * During usage; the annotation process have to be added to the testclass.
+ * Ensure that it's loaded as the most outer-rule by using order=0 - otherwise
+ * it may interfere with other rules:
+ * <code>
+ *   @Rule(order = 0)
+ *   public NegativeTestProcessor decoupledIgnoreProcessor = new NegativeTestProcessor();
+ *
+ *   @NegativeTest
+ *   @Test
+ *   public void testA() {
+ *   }
+ * </code>
+ *
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
@@ -67,6 +81,7 @@ public @interface NegativeTest
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
     INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword");
+
 
 
     public Class<? extends Throwable> throwableClass;
