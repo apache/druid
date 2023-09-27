@@ -692,13 +692,13 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               0.5
                           ),
                           new DoublesSketchToQuantilePostAggregator(
-                              "_p1",
-                              new FieldAccessPostAggregator("_p0", "a0:agg"),
+                              "s1",
+                              new FieldAccessPostAggregator("s0", "a0:agg"),
                               0.5
                           ),
                           new DoublesSketchToQuantilePostAggregator(
-                              "_p3",
-                              new FieldAccessPostAggregator("_p2", "a0:agg"),
+                              "s3",
+                              new FieldAccessPostAggregator("s2", "a0:agg"),
                               0.9800000190734863
                           )
                       )

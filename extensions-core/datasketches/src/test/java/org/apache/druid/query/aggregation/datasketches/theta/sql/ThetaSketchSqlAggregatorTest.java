@@ -747,8 +747,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                        null
                                    ),
                                    new SketchEstimatePostAggregator(
-                                       "_p1",
-                                       new FieldAccessPostAggregator("_p0", "a0"),
+                                       "s1",
+                                       new FieldAccessPostAggregator("s0", "a0"),
                                        null
                                    )
                                )
@@ -803,8 +803,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                        null
                                    ),
                                    new SketchEstimatePostAggregator(
-                                       "_p1",
-                                       new FieldAccessPostAggregator("_p0", "a0"),
+                                       "s1",
+                                       new FieldAccessPostAggregator("s0", "a0"),
                                        null
                                    )
                                )
