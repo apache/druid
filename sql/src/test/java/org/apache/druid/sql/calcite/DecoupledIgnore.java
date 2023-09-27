@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.UOE;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -46,28 +45,14 @@ import static org.junit.Assert.assertThrows;
 @Target({ElementType.METHOD})
 public @interface DecoupledIgnore
 {
-  Modes value() default Modes.NOT_ENOUGH_RULES;
+  Modes mode() default Modes.NOT_ENOUGH_RULES;
 
   enum Modes
   {
     PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
     CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
-    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
-    COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
-    NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
-    BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
-    NPE(DruidException.class, "java.lang.NullPointerException"),
-    RESULT_PARSE_EXCEPTION(Exception.class, "parseResults"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),
-    CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
-    MISSING_DESC(DruidException.class, "function signature DESC"),
-    RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
-    ALLDATA_CSV(DruidException.class, "allData.csv"),
-    BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
-    INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword");
-
+    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -96,7 +81,6 @@ public @interface DecoupledIgnore
     public Statement apply(Statement base, Description description)
     {
       DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
-
       if (annotation == null) {
         return base;
       }
@@ -105,22 +89,23 @@ public @interface DecoupledIgnore
         @Override
         public void evaluate()
         {
-          Modes ignoreMode = annotation.value();
           Throwable e = assertThrows(
-              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
-              ignoreMode.throwableClass,
+              "Expected that this testcase will fail - it might got fixed?",
+              annotation.mode().throwableClass,
               base::evaluate
               );
 
           String trace = Throwables.getStackTraceAsString(e);
-          Matcher m = annotation.value().getPattern().matcher(trace);
+          Matcher m = annotation.mode().getPattern().matcher(trace);
 
           if (!m.find()) {
-            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.value().regex, e);
+            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.mode().regex, e);
           }
           throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
         }
       };
     }
   }
+
+
 }
