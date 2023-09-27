@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import io.opentelemetry.proto.common.v1.AnyValue;
 import io.opentelemetry.proto.common.v1.KeyValue;
 import io.opentelemetry.proto.common.v1.KeyValueList;
+import io.opentelemetry.proto.metrics.v1.DataPointFlags;
 import io.opentelemetry.proto.metrics.v1.Metric;
 import io.opentelemetry.proto.metrics.v1.MetricsData;
 import org.apache.druid.data.input.InputRow;
@@ -402,6 +403,32 @@ public class OpenTelemetryMetricsProtobufReaderTest
     List<InputRow> rowList = new ArrayList<>();
     rows.forEachRemaining(rowList::add);
     Assert.assertEquals(0, rowList.size());
+  }
+
+  @Test
+  public void testNoRecordedValueMetric()
+  {
+    metricBuilder.setName("example_gauge")
+        .getGaugeBuilder()
+        .addDataPointsBuilder()
+        .setAsInt(6)
+        .setFlags(DataPointFlags.FLAG_NO_RECORDED_VALUE_VALUE)
+        .setTimeUnixNano(TIMESTAMP);
+
+    MetricsData metricsData = metricsDataBuilder.build();
+
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsData.toByteArray()));
+    CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
+        dimensionsSpec,
+        settableByteEntity,
+        "metric.name",
+        "raw.value",
+        "descriptor.",
+        "custom."
+    ).read();
+
+    Assert.assertFalse(rows.hasNext());
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
