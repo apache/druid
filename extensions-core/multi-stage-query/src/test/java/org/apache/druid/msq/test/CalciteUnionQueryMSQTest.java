@@ -20,28 +20,25 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.sql.calcite.CalciteQueryTest;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.CalciteUnionQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Runs {@link CalciteQueryTest} but with MSQ engine
+ * Runs {@link CalciteUnionQueryTest} but with MSQ engine
  */
-public class CalciteSelectQueryMSQTest extends CalciteQueryTest
+public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 {
   private TestGroupByBuffers groupByBuffers;
 
@@ -93,86 +90,23 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    return new QueryTestBuilder(new CalciteTestConfig(true))
+    return new QueryTestBuilder(new BaseCalciteQueryTest.CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate())
         .msqCompatible(msqCompatible);
   }
 
-  @Ignore
-  @Override
-  public void testCannotInsertWithNativeEngine()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testCannotReplaceWithNativeEngine()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testRequireTimeConditionSimpleQueryNegative()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testRequireTimeConditionSubQueryNegative()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testRequireTimeConditionSemiJoinNegative()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testExactCountDistinctWithFilter()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testUnplannableQueries()
-  {
-
-  }
-
-  @Ignore
-  @Override
-  public void testQueryWithMoreThanMaxNumericInFilter()
-  {
-
-  }
-
   /**
-   * Same query as {@link CalciteQueryTest#testArrayAggQueryOnComplexDatatypes}. ARRAY_AGG is not supported in MSQ currently.
-   * Once support is added, this test can be removed and msqCompatible() can be added to the one in CalciteQueryTest.
+   * Doesn't pass through Druid however the planning error is different as it rewrites to a union datasource.
+   * This test is disabled because MSQ wants to support union datasources, and it makes little sense to add highly
+   * conditional planning error for the same. Planning errors are merely hints, and this is one of those times
+   * when the hint is incorrect till MSQ starts supporting the union datasource.
    */
   @Test
   @Override
-  public void testArrayAggQueryOnComplexDatatypes()
+  public void testUnionIsUnplannable()
   {
-    try {
-      testQuery("SELECT ARRAY_AGG(unique_dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query execution should fail");
-    }
-    catch (ISE e) {
-      Assert.assertTrue(
-          e.getMessage().contains("Cannot handle column [a0] with type [ARRAY<COMPLEX<hyperUnique>>]")
-      );
-    }
-  }
 
+  }
 }

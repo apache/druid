@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -36,13 +37,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * TODO(laksh):
+ */
 public class UnionDataSource implements DataSource
 {
   @JsonProperty
-  private final List<TableDataSource> dataSources;
+  private final List<DataSource> dataSources;
 
   @JsonCreator
-  public UnionDataSource(@JsonProperty("dataSources") List<TableDataSource> dataSources)
+  public UnionDataSource(@JsonProperty("dataSources") List<DataSource> dataSources)
   {
     if (dataSources == null || dataSources.isEmpty()) {
       throw new ISE("'dataSources' must be non-null and non-empty for 'union'");
@@ -51,18 +55,38 @@ public class UnionDataSource implements DataSource
     this.dataSources = dataSources;
   }
 
+  public List<DataSource> getDataSources()
+  {
+    return dataSources;
+  }
+
+
+  // TODO: native only method
   @Override
   public Set<String> getTableNames()
   {
     return dataSources.stream()
-                      .map(input -> Iterables.getOnlyElement(input.getTableNames()))
+                      .map(input -> {
+                        if (!(input instanceof TableDataSource)) {
+                          throw DruidException.defensive("should be table");
+                        }
+                        return Iterables.getOnlyElement(input.getTableNames());
+                      })
                       .collect(Collectors.toSet());
   }
 
+  // TODO: native only method
   @JsonProperty
-  public List<TableDataSource> getDataSources()
+  public List<TableDataSource> getDataSourcesAsTableDataSources()
   {
-    return dataSources;
+    return dataSources.stream()
+                      .map(input -> {
+                        if (!(input instanceof TableDataSource)) {
+                          throw DruidException.defensive("should be table");
+                        }
+                        return (TableDataSource) input;
+                      })
+                      .collect(Collectors.toList());
   }
 
   @Override
@@ -76,10 +100,6 @@ public class UnionDataSource implements DataSource
   {
     if (children.size() != dataSources.size()) {
       throw new IAE("Expected [%d] children, got [%d]", dataSources.size(), children.size());
-    }
-
-    if (!children.stream().allMatch(dataSource -> dataSource instanceof TableDataSource)) {
-      throw new IAE("All children must be tables");
     }
 
     return new UnionDataSource(
@@ -149,11 +169,7 @@ public class UnionDataSource implements DataSource
 
     UnionDataSource that = (UnionDataSource) o;
 
-    if (!dataSources.equals(that.dataSources)) {
-      return false;
-    }
-
-    return true;
+    return dataSources.equals(that.dataSources);
   }
 
   @Override
