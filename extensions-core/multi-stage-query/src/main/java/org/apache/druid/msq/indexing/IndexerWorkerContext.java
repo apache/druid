@@ -118,7 +118,6 @@ public class IndexerWorkerContext implements WorkerContext
         new LoadedSegmentDataProviderFactory(
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
-            toolbox.getJsonMapper(),
             smileMapper
         ),
         serviceClientFactory

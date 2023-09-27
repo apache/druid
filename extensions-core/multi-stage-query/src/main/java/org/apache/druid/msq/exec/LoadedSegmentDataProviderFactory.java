@@ -29,21 +29,18 @@ public class LoadedSegmentDataProviderFactory
 {
   private final CoordinatorClient coordinatorClient;
   private final ServiceClientFactory serviceClientFactory;
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
+  private final ObjectMapper objectMapper;
 
   public LoadedSegmentDataProviderFactory(
       CoordinatorClient coordinatorClient,
       ServiceClientFactory serviceClientFactory,
-      ObjectMapper jsonMapper,
-      ObjectMapper smileMapper
+      ObjectMapper objectMapper
   )
   {
 
     this.coordinatorClient = coordinatorClient;
     this.serviceClientFactory = serviceClientFactory;
-    this.jsonMapper = jsonMapper;
-    this.smileMapper = smileMapper;
+    this.objectMapper = objectMapper;
   }
 
   public LoadedSegmentDataProvider createLoadedSegmentDataProvider(
@@ -58,8 +55,7 @@ public class LoadedSegmentDataProviderFactory
         channelCounters,
         serviceClientFactory,
         coordinatorClient,
-        jsonMapper,
-        smileMapper
+        objectMapper
     );
   }
 }

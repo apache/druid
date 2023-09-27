@@ -21,6 +21,7 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -55,13 +56,13 @@ public class DataServerClient<T>
   private static final Logger log = new Logger(DataServerClient.class);
   private static final String SERVED_SEGMENT_CLIENT_NAME = "ServedSegmentClient";
   private final ServiceClient serviceClient;
-  private final ObjectMapper smileMapper;
+  private final ObjectMapper objectMapper;
   private final ScheduledExecutorService queryCancellationExecutor;
 
   public DataServerClient(
       ServiceClientFactory serviceClientFactory,
       FixedSetServiceLocator fixedSetServiceLocator,
-      ObjectMapper smileMapper
+      ObjectMapper objectMapper
   )
   {
     serviceClient = serviceClientFactory.makeClient(
@@ -69,7 +70,7 @@ public class DataServerClient<T>
         fixedSetServiceLocator,
         StandardRetryPolicy.noRetries()
     );
-    this.smileMapper = smileMapper;
+    this.objectMapper = objectMapper;
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
 
@@ -78,10 +79,17 @@ public class DataServerClient<T>
     final String basePath = "/druid/v2/";
     final String cancelPath = basePath + query.getId();
 
+    RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, basePath);
+    final boolean isSmile = objectMapper.getFactory() instanceof SmileFactory;
+    if (isSmile) {
+      requestBuilder = requestBuilder.smileContent(objectMapper, query);
+    } else {
+      requestBuilder = requestBuilder.jsonContent(objectMapper, query);
+    }
+
     ListenableFuture<InputStream> resultStreamFuture = serviceClient.asyncRequest(
-        new RequestBuilder(HttpMethod.POST, basePath)
-            .smileContent(smileMapper, query),
-        new DataServerResponseHandler(query, responseContext, smileMapper)
+        requestBuilder,
+        new DataServerResponseHandler(query, responseContext, objectMapper)
     );
 
     Futures.addCallback(
@@ -117,7 +125,7 @@ public class DataServerClient<T>
                 basePath,
                 query,
                 "",
-                smileMapper
+                objectMapper
             );
           }
 

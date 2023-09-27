@@ -54,7 +54,6 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
   private final ServiceClientFactory serviceClientFactory;
   private final CoordinatorClient coordinatorClient;
   private final ObjectMapper objectMapper;
-  private final ObjectMapper smileMapper;
 
   public LoadedSegmentDataProviderImpl(
       RichSegmentDescriptor segmentDescriptor,
@@ -62,8 +61,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
       ChannelCounters channelCounters,
       ServiceClientFactory serviceClientFactory,
       CoordinatorClient coordinatorClient,
-      ObjectMapper objectMapper,
-      ObjectMapper smileMapper
+      ObjectMapper objectMapper
   )
   {
     this.segmentDescriptor = segmentDescriptor;
@@ -72,7 +70,6 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     this.serviceClientFactory = serviceClientFactory;
     this.coordinatorClient = coordinatorClient;
     this.objectMapper = objectMapper;
-    this.smileMapper = smileMapper;
   }
 
   @Override
@@ -90,7 +87,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     final DataServerClient<QueryType> dataServerClient = new DataServerClient<>(
         serviceClientFactory,
         new FixedSetServiceLocator(segmentDescriptor.getServers()),
-        smileMapper
+        objectMapper
     );
 
     final JavaType queryResultType = objectMapper.getTypeFactory().constructType(resultClass);
