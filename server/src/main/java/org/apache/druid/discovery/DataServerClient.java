@@ -21,20 +21,18 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.rpc.FixedSetServiceLocator;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -57,50 +55,54 @@ public class DataServerClient<T>
   private static final Logger log = new Logger(DataServerClient.class);
   private static final String SERVED_SEGMENT_CLIENT_NAME = "ServedSegmentClient";
   private final ServiceClient serviceClient;
-  private final ObjectMapper objectMapper;
   private final ObjectMapper smileMapper;
   private final ScheduledExecutorService queryCancellationExecutor;
 
   public DataServerClient(
       ServiceClientFactory serviceClientFactory,
       FixedSetServiceLocator fixedSetServiceLocator,
-      ObjectMapper objectMapper,
       ObjectMapper smileMapper
   )
   {
     serviceClient = serviceClientFactory.makeClient(
         SERVED_SEGMENT_CLIENT_NAME,
         fixedSetServiceLocator,
-        StandardRetryPolicy.aboutAnHour()
+        StandardRetryPolicy.noRetries()
     );
-    this.objectMapper = objectMapper;
     this.smileMapper = smileMapper;
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
 
-  public Sequence<T> run(Query<T> query, ResponseContext responseContext, Closer closer)
-      throws Exception
+  public Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType)
   {
     final String basePath = "/druid/v2/";
     final String cancelPath = basePath + query.getId();
-    JavaType queryResultType;
-    if (query instanceof ScanQuery) {
-      queryResultType = objectMapper.getTypeFactory().constructType(ScanResultValue.class);
-    } else {
-      queryResultType = objectMapper.getTypeFactory().constructType(ResultRow.class);
-    }
 
-    InputStream resultStream = serviceClient.request(
+    ListenableFuture<InputStream> resultStreamFuture = serviceClient.asyncRequest(
         new RequestBuilder(HttpMethod.POST, basePath)
             .smileContent(smileMapper, query),
         new DataServerResponseHandler(query, responseContext, smileMapper)
     );
-    closer.register(
-        () -> {
-          if (!resultStream.markSupported()) {
-            cancelQuery(query, cancelPath);
+
+    Futures.addCallback(
+        resultStreamFuture,
+        new FutureCallback<InputStream>()
+        {
+          @Override
+          public void onSuccess(InputStream result)
+          {
+            // Do nothing
           }
-        }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            if (resultStreamFuture.isCancelled()) {
+              cancelQuery(query, cancelPath);
+            }
+          }
+        },
+        Execs.directExecutor()
     );
 
     return new BaseSequence<>(
@@ -111,7 +113,7 @@ public class DataServerClient<T>
           {
             return new JsonParserIterator<>(
                 queryResultType,
-                Futures.immediateFuture(resultStream),
+                resultStreamFuture,
                 basePath,
                 query,
                 "",

@@ -21,8 +21,8 @@ package org.apache.druid.msq.input.table;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.SegmentDescriptor;
@@ -47,7 +47,8 @@ public class SegmentWithDescriptor
    *
    * @param segmentSupplier           supplier of a {@link ResourceHolder} of segment. The {@link ResourceHolder#close()}
    *                                  logic must include a delegated call to {@link Segment#close()}.
-   * @param loadedSegmentDataProvider
+   * @param loadedSegmentDataProvider {@link LoadedSegmentDataProvider} which fetches the corresponding results from a
+   *                                  data server where the segment is loaded. The call will fetch the
    * @param descriptor                segment descriptor
    */
   public SegmentWithDescriptor(
@@ -74,13 +75,14 @@ public class SegmentWithDescriptor
   {
     return segmentSupplier.get();
   }
-  public <T, S> Sequence<S> fetchRowsFromDataServer(
-      Query<T> query,
-      Function<Sequence<T>, Sequence<S>> mappingFunction,
-      Closer closer
+
+  public <QueryType, ReturnType> Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Sequence<ReturnType>> fetchRowsFromDataServer(
+      Query<QueryType> query,
+      Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
+      Class<QueryType> queryResultType
   ) throws IOException
   {
-    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, mappingFunction, closer);
+    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, mappingFunction, queryResultType);
   }
 
   /**

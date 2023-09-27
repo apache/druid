@@ -35,10 +35,12 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
@@ -113,9 +115,12 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
-      Sequence<ResultRow> servedSegmentFromServer =
-          segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), closer);
-      resultYielder = Yielders.each(servedSegmentFromServer);
+      Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Sequence<ResultRow>> statusSequencePair =
+          segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), ResultRow.class);
+      if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
+        return runWithSegment(segment);
+      }
+      resultYielder = Yielders.each(statusSequencePair.rhs);
     }
 
     populateFrameWriterAndFlushIfNeeded();

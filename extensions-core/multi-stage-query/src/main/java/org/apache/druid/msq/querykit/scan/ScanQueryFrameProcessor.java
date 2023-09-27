@@ -42,12 +42,14 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.external.ExternalSegment;
@@ -162,7 +164,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     closer.close();
   }
 
-  private static Sequence<Object[]> mappingFunction(Sequence<ScanResultValue> inputSequence)
+  public static Sequence<Object[]> mappingFunction(Sequence<ScanResultValue> inputSequence)
   {
     return inputSequence.flatMap(resultRow -> {
       List<List<Object>> events = (List<List<Object>>) resultRow.getEvents();
@@ -174,15 +176,19 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      final Sequence<Object[]> sequence = segment.fetchRowsFromDataServer(
-          query,
-          ScanQueryFrameProcessor::mappingFunction,
-          closer
-      );
+      final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Sequence<Object[]>> statusSequencePair =
+          segment.fetchRowsFromDataServer(
+              query,
+              ScanQueryFrameProcessor::mappingFunction,
+              ScanResultValue.class
+          );
+      if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
+        return runWithSegment(segment);
+      }
 
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(query, jsonMapper);
       RowBasedCursor<Object[]> cursorFromIterable = IterableRowsCursorHelper.getCursorFromSequence(
-          sequence,
+          statusSequencePair.rhs,
           rowSignature
       );
 

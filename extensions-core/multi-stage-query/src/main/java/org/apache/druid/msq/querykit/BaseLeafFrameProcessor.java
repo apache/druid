@@ -33,7 +33,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.msq.exec.HandoffException;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.DataSource;
@@ -159,11 +158,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     } else if (baseInput.hasSegment()) {
       SegmentWithDescriptor segment = baseInput.getSegment();
       if (segment.isRealtimeSegment()) {
-        try {
-          return runWithLoadedSegment(baseInput.getSegment());
-        } catch (HandoffException handoffException) {
-          return runWithSegment(baseInput.getSegment());
-        }
+        return runWithLoadedSegment(baseInput.getSegment());
       } else {
         return runWithSegment(baseInput.getSegment());
       }

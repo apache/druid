@@ -19,17 +19,17 @@
 
 package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.query.Queries;
@@ -47,7 +47,7 @@ import java.util.function.Function;
 
 public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
 {
-  private final static int DEFAULT_NUM_TRIES = 1;
+  private static final int DEFAULT_NUM_TRIES = 5;
   private final RichSegmentDescriptor segmentDescriptor;
   private final String dataSource;
   private final ChannelCounters channelCounters;
@@ -76,10 +76,10 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
   }
 
   @Override
-  public <ReturnType, QueryType> Sequence<ReturnType> fetchRowsFromDataServer(
+  public <ReturnType, QueryType> Pair<DataServerQueryStatus, Sequence<ReturnType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
-      Closer closer
+      Class<QueryType> resultClass
   ) throws IOException
   {
     final Query<QueryType> preparedQuery = Queries.withSpecificSegments(
@@ -90,25 +90,26 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     final DataServerClient<QueryType> dataServerClient = new DataServerClient<>(
         serviceClientFactory,
         new FixedSetServiceLocator(segmentDescriptor.getServers()),
-        objectMapper,
         smileMapper
     );
 
+    final JavaType queryResultType = objectMapper.getTypeFactory().constructType(resultClass);
     final int numRetriesOnMissingSegments = preparedQuery.context().getNumRetriesOnMissingSegments(DEFAULT_NUM_TRIES);
     final ResponseContext responseContext = new DefaultResponseContext();
 
-    Sequence<QueryType> queryReturnSequence;
+    Pair<DataServerQueryStatus, Sequence<QueryType>> statusSequencePair;
     try {
-      queryReturnSequence = RetryUtils.retry(
+      statusSequencePair = RetryUtils.retry(
           () -> {
-            Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, closer);
+            Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType);
             final List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
             if (missingSegments.isEmpty()) {
-              return sequence;
+              // Segment was found
+              return Pair.of(DataServerQueryStatus.SUCCESS, sequence);
             } else {
               Boolean wasHandedOff = checkSegmentHandoff(coordinatorClient, dataSource, segmentDescriptor);
               if (Boolean.TRUE.equals(wasHandedOff)) {
-                throw new HandoffException();
+                return Pair.of(DataServerQueryStatus.HANDOFF, null);
               } else {
                 throw new ISE(
                     "Segment[%s] could not be found on data server, but segment was not handed off.",
@@ -117,19 +118,22 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
               }
             }
           },
-          input -> !(input instanceof HandoffException),
+          input -> true,
           numRetriesOnMissingSegments
+      );
+
+      return Pair.of(
+          statusSequencePair.lhs,
+          mappingFunction.apply(statusSequencePair.rhs)
+                         .map(row -> {
+                           channelCounters.incrementRowCount();
+                           return row;
+                         })
       );
     }
     catch (Exception e) {
-      Throwables.propagateIfPossible(e, HandoffException.class);
       throw new IOE(e, "Exception while fetching rows from dataservers.");
     }
-
-    return mappingFunction.apply(queryReturnSequence).map(row -> {
-      channelCounters.incrementRowCount();
-      return row;
-    });
   }
 
   private static List<SegmentDescriptor> getMissingSegments(final ResponseContext responseContext)
@@ -145,7 +149,8 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
       CoordinatorClient coordinatorClient,
       String dataSource,
       SegmentDescriptor segmentDescriptor
-  ) throws Exception {
+  ) throws Exception
+  {
     Boolean wasHandedOff = RetryUtils.retry(
         () -> FutureUtils.get(coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor), true),
         input -> true,
