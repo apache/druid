@@ -25,15 +25,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class DDSketchToQuantilesPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testSerde() throws Exception
   {
@@ -69,14 +64,15 @@ public class DDSketchToQuantilesPostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of quantiles is not supported");
     PostAggregator postAgg = new DDSketchToQuantilesPostAggregator(
         "post",
         new ConstantPostAggregator("", 100),
         new double[]{0.25, 0.75}
     );
-    postAgg.getComparator();
+    Assert.assertThrows(
+        "Comparing arrays of quantiles is not supported",
+        IAE.class,
+        () -> postAgg.getComparator());
   }
 
   @Test

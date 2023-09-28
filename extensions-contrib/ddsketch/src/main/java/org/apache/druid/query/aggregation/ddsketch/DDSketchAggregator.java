@@ -46,8 +46,8 @@ public class DDSketchAggregator implements Aggregator
 
   public DDSketchAggregator(ColumnValueSelector selector, @Nullable Double relativeError, @Nullable Integer numBins)
   {
-    Integer effectiveNumBins = numBins != null ? numBins : DDSketchAggregatorFactory.DEFAULT_NUM_BINS;
-    Double effectiveRelativeError = relativeError != null ? relativeError : DDSketchAggregatorFactory.DEFAULT_RELATIVE_ERROR;
+    int effectiveNumBins = numBins != null ? numBins : DDSketchAggregatorFactory.DEFAULT_NUM_BINS;
+    double effectiveRelativeError = relativeError != null ? relativeError : DDSketchAggregatorFactory.DEFAULT_RELATIVE_ERROR;
     this.selector = selector;
     this.histogram = DDSketches.collapsingLowestDense(effectiveRelativeError, effectiveNumBins);
   }
