@@ -1178,6 +1178,7 @@ public class ControllerImpl implements Controller
       final Collection<DataSegment> metadataStoreSegments =
           FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
 
+      int realtimeCount = 0;
       Set<DataSegment> unifiedSegmentView = new HashSet<>(metadataStoreSegments);
       for (ImmutableSegmentLoadInfo segmentLoadInfo : serverViewSegments) {
         ImmutableSet<DruidServerMetadata> servers = segmentLoadInfo.getServers();
@@ -1187,12 +1188,22 @@ public class ControllerImpl implements Controller
                                                                              ServerType.INDEXER_EXECUTOR.equals(druidServerMetadata.getType()))
                                                                  .collect(Collectors.toSet());
         if (!realtimeServerMetadata.isEmpty()) {
+          realtimeCount += 1;
           DataSegmentWithLocation dataSegmentWithLocation = new DataSegmentWithLocation(
               segmentLoadInfo.getSegment(),
               realtimeServerMetadata
           );
           unifiedSegmentView.add(dataSegmentWithLocation);
         }
+      }
+
+      if (isIncludeRealtime) {
+        log.info(
+            "Fetched total [%d] segments from coordinator: [%d] from metadata stoure, [%d] from server view",
+            unifiedSegmentView.size(),
+            metadataStoreSegments.size(),
+            realtimeCount
+        );
       }
 
       if (unifiedSegmentView.isEmpty()) {

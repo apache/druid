@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
@@ -65,6 +66,7 @@ import java.util.function.Function;
  */
 public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
 {
+  private static final Logger log = new Logger(GroupByPreShuffleFrameProcessor.class);
   private final GroupByQuery query;
   private final GroupingEngine groupingEngine;
   private final ColumnSelectorFactory frameWriterColumnSelectorFactory;
@@ -118,6 +120,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Sequence<ResultRow>> statusSequencePair =
           segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), ResultRow.class);
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
+        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.", segment);
         return runWithSegment(segment);
       }
       resultYielder = Yielders.each(statusSequencePair.rhs);

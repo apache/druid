@@ -54,7 +54,6 @@ import java.util.concurrent.TimeUnit;
 public class DataServerClient<T>
 {
   private static final Logger log = new Logger(DataServerClient.class);
-  private static final String SERVED_SEGMENT_CLIENT_NAME = "ServedSegmentClient";
   private final ServiceClient serviceClient;
   private final ObjectMapper objectMapper;
   private final ScheduledExecutorService queryCancellationExecutor;
@@ -66,7 +65,7 @@ public class DataServerClient<T>
   )
   {
     serviceClient = serviceClientFactory.makeClient(
-        SERVED_SEGMENT_CLIENT_NAME,
+        NodeRole.INDEXER.getJsonName(),
         fixedSetServiceLocator,
         StandardRetryPolicy.noRetries()
     );
@@ -87,6 +86,7 @@ public class DataServerClient<T>
       requestBuilder = requestBuilder.jsonContent(objectMapper, query);
     }
 
+    log.debug("Sending request to servers for query[%s], request[%s]", query.getId(), requestBuilder.toString());
     ListenableFuture<InputStream> resultStreamFuture = serviceClient.asyncRequest(
         requestBuilder,
         new DataServerResponseHandler(query, responseContext, objectMapper)

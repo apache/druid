@@ -20,6 +20,7 @@
 package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -35,6 +36,7 @@ import java.io.InputStream;
 
 public class DataServerResponseHandler implements HttpResponseHandler<AppendableByteArrayInputStream, InputStream>
 {
+  private static final Logger log = new Logger(DataServerResponseHandler.class);
   private final String queryId;
   private final ResponseContext responseContext;
   private final ObjectMapper objectMapper;
@@ -49,6 +51,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<Appendable
   @Override
   public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
   {
+    log.debug("Received response status[%s] for queryId[%s]", response.getStatus(), queryId);
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
     in.add(getContentBytes(response.getContent()));
 

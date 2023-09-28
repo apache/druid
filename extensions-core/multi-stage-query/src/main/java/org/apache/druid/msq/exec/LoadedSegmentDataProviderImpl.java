@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.query.Queries;
@@ -40,13 +41,16 @@ import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.rpc.FixedSetServiceLocator;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
 {
+  private static final Logger log = new Logger(LoadedSegmentDataProviderImpl.class);
   private static final int DEFAULT_NUM_TRIES = 5;
   private final RichSegmentDescriptor segmentDescriptor;
   private final String dataSource;
@@ -84,14 +88,17 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
         ImmutableList.of(segmentDescriptor)
     );
 
+    Set<DruidServerMetadata> servers = segmentDescriptor.getServers();
     final DataServerClient<QueryType> dataServerClient = new DataServerClient<>(
         serviceClientFactory,
-        new FixedSetServiceLocator(segmentDescriptor.getServers()),
+        new FixedSetServiceLocator(servers),
         objectMapper
     );
 
     final JavaType queryResultType = objectMapper.getTypeFactory().constructType(resultClass);
     final int numRetriesOnMissingSegments = preparedQuery.context().getNumRetriesOnMissingSegments(DEFAULT_NUM_TRIES);
+
+    log.debug("Querying severs[%s] for segment[%s], retries:[%d]", servers, segmentDescriptor, numRetriesOnMissingSegments);
     final ResponseContext responseContext = new DefaultResponseContext();
 
     Pair<DataServerQueryStatus, Sequence<QueryType>> statusSequencePair;
@@ -101,13 +108,16 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType);
             final List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
             if (missingSegments.isEmpty()) {
+              log.debug("Successfully fetched rows from server for segment[%s]", segmentDescriptor);
               // Segment was found
               return Pair.of(DataServerQueryStatus.SUCCESS, sequence);
             } else {
               Boolean wasHandedOff = checkSegmentHandoff(coordinatorClient, dataSource, segmentDescriptor);
               if (Boolean.TRUE.equals(wasHandedOff)) {
+                log.debug("Segment[%s] was handed off.", segmentDescriptor);
                 return Pair.of(DataServerQueryStatus.HANDOFF, null);
               } else {
+                log.error("Segment[%s] could not be found on data server, but segment was not handed off.", segmentDescriptor);
                 throw new ISE(
                     "Segment[%s] could not be found on data server, but segment was not handed off.",
                     segmentDescriptor
@@ -129,6 +139,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
       );
     }
     catch (Exception e) {
+      log.error("Exception while fetching rows from dataservers.");
       throw new IOE(e, "Exception while fetching rows from dataservers.");
     }
   }

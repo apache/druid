@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
@@ -88,6 +89,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 {
+  private static final Logger log = new Logger(ScanQueryFrameProcessor.class);
   private final ScanQuery query;
   private final AtomicLong runningCountForLimit;
   private final ObjectMapper jsonMapper;
@@ -183,6 +185,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
               ScanResultValue.class
           );
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
+        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.", segment);
         return runWithSegment(segment);
       }
 
