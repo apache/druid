@@ -42,7 +42,8 @@ import java.util.stream.Collectors;
  */
 public class UnionDataSource implements DataSource
 {
-  @JsonProperty
+
+  @JsonProperty("dataSources")
   private final List<DataSource> dataSources;
 
   @JsonCreator
@@ -76,7 +77,6 @@ public class UnionDataSource implements DataSource
   }
 
   // TODO: native only method
-  @JsonProperty
   public List<TableDataSource> getDataSourcesAsTableDataSources()
   {
     return dataSources.stream()
@@ -102,9 +102,7 @@ public class UnionDataSource implements DataSource
       throw new IAE("Expected [%d] children, got [%d]", dataSources.size(), children.size());
     }
 
-    return new UnionDataSource(
-        children.stream().map(dataSource -> (TableDataSource) dataSource).collect(Collectors.toList())
-    );
+    return new UnionDataSource(children);
   }
 
   @Override

@@ -95,7 +95,8 @@ public class DruidRules
             DruidOuterQueryRule.WHERE_FILTER,
             DruidOuterQueryRule.SELECT_PROJECT,
             DruidOuterQueryRule.SORT,
-            new DruidUnionDataSourceRule(plannerContext),
+//            new DruidUnionDataSourceRule(plannerContext),
+            new DruidFreeUnionDataSourceRule(plannerContext),
             DruidJoinRule.instance(plannerContext)
         )
     );
