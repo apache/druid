@@ -94,11 +94,11 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
                                       + "  \"idx\" : 1,\n"
                                       + "  \"date_as_date\" : 1497744000000\n"
                                       + "}";
-    try{
+    try {
         JSONAssert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()), false);
         JSONAssert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()), false);
-    } catch (JSONException jse){
-        Assert.fail("Not comparing JSON strings");
+    } catch (JSONException jse) {
+        Assert.fail("Not comparing JSON strings. Error: " + jse.getMessage());
     }
   }
 
