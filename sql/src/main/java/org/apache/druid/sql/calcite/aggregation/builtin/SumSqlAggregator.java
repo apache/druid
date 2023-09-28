@@ -37,9 +37,9 @@ import javax.annotation.Nullable;
 public class SumSqlAggregator extends SimpleSqlAggregator
 {
   /**
-   * Workaround to avoid unconditional rewrite of SUM into COUNT+SUM0.
-   *
-   * Could be handled differenly after >Calcite-1.35; CALCITE-6020
+   * We use this custom aggregation function instead of builtin SqlStdOperatorTable.SUM
+   * to avoid transformation to COUNT+SUM0. See CALCITE-6020 for more details.
+   * It can be handled differently after CALCITE-6020 is addressed.
    */
   private static final SqlAggFunction DRUID_SUM = new SqlSumAggFunction(Nullness.castNonNull(null));
 
