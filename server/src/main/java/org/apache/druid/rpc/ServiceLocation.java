@@ -22,6 +22,7 @@ package org.apache.druid.rpc;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
@@ -80,7 +81,12 @@ public class ServiceLocation
     }
     Iterator<String> iterator = SPLITTER.split(s).iterator();
     ImmutableList<String> strings = ImmutableList.copyOf(iterator);
-    return Integer.parseInt(strings.get(1));
+    try {
+      return Integer.parseInt(strings.get(1));
+    }
+    catch (NumberFormatException e) {
+      throw new ISE(e, "Unable to parse port out of %s", strings.get(1));
+    }
   }
 
   public String getHost()

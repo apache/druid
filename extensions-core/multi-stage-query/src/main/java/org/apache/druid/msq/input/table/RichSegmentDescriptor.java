@@ -67,8 +67,7 @@ public class RichSegmentDescriptor extends SegmentDescriptor
       @JsonProperty("itvl") final Interval interval,
       @JsonProperty("ver") final String version,
       @JsonProperty("part") final int partitionNumber,
-      @JsonProperty("servers") final Set<DruidServerMetadata> servers,
-      @JsonProperty("isRealtime") final Boolean isRealtime
+      @JsonProperty("servers") final Set<DruidServerMetadata> servers
   )
   {
     return new RichSegmentDescriptor(
