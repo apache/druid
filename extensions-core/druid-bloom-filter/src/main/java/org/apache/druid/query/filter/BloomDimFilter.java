@@ -165,6 +165,12 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
               }
             };
           }
+
+          @Override
+          public boolean isNullInputUnknown()
+          {
+            return !bloomKFilter.testBytes(null, 0, 0);
+          }
         },
         extractionFn,
         filterTuning

@@ -73,6 +73,12 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
     return doublePredicate;
   }
 
+  @Override
+  public boolean isNullInputUnknown()
+  {
+    return value != null;
+  }
+
   private void initLongPredicate()
   {
     if (longPredicate != null) {

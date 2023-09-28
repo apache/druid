@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit.common;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -46,6 +45,7 @@ import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -1040,9 +1040,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
       }
 
       @Override

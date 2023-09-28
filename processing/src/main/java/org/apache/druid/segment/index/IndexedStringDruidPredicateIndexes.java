@@ -22,6 +22,7 @@ package org.apache.druid.segment.index;
 import com.google.common.base.Predicate;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -115,6 +116,16 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
             }
           }
         };
+      }
+
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (matcherFactory.isNullInputUnknown() && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          return bitmaps.get(0);
+        }
+        return null;
       }
     };
   }

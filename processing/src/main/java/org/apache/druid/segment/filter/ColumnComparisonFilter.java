@@ -79,14 +79,16 @@ public class ColumnComparisonFilter implements Filter
   public static ValueMatcher makeValueMatcher(final List<Supplier<String[]>> valueGetters)
   {
     if (valueGetters.isEmpty()) {
-      return BooleanValueMatcher.of(true);
+      return ValueMatchers.allTrue();
     }
 
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
+        // todo (clint): what to do about includeUnknown
+
         // Keep all values to compare against each other.
         String[][] values = new String[valueGetters.size()][];
 

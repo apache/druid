@@ -20,7 +20,11 @@
 package org.apache.druid.query.filter.vector;
 
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorSizeInspector;
+import org.apache.druid.segment.vector.VectorValueSelector;
+
+import javax.annotation.Nullable;
 
 /**
  * An object that returns a boolean indicating if the "current" row should be selected or not. The most prominent use
@@ -33,13 +37,121 @@ public interface VectorValueMatcher extends VectorSizeInspector
 {
   /**
    * Examine the current vector and return a match indicating what is accepted.
-   *
+   * <p>
    * Does not modify "mask".
    *
-   * @param mask must not be null; use {@link VectorMatch#allTrue} if you don't need a mask.
-   *
+   * @param mask           must not be null; use {@link VectorMatch#allTrue} if you don't need a mask.
+   * @param includeUnknown mapping for Druid native two state logic system into SQL three-state logic system. If set
+   *                       to true, this method should also return true if the result is 'unknown' to be a match, such
+   *                       as from the input being null valued. Used primarily to allow
+   *                       {@link org.apache.druid.segment.filter.NotFilter} to invert a match in an SQL compliant
+   *                       manner
    * @return the subset of "mask" that this value matcher accepts. May be the same instance as {@param mask} if
    * every row in the mask matches the filter.
    */
-  ReadableVectorMatch match(ReadableVectorMatch mask);
+  ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown);
+
+  /**
+   * Make a {@link VectorValueMatcher} that only selects input rows with null values
+   * @param selector
+   * @return
+   */
+  static VectorValueMatcher nullMatcher(VectorValueSelector selector)
+  {
+    return new BaseVectorValueMatcher(selector)
+    {
+      final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
+
+      @Override
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
+      {
+        return matchNulls(mask, match, selector.getNullVector());
+      }
+    };
+  }
+
+  /**
+   * Make an always false {@link VectorValueMatcher} for a {@link VectorValueSelector}. When {@code includeUnknown} is
+   * specified to the {@link VectorValueMatcher#match(ReadableVectorMatch, boolean)} function, this matcher will add
+   * the rows indicated as null values of {@link VectorValueSelector#getNullVector()} to the {@link ReadableVectorMatch}
+   * as selections, to participate in Druid 2-state logic system to SQL 3-state logic system conversion.
+   */
+  static BaseVectorValueMatcher allFalseMatcher(VectorValueSelector selector)
+  {
+    return new BaseVectorValueMatcher(selector)
+    {
+      final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
+
+      @Override
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
+      {
+        if (includeUnknown) {
+          return matchNulls(mask, match, selector.getNullVector());
+        }
+        return VectorMatch.allFalse();
+      }
+    };
+  }
+
+  /**
+   * Make an always false {@link VectorValueMatcher} for a {@link VectorObjectSelector}. When {@code includeUnknown} is
+   * specified to the {@link VectorValueMatcher#match(ReadableVectorMatch, boolean)} function, this matcher will add
+   * all rows of {@link VectorObjectSelector#getObjectVector()} which are null to the {@link ReadableVectorMatch} as
+   * selections, to participate in Druid 2-state logic system to SQL 3-state logic system conversion.
+   */
+  static VectorValueMatcher allFalseMatcher(VectorObjectSelector selector)
+  {
+    return new BaseVectorValueMatcher(selector)
+    {
+      final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
+
+      @Override
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
+      {
+        if (includeUnknown) {
+          final Object[] vector = selector.getObjectVector();
+          final int[] inputSelection = mask.getSelection();
+          final int inputSelectionSize = mask.getSelectionSize();
+          final int[] outputSelection = match.getSelection();
+          int outputSelectionSize = 0;
+
+          for (int i = 0; i < inputSelectionSize; i++) {
+            final int rowNum = inputSelection[i];
+            if (vector[rowNum] == null) {
+              outputSelection[outputSelectionSize++] = rowNum;
+            }
+          }
+
+          match.setSelectionSize(outputSelectionSize);
+          return match;
+        }
+        return VectorMatch.allFalse();
+      }
+    };
+  }
+
+  static ReadableVectorMatch matchNulls(
+      ReadableVectorMatch mask,
+      VectorMatch match,
+      @Nullable boolean[] nullVector
+  )
+  {
+    if (nullVector == null) {
+      return VectorMatch.allFalse();
+    }
+    final int[] inputSelection = mask.getSelection();
+    final int inputSelectionSize = mask.getSelectionSize();
+    final int[] outputSelection = match.getSelection();
+    int outputSelectionSize = 0;
+
+    for (int i = 0; i < inputSelectionSize; i++) {
+      final int rowNum = inputSelection[i];
+      if (nullVector[rowNum]) {
+        outputSelection[outputSelectionSize++] = rowNum;
+      }
+    }
+
+    match.setSelectionSize(outputSelectionSize);
+    return match;
+  }
 }

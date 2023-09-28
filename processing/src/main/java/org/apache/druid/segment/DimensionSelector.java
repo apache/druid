@@ -23,13 +23,14 @@ import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
@@ -66,7 +67,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
    */
   ValueMatcher makeValueMatcher(@Nullable String value);
 
-  ValueMatcher makeValueMatcher(Predicate<String> predicate);
+  ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory);
 
   /**
    * @deprecated This method is marked as deprecated in DimensionSelector to minimize the probability of accidental
@@ -186,6 +187,9 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       // does not report value cardinality, but otherwise behaves identically when used for grouping or selecting to a
       // normal multi-value dimension selector (getObject on a row with a single value returns the object instead of
       // the list)
+      if (values.get(0) == null) {
+        return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+      }
       return constant(values.get(0));
     } else {
       return new ConstantMultiValueDimensionSelector(values);
@@ -261,13 +265,17 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       @Override
       public ValueMatcher makeValueMatcher(@Nullable String value)
       {
-        return BooleanValueMatcher.of(value == null);
+        if (NullHandling.isNullOrEquivalent(value)) {
+          return ValueMatchers.allTrue();
+        }
+        return ValueMatchers.allUnknown();
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return BooleanValueMatcher.of(predicate.apply(null));
+        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+        return predicate.apply(null) ? ValueMatchers.allTrue() : ValueMatchers.allUnknown();
       }
 
       @Override

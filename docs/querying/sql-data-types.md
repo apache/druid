@@ -157,9 +157,9 @@ runtime property controls Druid's boolean logic mode. For the most SQL compliant
 
 When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic for
 [expressions](math-expr.md) evaluation, such as `expression` virtual columns or `expression` filters.
-However, even in this mode, Druid uses two-valued logic for filter types other than `expression`.
+If `druid.generic.useDefaultValueForNull = false` in addition to `druid.expressions.useStrictBooleans = true`, Druid also uses three-valued logic for native filters.
 
-When `druid.expressions.useStrictBooleans = false` (legacy mode), Druid uses two-valued logic.
+When `druid.expressions.useStrictBooleans = false` (legacy mode), Druid uses two-valued logic for expressions, and if `druid.generic.useDefaultValueForNull = true`, Druid uses two-valued logic for native filters, even if `druid.expressions.useStrictBooleans = true`.
 
 ## Nested columns
 

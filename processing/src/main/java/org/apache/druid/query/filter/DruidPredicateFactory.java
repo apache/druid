@@ -58,4 +58,9 @@ public interface DruidPredicateFactory
     final Predicate<String> stringPredicate = makeStringPredicate();
     return o -> stringPredicate.apply(null);
   }
+
+  default boolean isNullInputUnknown()
+  {
+    return true;
+  }
 }

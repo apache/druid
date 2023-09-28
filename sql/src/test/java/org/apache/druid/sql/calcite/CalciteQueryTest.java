@@ -2646,10 +2646,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{"10.1", 1L},
             new Object[]{"2", 1L},
             new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"2", 1L},
             new Object[]{"def", 1L}
         )
     );
@@ -3545,12 +3550,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+
         ImmutableList.of(
-            NullHandling.replaceWithDefault() ?
+            NullHandling.replaceWithDefault()
             // Matches everything but "abc"
-            new Object[]{5L} :
-            // match only null values
-            new Object[]{4L}
+            ? new Object[]{5L}
+            : new Object[]{2L}
         )
     );
   }
@@ -6262,7 +6267,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{5L}
+            new Object[]{NullHandling.replaceWithDefault() ? 5L : 4L}
         )
     );
   }
@@ -6315,7 +6320,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
         )
     );
   }
@@ -6350,7 +6355,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{5L}
+            NullHandling.replaceWithDefault() ? new Object[]{5L} : new Object[]{4L}
         )
     );
   }
@@ -7543,12 +7548,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             new Object[]{3L, 2L}
-        ) :
-        ImmutableList.of(
-            new Object[]{5L, 3L}
         )
     );
 

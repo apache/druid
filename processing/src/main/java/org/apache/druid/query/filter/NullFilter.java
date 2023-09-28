@@ -268,6 +268,13 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
+    public boolean isNullInputUnknown()
+    {
+      // this filter only matches null inputs
+      return false;
+    }
+
+    @Override
     public int hashCode()
     {
       return super.hashCode();

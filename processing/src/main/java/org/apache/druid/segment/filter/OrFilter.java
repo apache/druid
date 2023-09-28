@@ -52,7 +52,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- *
+ * Logical OR filter operation
  */
 public class OrFilter implements BooleanFilter
 {
@@ -112,10 +112,10 @@ public class OrFilter implements BooleanFilter
       }
 
       @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         return bitmapResultFactory.union(
-            () -> bitmapColumnIndices.stream().map(x -> x.computeBitmapResult(bitmapResultFactory)).iterator()
+            () -> bitmapColumnIndices.stream().map(x -> x.computeBitmapResult(bitmapResultFactory, includeUnknown)).iterator()
         );
       }
     };
@@ -166,7 +166,7 @@ public class OrFilter implements BooleanFilter
     for (Filter filter : filters) {
       final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
       if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
-        bitmaps.add(columnIndex.computeBitmapResult(resultFactory));
+        bitmaps.add(columnIndex.computeBitmapResult(resultFactory, false));
       } else {
         ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
         matchers.add(matcher);
@@ -227,10 +227,10 @@ public class OrFilter implements BooleanFilter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         for (ValueMatcher matcher : baseMatchers) {
-          if (matcher.matches()) {
+          if (matcher.matches(includeUnknown)) {
             return true;
           }
         }
@@ -262,9 +262,9 @@ public class OrFilter implements BooleanFilter
       final VectorMatch retVal = VectorMatch.wrap(new int[getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
-        ReadableVectorMatch currentMatch = baseMatchers[0].match(mask);
+        ReadableVectorMatch currentMatch = baseMatchers[0].match(mask, includeUnknown);
 
         // Initialize currentMask = mask, then progressively remove rows from the mask as we find matches for them.
         // This isn't necessary for correctness (we could use the original "mask" on every call to "match") but it
@@ -282,7 +282,7 @@ public class OrFilter implements BooleanFilter
           }
 
           currentMask.removeAll(currentMatch);
-          currentMatch = baseMatchers[i].match(currentMask);
+          currentMatch = baseMatchers[i].match(currentMask, false);
           retVal.addAll(currentMatch, scratch);
 
           if (currentMatch == currentMask) {

@@ -1427,6 +1427,22 @@ public class ImmutableConciseSetTest
     verifyComplement(expected, testSet, length);
   }
 
+  @Test
+  public void testComplement14()
+  {
+    List<Integer> expected = new ArrayList<>();
+    int length = 5;
+    for (int i = 0; i < length; i++) {
+      expected.add(i);
+    }
+    ImmutableConciseSet testSet = ImmutableConciseSet.complement(
+        ImmutableConciseSet.complement(new ImmutableConciseSet(), length),
+        length
+    );
+
+    verifyComplement(expected, testSet, length);
+  }
+
   private void verifyComplement(List<Integer> expected, ImmutableConciseSet set, int endIndex)
   {
     List<Integer> actual = new ArrayList<>();

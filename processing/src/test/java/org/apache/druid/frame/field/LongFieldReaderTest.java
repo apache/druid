@@ -23,6 +23,7 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -130,15 +131,15 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
 
     // Value matcher tests.
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(readSelector.makeValueMatcher("0").matches());
-      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher("0"::equals).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher(Objects::isNull).matches());
+      Assert.assertTrue(readSelector.makeValueMatcher("0").matches(false));
+      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches(false));
+      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0")).matches(false));
+      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Objects::isNull, false)).matches(false));
     } else {
-      Assert.assertFalse(readSelector.makeValueMatcher("0").matches());
-      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher("0"::equals).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
+      Assert.assertFalse(readSelector.makeValueMatcher("0").matches(false));
+      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches(false));
+      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0")).matches(false));
+      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Objects::isNull, false)).matches(false));
     }
   }
 
@@ -163,10 +164,10 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("5"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("5").matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher("2").matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5")).matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("2")).matches(false));
   }
 
   @Test
@@ -194,10 +195,10 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("5"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("5").matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher("2").matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5")).matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("2")).matches(false));
   }
 
   private void writeToMemory(final Long value)

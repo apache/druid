@@ -218,6 +218,12 @@ public class DimensionPredicateFilter implements Filter
     }
 
     @Override
+    public boolean isNullInputUnknown()
+    {
+      return !baseStringPredicate.apply(extractionFn.apply(null));
+    }
+
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {

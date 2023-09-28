@@ -27,6 +27,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -232,10 +233,10 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("bar").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("baz").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("bar"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("baz"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("bar").matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher("baz").matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("bar")).matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("baz")).matches(false));
   }
 
   @Test
@@ -264,10 +265,10 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("ar").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("bar").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("ar"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("bar"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("ar").matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher("bar").matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("ar")).matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("bar")).matches(false));
   }
 
   private void writeToMemory(@Nullable final List<String> values)

@@ -628,6 +628,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
+    public boolean isNullInputUnknown()
+    {
+      return !values.contains(null);
+    }
+
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {

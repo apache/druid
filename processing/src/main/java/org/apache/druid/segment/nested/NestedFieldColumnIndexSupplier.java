@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
@@ -310,6 +311,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
           }
         };
       }
+
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (localDictionary.get(0) == 0) {
+          return bitmaps.get(0);
+        }
+        return null;
+      }
     };
   }
 
@@ -373,9 +384,20 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int globalId = stringDictionary.indexOf(StringUtils.toUtf8ByteBuffer(value));
+          if (includeUnknown && localDictionary.get(0) == 0) {
+            if (globalId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(bitmaps.get(0));
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(
+                    getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)),
+                    bitmaps.get(0)
+                )
+            );
+          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -430,6 +452,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
         }
       };
     }
@@ -529,6 +561,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
@@ -594,6 +636,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
@@ -628,7 +680,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (longValue == null) {
             if (inputNull) {
@@ -638,6 +690,17 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           }
           final int globalId = longDictionary.indexOf(longValue);
+          if (includeUnknown && localDictionary.get(0) == 0) {
+            if (globalId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(bitmaps.get(0));
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(
+                    getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)),
+                    bitmaps.get(0)
+                )
+            );
+          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -713,6 +776,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
         }
       };
     }
@@ -823,6 +896,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
@@ -856,7 +939,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (doubleValue == null) {
             if (inputNull) {
@@ -866,6 +949,17 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           }
           final int globalId = doubleDictionary.indexOf(doubleValue);
+          if (includeUnknown && localDictionary.get(0) == 0) {
+            if (globalId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(bitmaps.get(0));
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(
+                    getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)),
+                    bitmaps.get(0)
+                )
+            );
+          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -941,6 +1035,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
         }
       };
     }
@@ -1035,6 +1139,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
@@ -1116,6 +1230,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (value != null && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
 
@@ -1161,6 +1285,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
         }
       };
     }
@@ -1235,6 +1369,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
         }
       };
     }

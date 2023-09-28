@@ -280,53 +280,53 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertNull(nullVector);
         }
 
-        Assert.assertTrue(valueSetIndex.forValue(String.valueOf(row)).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(valueIndexes.forValue(row, ColumnType.LONG).computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(valueSetIndex.forValue(String.valueOf(row)).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(valueIndexes.forValue(row, ColumnType.LONG).computeBitmapResult(resultFactory, false).get(i));
         Assert.assertTrue(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(String.valueOf(row))))
-                                       .computeBitmapResult(resultFactory)
+                                       .computeBitmapResult(resultFactory, false)
                                        .get(i));
         Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(String.valueOf(row)))
-                                        .computeBitmapResult(resultFactory)
+                                        .computeBitmapResult(resultFactory, false)
                                         .get(i));
-        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
         Assert.assertFalse(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH)))
-                                        .computeBitmapResult(resultFactory)
+                                        .computeBitmapResult(resultFactory, false)
                                         .get(i));
         Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH))
-                                         .computeBitmapResult(resultFactory)
+                                         .computeBitmapResult(resultFactory, false)
                                          .get(i));
-        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
 
       } else {
         if (NullHandling.sqlCompatible()) {
           Assert.assertNull(valueSelector.getObject());
           Assert.assertTrue(valueSelector.isNull());
           Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
-          Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-          Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
+          Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
+          Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
           Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                          .computeBitmapResult(resultFactory)
+                                          .computeBitmapResult(resultFactory, false)
                                           .get(i));
         } else {
           Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
           Assert.assertFalse(valueSelector.isNull());
           Assert.assertNull(vectorValueSelector.getNullVector());
-          Assert.assertFalse(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-          Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
+          Assert.assertFalse(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
+          Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
           Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                           .computeBitmapResult(resultFactory)
+                                           .computeBitmapResult(resultFactory, false)
                                            .get(i));
           final String defaultString = String.valueOf(NullHandling.defaultLongValue());
-          Assert.assertTrue(valueSetIndex.forValue(defaultString).computeBitmapResult(resultFactory).get(i));
+          Assert.assertTrue(valueSetIndex.forValue(defaultString).computeBitmapResult(resultFactory, false).get(i));
           Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(defaultString))
-                                          .computeBitmapResult(resultFactory)
+                                          .computeBitmapResult(resultFactory, false)
                                           .get(i));
         }
 
-        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
         Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH))
-                                         .computeBitmapResult(resultFactory)
+                                         .computeBitmapResult(resultFactory, false)
                                          .get(i));
       }
 

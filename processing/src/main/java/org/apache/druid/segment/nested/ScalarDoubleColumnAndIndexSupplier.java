@@ -235,7 +235,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
       if (castForComparison == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       final double doubleValue = castForComparison.asDouble();
       return new SimpleBitmapColumnIndex()
@@ -252,9 +252,17 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int id = dictionary.indexOf(doubleValue);
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -300,7 +308,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (doubleValue == null) {
             if (inputNull && NullHandling.sqlCompatible()) {
@@ -322,6 +330,14 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
           }
           final int id = dictionary.indexOf(doubleValue);
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -401,6 +417,16 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null)) {
+            return nullValueBitmap;
+          }
+          return null;
+        }
       };
     }
   }
@@ -450,6 +476,13 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               return getBitmap(rangeIterator.nextInt());
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          return nullValueBitmap;
         }
       };
     }
@@ -521,6 +554,16 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown()) {
+            return nullValueBitmap;
+          }
+          return null;
         }
       };
     }

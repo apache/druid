@@ -22,21 +22,24 @@ package org.apache.druid.segment.filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-final class TrueValueMatcher implements ValueMatcher
+/**
+ * Constant condition {@link ValueMatcher} that always returns true regardless of the underlying column value
+ */
+final class AllTrueValueMatcher implements ValueMatcher
 {
-  private static final TrueValueMatcher INSTANCE = new TrueValueMatcher();
+  private static final AllTrueValueMatcher INSTANCE = new AllTrueValueMatcher();
 
-  public static TrueValueMatcher instance()
+  public static AllTrueValueMatcher instance()
   {
     return INSTANCE;
   }
 
-  private TrueValueMatcher()
+  private AllTrueValueMatcher()
   {
   }
 
   @Override
-  public boolean matches()
+  public boolean matches(boolean includeUnknown)
   {
     return true;
   }
