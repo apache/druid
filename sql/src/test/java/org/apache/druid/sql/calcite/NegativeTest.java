@@ -74,7 +74,6 @@ public @interface NegativeTest
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
     NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
-    RESULT_PARSE_EXCEPTION(Exception.class, "parseResults"),
     AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),
     CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
     MISSING_DESC(DruidException.class, "function signature DESC"),
