@@ -232,7 +232,7 @@ case $CMD in
     mvn -q clean install dependency:go-offline -P dist $MAVEN_IGNORE
     ;;
   "build" )
-    mvn -B clean install -P dist $MAVEN_IGNORE $*
+    mvn -B clean install -P dist $MAVEN_IGNORE -T1.0C $*
     ;;
   "dist" )
     mvn -B install -P dist $MAVEN_IGNORE -pl :distribution
