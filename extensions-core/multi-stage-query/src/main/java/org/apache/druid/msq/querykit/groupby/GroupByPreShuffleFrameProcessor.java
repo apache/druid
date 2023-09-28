@@ -117,13 +117,13 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
-      Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Sequence<ResultRow>> statusSequencePair =
-          segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), ResultRow.class);
+      Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<ResultRow>> statusSequencePair =
+          segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), ResultRow.class, closer);
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
         log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.", segment);
         return runWithSegment(segment);
       }
-      resultYielder = Yielders.each(statusSequencePair.rhs);
+      resultYielder = statusSequencePair.rhs;
     }
 
     populateFrameWriterAndFlushIfNeeded();

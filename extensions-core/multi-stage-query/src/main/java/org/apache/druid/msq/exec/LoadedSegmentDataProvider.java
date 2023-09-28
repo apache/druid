@@ -21,6 +21,8 @@ package org.apache.druid.msq.exec;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Query;
 
 import java.io.IOException;
@@ -28,10 +30,11 @@ import java.util.function.Function;
 
 public interface LoadedSegmentDataProvider
 {
-  <ReturnType, QueryType> Pair<DataServerQueryStatus, Sequence<ReturnType>> fetchRowsFromDataServer(
+  <ReturnType, QueryType> Pair<DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
-      Class<QueryType> queryResultType
+      Class<QueryType> queryResultType,
+      Closer closer
   ) throws IOException;
 
   enum DataServerQueryStatus

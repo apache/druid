@@ -23,6 +23,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.SegmentDescriptor;
@@ -77,13 +79,14 @@ public class SegmentWithDescriptor
     return segmentSupplier.get();
   }
 
-  public <QueryType, ReturnType> Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Sequence<ReturnType>> fetchRowsFromDataServer(
+  public <QueryType, ReturnType> Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
-      Class<QueryType> queryResultType
+      Class<QueryType> queryResultType,
+      Closer closer
   ) throws IOException
   {
-    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, mappingFunction, queryResultType);
+    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, mappingFunction, queryResultType, closer);
   }
 
   /**

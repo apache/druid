@@ -30,6 +30,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
@@ -77,10 +80,11 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
   }
 
   @Override
-  public <ReturnType, QueryType> Pair<DataServerQueryStatus, Sequence<ReturnType>> fetchRowsFromDataServer(
+  public <ReturnType, QueryType> Pair<DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
-      Class<QueryType> resultClass
+      Class<QueryType> resultClass,
+      Closer closer
   ) throws IOException
   {
     final Query<QueryType> preparedQuery = Queries.withSpecificSegments(
@@ -101,16 +105,22 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     log.debug("Querying severs[%s] for segment[%s], retries:[%d]", servers, segmentDescriptor, numRetriesOnMissingSegments);
     final ResponseContext responseContext = new DefaultResponseContext();
 
-    Pair<DataServerQueryStatus, Sequence<QueryType>> statusSequencePair;
+    Pair<DataServerQueryStatus, Yielder<ReturnType>> statusSequencePair;
     try {
       statusSequencePair = RetryUtils.retry(
           () -> {
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType);
+            Yielder<ReturnType> yielder = Yielders.each(mappingFunction.apply(sequence)
+                                                                    .map(row -> {
+                                                                      channelCounters.incrementRowCount();
+                                                                      return row;
+                                                                    }));
+            closer.register(yielder);
             final List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
             if (missingSegments.isEmpty()) {
               log.debug("Successfully fetched rows from server for segment[%s]", segmentDescriptor);
               // Segment was found
-              return Pair.of(DataServerQueryStatus.SUCCESS, sequence);
+              return Pair.of(DataServerQueryStatus.SUCCESS, yielder);
             } else {
               Boolean wasHandedOff = checkSegmentHandoff(coordinatorClient, dataSource, segmentDescriptor);
               if (Boolean.TRUE.equals(wasHandedOff)) {
@@ -129,14 +139,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
           numRetriesOnMissingSegments
       );
 
-      return Pair.of(
-          statusSequencePair.lhs,
-          mappingFunction.apply(statusSequencePair.rhs)
-                         .map(row -> {
-                           channelCounters.incrementRowCount();
-                           return row;
-                         })
-      );
+      return statusSequencePair;
     }
     catch (Exception e) {
       log.error("Exception while fetching rows from dataservers.");

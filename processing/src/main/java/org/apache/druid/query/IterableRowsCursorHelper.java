@@ -103,4 +103,35 @@ public class IterableRowsCursorHelper
         rowSignature
     );
   }
+
+  public static RowBasedCursor<Object[]> getCursorFromYielder(Yielder<Object[]> yielderParam, RowSignature rowSignature)
+  {
+    return getCursorFromIterable(
+        new Iterable<Object[]>()
+        {
+          Yielder<Object[]> yielder = yielderParam;
+          @Override
+          public Iterator<Object[]> iterator()
+          {
+            return new Iterator<Object[]>()
+            {
+              @Override
+              public boolean hasNext()
+              {
+                return !yielder.isDone();
+              }
+
+              @Override
+              public Object[] next()
+              {
+                Object[] retVal = yielder.get();
+                yielder = yielder.next(null);
+                return retVal;
+              }
+            };
+          }
+        },
+        rowSignature
+    );
+  }
 }

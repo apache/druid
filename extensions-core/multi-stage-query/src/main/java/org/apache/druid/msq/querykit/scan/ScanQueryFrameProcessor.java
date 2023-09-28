@@ -178,11 +178,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Sequence<Object[]>> statusSequencePair =
+      final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> statusSequencePair =
           segment.fetchRowsFromDataServer(
               query,
               ScanQueryFrameProcessor::mappingFunction,
-              ScanResultValue.class
+              ScanResultValue.class,
+              closer
           );
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
         log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.", segment);
@@ -190,7 +191,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       }
 
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(query, jsonMapper);
-      RowBasedCursor<Object[]> cursorFromIterable = IterableRowsCursorHelper.getCursorFromSequence(
+      RowBasedCursor<Object[]> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
           statusSequencePair.rhs,
           rowSignature
       );
