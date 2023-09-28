@@ -48,6 +48,7 @@ import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
@@ -75,7 +76,6 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
@@ -120,6 +120,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
@@ -314,26 +315,28 @@ public class MSQTestBase extends BaseCalciteQueryTest
   {
     super.configureGuice(builder);
 
-    builder.addModule(new DruidModule()
-    {
-      // Small subset of MsqSqlModule
-      @Override
-      public void configure(Binder binder)
-      {
-        // We want this module to bring InputSourceModule along for the ride.
-        binder.install(new InputSourceModule());
-        binder.install(new NestedDataModule());
-        NestedDataModule.registerHandlersAndSerde();
-        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-      }
+    builder
+        .addModule(new HllSketchModule())
+        .addModule(new DruidModule()
+        {
+          // Small subset of MsqSqlModule
+          @Override
+          public void configure(Binder binder)
+          {
+            // We want this module to bring InputSourceModule along for the ride.
+            binder.install(new InputSourceModule());
+            binder.install(new NestedDataModule());
+            NestedDataModule.registerHandlersAndSerde();
+            SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+          }
 
-      @Override
-      public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-      {
-        // We want this module to bring input sources along for the ride.
-        return new InputSourceModule().getJacksonModules();
-      }
-    });
+          @Override
+          public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+          {
+            // We want this module to bring input sources along for the ride.
+            return new InputSourceModule().getJacksonModules();
+          }
+        });
   }
 
   @After
@@ -367,10 +370,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
     SqlTestFramework qf = queryFramework();
     Injector secondInjector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
-            binder -> {
-              binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-              binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-            }
+            new ExpressionModule(),
+            (Module) binder ->
+                binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT)
         )
     );
 
@@ -453,7 +455,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
             throw new ISE(e, "Unable to create setup storage connector");
           }
 
-          binder.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
         },
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
@@ -474,9 +475,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
               binder.bind(MSQTaskSqlEngine.class).toProvider(Providers.of(null));
             }
         ),
+        new ExpressionModule(),
         new MSQExternalDataSourceModule(),
         new LookylooModule(),
         new SegmentWranglerModule(),
+        new HllSketchModule(),
         binder -> binder.bind(BrokerClient.class).toInstance(brokerClient)
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
