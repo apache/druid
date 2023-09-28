@@ -61,6 +61,7 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
@@ -776,6 +777,17 @@ public class DruidQuery
     return VirtualColumns.create(columns);
   }
 
+  public static List<DimFilter> getAllFiltersUnderDataSource(DataSource d, List<DimFilter> dimFilterList)
+  {
+    if (d instanceof FilteredDataSource) {
+      dimFilterList.add(((FilteredDataSource) d).getFilter());
+    }
+    for (DataSource ds : d.getChildren()) {
+      dimFilterList.addAll(getAllFiltersUnderDataSource(ds, dimFilterList));
+    }
+    return dimFilterList;
+  }
+
   /**
    * Returns a pair of DataSource and Filtration object created on the query filter. In case the, data source is
    * a join datasource, the datasource may be altered and left filter of join datasource may
@@ -806,11 +818,11 @@ public class DruidQuery
       // and, if possible, pushes it down inside the data source.
       // So a chain of Filter->Unnest->Filter is typically impossible when the query is done through SQL.
       // Also, Calcite has filter reduction rules that push filters deep into base data sources for better query planning.
-      // Hence, the case that can be seen is a bunch of unnests followed by a terminal filteredDS like Unnest->Unnest->FilteredDS.
       // A base table with a chain of filters is synonymous with a filteredDS.
-      // In case there are filters present in the getFiltration call we still update the interval by:
-      // 1) creating a filtration from the filteredDS's filter and
+      // We recursively find all filters under a filteredDS and then
+      // 1) creating a filtration from the filteredDS's filters and
       // 2) Updating the interval of the outer filter with the intervals in step 1, and you'll see these 2 calls in the code
+      List<DimFilter> dimFilterList = getAllFiltersUnderDataSource(dataSource, new ArrayList<>());
       final FilteredDataSource filteredDataSource = (FilteredDataSource) dataSource;
       // Defensive check as in the base of a filter cannot be another filter
       final DataSource baseOfFilterDataSource = filteredDataSource.getBase();
@@ -819,7 +831,7 @@ public class DruidQuery
       }
       final boolean useIntervalFiltering = canUseIntervalFiltering(filteredDataSource);
       final Filtration baseFiltration = toFiltration(
-          filteredDataSource.getFilter(),
+          new AndDimFilter(dimFilterList),
           virtualColumnRegistry.getFullRowSignature(),
           useIntervalFiltering
       );
