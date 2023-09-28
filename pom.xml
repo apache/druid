@@ -2106,6 +2106,7 @@
             <maven.javadoc.skip>true</maven.javadoc.skip>
             <pmd.skip>true</pmd.skip>
             <spotbugs.skip>true</spotbugs.skip>
+            <maven.gitcommitid.skip>true</maven.gitcommitid.skip>
           </properties>
         </profile>
         <profile>
