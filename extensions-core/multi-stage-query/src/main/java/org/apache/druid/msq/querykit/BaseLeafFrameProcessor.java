@@ -36,8 +36,10 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -96,7 +98,17 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final long memoryReservedForBroadcastJoin
   )
   {
-    if (!(dataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
+    // An UnnestDataSource or FilteredDataSource can have a join as a base
+    // In such a case a side channel is expected to be there
+    final DataSource baseDataSource;
+    if (dataSource instanceof UnnestDataSource) {
+      baseDataSource = ((UnnestDataSource) dataSource).getBase();
+    } else if (dataSource instanceof FilteredDataSource) {
+      baseDataSource = ((FilteredDataSource) dataSource).getBase();
+    } else {
+      baseDataSource = dataSource;
+    }
+    if (!(baseDataSource instanceof JoinDataSource) && !sideChannels.isEmpty()) {
       throw new ISE("Did not expect side channels for dataSource [%s]", dataSource);
     }
 
@@ -106,8 +118,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     if (baseInput.hasChannel()) {
       inputChannels.add(baseInput.getChannel());
     }
-
-    if (dataSource instanceof JoinDataSource) {
+    
+    if (baseDataSource instanceof JoinDataSource) {
       final Int2IntMap inputNumberToProcessorChannelMap = new Int2IntOpenHashMap();
       final List<FrameReader> channelReaders = new ArrayList<>();
 
@@ -196,7 +208,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     if (segmentMapFn != null) {
       return true;
     } else if (broadcastJoinHelper == null) {
-      segmentMapFn = Function.identity();
+      segmentMapFn = query.getDataSource().createSegmentMapFunction(query, cpuAccumulator);
       return true;
     } else {
       final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);

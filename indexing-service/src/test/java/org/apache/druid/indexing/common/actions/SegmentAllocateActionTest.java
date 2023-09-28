@@ -574,7 +574,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -639,7 +639,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -702,7 +702,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -741,7 +741,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -780,7 +780,7 @@ public class SegmentAllocateActionTest
   {
     final Task task = NoopTask.create();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
@@ -825,7 +825,7 @@ public class SegmentAllocateActionTest
 
     final ObjectMapper objectMapper = new DefaultObjectMapper();
 
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
         ImmutableSet.of(
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
