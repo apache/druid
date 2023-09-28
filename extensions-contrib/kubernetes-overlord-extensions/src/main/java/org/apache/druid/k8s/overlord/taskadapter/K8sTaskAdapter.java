@@ -43,14 +43,14 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.druid.error.InternalError;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.QuotableWhiteSpaceSplitter;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
@@ -151,22 +151,25 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   {
     com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
     if (!taskBody.isPresent()) {
-      throw InternalError.exception("Could not load task payload for job [%s]", from.getMetadata().getName());
+      throw InternalServerError.exception(
+          "Could not load task payload from deep storage for job [%s]. Check the overlord logs for errors uploading task payloads to deep storage.",
+          from.getMetadata().getName()
+      );
     }
     String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
     return mapper.readValue(task, Task.class);
   }
 
   @Override
-  public K8sTaskId getTaskId(Job from) throws IOException
+  public K8sTaskId getTaskId(Job from)
   {
     Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
-      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+      throw DruidException.defensive().build("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
     }
     String taskId = annotations.get(DruidK8sConstants.TASK_ID);
     if (taskId == null) {
-      throw new IOE("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
+      throw DruidException.defensive().build("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
     return new K8sTaskId(taskId);
   }

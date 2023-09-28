@@ -19,35 +19,29 @@
 
 package org.apache.druid.error;
 
-public class InternalError extends DruidException.Failure
+public class InternalServerError extends DruidException.Failure
 {
-
-  public static DruidException exception()
+  public static DruidException exception(String errorCode, String msg, Object... args)
   {
-    return exception("Internal Error");
+    return exception(null, errorCode, msg, args);
   }
-
-  public static DruidException exception(String msg, Object... args)
+  public static DruidException exception(Throwable t, String errorCode, String msg, Object... args)
   {
-    return exception(null, msg, args);
-  }
-
-  public static DruidException exception(Throwable t, String msg, Object... args)
-  {
-    return DruidException.fromFailure(new InternalError(t, msg, args));
+    return DruidException.fromFailure(new InternalServerError(t, errorCode, msg, args));
   }
 
   private final Throwable t;
   private final String msg;
   private final Object[] args;
 
-  private InternalError(
+  private InternalServerError(
       Throwable t,
+      String errorCode,
       String msg,
       Object... args
   )
   {
-    super("canceled");
+    super(errorCode);
     this.t = t;
     this.msg = msg;
     this.args = args;
@@ -57,7 +51,7 @@ public class InternalError extends DruidException.Failure
   public DruidException makeException(DruidException.DruidExceptionBuilder bob)
   {
     bob = bob.forPersona(DruidException.Persona.OPERATOR)
-        .ofCategory(DruidException.Category.CANCELED);
+        .ofCategory(DruidException.Category.RUNTIME_FAILURE);
 
     if (t == null) {
       return bob.build(msg, args);

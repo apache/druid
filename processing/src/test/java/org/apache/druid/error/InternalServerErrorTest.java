@@ -25,23 +25,23 @@ import org.junit.Test;
 
 import java.util.Map;
 
-public class InternalErrorTest
+public class InternalServerErrorTest
 {
 
   @Test
   public void testAsErrorResponse()
   {
-    ErrorResponse errorResponse = new ErrorResponse(InternalError.exception());
+    ErrorResponse errorResponse = new ErrorResponse(InternalServerError.exception("runtimeFailure", "Internal Server Error"));
     final Map<String, Object> asMap = errorResponse.getAsMap();
 
     MatcherAssert.assertThat(
         asMap,
         DruidMatchers.mapMatcher(
             "error", "druidException",
-            "errorCode", "canceled",
+            "errorCode", "runtimeFailure",
             "persona", "OPERATOR",
-            "category", "CANCELED",
-            "errorMessage", "Internal Error"
+            "category", "RUNTIME_FAILURE",
+            "errorMessage", "Internal Server Error"
         )
     );
 
@@ -51,9 +51,9 @@ public class InternalErrorTest
         recomposed.getUnderlyingException(),
         new DruidExceptionMatcher(
             DruidException.Persona.OPERATOR,
-            DruidException.Category.CANCELED,
-            "canceled"
-        ).expectMessageContains("Internal Error")
+            DruidException.Category.RUNTIME_FAILURE,
+            "runtimeFailure"
+        ).expectMessageContains("Internal Server Error")
     );
   }
 }

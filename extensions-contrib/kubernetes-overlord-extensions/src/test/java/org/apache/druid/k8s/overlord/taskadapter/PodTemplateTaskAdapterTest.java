@@ -26,13 +26,13 @@ import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
@@ -267,7 +267,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_withoutAnnotations_throwsIOE() throws IOException
+  public void test_fromTask_withoutAnnotations_throwsDruidException() throws IOException
   {
     Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
     mapper.writeValue(templatePath.toFile(), podTemplateSpec);
@@ -287,7 +287,7 @@ public class PodTemplateTaskAdapterTest
     Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
 
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.toTask(job));
   }
 
   @Test
@@ -335,7 +335,7 @@ public class PodTemplateTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
 
   @Test
@@ -360,7 +360,7 @@ public class PodTemplateTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
 
   @Test
@@ -392,7 +392,7 @@ public class PodTemplateTaskAdapterTest
         .endTemplate()
         .endSpec()
         .build();
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.toTask(job));
   }
 
   @Test

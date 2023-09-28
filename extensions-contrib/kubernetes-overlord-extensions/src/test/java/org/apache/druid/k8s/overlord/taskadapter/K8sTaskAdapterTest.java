@@ -43,6 +43,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -52,7 +53,6 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
@@ -345,7 +345,7 @@ class K8sTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
 
   @Test
@@ -368,7 +368,7 @@ class K8sTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(IOE.class, () -> adapter.getTaskId(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
   @Test
   void testGrabbingTheLastXmxValueFromACommand()
