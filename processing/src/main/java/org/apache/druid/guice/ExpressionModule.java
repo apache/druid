@@ -47,6 +47,10 @@ import org.apache.druid.query.expression.TrimExprMacro;
 
 import java.util.List;
 
+/**
+ * Module that binds {@link ExprMacroTable} to {@link GuiceExprMacroTable} and configures a starter set of
+ * {@link ExprMacroTable.ExprMacro} for all macros defined in the "druid-processing" module.
+ */
 public class ExpressionModule implements Module
 {
   public static final List<Class<? extends ExprMacroTable.ExprMacro>> EXPR_MACROS =
