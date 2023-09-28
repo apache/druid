@@ -68,6 +68,7 @@ public @interface NegativeTest
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
     CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
     ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
+
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
