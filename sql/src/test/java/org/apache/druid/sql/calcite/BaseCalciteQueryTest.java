@@ -1133,7 +1133,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .queryContext(contexts)
         .authResult(authenticationResult)
         .expectedResources(expectedActions)
-        .expectedLogicalPlan("asd")
         .run();
   }
 

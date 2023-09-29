@@ -292,33 +292,4 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
         )
     );
   }
-
-
-  @Test
-  public void testInformationSchemaColumnsOnTable()
-  {
-    notMsqCompatible();
-
-
-    final AuthConfig authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
-    final Map<String, Object> context = ImmutableMap.of(
-        "baz", "fo",
-        "nested-bar", ImmutableMap.of("nested-key", "nested-val")
-    );
-    testSysTable("select sum(num_rows) from sys.segments", null, context, PLANNER_CONFIG_DEFAULT, authConfig);
-
-//    testBuilder()
-//        .sql("select sum(num_rows) from sys.segments")
-////        .expectedLogicalPlan("asd")
-//        .expectedResults(ImmutableList.of(
-//            new Object[] {"__time", "TIMESTAMP", "NO"},
-//            new Object[] {"dim1", "VARCHAR", "YES"},
-//            new Object[] {"dim2", "VARCHAR", "YES"},
-//            new Object[] {"dim3", "VARCHAR", "YES"},
-//            new Object[] {"cnt", "BIGINT", useDefault ? "NO" : "YES"},
-//            new Object[] {"m1", "FLOAT", useDefault ? "NO" : "YES"},
-//            new Object[] {"m2", "DOUBLE", useDefault ? "NO" : "YES"},
-//            new Object[] {"unique_dim1", "COMPLEX<hyperUnique>", "YES"}))
-//        .run();
-  }
 }
