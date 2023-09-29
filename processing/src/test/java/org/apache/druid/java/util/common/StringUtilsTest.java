@@ -386,4 +386,11 @@ public class StringUtilsTest
       }
     }
   }
+  @Test
+  public void testNonStrictFormatWithNullMessage()
+  {
+    Assert.assertEquals("; 1; 2", StringUtils.nonStrictFormat(null, 1, 2));
+    Assert.assertEquals(null, StringUtils.nonStrictFormat(null));
+    Assert.assertEquals("", StringUtils.nonStrictFormat("", 1));
+  }
 }
