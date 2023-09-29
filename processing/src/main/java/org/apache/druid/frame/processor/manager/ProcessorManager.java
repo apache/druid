@@ -56,6 +56,8 @@ public interface ProcessorManager<T, R> extends Closeable
    *
    * Returns an empty Optional if there are no more processors to run.
    *
+   * Behavior of this method is undefined if called after {@link #close()}.
+   *
    * @throws java.util.NoSuchElementException if a prior call to this method had returned an empty Optional
    */
   ListenableFuture<Optional<ProcessorAndCallback<T>>> next();

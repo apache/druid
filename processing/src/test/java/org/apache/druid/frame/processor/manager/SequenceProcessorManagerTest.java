@@ -108,6 +108,12 @@ public class SequenceProcessorManagerTest
       future = manager.next();
       Assert.assertTrue(future.isDone());
       Assert.assertFalse(future.get().isPresent());
+
+      // One more, should throw because there's nothing left.
+      Assert.assertThrows(
+          NoSuchElementException.class,
+          manager::next
+      );
     }
 
     Assert.assertEquals(1, closed.get());
@@ -124,8 +130,9 @@ public class SequenceProcessorManagerTest
                      .withBaggage(closed::getAndIncrement));
     manager.close();
 
+    // IllegalStateException instead of NoSuchElementException because the problem is that we are closed.
     Assert.assertThrows(
-        NoSuchElementException.class,
+        IllegalStateException.class,
         manager::next
     );
 

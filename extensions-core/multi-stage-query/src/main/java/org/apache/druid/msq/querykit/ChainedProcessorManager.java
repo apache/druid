@@ -56,6 +56,11 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
    */
   private final SettableFuture<ProcessorManager<B, R>> restFuture = SettableFuture.create();
 
+  /**
+   * Whether {@link #close()} has been called.
+   */
+  private boolean closed;
+
   public ChainedProcessorManager(
       final FrameProcessor<A> first,
       final Function<A, ProcessorManager<B, R>> restFactory
@@ -68,7 +73,9 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @Override
   public ListenableFuture<Optional<ProcessorAndCallback<Object>>> next()
   {
-    if (first != null) {
+    if (closed) {
+      throw new IllegalStateException();
+    } else if (first != null) {
       //noinspection unchecked
       final FrameProcessor<Object> tmp = (FrameProcessor<Object>) first;
       first = null;
@@ -96,9 +103,12 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @Override
   public void close()
   {
-    CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(
-        first != null ? first::cleanup : null,
-        restFuture.isDone() ? FutureUtils.getUnchecked(restFuture, false) : null
-    ));
+    if (!closed) {
+      closed = true;
+      CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(
+          first != null ? first::cleanup : null,
+          restFuture.isDone() ? FutureUtils.getUnchecked(restFuture, false) : null
+      ));
+    }
   }
 }

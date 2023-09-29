@@ -52,7 +52,13 @@ public class SequenceProcessorManager<T, P extends FrameProcessor<T>> implements
     initializeYielderIfNeeded();
 
     if (done) {
-      throw new NoSuchElementException();
+      if (yielder == null) {
+        // Already closed.
+        throw new IllegalStateException();
+      } else {
+        // Not closed yet, but done.
+        throw new NoSuchElementException();
+      }
     } else if (yielder.isDone()) {
       done = true;
       return Futures.immediateFuture(Optional.empty());
