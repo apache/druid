@@ -642,6 +642,8 @@ public class QueryTestRunner
       if (builder.expectedSqlSchema != null) {
         verifySteps.add(new VerifyPrepareSignature(execStep));
       }
+      BaseExecuteQuery execStep1 = new ExecuteQuery(builder);
+      runSteps.add(execStep1);
     } else {
       BaseExecuteQuery execStep = new ExecuteQuery(builder);
       runSteps.add(execStep);

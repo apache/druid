@@ -238,6 +238,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testInformationSchemaColumnsOnTable()
   {
     notMsqCompatible();
+
+    testBuilder()
+        .sql("select * from sys.tasks")
+//        .expectedLogicalPlan("asd")
+        .expectedResults(ImmutableList.of(
+            new Object[] {"__time", "TIMESTAMP", "NO"},
+            new Object[] {"dim1", "VARCHAR", "YES"},
+            new Object[] {"dim2", "VARCHAR", "YES"},
+            new Object[] {"dim3", "VARCHAR", "YES"},
+            new Object[] {"cnt", "BIGINT", useDefault ? "NO" : "YES"},
+            new Object[] {"m1", "FLOAT", useDefault ? "NO" : "YES"},
+            new Object[] {"m2", "DOUBLE", useDefault ? "NO" : "YES"},
+            new Object[] {"unique_dim1", "COMPLEX<hyperUnique>", "YES"}))
+        .run();
+  }
+
+  @Test
+  public void testInformationSchemaColumnsOnTable1()
+  {
+    notMsqCompatible();
     testQuery(
         "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
