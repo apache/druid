@@ -27,7 +27,6 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.filter.ConstantMatcherType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
@@ -57,7 +56,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
       if (id < 0) {
         // Value doesn't exist in this column.
-        return makeAllFalseMatcher();
+        return VectorValueMatcher.makeAllFalseMatcher(selector);
       }
 
       // Check for "id".
@@ -109,7 +108,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
     if (castForComparison == null) {
-      return makeAllFalseMatcher();
+      return VectorValueMatcher.makeAllFalseMatcher(selector);
     }
     return makeMatcher(castForComparison.asString());
   }
@@ -219,85 +218,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
           match.setSelectionSize(numRows);
           return match;
-        }
-      };
-    }
-  }
-
-  private VectorValueMatcher makeAllFalseMatcher()
-  {
-    final IdLookup idLookup = selector.idLookup();
-    final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
-
-    if (idLookup == null || !selector.nameLookupPossibleInAdvance()) {
-      // must call selector.lookupName on every id to check for nulls
-      return new BaseVectorValueMatcher(selector)
-      {
-        @Override
-        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
-        {
-          if (includeUnknown) {
-            int numRows = 0;
-            final IndexedInts[] vector = selector.getRowVector();
-            final int[] selection = match.getSelection();
-
-            for (int i = 0; i < mask.getSelectionSize(); i++) {
-              final int rowNum = mask.getSelection()[i];
-              final IndexedInts row = vector[rowNum];
-              if (row.size() == 0) {
-                selection[numRows++] = rowNum;
-              } else {
-                //noinspection SSBasedInspection
-                for (int j = 0; j < row.size(); j++) {
-                  if (NullHandling.isNullOrEquivalent(selector.lookupName(row.get(j)))) {
-                    selection[numRows++] = rowNum;
-                    break;
-                  }
-                }
-              }
-            }
-            match.setSelectionSize(numRows);
-            return match;
-          }
-          return VectorMatch.allFalse();
-        }
-      };
-    } else {
-      final int nullId = idLookup.lookupId(null);
-      // null value doesn't exist in column, can safely return all false matcher
-      if (nullId < 0) {
-        return ConstantMatcherType.ALL_FALSE.asVectorMatcher(selector);
-      }
-
-      return new BaseVectorValueMatcher(selector)
-      {
-        @Override
-        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
-        {
-          if (includeUnknown) {
-            int numRows = 0;
-            final IndexedInts[] vector = selector.getRowVector();
-            final int[] selection = match.getSelection();
-
-            for (int i = 0; i < mask.getSelectionSize(); i++) {
-              final int rowNum = mask.getSelection()[i];
-              final IndexedInts row = vector[rowNum];
-              if (row.size() == 0) {
-                selection[numRows++] = rowNum;
-              } else {
-                //noinspection SSBasedInspection
-                for (int j = 0; j < row.size(); j++) {
-                  if (row.get(j) == nullId) {
-                    selection[numRows++] = rowNum;
-                    break;
-                  }
-                }
-              }
-            }
-            match.setSelectionSize(numRows);
-            return match;
-          }
-          return VectorMatch.allFalse();
         }
       };
     }

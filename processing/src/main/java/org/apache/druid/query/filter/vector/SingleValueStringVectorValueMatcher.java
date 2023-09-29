@@ -66,7 +66,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
       if (id < 0) {
         // Value doesn't exist in this column.
-        return makeAllFalseMatcher();
+        return VectorValueMatcher.makeAllFalseMatcher(selector);
       }
       final boolean hasNull = NullHandling.isNullOrEquivalent(selector.lookupName(0));
 
@@ -106,7 +106,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
     if (castForComparison == null || castForComparison.asString() == null) {
-      return makeAllFalseMatcher();
+      return VectorValueMatcher.makeAllFalseMatcher(selector);
     }
     return makeMatcher(castForComparison.asString());
   }
@@ -195,71 +195,6 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
           match.setSelectionSize(numRows);
           return match;
-        }
-      };
-    }
-  }
-
-  private VectorValueMatcher makeAllFalseMatcher()
-  {
-    final IdLookup idLookup = selector.idLookup();
-    final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
-
-    if (idLookup == null || !selector.nameLookupPossibleInAdvance()) {
-      // must call selector.lookupName on every id to check for nulls
-      return new BaseVectorValueMatcher(selector)
-      {
-        @Override
-        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
-        {
-          if (includeUnknown) {
-            final int[] vector = selector.getRowVector();
-            final int[] inputSelection = mask.getSelection();
-            final int inputSelectionSize = mask.getSelectionSize();
-            final int[] outputSelection = match.getSelection();
-            int outputSelectionSize = 0;
-
-            for (int i = 0; i < inputSelectionSize; i++) {
-              final int rowNum = inputSelection[i];
-              if (NullHandling.isNullOrEquivalent(selector.lookupName(vector[rowNum]))) {
-                outputSelection[outputSelectionSize++] = rowNum;
-              }
-            }
-            match.setSelectionSize(outputSelectionSize);
-            return match;
-          }
-          return VectorMatch.allFalse();
-        }
-      };
-    } else {
-      final int nullId = idLookup.lookupId(null);
-      // column doesn't have nulls, can safely return an 'all false' matcher
-      if (nullId < 0) {
-        return ConstantMatcherType.ALL_FALSE.asVectorMatcher(selector);
-      }
-
-      return new BaseVectorValueMatcher(selector)
-      {
-        @Override
-        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
-        {
-          if (includeUnknown) {
-            final int[] vector = selector.getRowVector();
-            final int[] inputSelection = mask.getSelection();
-            final int inputSelectionSize = mask.getSelectionSize();
-            final int[] outputSelection = match.getSelection();
-            int outputSelectionSize = 0;
-
-            for (int i = 0; i < inputSelectionSize; i++) {
-              final int rowNum = inputSelection[i];
-              if (vector[rowNum] == nullId) {
-                outputSelection[outputSelectionSize++] = rowNum;
-              }
-            }
-            match.setSelectionSize(outputSelectionSize);
-            return match;
-          }
-          return VectorMatch.allFalse();
         }
       };
     }

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -120,6 +121,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     return null;
   }
 
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   @Override
   public BitmapColumnIndex forSortedValues(SortedSet<String> values)
   {
@@ -133,6 +135,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     );
   }
 
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   @Override
   public BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8)
   {

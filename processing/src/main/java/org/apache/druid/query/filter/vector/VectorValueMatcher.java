@@ -19,7 +19,13 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.filter.ConstantMatcherType;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorSizeInspector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -68,6 +74,164 @@ public interface VectorValueMatcher extends VectorSizeInspector
         return matchNulls(mask, match, selector.getNullVector());
       }
     };
+  }
+
+  /**
+   * Make an always false {@link VectorValueMatcher} for a {@link SingleValueDimensionVectorSelector}. When
+   * {@code includeUnknown} is specified to the {@link VectorValueMatcher#match(ReadableVectorMatch, boolean)} function,
+   * this matcher will add all rows of {@link SingleValueDimensionVectorSelector#getRowVector()} which are null to the
+   * {@link ReadableVectorMatch} as selections, to participate in Druid 2-state logic system to SQL 3-state logic
+   * system conversion.
+   */
+  static VectorValueMatcher makeAllFalseMatcher(SingleValueDimensionVectorSelector selector)
+  {
+    final IdLookup idLookup = selector.idLookup();
+    final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
+
+    if (idLookup == null || !selector.nameLookupPossibleInAdvance()) {
+      // must call selector.lookupName on every id to check for nulls
+      return new BaseVectorValueMatcher(selector)
+      {
+        @Override
+        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
+        {
+          if (includeUnknown) {
+            final int[] vector = selector.getRowVector();
+            final int[] inputSelection = mask.getSelection();
+            final int inputSelectionSize = mask.getSelectionSize();
+            final int[] outputSelection = match.getSelection();
+            int outputSelectionSize = 0;
+
+            for (int i = 0; i < inputSelectionSize; i++) {
+              final int rowNum = inputSelection[i];
+              if (NullHandling.isNullOrEquivalent(selector.lookupName(vector[rowNum]))) {
+                outputSelection[outputSelectionSize++] = rowNum;
+              }
+            }
+            match.setSelectionSize(outputSelectionSize);
+            return match;
+          }
+          return VectorMatch.allFalse();
+        }
+      };
+    } else {
+      final int nullId = idLookup.lookupId(null);
+      // column doesn't have nulls, can safely return an 'all false' matcher
+      if (nullId < 0) {
+        return ConstantMatcherType.ALL_FALSE.asVectorMatcher(selector);
+      }
+
+      return new BaseVectorValueMatcher(selector)
+      {
+        @Override
+        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
+        {
+          if (includeUnknown) {
+            final int[] vector = selector.getRowVector();
+            final int[] inputSelection = mask.getSelection();
+            final int inputSelectionSize = mask.getSelectionSize();
+            final int[] outputSelection = match.getSelection();
+            int outputSelectionSize = 0;
+
+            for (int i = 0; i < inputSelectionSize; i++) {
+              final int rowNum = inputSelection[i];
+              if (vector[rowNum] == nullId) {
+                outputSelection[outputSelectionSize++] = rowNum;
+              }
+            }
+            match.setSelectionSize(outputSelectionSize);
+            return match;
+          }
+          return VectorMatch.allFalse();
+        }
+      };
+    }
+  }
+
+  /**
+   * Make an always false {@link VectorValueMatcher} for a {@link MultiValueDimensionVectorSelector}. When
+   * {@code includeUnknown} is specified to the {@link VectorValueMatcher#match(ReadableVectorMatch, boolean)} function,
+   * this matcher will add all rows of {@link MultiValueDimensionVectorSelector#getRowVector()} which are empty or have
+   * any null elements to the {@link ReadableVectorMatch} as selections, to participate in Druid 2-state logic system
+   * to SQL 3-state logic system conversion (as best as a multi-value dimension can).
+   */
+  static VectorValueMatcher makeAllFalseMatcher(MultiValueDimensionVectorSelector selector)
+  {
+    final IdLookup idLookup = selector.idLookup();
+    final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
+
+    if (idLookup == null || !selector.nameLookupPossibleInAdvance()) {
+      // must call selector.lookupName on every id to check for nulls
+      return new BaseVectorValueMatcher(selector)
+      {
+        @Override
+        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
+        {
+          if (includeUnknown) {
+            int numRows = 0;
+            final IndexedInts[] vector = selector.getRowVector();
+            final int[] selection = match.getSelection();
+
+            for (int i = 0; i < mask.getSelectionSize(); i++) {
+              final int rowNum = mask.getSelection()[i];
+              final IndexedInts row = vector[rowNum];
+              if (row.size() == 0) {
+                selection[numRows++] = rowNum;
+              } else {
+                //noinspection SSBasedInspection
+                for (int j = 0; j < row.size(); j++) {
+                  if (NullHandling.isNullOrEquivalent(selector.lookupName(row.get(j)))) {
+                    selection[numRows++] = rowNum;
+                    break;
+                  }
+                }
+              }
+            }
+            match.setSelectionSize(numRows);
+            return match;
+          }
+          return VectorMatch.allFalse();
+        }
+      };
+    } else {
+      final int nullId = idLookup.lookupId(null);
+      // null value doesn't exist in column, can safely return all false matcher
+      if (nullId < 0) {
+        return ConstantMatcherType.ALL_FALSE.asVectorMatcher(selector);
+      }
+
+      return new BaseVectorValueMatcher(selector)
+      {
+        @Override
+        public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
+        {
+          if (includeUnknown) {
+            int numRows = 0;
+            final IndexedInts[] vector = selector.getRowVector();
+            final int[] selection = match.getSelection();
+
+            for (int i = 0; i < mask.getSelectionSize(); i++) {
+              final int rowNum = mask.getSelection()[i];
+              final IndexedInts row = vector[rowNum];
+              if (row.size() == 0) {
+                selection[numRows++] = rowNum;
+              } else {
+                //noinspection SSBasedInspection
+                for (int j = 0; j < row.size(); j++) {
+                  if (row.get(j) == nullId) {
+                    selection[numRows++] = rowNum;
+                    break;
+                  }
+                }
+              }
+            }
+            match.setSelectionSize(numRows);
+            return match;
+          }
+          return VectorMatch.allFalse();
+        }
+      };
+    }
   }
 
   /**

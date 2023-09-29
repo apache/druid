@@ -28,6 +28,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleIterator;
 import it.unimi.dsi.fastutil.doubles.DoubleSet;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -418,6 +419,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
           };
         }
 
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
         @Nullable
         @Override
         protected ImmutableBitmap getUnknownsBitmap()

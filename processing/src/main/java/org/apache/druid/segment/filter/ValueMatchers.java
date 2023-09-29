@@ -354,6 +354,7 @@ public class ValueMatchers
             if (row.size() == 0) {
               return true;
             }
+            //noinspection SSBasedInspection
             for (int i = 0; i < row.size(); i++) {
               if (NullHandling.isNullOrEquivalent(selector.lookupName(row.get(i)))) {
                 return true;
@@ -386,6 +387,7 @@ public class ValueMatchers
               if (row.size() == 0) {
                 return true;
               }
+              //noinspection SSBasedInspection
               for (int i = 0; i < row.size(); i++) {
                 if (row.get(i) == nullId) {
                   return true;

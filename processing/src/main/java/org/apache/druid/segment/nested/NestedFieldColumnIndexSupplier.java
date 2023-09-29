@@ -35,6 +35,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -454,6 +455,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
           };
         }
 
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
         @Nullable
         @Override
         protected ImmutableBitmap getUnknownsBitmap()
@@ -778,6 +780,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
           };
         }
 
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
         @Nullable
         @Override
         protected ImmutableBitmap getUnknownsBitmap()
@@ -1037,6 +1040,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
           };
         }
 
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
         @Nullable
         @Override
         protected ImmutableBitmap getUnknownsBitmap()
@@ -1287,6 +1291,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
           };
         }
 
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
         @Nullable
         @Override
         protected ImmutableBitmap getUnknownsBitmap()

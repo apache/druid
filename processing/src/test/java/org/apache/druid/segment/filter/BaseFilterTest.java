@@ -297,7 +297,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   }
 
 
-  static InputRow makeSchemaRow(
+  public static InputRow makeSchemaRow(
       final InputRowParser<Map<String, Object>> parser,
       final RowSignature signature,
       @Nullable Object... elements
