@@ -55,6 +55,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractTask implements Task
 {
@@ -100,6 +102,8 @@ public abstract class AbstractTask implements Task
   private File statusFile;
 
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
+  private volatile CountDownLatch cleanupCompletionLatch;
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
@@ -166,6 +170,7 @@ public abstract class AbstractTask implements Task
   {
     TaskStatus taskStatus = TaskStatus.running(getId());
     try {
+      cleanupCompletionLatch = new CountDownLatch(1);
       String errorMessage = setup(taskToolbox);
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
         return TaskStatus.failure(getId(), errorMessage);
@@ -178,14 +183,23 @@ public abstract class AbstractTask implements Task
       throw e;
     }
     finally {
-      cleanUp(taskToolbox, taskStatus);
+      try {
+        cleanUp(taskToolbox, taskStatus);
+      }
+      finally {
+        cleanupCompletionLatch.countDown();
+      }
     }
   }
 
   public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
 
+  @Override
   public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
   {
+    // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
+    Thread.interrupted();
+
     if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
       return;
@@ -213,6 +227,24 @@ public abstract class AbstractTask implements Task
       log.debug("Pushed task status");
     } else {
       log.debug("No task status file exists to push");
+    }
+  }
+
+  @Override
+  public boolean waitForCleanupToFinish()
+  {
+    try {
+      if (cleanupCompletionLatch != null) {
+        // block until the cleanup process completes
+        return cleanupCompletionLatch.await(300, TimeUnit.SECONDS);
+      }
+
+      return true;
+    }
+    catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for task cleanUp to finish!");
+      Thread.currentThread().interrupt();
+      return false;
     }
   }
 
