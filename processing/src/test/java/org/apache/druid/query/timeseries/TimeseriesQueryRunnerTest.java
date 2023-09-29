@@ -1767,20 +1767,49 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<>(
-            DateTimes.of("2011-04-01"),
-            new TimeseriesResultValue(
-                TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-04-02"),
-            new TimeseriesResultValue(
-                TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
-            )
-        )
-    );
+
+    List<Result<TimeseriesResultValue>> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = Arrays.asList(
+          new Result<>(
+              DateTimes.of("2011-04-01"),
+              new TimeseriesResultValue(
+                  TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
+              )
+          ),
+          new Result<>(
+              DateTimes.of("2011-04-02"),
+              new TimeseriesResultValue(
+                  TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
+              )
+          )
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          new Result<>(
+              DateTimes.of("2011-04-01"),
+              new TimeseriesResultValue(
+                  ImmutableMap.of(
+                      "rows", 13L,
+                      "index", 6626.151596069336,
+                      "addRowsIndexConstant", 6640.151596069336,
+                      "uniques", QueryRunnerTestHelper.UNIQUES_9
+                  )
+              )
+          ),
+          new Result<>(
+              DateTimes.of("2011-04-02"),
+              new TimeseriesResultValue(
+                  ImmutableMap.of(
+                      "rows", 13L,
+                      "index", 5833.2095947265625,
+                      "addRowsIndexConstant", 5847.2095947265625,
+                      "uniques", QueryRunnerTestHelper.UNIQUES_9
+                  )
+              )
+          )
+      );
+    }
 
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query))
                                                             .toList();
