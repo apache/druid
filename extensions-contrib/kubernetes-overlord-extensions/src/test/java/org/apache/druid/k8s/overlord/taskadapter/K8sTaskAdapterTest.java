@@ -305,7 +305,7 @@ class K8sTaskAdapterTest
   }
 
   @Test
-  public void getTaskId() throws IOException
+  public void getTaskId()
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
