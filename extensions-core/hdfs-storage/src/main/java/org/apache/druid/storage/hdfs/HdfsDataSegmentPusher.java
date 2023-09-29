@@ -106,36 +106,37 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
     final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
     final String outIndexFilePathSuffix = StringUtils.format(
-        "%s/%d_%sindex.zip",
+        "%s/%s/%d_%sindex.zip",
+        fullyQualifiedStorageDirectory.get(),
         storageDir,
         segment.getShardSpec().getPartitionNum(),
         uniquePrefix
     );
 
-    return pushToPath(inDir, segment, outIndexFilePathSuffix);
+    return pushToFilePath(inDir, segment, outIndexFilePathSuffix);
   }
 
   @Override
   public DataSegment pushToPath(File inDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
+    String outIndexFilePath = StringUtils.format(
+        "%s/%s/%d_index.zip",
+        fullyQualifiedStorageDirectory.get(),
+        storageDirSuffix.replace(':', '_'),
+        segment.getShardSpec().getPartitionNum()
+    );
+    
+    return pushToFilePath(inDir, segment, outIndexFilePath);
+  }
+  
+  private DataSegment pushToFilePath(File inDir, DataSegment segment, String outIndexFilePath) throws IOException
+  {
     log.debug(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getId(),
         fullyQualifiedStorageDirectory.get(),
-        storageDirSuffix
+        outIndexFilePath
     );
-    
-    final String outIndexFilePath;
-    if (storageDirSuffix.endsWith("index.zip")) {
-      outIndexFilePath = StringUtils.format("%s/%s", fullyQualifiedStorageDirectory.get(), storageDirSuffix);
-    } else {
-      outIndexFilePath = StringUtils.format(
-          "%s/%s/%d_index.zip",
-          fullyQualifiedStorageDirectory.get(),
-          storageDirSuffix.replace(':', '_'),
-          segment.getShardSpec().getPartitionNum()
-      );
-    }
 
     Path tmpIndexFile = new Path(StringUtils.format(
         "%s/%s/%s/%s_index.zip",

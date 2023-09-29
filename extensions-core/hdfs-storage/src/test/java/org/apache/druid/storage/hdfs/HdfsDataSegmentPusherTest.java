@@ -208,14 +208,6 @@ public class HdfsDataSegmentPusherTest
         segment.getLoadSpec().get("path").toString(),
         segment.getLoadSpec().get("path").toString().endsWith(storageDirSuffix.replace(':', '_') + "/0_index.zip")
     );
-    
-    final String outIndexFilePathSuffix = "foo/20150101T000000.000Z_20160101T000000.000Z/0/0_index.zip";
-    segment = pusher.pushToPath(segmentDir, segmentToPush, outIndexFilePathSuffix);
-
-    Assert.assertTrue(
-        segment.getLoadSpec().get("path").toString(),
-        segment.getLoadSpec().get("path").toString().endsWith(outIndexFilePathSuffix)
-    );
   }
 
   private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments) throws Exception
