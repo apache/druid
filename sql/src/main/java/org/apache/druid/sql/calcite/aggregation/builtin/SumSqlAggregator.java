@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
+import org.apache.calcite.linq4j.Nullness;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -28,6 +29,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlSplittableAggFunction;
+import org.apache.calcite.sql.fun.SqlSumAggFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.util.Optionality;
@@ -49,7 +51,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
    * to avoid transformation to COUNT+SUM0. See CALCITE-6020 for more details.
    * It can be handled differently after CALCITE-6020 is addressed.
    */
-  private static final SqlAggFunction DRUID_SUM = new DruidSumAggFunction();
+  private static final SqlSumAggFunction DRUID_SUM = new SqlSumAggFunction(Nullness.castNonNull(null)) {};
 
   @Override
   public SqlAggFunction calciteFunction()
