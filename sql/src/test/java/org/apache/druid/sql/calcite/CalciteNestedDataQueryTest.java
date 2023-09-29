@@ -6308,4 +6308,40 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     );
   }
+
+  @Test
+  public void testCoalesceOnNestedColumns()
+  {
+    testQuery(
+        "select coalesce(c,long) as col "
+        + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) ",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                        .dataSource(UnnestDataSource.create(
+                            new TableDataSource(DATA_SOURCE_ALL),
+                            new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
+                            null
+                        ))
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .columns("j0.unnest")
+                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                        .legacy(false)
+                        .context(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{3L},
+            new Object[]{4L},
+            new Object[]{3L},
+            new Object[]{4L},
+            new Object[]{1L},
+            new Object[]{2L},
+            new Object[]{null}
+        ),
+        RowSignature.builder()
+                    .add("col", ColumnType.LONG)
+                    .build()
+    );
+  }
 }
