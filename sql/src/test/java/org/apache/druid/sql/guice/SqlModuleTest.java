@@ -22,6 +22,8 @@ package org.apache.druid.sql.guice;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -41,8 +43,11 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.ServerModule;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
@@ -77,8 +82,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nullable;
 import javax.validation.Validation;
 import javax.validation.Validator;
+
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 
@@ -208,12 +216,27 @@ public class SqlModuleTest
                     .in(LazySingleton.class);
               binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
               binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
-              binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
+              binder.bind(OverlordClient.class).to(TestOverlordClient.class);
             },
             sqlModule,
             new TestViewManagerModule()
         )
     );
+  }
+
+  private static class TestOverlordClient extends NoopOverlordClient {
+
+    @Override
+    public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+        @Nullable String state,
+        @Nullable String dataSource,
+        @Nullable Integer maxCompletedTasks
+    )
+    {
+      return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(Collections.emptyIterator()));
+    }
+
+
   }
 
   private static class TestViewManagerModule implements DruidModule
