@@ -76,12 +76,12 @@ public class BrokerServerView implements TimelineServerView
   private final QueryWatcher queryWatcher;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
-  private final FilteredServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
   private final CountDownLatch initialized = new CountDownLatch(1);
+  protected final FilteredServerInventoryView baseView;
 
   protected final Object lock = new Object();
 

@@ -54,8 +54,6 @@ import java.util.Map;
 @ManageLifecycle
 public class QueryableCoordinatorServerView extends BrokerServerView implements CoordinatorTimeline
 {
-  private final FilteredServerInventoryView baseView;
-
   @Inject
   public QueryableCoordinatorServerView(
       final QueryToolChestWarehouse warehouse,
@@ -75,7 +73,6 @@ public class QueryableCoordinatorServerView extends BrokerServerView implements 
         return segmentWatcherConfig.isAwaitInitializationOnStart();
       }
     });
-    this.baseView = baseView;
   }
 
   /**
