@@ -131,7 +131,7 @@ public class ErrorResponseTest
             "TIMEOUT",
 
             "errorMessage",
-            null
+            "null"
         )
     );
   }
