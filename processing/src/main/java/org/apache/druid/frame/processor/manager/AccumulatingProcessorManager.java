@@ -22,6 +22,7 @@ package org.apache.druid.frame.processor.manager;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.java.util.common.ISE;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -49,6 +50,10 @@ public class AccumulatingProcessorManager<T, R> implements ProcessorManager<T, R
   @Override
   public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
   {
+    if (currentResult == null) {
+      throw new ISE("Closed");
+    }
+
     return FutureUtils.transform(
         delegate.next(),
         nextProcessor -> nextProcessor.map(

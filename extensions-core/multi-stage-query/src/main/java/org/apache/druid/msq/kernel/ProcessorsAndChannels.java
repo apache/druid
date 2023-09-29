@@ -26,6 +26,9 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
  * Returned from {@link FrameProcessorFactory#makeProcessors}.
  *
  * Includes a processor sequence and a list of output channels.
+ *
+ * @param <T> return type of {@link org.apache.druid.frame.processor.FrameProcessor} from {@link #getProcessorManager()}
+ * @param <R> result type of {@link ProcessorManager#result()}
  */
 public class ProcessorsAndChannels<T, R>
 {

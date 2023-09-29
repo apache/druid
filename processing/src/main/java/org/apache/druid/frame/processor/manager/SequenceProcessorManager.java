@@ -83,10 +83,11 @@ public class SequenceProcessorManager<T, P extends FrameProcessor<T>> implements
   @Override
   public void close()
   {
+    done = true;
+
     if (yielder != null) {
       // Clean up.
       CloseableUtils.closeAndWrapExceptions(yielder);
-      done = true;
       yielder = null;
     }
   }

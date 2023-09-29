@@ -36,6 +36,9 @@ import java.util.function.BiFunction;
  * processors are made available to the manager through {@link ProcessorAndCallback#onComplete(Object)}.)
  *
  * Implementations do not need to be thread-safe.
+ *
+ * @param <T> return type of {@link org.apache.druid.frame.processor.FrameProcessor} created by this manager
+ * @param <R> result type of this manager; see {@link #result()}
  */
 public interface ProcessorManager<T, R> extends Closeable
 {
@@ -44,7 +47,12 @@ public interface ProcessorManager<T, R> extends Closeable
    * completes successfully, along with the result of the processor. If the processor fails, the callback is not called.
    *
    * The callback is called in a thread-safe manner: it will never be called concurrently with another callback, or
-   * concurrently with a call to "next" or {@link #close()}.
+   * concurrently with a call to "next" or {@link #close()}. To ensure this, {@link FrameProcessorExecutor#runAllFully}
+   * synchronizes executions of callbacks for the same processor manager. Therefore, it is important that the callbacks
+   * executed quickly.
+   *
+   * This method returns a future, so it allows for logic where the construction of later processors depends on the
+   * results of earlier processors.
    *
    * Returns an empty Optional if there are no more processors to run.
    *
@@ -54,18 +62,30 @@ public interface ProcessorManager<T, R> extends Closeable
 
   /**
    * Called after all procesors are done, prior to {@link #close()}, to retrieve the result of this computation.
+   *
+   * Behavior of this method is undefined if called after {@link #close()}, or if called prior to {@link #next()}
+   * returning an empty {@link Optional}, or if called prior to all callbacks from {@link #next()} having been called.
    */
   R result();
 
   /**
    * Called when all processors are done, or when one has failed.
    *
-   * This method releases all resources associated with this manager. After this method is called, no other methods
-   * are called.
+   * This method releases all resources associated with this manager. After calling this method, callers must call no
+   * other methods.
    */
   @Override
   void close();
 
+  /**
+   * Returns an {@link AccumulatingProcessorManager} that wraps this manager and accumulates a result, to be returned
+   * by its {@link #result()} method.
+   *
+   * @param initialResult initial accumulated value
+   * @param accumulateFn  accumulation function, will be provided the current accumulated value and the incremental
+   *                      new value.
+   * @param <R2>          result type of the returned manager
+   */
   default <R2> ProcessorManager<T, R2> withAccumulation(
       R2 initialResult,
       BiFunction<R2, T, R2> accumulateFn

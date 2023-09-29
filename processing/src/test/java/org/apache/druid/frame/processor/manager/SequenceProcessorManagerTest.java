@@ -33,6 +33,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -110,6 +111,26 @@ public class SequenceProcessorManagerTest
     }
 
     Assert.assertEquals(1, closed.get());
+  }
+
+  @Test
+  public void test_empty_closeThenNext()
+  {
+    final AtomicLong closed = new AtomicLong();
+
+    final SequenceProcessorManager<Object, FrameProcessor<Object>> manager =
+        new SequenceProcessorManager<>(
+            Sequences.<FrameProcessor<Object>>empty()
+                     .withBaggage(closed::getAndIncrement));
+    manager.close();
+
+    Assert.assertThrows(
+        NoSuchElementException.class,
+        manager::next
+    );
+
+    // Sequence is not closed because it never started iterating.
+    Assert.assertEquals(0, closed.get());
   }
 
   private static class NilFrameProcessor implements FrameProcessor<Unit>

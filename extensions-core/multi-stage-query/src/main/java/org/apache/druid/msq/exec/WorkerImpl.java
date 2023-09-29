@@ -1100,11 +1100,12 @@ public class WorkerImpl implements Worker
                       .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir()))
                       .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
                       .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
-                      .put(SegmentsInputSlice.class,
-                           new SegmentsInputSliceReader(
-                               frameContext.dataSegmentProvider(),
-                               MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
-                           )
+                      .put(
+                          SegmentsInputSlice.class,
+                          new SegmentsInputSliceReader(
+                              frameContext.dataSegmentProvider(),
+                              MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
+                          )
                       )
                       .build()
       );
@@ -1152,7 +1153,16 @@ public class WorkerImpl implements Worker
           );
     }
 
-    private <FactoryType extends FrameProcessorFactory<T, R, I>, T, R, I> void makeAndRunWorkProcessors()
+    /**
+     * Use {@link FrameProcessorFactory#makeProcessors} to create {@link ProcessorsAndChannels}. Executes the
+     * processors using {@link #exec} and sets the output channels in {@link #workResultAndOutputChannels}.
+     *
+     * @param <FactoryType>         type of {@link StageDefinition#getProcessorFactory()}
+     * @param <ProcessorReturnType> return type of {@link FrameProcessor} created by the manager
+     * @param <ManagerReturnType>   result type of {@link ProcessorManager#result()}
+     * @param <ExtraInfoType>       type of {@link WorkOrder#getExtraInfo()}
+     */
+    private <FactoryType extends FrameProcessorFactory<ProcessorReturnType, ManagerReturnType, ExtraInfoType>, ProcessorReturnType, ManagerReturnType, ExtraInfoType> void makeAndRunWorkProcessors()
         throws IOException
     {
       if (workResultAndOutputChannels != null) {
@@ -1163,13 +1173,13 @@ public class WorkerImpl implements Worker
       final FactoryType processorFactory = (FactoryType) kernel.getStageDefinition().getProcessorFactory();
 
       @SuppressWarnings("unchecked")
-      final ProcessorsAndChannels<T, R> processors =
+      final ProcessorsAndChannels<ProcessorReturnType, ManagerReturnType> processors =
           processorFactory.makeProcessors(
               kernel.getStageDefinition(),
               kernel.getWorkOrder().getWorkerNumber(),
               kernel.getWorkOrder().getInputs(),
               inputSliceReader,
-              (I) kernel.getWorkOrder().getExtraInfo(),
+              (ExtraInfoType) kernel.getWorkOrder().getExtraInfo(),
               workOutputChannelFactory,
               frameContext,
               parallelism,
@@ -1177,7 +1187,7 @@ public class WorkerImpl implements Worker
               e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e)
           );
 
-      final ProcessorManager<T, R> processorManager = processors.getProcessorManager();
+      final ProcessorManager<ProcessorReturnType, ManagerReturnType> processorManager = processors.getProcessorManager();
 
       final int maxOutstandingProcessors;
 
@@ -1190,7 +1200,7 @@ public class WorkerImpl implements Worker
             Math.max(1, Math.min(parallelism, processors.getOutputChannels().getAllChannels().size()));
       }
 
-      final ListenableFuture<R> workResultFuture = exec.runAllFully(
+      final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
           processorManager,
           maxOutstandingProcessors,
           processorBouncer,

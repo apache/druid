@@ -41,7 +41,7 @@ public class ProcessorManagers
    */
   public static <T> ProcessorManager<T, Long> none()
   {
-    return new SequenceProcessorManager<>(Sequences.empty());
+    return of(Sequences.empty());
   }
 
   /**
@@ -57,7 +57,7 @@ public class ProcessorManagers
    */
   public static <T> ProcessorManager<T, Long> of(final Iterable<? extends FrameProcessor<T>> processors)
   {
-    return new SequenceProcessorManager<>(Sequences.simple(processors));
+    return of(Sequences.simple(processors));
   }
 
   /**
@@ -65,6 +65,6 @@ public class ProcessorManagers
    */
   public static <T> ProcessorManager<T, Long> of(final Supplier<? extends FrameProcessor<T>> processors)
   {
-    return new SequenceProcessorManager<>(Sequences.simple(() -> Iterators.singletonIterator(processors.get())));
+    return of(Sequences.simple(() -> Iterators.singletonIterator(processors.get())));
   }
 }
