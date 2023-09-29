@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
@@ -42,7 +43,6 @@ import java.util.Set;
  */
 public class DDSketchToQuantilesPostAggregator implements PostAggregator
 {
-  public static final byte DDSKETCH_QUANTILES_TYPE_ID = 51;
   private final String name;
   private final PostAggregator field;
   private final double[] fractions;
@@ -156,7 +156,7 @@ public class DDSketchToQuantilesPostAggregator implements PostAggregator
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
-        DDSKETCH_QUANTILES_TYPE_ID).appendCacheable(field);
+        PostAggregatorIds.DDSKETCH_QUANTILES_TYPE_ID).appendCacheable(field);
     for (final double value : fractions) {
       builder.appendDouble(value);
     }

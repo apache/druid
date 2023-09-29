@@ -24,10 +24,12 @@ import com.datadoghq.sketch.ddsketch.DDSketches;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.curator.shaded.com.google.common.math.IntMath;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -53,7 +55,6 @@ import java.util.Objects;
 @JsonTypeName(DDSketchAggregatorFactory.TYPE_NAME)
 public class DDSketchAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x50;
   // Default relative error
   public static final double DEFAULT_RELATIVE_ERROR = 0.01;
 
@@ -82,7 +83,7 @@ public class DDSketchAggregatorFactory extends AggregatorFactory
       @JsonProperty("numBins") final Integer numBins
   )
   {
-    this(name, fieldName, relativeError, numBins, CACHE_TYPE_ID);
+    this(name, fieldName, relativeError, numBins, AggregatorUtil.DDSKETCH_CACHE_TYPE_ID);
   }
 
   DDSketchAggregatorFactory(
@@ -234,13 +235,24 @@ public class DDSketchAggregatorFactory extends AggregatorFactory
     return TYPE;
   }
 
-  // The bounded lower collapsing yields a size of roughly numBins * 8 in terms of size.
-  // Since negative and positive value stores exist per sketch, we multiply this by 2.
-  // then we add 1k for measure.
+  /*
+   * Each bounded lower collapsing store yields a max size of numBins * 8 bytes (size Of Double) in terms of size.
+   * Since the sketch contains a store for positive values and negative values, a fully filled sketch at maximum would contain:
+   * 2 * numBins * 8Bytes for storage. Other tracked members of the serialized sketch are constant,
+   * so we add 1k as buffer for these members. These members include mapping reconstruction, and zero counts.
+   * These are tracked through doubles and integers and do not increase in size as the sketch accepts new values and merged.
+   *
+   */
   @Override
   public int getMaxIntermediateSize()
   {
-    return numBins * 8 * 2 + 1000;
+    return IntMath.checkedMultiply(numBins, Double.BYTES * 2) // Postive + Negative Stores
+        + Double.BYTES // zeroCount
+        + Double.BYTES // gamma
+        + Double.BYTES // indexOffset
+        + Integer.BYTES // interpolationEnum
+        + 12;  // collective protoscope descriptor max sizes
+
   }
 
   @Override

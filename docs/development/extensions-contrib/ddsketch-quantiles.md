@@ -29,7 +29,7 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 
 ### Aggregator
 
-The result of the aggregation is a DDSketch that is the union of all sketches either built from raw data or read from the segments. The single number that is returned represents the total number of included datapoints. The default aggregator type of `ddSketch` uses the collapsingLowestDense strategy for storing and merging sketch. This means that in favor of keeping the highest values represented at the highest accuracy, the sketch will collapse and merge lower, smaller values in the sketch. Collapsed bins will lose accuracy guarantees. The default number of bins is 1000. Sketches can only be merged when using the same relativeError values.
+The result of the aggregation is a DDSketch that is the union of all sketches either built from raw data or read from the segments. The single number that is returned represents the total number of included data points. The default aggregator type of `ddSketch` uses the collapsingLowestDense strategy for storing and merging sketch. This means that in favor of keeping the highest values represented at the highest accuracy, the sketch will collapse and merge lower, smaller values in the sketch. Collapsed bins will lose accuracy guarantees. The default number of bins is 1000. Sketches can only be merged when using the same relativeError values.
 
 The `ddSketch` aggregator operates over raw data and precomputed sketches.
 
@@ -59,7 +59,7 @@ Users can query for a set of quantiles using the `quantilesFromDDSketch` post-ag
 {
   "type"  : "quantilesFromDDSketch",
   "name" : <output_name>,
-  "field" : <reference to moment sketch>,
+  "field" : <reference to DDSketch>,
   "fractions" : <array of doubles in [0,1]>
 }
 ```
@@ -70,7 +70,7 @@ Single quantiles may be fetched as well.
 {
   "type"  : "quantileFromDDSketch",
   "name" : <output_name>,
-  "field" : <reference to moment sketch>,
+  "field" : <reference to DDsketch>,
   "fraction" : <double [0,1]>
 }
 ```

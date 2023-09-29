@@ -27,6 +27,7 @@ import com.google.common.primitives.Doubles;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
@@ -42,7 +43,6 @@ import java.util.Set;
  */
 public class DDSketchToQuantilePostAggregator implements PostAggregator
 {
-  public static final byte DDSKETCH_QUANTILE_TYPE_ID = 52;
   private final String name;
   private final PostAggregator field;
 
@@ -120,7 +120,7 @@ public class DDSketchToQuantilePostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    final CacheKeyBuilder builder = new CacheKeyBuilder(DDSKETCH_QUANTILE_TYPE_ID).appendCacheable(field);
+    final CacheKeyBuilder builder = new CacheKeyBuilder(PostAggregatorIds.DDSKETCH_QUANTILE_TYPE_ID).appendCacheable(field);
     builder.appendDouble(fraction);
     return builder.build();
   }
