@@ -57,7 +57,7 @@ public class ServiceLocation
 
   public static ServiceLocation fromDruidServerMetadata(final DruidServerMetadata druidServerMetadata)
   {
-    final String host = getHostFromString(druidServerMetadata.getHostAndPort());
+    final String host = getHostFromString(druidServerMetadata.getHost());
     int plaintextPort = getPortFromString(druidServerMetadata.getHostAndPort());
     int tlsPort = getPortFromString(druidServerMetadata.getHostAndTlsPort());
     return new ServiceLocation(host, plaintextPort, tlsPort, "");

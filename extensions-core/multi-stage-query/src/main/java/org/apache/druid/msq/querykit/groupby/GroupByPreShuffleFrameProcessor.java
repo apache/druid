@@ -120,7 +120,8 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<ResultRow>> statusSequencePair =
           segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), ResultRow.class, closer);
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
-        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.", segment);
+        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.",
+                 segment.getDescriptor());
         return runWithSegment(segment);
       }
       resultYielder = statusSequencePair.rhs;

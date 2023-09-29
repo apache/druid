@@ -186,7 +186,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
               closer
           );
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
-        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.", segment);
+        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.",
+                 segment.getDescriptor());
         return runWithSegment(segment);
       }
 
