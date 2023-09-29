@@ -562,9 +562,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new TestIndexerMetadataStorageCoordinator()
     {
       @Override
-      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments)
       {
-        Set<DataSegment> retVal = super.announceHistoricalSegments(segments);
+        Set<DataSegment> retVal = super.commitSegments(segments);
         if (publishCountDown != null) {
           publishCountDown.countDown();
         }
