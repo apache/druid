@@ -144,7 +144,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 
   @Ignore
   @Override
-  public void testUnplannableScanOrderByNonTime()
+  public void testUnplannableQueries()
   {
 
   }
