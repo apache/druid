@@ -387,10 +387,10 @@ public class StringUtilsTest
     }
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test()
   public void testNonStrictFormatWithNullMessage()
   {
-    StringUtils.nonStrictFormat(null, 1, 2);
+    Assert.assertThrows(NullPointerException.class, () -> StringUtils.nonStrictFormat(null, 1, 2));
   }
 
   @Test
