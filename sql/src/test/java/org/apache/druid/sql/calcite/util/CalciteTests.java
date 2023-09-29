@@ -385,15 +385,15 @@ public class CalciteTests
           @Nullable Integer maxCompletedTasks
       )
       {
-        List<TaskStatusPlus> fakeResults=new ArrayList<TaskStatusPlus>();
-        fakeResults.add(newTaskStatusPlus("id1", DATASOURCE1, 10L));
-        fakeResults.add(newTaskStatusPlus("id1", DATASOURCE1, 1L));
-        fakeResults.add(newTaskStatusPlus("id2", DATASOURCE2, 20L));
-        fakeResults.add(newTaskStatusPlus("id2", DATASOURCE2, 2L));
-        return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(fakeResults.iterator()));
+        List<TaskStatusPlus> tasks = new ArrayList<TaskStatusPlus>();
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 10L));
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 1L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 20L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 2L));
+        return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(tasks.iterator()));
       }
 
-      private TaskStatusPlus newTaskStatusPlus(String id, String datasource, Long duration)
+      private TaskStatusPlus createTaskStatus(String id, String datasource, Long duration)
       {
         return new TaskStatusPlus(
             id,

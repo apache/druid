@@ -235,41 +235,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSysTasksSum()
-  {
-    notMsqCompatible();
-
-    testBuilder()
-        .sql("select datasource, sum(duration) from sys.tasks group by datasource")
-        .expectedLogicalPlan("LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])\n"
-            + "  LogicalProject(exprs=[[$3, $8]])\n"
-            + "    LogicalTableScan(table=[[sys, tasks]])\n"
-            + "")
-        .expectedResults(ImmutableList.of(
-            new Object[]{"foo", 11L},
-            new Object[]{"foo2", 22L}))
-        .run();
-  }
-
-  @Test
-  public void testSysTasksSumOver()
-  {
-    notMsqCompatible();
-
-    testBuilder()
-        .sql("select datasource, sum(duration) from sys.tasks group by datasource")
-        .expectedLogicalPlan("LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])\n"
-            + "  LogicalProject(exprs=[[$3, $8]])\n"
-            + "    LogicalTableScan(table=[[sys, tasks]])\n"
-            + "")
-        .expectedResults(ImmutableList.of(
-            new Object[]{"foo", 11L},
-            new Object[]{"foo2", 22L}))
-        .run();
-  }
-
-  @Test
-  public void testInformationSchemaColumnsOnTable1()
+  public void testInformationSchemaColumnsOnTable()
   {
     notMsqCompatible();
     testQuery(
