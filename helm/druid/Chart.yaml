@@ -19,8 +19,8 @@ description: Apache Druid is a high performance real-time analytics database.
 name: druid
 dependencies:
   - name: zookeeper
-    version: 2.1.4
-    repository: https://charts.helm.sh/incubator
+    version: 11.1.0
+    repository: https://charts.bitnami.com/bitnami
     condition: zookeeper.enabled
   - name: mysql
     version: 1.6.4
