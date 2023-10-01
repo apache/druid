@@ -757,7 +757,7 @@ In current Druid, multiple data segments may be announced under the same Znode.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.announcer.segmentsPerNode`|Each Znode contains info for up to this many segments.|50|
-|`druid.announcer.maxBytesPerNode`|Max byte size for Znode.|524288|
+|`druid.announcer.maxBytesPerNode`|Max byte size for Znode. Allowed range is [1024, 1048576].|524288|
 |`druid.announcer.skipDimensionsAndMetrics`|Skip Dimensions and Metrics list from segment announcements. NOTE: Enabling this will also remove the dimensions and metrics list from Coordinator and Broker endpoints.|false|
 |`druid.announcer.skipLoadSpec`|Skip segment LoadSpec from segment announcements. NOTE: Enabling this will also remove the loadspec from Coordinator and Broker endpoints.|false|
 
