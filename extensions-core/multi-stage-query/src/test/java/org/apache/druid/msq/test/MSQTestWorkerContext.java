@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -158,7 +159,7 @@ public class MSQTestWorkerContext implements WorkerContext
         ),
         indexIO,
         injector.getInstance(DataSegmentProvider.class),
-        null,
+        injector.getInstance(LoadedSegmentDataProviderFactory.class),
         workerMemoryParameters
     );
   }
