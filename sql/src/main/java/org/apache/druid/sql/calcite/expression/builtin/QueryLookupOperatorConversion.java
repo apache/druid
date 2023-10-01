@@ -50,6 +50,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
                                      SqlTypeFamily.CHARACTER
                                  )
                                  .requiredOperandCount(2)
+                                 .literalOperands(2)
                                  .build())
       .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
@@ -112,7 +113,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
     if (inputExpressions.size() > 2) {
       final Expr missingValExpr = plannerContext.parseExpression(inputExpressions.get(2).getExpression());
       if (missingValExpr.isLiteral()) {
-        return missingValExpr.getLiteralValue().toString();
+        return (String) missingValExpr.getLiteralValue();
       }
     }
     return null;

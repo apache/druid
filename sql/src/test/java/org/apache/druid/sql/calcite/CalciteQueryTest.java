@@ -8973,7 +8973,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize due to extraction dimension specs.
     cannotVectorize();
 
-    final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
+    final RegisteredLookupExtractionFn extractionFn1 = new RegisteredLookupExtractionFn(
         null,
         "lookyloo",
         false,
@@ -8981,9 +8981,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         null,
         true
     );
-
+    final RegisteredLookupExtractionFn extractionFnRMVNull = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        null,
+        null,
+        true
+    );
     testQuery(
-        "SELECT LOOKUP(dim1, 'lookyloo', 'Missing_Value'), COUNT(*) FROM foo group by 1",
+        "SELECT LOOKUP(dim1, 'lookyloo', 'Missing_Value'), LOOKUP(dim1, 'lookyloo', null) as rmvNull, COUNT(*) FROM foo group by 1,2",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -8995,7 +9002,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                     "dim1",
                                     "d0",
                                     ColumnType.STRING,
-                                    extractionFn
+                                    extractionFn1
+                                ),
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d1",
+                                    ColumnType.STRING,
+                                    extractionFnRMVNull
                                 )
                             )
                         )
@@ -9008,8 +9021,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"Missing_Value", 5L},
-            new Object[]{"xabc", 1L}
+            new Object[]{"Missing_Value", NullHandling.sqlCompatible() ? null : "", 5L},
+            new Object[]{"xabc", "xabc", 1L}
         )
     );
   }
