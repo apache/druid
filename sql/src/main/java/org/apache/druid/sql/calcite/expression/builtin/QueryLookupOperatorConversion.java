@@ -26,6 +26,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -113,7 +114,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
     if (inputExpressions.size() > 2) {
       final Expr missingValExpr = plannerContext.parseExpression(inputExpressions.get(2).getExpression());
       if (missingValExpr.isLiteral()) {
-        return (String) missingValExpr.getLiteralValue();
+        return Evals.asString(missingValExpr.getLiteralValue());
       }
     }
     return null;

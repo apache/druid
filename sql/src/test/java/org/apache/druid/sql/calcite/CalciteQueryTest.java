@@ -9021,7 +9021,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"Missing_Value", NullHandling.sqlCompatible() ? null : "", 5L},
+            new Object[]{"Missing_Value", NullHandling.defaultStringValue(), 5L},
             new Object[]{"xabc", "xabc", 1L}
         )
     );

@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -71,7 +72,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
         lookupName,
         false,
         replaceMissingValueWith != null && replaceMissingValueWith.isLiteral()
-        ? (String) replaceMissingValueWith.getLiteralValue()
+        ? Evals.asString(replaceMissingValueWith.getLiteralValue())
         : null,
         false,
         null
