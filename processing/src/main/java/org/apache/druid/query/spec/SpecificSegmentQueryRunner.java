@@ -74,7 +74,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 
     final Thread currThread = setName ? Thread.currentThread() : null;
     final String currThreadName = setName ? currThread.getName() : null;
-    final String newName = setName ? "processing_" + query.getId() : null;
+    final String newName = setName ? "processing_" + query.getDataSource().getTableNames() + "_" + query.getId() : null;
 
     final Sequence<T> baseSequence;
 
