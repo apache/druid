@@ -31,6 +31,7 @@ import java.util.Objects;
 public class DruidServerMetadata
 {
   private final String name;
+  @Nullable
   private final String hostAndPort;
   @Nullable
   private final String hostAndTlsPort;
@@ -42,7 +43,7 @@ public class DruidServerMetadata
   @JsonCreator
   public DruidServerMetadata(
       @JsonProperty("name") String name,
-      @JsonProperty("host") String hostAndPort,
+      @JsonProperty("host") @Nullable String hostAndPort,
       @JsonProperty("hostAndTlsPort") @Nullable String hostAndTlsPort,
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") ServerType type,
@@ -70,6 +71,7 @@ public class DruidServerMetadata
     return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();
   }
 
+  @Nullable
   @JsonProperty("host")
   public String getHostAndPort()
   {
