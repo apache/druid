@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.query.Query;
 
 import java.io.IOException;
@@ -32,6 +33,7 @@ public interface LoadedSegmentDataProvider
 {
   <ReturnType, QueryType> Pair<DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
       Query<QueryType> query,
+      RichSegmentDescriptor segmentDescriptor,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
       Class<QueryType> queryResultType,
       Closer closer

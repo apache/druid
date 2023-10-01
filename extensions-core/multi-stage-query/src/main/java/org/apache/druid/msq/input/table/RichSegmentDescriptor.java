@@ -46,6 +46,7 @@ public class RichSegmentDescriptor extends SegmentDescriptor
 {
   @Nullable
   private final Interval fullInterval;
+  @Nullable
   private final Set<DruidServerMetadata> servers;
 
   public RichSegmentDescriptor(
@@ -61,13 +62,24 @@ public class RichSegmentDescriptor extends SegmentDescriptor
     this.servers = servers;
   }
 
+  public RichSegmentDescriptor(
+      SegmentDescriptor segmentDescriptor,
+      @Nullable Interval fullInterval,
+      @Nullable Set<DruidServerMetadata> servers
+  )
+  {
+    super(segmentDescriptor.getInterval(), segmentDescriptor.getVersion(), segmentDescriptor.getPartitionNumber());
+    this.fullInterval = fullInterval;
+    this.servers = servers;
+  }
+
   @JsonCreator
   static RichSegmentDescriptor fromJson(
       @JsonProperty("fi") @Nullable final Interval fullInterval,
       @JsonProperty("itvl") final Interval interval,
       @JsonProperty("ver") final String version,
       @JsonProperty("part") final int partitionNumber,
-      @JsonProperty("servers") final Set<DruidServerMetadata> servers
+      @JsonProperty("servers") @Nullable final Set<DruidServerMetadata> servers
   )
   {
     return new RichSegmentDescriptor(

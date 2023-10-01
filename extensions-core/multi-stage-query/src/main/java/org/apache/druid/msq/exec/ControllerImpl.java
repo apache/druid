@@ -1166,22 +1166,26 @@ public class ControllerImpl implements Controller
     final boolean isIncludeRealtime = MultiStageQueryContext.isIncludeRealtime(task.getQuerySpec().getQuery().context());
 
     return (dataSource, intervals) -> {
-      final Iterable<ImmutableSegmentLoadInfo> serverViewSegments;
+      final Iterable<ImmutableSegmentLoadInfo> realtimeAndHistoricalSegments;
 
       // Fetch the realtime segments first, so that we don't miss any segment if they get handed off between the two calls.
+      // Segments loaded on historicals are also returned here, we dedup it below.
       if (isIncludeRealtime) {
-        serverViewSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
+        realtimeAndHistoricalSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
       } else {
-        serverViewSegments = ImmutableList.of();
+        realtimeAndHistoricalSegments = ImmutableList.of();
       }
 
-      final Collection<DataSegment> metadataStoreSegments =
+      // Fetch all published used segments from the metadata store.
+      final Collection<DataSegment> publishedUsedSegments =
           FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
 
       int realtimeCount = 0;
-      Set<DataSegment> unifiedSegmentView = new HashSet<>(metadataStoreSegments);
-      for (ImmutableSegmentLoadInfo segmentLoadInfo : serverViewSegments) {
+      Set<DataSegment> unifiedSegmentView = new HashSet<>(publishedUsedSegments);
+      for (ImmutableSegmentLoadInfo segmentLoadInfo : realtimeAndHistoricalSegments) {
         ImmutableSet<DruidServerMetadata> servers = segmentLoadInfo.getServers();
+        // Filter out only realtime servers. We don't want to query historicals for now, but we can in the future.
+        // This check can be modified then.
         Set<DruidServerMetadata> realtimeServerMetadata = servers.stream()
                                                                  .filter(druidServerMetadata ->
                                                                              ServerType.REALTIME.equals(druidServerMetadata.getType()) ||
@@ -1201,7 +1205,7 @@ public class ControllerImpl implements Controller
         log.info(
             "Fetched total [%d] segments from coordinator: [%d] from metadata stoure, [%d] from server view",
             unifiedSegmentView.size(),
-            metadataStoreSegments.size(),
+            publishedUsedSegments.size(),
             realtimeCount
         );
       }

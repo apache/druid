@@ -55,7 +55,6 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
 {
   private static final Logger log = new Logger(LoadedSegmentDataProviderImpl.class);
   private static final int DEFAULT_NUM_TRIES = 5;
-  private final RichSegmentDescriptor segmentDescriptor;
   private final String dataSource;
   private final ChannelCounters channelCounters;
   private final ServiceClientFactory serviceClientFactory;
@@ -63,7 +62,6 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
   private final ObjectMapper objectMapper;
 
   public LoadedSegmentDataProviderImpl(
-      RichSegmentDescriptor segmentDescriptor,
       String dataSource,
       ChannelCounters channelCounters,
       ServiceClientFactory serviceClientFactory,
@@ -71,7 +69,6 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
       ObjectMapper objectMapper
   )
   {
-    this.segmentDescriptor = segmentDescriptor;
     this.dataSource = dataSource;
     this.channelCounters = channelCounters;
     this.serviceClientFactory = serviceClientFactory;
@@ -82,6 +79,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
   @Override
   public <ReturnType, QueryType> Pair<DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
       Query<QueryType> query,
+      RichSegmentDescriptor segmentDescriptor,
       Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
       Class<QueryType> resultClass,
       Closer closer

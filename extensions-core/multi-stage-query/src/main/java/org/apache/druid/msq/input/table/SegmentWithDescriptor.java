@@ -43,7 +43,7 @@ public class SegmentWithDescriptor
 {
   private final Supplier<? extends ResourceHolder<Segment>> segmentSupplier;
   private final LoadedSegmentDataProvider loadedSegmentDataProvider;
-  private final SegmentDescriptor descriptor;
+  private final RichSegmentDescriptor descriptor;
 
   /**
    * Create a new instance.
@@ -57,7 +57,7 @@ public class SegmentWithDescriptor
   public SegmentWithDescriptor(
       final Supplier<? extends ResourceHolder<Segment>> segmentSupplier,
       final LoadedSegmentDataProvider loadedSegmentDataProvider,
-      final SegmentDescriptor descriptor
+      final RichSegmentDescriptor descriptor
   )
   {
     this.segmentSupplier = Preconditions.checkNotNull(segmentSupplier, "segment");
@@ -86,7 +86,7 @@ public class SegmentWithDescriptor
       Closer closer
   ) throws IOException
   {
-    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, mappingFunction, queryResultType, closer);
+    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, descriptor, mappingFunction, queryResultType, closer);
   }
 
   /**
@@ -99,10 +99,7 @@ public class SegmentWithDescriptor
 
   public boolean isLoadedOnServer()
   {
-    if (!(descriptor instanceof RichSegmentDescriptor)) {
-      return false;
-    }
-    return !CollectionUtils.isNullOrEmpty(((RichSegmentDescriptor) descriptor).getServers());
+    return !CollectionUtils.isNullOrEmpty(descriptor.getServers());
   }
 
   @Override

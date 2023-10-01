@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 public class LoadedSegmentDataProviderFactory
@@ -44,13 +43,11 @@ public class LoadedSegmentDataProviderFactory
   }
 
   public LoadedSegmentDataProvider createLoadedSegmentDataProvider(
-      RichSegmentDescriptor segmentDescriptor,
       String dataSource,
       ChannelCounters channelCounters
   )
   {
     return new LoadedSegmentDataProviderImpl(
-        segmentDescriptor,
         dataSource,
         channelCounters,
         serviceClientFactory,
