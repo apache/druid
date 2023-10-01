@@ -77,10 +77,10 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
   }
 
   @Override
-  public <ReturnType, QueryType> Pair<DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
+  public <RowType, QueryType> Pair<DataServerQueryStatus, Yielder<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       RichSegmentDescriptor segmentDescriptor,
-      Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
+      Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
       Class<QueryType> resultClass,
       Closer closer
   ) throws IOException
@@ -103,12 +103,12 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     log.debug("Querying severs[%s] for segment[%s], retries:[%d]", servers, segmentDescriptor, numRetriesOnMissingSegments);
     final ResponseContext responseContext = new DefaultResponseContext();
 
-    Pair<DataServerQueryStatus, Yielder<ReturnType>> statusSequencePair;
+    Pair<DataServerQueryStatus, Yielder<RowType>> statusSequencePair;
     try {
       statusSequencePair = RetryUtils.retry(
           () -> {
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType);
-            Yielder<ReturnType> yielder = Yielders.each(mappingFunction.apply(sequence)
+            Yielder<RowType> yielder = Yielders.each(mappingFunction.apply(sequence)
                                                                     .map(row -> {
                                                                       channelCounters.incrementRowCount();
                                                                       return row;

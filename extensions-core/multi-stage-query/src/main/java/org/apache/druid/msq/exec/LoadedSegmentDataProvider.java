@@ -31,10 +31,10 @@ import java.util.function.Function;
 
 public interface LoadedSegmentDataProvider
 {
-  <ReturnType, QueryType> Pair<DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
+  <RowType, QueryType> Pair<DataServerQueryStatus, Yielder<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       RichSegmentDescriptor segmentDescriptor,
-      Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
+      Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
       Class<QueryType> queryResultType,
       Closer closer
   ) throws IOException;

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.base.Preconditions;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.CompactionState;
@@ -67,7 +68,7 @@ public class DataSegmentWithLocation extends DataSegment
   )
   {
     super(dataSource, interval, version, loadSpec, dimensions, metrics, shardSpec, lastCompactionState, binaryVersion, size, pruneSpecsHolder);
-    this.servers = servers;
+    this.servers = Preconditions.checkNotNull(servers, "servers");
   }
 
   public DataSegmentWithLocation(

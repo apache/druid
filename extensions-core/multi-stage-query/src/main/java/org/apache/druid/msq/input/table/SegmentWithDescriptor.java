@@ -79,9 +79,9 @@ public class SegmentWithDescriptor
     return segmentSupplier.get();
   }
 
-  public <QueryType, ReturnType> Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<ReturnType>> fetchRowsFromDataServer(
+  public <QueryType, RowType> Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
-      Function<Sequence<QueryType>, Sequence<ReturnType>> mappingFunction,
+      Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
       Class<QueryType> queryResultType,
       Closer closer
   ) throws IOException

@@ -191,7 +191,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -1164,14 +1163,21 @@ public class ControllerImpl implements Controller
 
   private DataSegmentTimelineView makeDataSegmentTimelineView()
   {
-    final boolean isIncludeRealtime = MultiStageQueryContext.isIncludeRealtime(task.getQuerySpec().getQuery().context());
+    final MultiStageQueryContext.SegmentSource includeSegmentSource = MultiStageQueryContext.getSegmentSources(
+        task.getQuerySpec()
+            .getQuery()
+            .context()
+    );
+
+    final boolean includeRealtime
+        = MultiStageQueryContext.SegmentSource.shouldQueryRealtimeServers(includeSegmentSource);
 
     return (dataSource, intervals) -> {
       final Iterable<ImmutableSegmentLoadInfo> realtimeAndHistoricalSegments;
 
-      // Fetch the realtime segments first, so that we don't miss any segment if they get handed off between the two calls.
-      // Segments loaded on historicals are also returned here, we dedup it below.
-      if (isIncludeRealtime) {
+      // Fetch the realtime segments first, so that we don't miss any segment if they get handed off between the two
+      // calls. Segments loaded on historicals are also returned here, we deduplicate it below.
+      if (includeRealtime) {
         realtimeAndHistoricalSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
       } else {
         realtimeAndHistoricalSegments = ImmutableList.of();
@@ -1182,16 +1188,20 @@ public class ControllerImpl implements Controller
           FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
 
       int realtimeCount = 0;
+
+      // Deduplicate segments, giving preference to metadata store segments. We do this so that if any segments have been
+      // handed off in between the two metadata calls above, we directly fetch it from deep storage.
       Set<DataSegment> unifiedSegmentView = new HashSet<>(publishedUsedSegments);
       for (ImmutableSegmentLoadInfo segmentLoadInfo : realtimeAndHistoricalSegments) {
         ImmutableSet<DruidServerMetadata> servers = segmentLoadInfo.getServers();
         // Filter out only realtime servers. We don't want to query historicals for now, but we can in the future.
         // This check can be modified then.
-        Set<DruidServerMetadata> realtimeServerMetadata = servers.stream()
-                                                                 .filter(druidServerMetadata ->
-                                                                             ServerType.REALTIME.equals(druidServerMetadata.getType()) ||
-                                                                             ServerType.INDEXER_EXECUTOR.equals(druidServerMetadata.getType()))
-                                                                 .collect(Collectors.toSet());
+        Set<DruidServerMetadata> realtimeServerMetadata
+            = servers.stream()
+                     .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
+                                                                        .contains(druidServerMetadata.getType())
+                     )
+                     .collect(Collectors.toSet());
         if (!realtimeServerMetadata.isEmpty()) {
           realtimeCount += 1;
           DataSegmentWithLocation dataSegmentWithLocation = new DataSegmentWithLocation(
@@ -1202,7 +1212,7 @@ public class ControllerImpl implements Controller
         }
       }
 
-      if (isIncludeRealtime) {
+      if (includeRealtime) {
         log.info(
             "Fetched total [%d] segments from coordinator: [%d] from metadata stoure, [%d] from server view",
             unifiedSegmentView.size(),

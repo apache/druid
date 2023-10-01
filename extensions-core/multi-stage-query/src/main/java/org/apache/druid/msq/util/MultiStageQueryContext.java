@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
@@ -33,12 +34,14 @@ import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.server.coordination.ServerType;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -90,8 +93,8 @@ public class MultiStageQueryContext
   public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
 
-  public static final String CTX_INCLUDE_REALTIME = "includeRealtimeResults";
-  public static final boolean DEFAULT_INCLUDE_REALTIME = false;
+  public static final String CTX_INCLUDE_SEGMENT_SOURCE = "includeSegmentSource";
+  public static final SegmentSource DEFAULT_INCLUDE_SEGMENT_SOURCE = SegmentSource.NONE;
 
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
@@ -184,12 +187,12 @@ public class MultiStageQueryContext
     );
   }
 
-  public static boolean isIncludeRealtime(final QueryContext queryContext)
+  public static SegmentSource getSegmentSources(final QueryContext queryContext)
   {
-    return QueryContexts.getAsBoolean(
-        CTX_INCLUDE_REALTIME,
-        queryContext.getBoolean(CTX_INCLUDE_REALTIME, DEFAULT_INCLUDE_REALTIME),
-        DEFAULT_INCLUDE_REALTIME
+    return queryContext.getEnum(
+        CTX_INCLUDE_SEGMENT_SOURCE,
+        SegmentSource.class,
+        DEFAULT_INCLUDE_SEGMENT_SOURCE
     );
   }
 
@@ -311,6 +314,28 @@ public class MultiStageQueryContext
     }
     catch (Exception e) {
       throw QueryContexts.badValueException(CTX_INDEX_SPEC, "an indexSpec", indexSpecObject);
+    }
+  }
+
+  public enum SegmentSource {
+
+    NONE(ImmutableSet.of()),
+    REALTIME(ImmutableSet.of(ServerType.REALTIME, ServerType.INDEXER_EXECUTOR));
+
+    private final Set<ServerType> usedServerTypes;
+
+    SegmentSource(Set<ServerType> usedServerTypes)
+    {
+      this.usedServerTypes = usedServerTypes;
+    }
+
+    public Set<ServerType> getUsedServerTypes()
+    {
+      return usedServerTypes;
+    }
+
+    public static boolean shouldQueryRealtimeServers(SegmentSource segmentSource) {
+      return REALTIME.equals(segmentSource);
     }
   }
 }
