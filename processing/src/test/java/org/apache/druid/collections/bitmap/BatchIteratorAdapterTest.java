@@ -17,20 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.collections.bitmap;
 
-import com.google.inject.BindingAnnotation;
+import org.apache.druid.collections.IntSetTestUtility;
+import org.junit.Assert;
+import org.junit.Test;
+import org.roaringbitmap.BatchIterator;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.util.BitSet;
 
-/**
- */
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface CoordinatorIndexingServiceDuty
+public class BatchIteratorAdapterTest
 {
+  @Test
+  public void advanceIfNeeded()
+  {
+    BitSet simpleBitSet = IntSetTestUtility.createSimpleBitSet(IntSetTestUtility.getSetBits());
+    WrappedBitSetBitmap bitSetBitmap = new WrappedBitSetBitmap(simpleBitSet);
+    BatchIterator batchIterator = bitSetBitmap.batchIterator();
+    batchIterator.advanceIfNeeded(4);
+    int[] batch = new int[3];
+    batchIterator.nextBatch(batch);
+    Assert.assertArrayEquals(new int[]{5, 8, 13}, batch);
+  }
 }

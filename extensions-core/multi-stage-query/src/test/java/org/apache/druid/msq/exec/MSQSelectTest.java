@@ -51,6 +51,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -137,6 +138,7 @@ public class MSQSelectTest extends MSQTestBase
         {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
         {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
     };
+
     return Arrays.asList(data);
   }
 
@@ -2097,6 +2099,207 @@ public class MSQSelectTest extends MSQTestBase
             "assert the query didn't use sort merge"
         )
         .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectUnnestOnInlineFoo()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("EXPR$0", ColumnType.LONG)
+                                               .build();
+    RowSignature outputSignature = RowSignature.builder()
+                                               .add("d", ColumnType.LONG)
+                                               .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("EXPR$0", "d")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("select d from UNNEST(ARRAY[1,2,3]) as unnested(d)")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(
+                                  InlineDataSource.fromIterable(
+                                      ImmutableList.of(
+                                          new Object[]{1L},
+                                          new Object[]{2L},
+                                          new Object[]{3L}
+                                      ),
+                                      resultSignature
+                                  )
+                              )
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .columns("EXPR$0")
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  resultSignature
+                              ))
+                              .build())
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(outputSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3}
+        ))
+        .verifyResults();
+  }
+
+
+  @Test
+  public void testSelectUnnestOnFoo()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("j0.unnest", ColumnType.STRING)
+                                               .build();
+
+    RowSignature outputSignature = RowSignature.builder()
+                                               .add("d3", ColumnType.STRING)
+                                               .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("j0.unnest", "d3")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("SELECT d3 FROM foo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(UnnestDataSource.create(
+                                  new TableDataSource(CalciteTests.DATASOURCE1),
+                                  expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                  null
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  resultSignature
+                              ))
+                              .columns(ImmutableList.of("j0.unnest"))
+                              .build())
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(outputSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(
+            useDefault ? ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"c"},
+                new Object[]{"d"},
+                new Object[]{""},
+                new Object[]{""},
+                new Object[]{""}
+            ) : ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"c"},
+                new Object[]{"d"},
+                new Object[]{""},
+                new Object[]{null},
+                new Object[]{null}
+            ))
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectUnnestOnQueryFoo()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("j0.unnest", ColumnType.STRING)
+                                               .build();
+
+    RowSignature resultSignature1 = RowSignature.builder()
+                                               .add("dim3", ColumnType.STRING)
+                                               .build();
+
+    RowSignature outputSignature = RowSignature.builder()
+                                               .add("d3", ColumnType.STRING)
+                                               .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("j0.unnest", "d3")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("SELECT d3 FROM (select * from druid.foo where dim2='a' LIMIT 10), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(UnnestDataSource.create(
+                                  new QueryDataSource(
+                                      newScanQueryBuilder()
+                                          .dataSource(
+                                              new TableDataSource(CalciteTests.DATASOURCE1)
+                                          )
+                                          .intervals(querySegmentSpec(Filtration.eternity()))
+                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                          .legacy(false)
+                                          .filters(equality("dim2", "a", ColumnType.STRING))
+                                          .columns("dim3")
+                                          .context(defaultScanQueryContext(
+                                              context,
+                                              resultSignature1
+                                          ))
+                                          .limit(10)
+                                          .build()
+                                  ),
+                                  expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                  null
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  resultSignature
+                              ))
+                              .columns(ImmutableList.of("j0.unnest"))
+                              .build())
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(outputSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(
+            useDefault ? ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"}
+            ) : ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{""}
+            ))
         .verifyResults();
   }
 

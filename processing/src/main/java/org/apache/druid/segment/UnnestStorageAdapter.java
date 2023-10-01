@@ -478,13 +478,16 @@ public class UnnestStorageAdapter implements StorageAdapter
     for (Filter filter : queryFilter.getFilters()) {
       if (filter.getRequiredColumns().contains(outputColumnName)) {
         if (filter instanceof AndFilter) {
-          preFilterList.add(new AndFilter(recursiveRewriteOnUnnestFilters(
+          List<Filter> andChildFilters = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) filter,
               inputColumn,
               inputColumnCapabilites,
               filterSplitter,
               isTopLevelAndFilter
-          )));
+          );
+          if (!andChildFilters.isEmpty()) {
+            preFilterList.add(new AndFilter(andChildFilters));
+          }
         } else if (filter instanceof OrFilter) {
           // in case of Or Fiters, we set isTopLevelAndFilter to false that prevents pushing down any child filters to base
           List<Filter> orChildFilters = recursiveRewriteOnUnnestFilters(
@@ -495,6 +498,8 @@ public class UnnestStorageAdapter implements StorageAdapter
               false
           );
           preFilterList.add(new OrFilter(orChildFilters));
+        } else if (filter instanceof NotFilter) {
+          continue;
         } else {
           final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(
               filter,
@@ -579,7 +584,7 @@ public class UnnestStorageAdapter implements StorageAdapter
       }
       return true;
     } else if (filter instanceof NotFilter) {
-      return filterMapsOverMultiValueStrings(((NotFilter) filter).getBaseFilter());
+      return false;
     } else {
       return filter instanceof SelectorFilter
              || filter instanceof InDimFilter

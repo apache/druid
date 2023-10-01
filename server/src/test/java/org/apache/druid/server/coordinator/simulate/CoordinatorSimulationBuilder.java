@@ -37,9 +37,11 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
@@ -193,18 +195,14 @@ public class CoordinatorSimulationBuilder
     // Build the coordinator
     final DruidCoordinator coordinator = new DruidCoordinator(
         env.coordinatorConfig,
-        env.jacksonConfigManager,
-        env.segmentManager,
+        env.metadataManager,
         env.coordinatorInventoryView,
-        env.ruleManager,
         env.serviceEmitter,
         env.executorFactory,
         null,
         env.loadQueueTaskMaster,
         env.loadQueueManager,
         new ServiceAnnouncer.Noop(),
-        null,
-        Collections.emptySet(),
         null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
         createBalancerStrategy(env),
@@ -441,7 +439,7 @@ public class CoordinatorSimulationBuilder
      */
     private final TestServerInventoryView coordinatorInventoryView;
 
-    private final JacksonConfigManager jacksonConfigManager;
+    private final MetadataManager metadataManager;
     private final LookupCoordinatorManager lookupCoordinatorManager;
     private final DruidCoordinatorConfig coordinatorConfig;
 
@@ -491,12 +489,21 @@ public class CoordinatorSimulationBuilder
       this.loadQueueManager =
           new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
 
-      this.jacksonConfigManager = mockConfigManager();
+      JacksonConfigManager jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);
 
       this.lookupCoordinatorManager = EasyMock.createNiceMock(LookupCoordinatorManager.class);
       mocks.add(jacksonConfigManager);
       mocks.add(lookupCoordinatorManager);
+
+      this.metadataManager = new MetadataManager(
+          null,
+          new CoordinatorConfigManager(jacksonConfigManager, null, null),
+          segmentManager,
+          null,
+          ruleManager,
+          null
+      );
     }
 
     private void setUp() throws Exception

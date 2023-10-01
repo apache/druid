@@ -17,20 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.metadata;
 
-import com.google.inject.BindingAnnotation;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-/**
- */
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface CoordinatorMetadataStoreManagementDuty
+public class ReplaceTaskLockTest
 {
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ReplaceTaskLock.class)
+                  .usingGetClass()
+                  .withNonnullFields("supervisorTaskId", "interval", "version")
+                  .verify();
+  }
 }
