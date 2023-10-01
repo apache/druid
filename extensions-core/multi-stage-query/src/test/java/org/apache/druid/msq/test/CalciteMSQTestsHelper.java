@@ -91,6 +91,8 @@ import java.util.function.Supplier;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE5;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_LOTS_O_COLUMNS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
@@ -98,6 +100,7 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS_LOTS_OF_COLUMNS;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
@@ -258,6 +261,15 @@ public class CalciteMSQTestsHelper
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(INDEX_SCHEMA_NUMERIC_DIMS)
               .rows(ROWS1_WITH_NUMERIC_DIMS)
+              .buildMMappedIndex();
+          break;
+        case DATASOURCE5:
+          index = IndexBuilder
+              .create()
+              .tmpDir(new File(temporaryFolder.newFolder(), "5"))
+              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+              .schema(INDEX_SCHEMA_LOTS_O_COLUMNS)
+              .rows(ROWS_LOTS_OF_COLUMNS)
               .buildMMappedIndex();
           break;
         default:

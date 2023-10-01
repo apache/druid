@@ -64,7 +64,6 @@ public class ViewSqlEngine implements SqlEngine
       case WINDOW_FUNCTIONS:
       case UNNEST:
         return true;
-
       // Views can't sit on top of INSERT or REPLACE.
       case CAN_INSERT:
       case CAN_REPLACE:

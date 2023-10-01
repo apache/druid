@@ -42,6 +42,7 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -89,6 +90,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Mock
   private DruidSchemaCatalog rootSchema;
 
+  @Mock
+  private SqlEngine engine;
   private Set<SqlAggregator> aggregators;
   private Set<SqlOperatorConversion> operatorConversions;
 
@@ -185,13 +188,16 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         AuthConfig.newBuilder().build()
     );
+
+
     PlannerContext context = PlannerContext.create(
         toolbox,
         "SELECT 1",
-        null,
+        engine,
         Collections.emptyMap(),
         null
     );
+
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)
                                          .contains(customRule);
