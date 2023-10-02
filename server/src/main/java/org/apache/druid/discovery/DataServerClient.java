@@ -51,7 +51,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Client to query data servers given a query.
  */
-public class DataServerClient<T>
+public class DataServerClient
 {
   private static final Logger log = new Logger(DataServerClient.class);
   private final ServiceClient serviceClient;
@@ -73,7 +73,7 @@ public class DataServerClient<T>
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
 
-  public Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType)
+  public <T> Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType)
   {
     final String basePath = "/druid/v2/";
     final String cancelPath = basePath + query.getId();
@@ -138,7 +138,7 @@ public class DataServerClient<T>
     );
   }
 
-  private void cancelQuery(Query<T> query, String cancelPath)
+  private void cancelQuery(Query<?> query, String cancelPath)
   {
     Runnable cancelRunnable = () -> {
       Future<StatusResponseHolder> cancelFuture = serviceClient.asyncRequest(

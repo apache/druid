@@ -46,7 +46,6 @@ public class RichSegmentDescriptor extends SegmentDescriptor
 {
   @Nullable
   private final Interval fullInterval;
-  @Nullable
   private final Set<DruidServerMetadata> servers;
 
   public RichSegmentDescriptor(
@@ -65,7 +64,7 @@ public class RichSegmentDescriptor extends SegmentDescriptor
   public RichSegmentDescriptor(
       SegmentDescriptor segmentDescriptor,
       @Nullable Interval fullInterval,
-      @Nullable Set<DruidServerMetadata> servers
+      Set<DruidServerMetadata> servers
   )
   {
     super(segmentDescriptor.getInterval(), segmentDescriptor.getVersion(), segmentDescriptor.getPartitionNumber());
@@ -92,8 +91,6 @@ public class RichSegmentDescriptor extends SegmentDescriptor
   }
 
   @JsonProperty("servers")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @Nullable
   public Set<DruidServerMetadata> getServers()
   {
     return servers;
@@ -125,23 +122,21 @@ public class RichSegmentDescriptor extends SegmentDescriptor
       return false;
     }
     RichSegmentDescriptor that = (RichSegmentDescriptor) o;
-    return Objects.equals(fullInterval, that.fullInterval);
+    return Objects.equals(fullInterval, that.fullInterval) && Objects.equals(servers, that.servers);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), fullInterval);
+    return Objects.hash(super.hashCode(), fullInterval, servers);
   }
 
   @Override
   public String toString()
   {
     return "RichSegmentDescriptor{" +
-           "fullInterval=" + (fullInterval == null ? getInterval() : fullInterval) +
-           ", interval=" + getInterval() +
-           ", version='" + getVersion() + '\'' +
-           ", partitionNumber=" + getPartitionNumber() +
+           "fullInterval=" + fullInterval +
+           ", servers=" + servers +
            '}';
   }
 }

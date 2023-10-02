@@ -270,7 +270,6 @@ public class MSQLoadedSegmentTests extends MSQTestBase
     )
         .when(loadedSegmentDataProvider)
         .fetchRowsFromDataServer(any(), any(), any(), any(), any());
-    doReturn(Pair.of(LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF, null));
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")

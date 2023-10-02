@@ -112,12 +112,15 @@ public class SegmentWithDescriptor
       return false;
     }
     SegmentWithDescriptor that = (SegmentWithDescriptor) o;
-    return Objects.equals(segmentSupplier, that.segmentSupplier) && Objects.equals(descriptor, that.descriptor);
+    return Objects.equals(segmentSupplier, that.segmentSupplier) && Objects.equals(
+        loadedSegmentDataProvider,
+        that.loadedSegmentDataProvider
+    ) && Objects.equals(descriptor, that.descriptor);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segmentSupplier, descriptor);
+    return Objects.hash(segmentSupplier, loadedSegmentDataProvider, descriptor);
   }
 }

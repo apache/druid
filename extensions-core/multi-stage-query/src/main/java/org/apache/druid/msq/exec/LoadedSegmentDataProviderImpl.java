@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
@@ -76,6 +77,12 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     this.objectMapper = objectMapper;
   }
 
+  @VisibleForTesting
+  DataServerClient makeDataServerClient(FixedSetServiceLocator serviceLocator)
+  {
+    return new DataServerClient(serviceClientFactory, serviceLocator, objectMapper);
+  }
+
   @Override
   public <RowType, QueryType> Pair<DataServerQueryStatus, Yielder<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
@@ -91,11 +98,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     );
 
     Set<DruidServerMetadata> servers = segmentDescriptor.getServers();
-    final DataServerClient<QueryType> dataServerClient = new DataServerClient<>(
-        serviceClientFactory,
-        FixedSetServiceLocator.forDruidServerMetadata(servers),
-        objectMapper
-    );
+    DataServerClient dataServerClient = makeDataServerClient(FixedSetServiceLocator.forDruidServerMetadata(servers));
 
     final JavaType queryResultType = objectMapper.getTypeFactory().constructType(resultClass);
     final int numRetriesOnMissingSegments = preparedQuery.context().getNumRetriesOnMissingSegments(DEFAULT_NUM_TRIES);
@@ -108,16 +111,17 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
       statusSequencePair = RetryUtils.retry(
           () -> {
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType);
-            Yielder<RowType> yielder = Yielders.each(mappingFunction.apply(sequence)
-                                                                    .map(row -> {
-                                                                      channelCounters.incrementRowCount();
-                                                                      return row;
-                                                                    }));
-            closer.register(yielder);
             final List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
             if (missingSegments.isEmpty()) {
               log.debug("Successfully fetched rows from server for segment[%s]", segmentDescriptor);
               // Segment was found
+              Yielder<RowType> yielder = closer.register(
+                  Yielders.each(mappingFunction.apply(sequence)
+                                               .map(row -> {
+                                                 channelCounters.incrementRowCount();
+                                                 return row;
+                                               }))
+              );
               return Pair.of(DataServerQueryStatus.SUCCESS, yielder);
             } else {
               Boolean wasHandedOff = checkSegmentHandoff(coordinatorClient, dataSource, segmentDescriptor);
