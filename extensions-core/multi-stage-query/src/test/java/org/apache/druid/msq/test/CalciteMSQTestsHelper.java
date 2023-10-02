@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
@@ -97,10 +98,11 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_NUM
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS_LOTS_OF_COLUMNS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS_LOTS_OF_COLUMNS;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
@@ -191,8 +193,15 @@ public class CalciteMSQTestsHelper
   private static LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
   {
     LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
-    doThrow(new AssertionError("Test does not support loaded segment query"))
-        .when(mockFactory).createLoadedSegmentDataProvider(anyString(), any());
+    LoadedSegmentDataProvider loadedSegmentDataProvider = Mockito.mock(LoadedSegmentDataProvider.class);
+    try {
+      doThrow(new AssertionError("Test does not support loaded segment query"))
+          .when(loadedSegmentDataProvider).fetchRowsFromDataServer(any(), any(), any(), any(), any());
+      doReturn(loadedSegmentDataProvider).when(mockFactory).createLoadedSegmentDataProvider(anyString(), any());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     return mockFactory;
   }
 

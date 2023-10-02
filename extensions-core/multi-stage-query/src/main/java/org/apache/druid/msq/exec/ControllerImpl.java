@@ -1163,14 +1163,13 @@ public class ControllerImpl implements Controller
 
   private DataSegmentTimelineView makeDataSegmentTimelineView()
   {
-    final MultiStageQueryContext.SegmentSource includeSegmentSource = MultiStageQueryContext.getSegmentSources(
+    final SegmentSource includeSegmentSource = MultiStageQueryContext.getSegmentSources(
         task.getQuerySpec()
             .getQuery()
             .context()
     );
 
-    final boolean includeRealtime
-        = MultiStageQueryContext.SegmentSource.shouldQueryRealtimeServers(includeSegmentSource);
+    final boolean includeRealtime = SegmentSource.shouldQueryRealtimeServers(includeSegmentSource);
 
     return (dataSource, intervals) -> {
       final Iterable<ImmutableSegmentLoadInfo> realtimeAndHistoricalSegments;

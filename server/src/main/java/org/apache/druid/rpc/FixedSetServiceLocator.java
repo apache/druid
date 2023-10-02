@@ -35,15 +35,21 @@ public class FixedSetServiceLocator implements ServiceLocator
 {
   private ServiceLocations serviceLocations;
 
-  public FixedSetServiceLocator(Set<DruidServerMetadata> servers)
+  private FixedSetServiceLocator(ServiceLocations serviceLocations)
   {
-    if (servers == null) {
-      serviceLocations = ServiceLocations.closed();
+    this.serviceLocations = serviceLocations;
+  }
+
+  public static FixedSetServiceLocator forDruidServerMetadata(Set<DruidServerMetadata> serverMetadataSet)
+  {
+    if (serverMetadataSet == null || serverMetadataSet.isEmpty()) {
+      return new FixedSetServiceLocator(ServiceLocations.closed());
     } else {
-      Set<ServiceLocation> serviceLocationSet = servers.stream()
-                                                       .map(ServiceLocation::fromDruidServerMetadata)
-                                                       .collect(Collectors.toSet());
-      serviceLocations = ServiceLocations.forLocations(serviceLocationSet);
+      Set<ServiceLocation> serviceLocationSet = serverMetadataSet.stream()
+                                                                  .map(ServiceLocation::fromDruidServerMetadata)
+                                                                  .collect(Collectors.toSet());
+
+      return new FixedSetServiceLocator(ServiceLocations.forLocations(serviceLocationSet));
     }
   }
 

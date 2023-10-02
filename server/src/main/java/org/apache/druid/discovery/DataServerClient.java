@@ -64,7 +64,7 @@ public class DataServerClient<T>
       ObjectMapper objectMapper
   )
   {
-    serviceClient = serviceClientFactory.makeClient(
+    this.serviceClient = serviceClientFactory.makeClient(
         NodeRole.INDEXER.getJsonName(),
         fixedSetServiceLocator,
         StandardRetryPolicy.noRetries()

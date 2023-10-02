@@ -93,7 +93,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
     Set<DruidServerMetadata> servers = segmentDescriptor.getServers();
     final DataServerClient<QueryType> dataServerClient = new DataServerClient<>(
         serviceClientFactory,
-        new FixedSetServiceLocator(servers),
+        FixedSetServiceLocator.forDruidServerMetadata(servers),
         objectMapper
     );
 
