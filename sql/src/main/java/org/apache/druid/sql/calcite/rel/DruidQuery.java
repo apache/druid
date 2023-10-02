@@ -1384,6 +1384,7 @@ public class DruidQuery
     }
     if (dataSource instanceof TableDataSource) {
       // We need a scan query to pull the results up for us before applying the window
+      // Returning null here to ensure that the planner generates that alternative
       return null;
     }
 
