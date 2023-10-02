@@ -54,7 +54,6 @@ import org.apache.calcite.util.Optionality;
 import org.apache.calcite.util.Static;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
@@ -563,38 +562,6 @@ public class OperatorConversions
           buildOperandTypeInference(nullableOperands),
           buildOperandTypeChecker(nullableOperands),
           functionCategory
-      );
-    }
-
-    /**
-     * Creates a {@link SqlFunction} from this builder with alias.
-     */
-    @SuppressWarnings("unchecked")
-    public Pair<T, T> buildWithAlias(String alias)
-    {
-      Preconditions.checkNotNull(alias, "Function Alias");
-      Preconditions.checkArgument(!alias.equals(name), "Function alias can not equal to name");
-      final IntSet nullableOperands = buildNullableOperands();
-      final SqlOperandTypeInference operandTypeInference = buildOperandTypeInference(nullableOperands);
-      final SqlOperandTypeChecker sqlOperandTypeChecker = buildOperandTypeChecker(nullableOperands);
-      Preconditions.checkNotNull(returnTypeInference, "returnTypeInference");
-      return Pair.of(
-          (T) new SqlFunction(
-              name,
-              kind,
-              returnTypeInference,
-              operandTypeInference,
-              sqlOperandTypeChecker,
-              functionCategory
-          ),
-          (T) new SqlFunction(
-              alias,
-              kind,
-              returnTypeInference,
-              operandTypeInference,
-              sqlOperandTypeChecker,
-              functionCategory
-          )
       );
     }
 

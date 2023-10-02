@@ -32,6 +32,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.BuiltInExprMacros;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArrayConcatSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
@@ -227,11 +228,16 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(ContainsOperatorConversion.caseInsensitive())
                    .build();
 
+  private static final SqlOperatorConversion COMPLEX_DECODE_OPERATOR_CONVERSIONS = new ComplexDecodeBase64OperatorConversion();
   private static final List<SqlOperatorConversion> VALUE_COERCION_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new CastOperatorConversion())
                    .add(new ReinterpretOperatorConversion())
-                   .add(new ComplexDecodeBase64OperatorConversion())
+                   .add(COMPLEX_DECODE_OPERATOR_CONVERSIONS)
+                   .add(new AliasedOperatorConversion(
+                       COMPLEX_DECODE_OPERATOR_CONVERSIONS,
+                       BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS_NAME
+                   ))
                    .add(new DecodeBase64UTFOperatorConversion())
                    .build();
 
@@ -445,13 +451,6 @@ public class DruidOperatorTable implements SqlOperatorTable
           || this.operatorConversions.put(operatorKey, operatorConversion) != null) {
         throw new ISE("Cannot have two operators with key [%s]", operatorKey);
       }
-      if (operatorConversion.aliasCalciteOperator().isPresent()) {
-        final OperatorKey aliasOperatorKey = OperatorKey.of(operatorConversion.aliasCalciteOperator().get());
-        if (this.aggregators.containsKey(aliasOperatorKey)
-            || this.operatorConversions.put(aliasOperatorKey, operatorConversion) != null) {
-          throw new ISE("Cannot have two operators with alias key [%s]", aliasOperatorKey);
-        }
-      }
     }
 
     for (SqlOperatorConversion operatorConversion : STANDARD_OPERATOR_CONVERSIONS) {
@@ -463,15 +462,6 @@ public class DruidOperatorTable implements SqlOperatorTable
       }
 
       this.operatorConversions.putIfAbsent(operatorKey, operatorConversion);
-
-      if (operatorConversion.aliasCalciteOperator().isPresent()) {
-        final OperatorKey aliasOperatorKey = OperatorKey.of(operatorConversion.aliasCalciteOperator().get());
-        // Don't complain if the alias already exists; we allow standard operators alias to be overridden as well.
-        if (this.aggregators.containsKey(aliasOperatorKey)) {
-          continue;
-        }
-        this.operatorConversions.put(aliasOperatorKey, operatorConversion);
-      }
     }
   }
 

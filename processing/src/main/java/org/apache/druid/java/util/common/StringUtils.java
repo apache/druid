@@ -373,24 +373,16 @@ public class StringUtils
     if (formatArgs == null || formatArgs.length == 0) {
       return message;
     }
-    if (message == null) {
-      return compactFormatArgs("", formatArgs);
-    }
     try {
       return String.format(Locale.ENGLISH, message, formatArgs);
     }
     catch (IllegalFormatException e) {
-      return compactFormatArgs(message, formatArgs);
+      StringBuilder bob = new StringBuilder(message);
+      for (Object formatArg : formatArgs) {
+        bob.append("; ").append(formatArg);
+      }
+      return bob.toString();
     }
-  }
-
-  private static String compactFormatArgs(String message, Object... formatArgs)
-  {
-    StringBuilder bob = new StringBuilder(message);
-    for (Object formatArg : formatArgs) {
-      bob.append("; ").append(formatArg);
-    }
-    return bob.toString();
   }
 
   /**

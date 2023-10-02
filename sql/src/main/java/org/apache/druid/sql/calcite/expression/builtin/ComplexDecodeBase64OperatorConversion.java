@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.BuiltInExprMacros;
 import org.apache.druid.segment.column.ColumnType;
@@ -38,7 +37,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
-import java.util.Optional;
 
 public class ComplexDecodeBase64OperatorConversion implements SqlOperatorConversion
 {
@@ -52,7 +50,7 @@ public class ComplexDecodeBase64OperatorConversion implements SqlOperatorConvers
     );
   };
 
-  private static final Pair<SqlFunction, SqlFunction> SQL_FUNCTION_PAIR = OperatorConversions
+  private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(BuiltInExprMacros.ComplexDecodeBase64ExprMacro.NAME))
       .operandTypeChecker(
           OperandTypes.sequence(
@@ -63,19 +61,13 @@ public class ComplexDecodeBase64OperatorConversion implements SqlOperatorConvers
       )
       .returnTypeInference(ARBITRARY_COMPLEX_RETURN_TYPE_INFERENCE)
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-      .buildWithAlias(StringUtils.toUpperCase(BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS_NAME));
+      .build();
 
 
   @Override
   public SqlOperator calciteOperator()
   {
-    return SQL_FUNCTION_PAIR.lhs;
-  }
-
-  @Override
-  public Optional<SqlOperator> aliasCalciteOperator()
-  {
-    return Optional.of(SQL_FUNCTION_PAIR.rhs);
+    return SQL_FUNCTION;
   }
 
   @Nullable

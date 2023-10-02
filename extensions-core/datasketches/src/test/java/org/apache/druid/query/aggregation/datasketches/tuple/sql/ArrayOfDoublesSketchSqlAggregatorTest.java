@@ -27,6 +27,7 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -274,9 +275,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         "\\u003D"
     )
                                           + "'";
-
-    testQuery(
-        sql,
+    List<Query<?>> expectedQueries =
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -324,9 +323,9 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
-        ),
-        expectedResults
-    );
+        );
+    testQuery(sql, expectedQueries, expectedResults);
+    testQuery(sql.replaceAll("COMPLEX_DECODE_BASE64", "DECODE_BASE64_COMPLEX"), expectedQueries, expectedResults);
   }
 
   @Test
