@@ -47,6 +47,8 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static org.junit.Assume.assumeTrue;
+
 /**
  * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
  */
@@ -93,6 +95,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   @SuppressWarnings("unchecked")
   public void windowQueryTest() throws IOException
   {
+    assumeTrue("These tests are only run in sqlCompatible mode!", NullHandling.sqlCompatible());
     final Function<String, String> stringManipulator;
     if (NullHandling.sqlCompatible()) {
       stringManipulator = s -> "".equals(s) ? null : s;
