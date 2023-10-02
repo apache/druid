@@ -145,9 +145,22 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
               final OperatorFactory expectedOperator = input.expectedOperators.get(i);
               final OperatorFactory actualOperator = query.getOperators().get(i);
               if (!expectedOperator.validateEquivalent(actualOperator)) {
+                // This assertion always fails because the validate equivalent failed, but we do it anyway
+                // so that we get values in the output of the failed test to make it easier to
+                // debug what happened.  Note, we use the Jackson representation when showing the diff.  There is
+                // a chance that this representation is exactly equivalent, but the validation call is still failing
+                // this is probably indicative of a bug where something that needs to be serialized by Jackson
+                // currently is not.  Check your getters.
+
+                // prepend different values so that we are guaranteed that it is always different
+
                 Assert.assertEquals("Operator Mismatch, index[" + i + "]", expectedOperator, actualOperator);
-                Assert.assertEquals("Operator Mismatch, index[" + i + "]", expectedOperator.toString(), actualOperator.toString());
-                Assert.fail("validateEquivalent false - but above assertions didn't worked");
+
+                String expected = "e " + jacksonToString.apply(expectedOperator);
+                String actual = "a " + jacksonToString.apply(actualOperator);
+
+
+                Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
               }
             }
             final RowSignature outputSignature = query.getRowSignature();
