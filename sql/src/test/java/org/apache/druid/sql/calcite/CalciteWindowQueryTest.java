@@ -153,12 +153,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                 // currently is not.  Check your getters.
 
                 // prepend different values so that we are guaranteed that it is always different
-
-                Assert.assertEquals("Operator Mismatch, index[" + i + "]", expectedOperator, actualOperator);
-
                 String expected = "e " + jacksonToString.apply(expectedOperator);
                 String actual = "a " + jacksonToString.apply(actualOperator);
-
 
                 Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
               }

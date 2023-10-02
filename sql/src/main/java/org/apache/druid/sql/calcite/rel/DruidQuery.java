@@ -1379,7 +1379,6 @@ public class DruidQuery
   @Nullable
   private WindowOperatorQuery toWindowQuery()
   {
-
     if (windowing == null) {
       return null;
     }
