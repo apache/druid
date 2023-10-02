@@ -23,27 +23,51 @@ sidebar_label: SQL JDBC driver
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
+ This document describes the SQL language.
+:::
 
 
-You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
+You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
+We recommend using Avatica JDBC driver version 1.23.0 or later. Note that starting with Avatica 1.21.0, you may need to set the [`transparent_reconnection`](https://calcite.apache.org/avatica/docs/client_reference.html#transparent_reconnection) property to `true` if you notice intermittent query failures.
 
-When using the JDBC connector for the [examples](#examples) or in general, it's helpful to understand the parts of the connect string stored in the `url` variable:
+Once you've downloaded the Avatica client jar, add it to your classpath.
 
-  - `jdbc:avatica:remote:url=` is prepended to the hostname and port.
-  - The hostname and port number for your Druid deployment depends on whether you want to connect to the Router or a specific Broker. For more information, see [Connection stickiness](#connection-stickiness). In the case of the quickstart deployment, the hostname and port are `http://localhost:8888`, which connects to the Router running on your local machine.
-  - The SQL endpoint in Druid for the Avatica driver is  `/druid/v2/sql/avatica/`.
+Example connection string:
 
-Example code:
+```
+jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true
+```
+
+Or, to use the protobuf protocol instead of JSON:
+
+```
+jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica-protobuf/;transparent_reconnection=true;serialization=protobuf
+```
+
+The `url` is the `/druid/v2/sql/avatica/` endpoint on the Router, which routes JDBC connections to a consistent Broker.
+For more information, see [Connection stickiness](#connection-stickiness).
+
+Set `transparent_reconnection` to `true` so your connection is not interrupted if the pool of Brokers changes membership,
+or if a Broker is restarted.
+
+Set `serialization` to `protobuf` if using the protobuf endpoint.
+
+Note that as of the time of this writing, Avatica 1.23.0, the latest version, does not support passing
+[connection context parameters](../querying/sql-query-context.md) from the JDBC connection string to Druid. These context parameters
+must be passed using a `Properties` object instead. Refer to the Java code below for an example.
+
+Example Java code:
 
 ```java
 // Connect to /druid/v2/sql/avatica/ on your Broker.
-String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
+String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
 
-// Set any connection context parameters you need here
-// Or leave empty for default behavior.
+// Set any connection context parameters you need here.
+// Any property from https://druid.apache.org/docs/latest/querying/sql-query-context.html can go here.
 Properties connectionProperties = new Properties();
+connectionProperties.setProperty("sqlTimeZone", "Etc/UTC");
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   try (
@@ -62,10 +86,12 @@ For a runnable example that includes a query that you might run, see [Examples](
 It is also possible to use a protocol buffers JDBC connection with Druid, this offer reduced bloat and potential performance
 improvements for larger result sets. To use it apply the following connection URL instead, everything else remains the same
 ```
-String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica-protobuf/;serialization=protobuf";
+String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica-protobuf/;transparent_reconnection=true;serialization=protobuf";
 ```
 
-> The protobuf endpoint is also known to work with the official [Golang Avatica driver](https://github.com/apache/calcite-avatica-go)
+:::info
+ The protobuf endpoint is also known to work with the official [Golang Avatica driver](https://github.com/apache/calcite-avatica-go)
+:::
 
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
 [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md). For an example of this, see [Get the metadata for a datasource](#get-the-metadata-for-a-datasource).
@@ -130,11 +156,12 @@ public class JdbcListColumns {
     {
         // Connect to /druid/v2/sql/avatica/ on your Router. 
         // You can connect to a Broker but must configure connection stickiness if you do. 
-        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/";
+        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
 
         String query = "SELECT COLUMN_NAME,* FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'wikipedia' and TABLE_SCHEMA='druid'";
-        // Set any connection context parameters you need here
-        // Or leave empty for default behavior.
+
+        // Set any connection context parameters you need here.
+        // Any property from https://druid.apache.org/docs/latest/querying/sql-query-context.html can go here.
         Properties connectionProperties = new Properties();
 
         try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
@@ -169,12 +196,13 @@ public class JdbcCountryAndTime {
     {
         // Connect to /druid/v2/sql/avatica/ on your Router. 
         // You can connect to a Broker but must configure connection stickiness if you do. 
-        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/";
+        String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica/;transparent_reconnection=true";
 
         //The query you want to run.
         String query = "SELECT __time, isRobot, countryName, comment FROM wikipedia WHERE countryName='Japan'";
-        // Set any connection context parameters you need here
-        // Or leave empty for default behavior.
+
+        // Set any connection context parameters you need here.
+        // Any property from https://druid.apache.org/docs/latest/querying/sql-query-context.html can go here.
         Properties connectionProperties = new Properties();
         connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
 

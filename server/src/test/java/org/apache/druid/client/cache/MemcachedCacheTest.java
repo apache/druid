@@ -33,6 +33,8 @@ import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.CachedData;
+import net.spy.memcached.ClientMode;
+import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.MemcachedNode;
@@ -62,6 +64,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.SocketAddress;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -225,6 +230,61 @@ public class MemcachedCacheTest
   }
 
   @Test
+  public void testDefaultClientMode() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException
+  {
+    ConnectionFactory connectionFactory = MemcachedCache.createConnectionFactory(memcachedCacheConfig, null, null, null);
+    // Ensure that clientMode is set to Static by default
+    Assert.assertEquals(connectionFactory.getClientMode(), ClientMode.Static);
+    Assert.assertNull(connectionFactory.getSSLContext());
+  }
+  @Test
+  public void testConnectionFactory() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException
+  {
+    final MemcachedCacheConfig config = new MemcachedCacheConfig()
+    {
+      @Override
+      public boolean enableTls()
+      {
+        return true;
+      }
+
+      @Override
+      public String getClientMode()
+      {
+        return "dynamic";
+      }
+      @Override
+      public String getHosts()
+      {
+        return "localhost:9999";
+      }
+    };
+    // Dynamic mode
+    ConnectionFactory connectionFactoryDynamic = MemcachedCache.createConnectionFactory(config, null, null, null);
+    // Ensure client mode is set to the value passed in config.
+    Assert.assertEquals(connectionFactoryDynamic.getClientMode(), ClientMode.Dynamic);
+    //enableTls is true so sslContext is not null
+    Assert.assertNotNull(connectionFactoryDynamic.getSSLContext());
+  }
+
+  @Test
+  public void testInvalidClientMode()
+  {
+    final MemcachedCacheConfig config = new MemcachedCacheConfig()
+    {
+
+      @Override
+      public String getClientMode()
+      {
+        return "invalid-name";
+      }
+    };
+    RuntimeException exception = Assert.assertThrows(RuntimeException.class, () -> {
+      MemcachedCache.createConnectionFactory(config, null, null, null);
+    });
+    Assert.assertEquals(exception.getMessage(), "Invalid value provided for `druid.cache.clientMode`. Value must be 'static' or 'dynamic'.");
+  }
+  @Test
   public void testSanity()
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
@@ -314,6 +374,12 @@ class MockMemcachedClient implements MemcachedClientIF
   public Collection<SocketAddress> getAvailableServers()
   {
     throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public boolean refreshCertificate()
+  {
+    return true;
   }
 
   @Override

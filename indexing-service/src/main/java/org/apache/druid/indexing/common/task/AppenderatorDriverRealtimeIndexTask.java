@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -54,6 +55,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
@@ -292,7 +294,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
-    TaskLockType lockType = getContextValue(Tasks.USE_SHARED_LOCK, false) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    final TaskLockType lockType = TaskLocks.determineLockTypeForAppend(getContext());
     StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics, lockType);
 
     try {
@@ -350,17 +352,11 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, mustBeNullOrEmptyDropSegments, segments, commitMetadata) -> {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata) -> {
         if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
           throw new ISE(
               "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
               SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
-          );
-        }
-        if (mustBeNullOrEmptyDropSegments != null && !mustBeNullOrEmptyDropSegments.isEmpty()) {
-          throw new ISE(
-              "Stream ingestion task unexpectedly attempted to drop segments: %s",
-              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyDropSegments)
           );
         }
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
@@ -698,9 +694,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-    pendingHandoffs.add(Futures.transform(
+    pendingHandoffs.add(Futures.transformAsync(
         publishFuture,
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) driver::registerHandoff
+        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) driver::registerHandoff,
+        MoreExecutors.directExecutor()
     ));
   }
 

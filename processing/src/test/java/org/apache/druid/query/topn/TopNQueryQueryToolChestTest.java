@@ -354,7 +354,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
                 ImmutableList.of(
                     new Result<>(
                         DateTimes.of("2000"),
-                        new TopNResultValue(
+                        TopNResultValue.create(
                             ImmutableList.of(
                                 new DimensionAndMetricValueExtractor(
                                     ImmutableMap.of("dim", "foo", "rows", 1L, "index", 2L, "uniques", 3L, "const", 1L)
@@ -451,7 +451,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Result<TopNResultValue> result1 = new Result<>(
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
-        new TopNResultValue(
+        TopNResultValue.create(
             Collections.singletonList(
                 ImmutableMap.of(
                     "test", dimValue,
@@ -479,7 +479,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Result<TopNResultValue> result2 = new Result<>(
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
-        new TopNResultValue(
+        TopNResultValue.create(
             Collections.singletonList(
                 ImmutableMap.of(
                     "test", dimValue,
@@ -496,7 +496,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     if (valueType.is(ValueType.FLOAT)) {
       typeAdjustedResult2 = new Result<>(
           DateTimes.utc(123L),
-          new TopNResultValue(
+          TopNResultValue.create(
               Collections.singletonList(
                   ImmutableMap.of(
                       "test", dimValue,
@@ -510,7 +510,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     } else if (valueType.is(ValueType.LONG)) {
       typeAdjustedResult2 = new Result<>(
           DateTimes.utc(123L),
-          new TopNResultValue(
+          TopNResultValue.create(
               Collections.singletonList(
                   ImmutableMap.of(
                       "test", dimValue,
@@ -581,7 +581,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Result<TopNResultValue> result1 = new Result<>(
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
-        new TopNResultValue(
+        TopNResultValue.create(
             Collections.singletonList(
                 ImmutableMap.of(
                     "test", dimValue,
@@ -610,7 +610,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Result<TopNResultValue> resultLevelCacheResult = new Result<>(
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
-        new TopNResultValue(
+        TopNResultValue.create(
             Collections.singletonList(
                 ImmutableMap.of(
                     "test", dimValue,

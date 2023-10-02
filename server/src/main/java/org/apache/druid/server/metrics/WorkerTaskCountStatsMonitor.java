@@ -26,6 +26,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.apache.druid.query.DruidMetrics;
 
 import java.util.Set;
 
@@ -71,9 +72,9 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
   {
     if (value != null) {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-      builder.setDimension("category", workerCategory);
-      builder.setDimension("workerVersion", workerVersion);
-      emitter.emit(builder.build(metricName, value));
+      builder.setDimension(DruidMetrics.CATEGORY, workerCategory);
+      builder.setDimension(DruidMetrics.WORKER_VERSION, workerVersion);
+      emitter.emit(builder.setMetric(metricName, value));
     }
   }
 }

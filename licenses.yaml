@@ -248,7 +248,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.5
+version: 2.12.7
 libraries:
   - com.fasterxml.jackson.core: jackson-annotations
   - com.fasterxml.jackson.core: jackson-core
@@ -289,7 +289,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.5.1
+version: 2.12.7
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -364,9 +364,29 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 16.0.1
+version: 31.1-jre
 libraries:
   - com.google.guava: guava
+
+---
+
+name: Failureaccess
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - com.google.guava: failureaccess
+
+---
+
+name: j2objc
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
@@ -635,7 +655,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.21
+version: 1.23.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -771,7 +791,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.0.0
+version: 4.2.19
 libraries:
   - io.dropwizard.metrics: metrics-core
 
@@ -1569,9 +1589,9 @@ name: Bean Validation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.0.Final
+version: 2.0.2
 libraries:
-  - javax.validation: validation-api
+  - jakarta.validation: jakarta.validation-api
 
 ---
 
@@ -1579,7 +1599,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.4
+version: 2.12.5
 libraries:
   - joda-time: joda-time
 notices:
@@ -1638,13 +1658,13 @@ libraries:
 
 ---
 
-name: Spymemcached
+name: aws-elasticache-cluster-client-memcached-for-java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.3
+version: 1.2.0
 libraries:
-  - net.spy: spymemcached
+  - com.amazonaws: elasticache-java-cluster-client
 
 ---
 
@@ -1662,7 +1682,7 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.21.0
+version: 1.35.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
@@ -1680,7 +1700,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.17.0
+version: 1.23.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -1701,7 +1721,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework
@@ -2366,7 +2386,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 6.4.2
+version: 6.4.4
 libraries:
   - com.github.oshi: oshi-core
 license_file_path: licenses/bin/oshi.MIT
@@ -2444,7 +2464,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.9.0
+version: 0.9.49
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -2483,461 +2503,6 @@ notices:
   - ion-java: |
       Amazon Ion Java
       Copyright 2007-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
----
-
-name: Apache Hadoop
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 2.8.5
-libraries:
-  - org.apache.hadoop: hadoop-annotations
-  - org.apache.hadoop: hadoop-auth
-  - org.apache.hadoop: hadoop-client
-  - org.apache.hadoop: hadoop-common
-  - org.apache.hadoop: hadoop-hdfs-client
-  - org.apache.hadoop: hadoop-mapreduce-client-app
-  - org.apache.hadoop: hadoop-mapreduce-client-common
-  - org.apache.hadoop: hadoop-mapreduce-client-core
-  - org.apache.hadoop: hadoop-mapreduce-client-jobclient
-  - org.apache.hadoop: hadoop-mapreduce-client-shuffle
-  - org.apache.hadoop: hadoop-yarn-api
-  - org.apache.hadoop: hadoop-yarn-client
-  - org.apache.hadoop: hadoop-yarn-common
-  - org.apache.hadoop: hadoop-yarn-server-common
-notice: |
-  The binary distribution of this product bundles binaries of
-  org.iq80.leveldb:leveldb-api (https://github.com/dain/leveldb), which has the
-  following notices:
-  * Copyright 2011 Dain Sundstrom <dain@iq80.com>
-  * Copyright 2011 FuseSource Corp. http://fusesource.com
-
-  The binary distribution of this product bundles binaries of
-  org.fusesource.hawtjni:hawtjni-runtime (https://github.com/fusesource/hawtjni),
-  which has the following notices:
-  * This product includes software developed by FuseSource Corp.
-    http://fusesource.com
-  * This product includes software developed at
-    Progress Software Corporation and/or its  subsidiaries or affiliates.
-  * This product includes software developed by IBM Corporation and others.
-
-  The binary distribution of this product bundles binaries of
-  AWS Java SDK 1.10.6,
-  which has the following notices:
-   * This software includes third party software subject to the following
-   copyrights: - XML parsing and utility functions from JetS3t - Copyright
-   2006-2009 James Murty. - JSON parsing and utility functions from JSON.org -
-   Copyright 2002 JSON.org. - PKCS#1 PEM encoded private key parsing and utility
-   functions from oauth.googlecode.com - Copyright 1998-2010 AOL Inc.
-
-  The binary distribution of this product bundles binaries of
-  Gson 2.2.4,
-  which has the following notices:
-
-                              The Netty Project
-                              =================
-
-  Please visit the Netty web site for more information:
-
-    * http://netty.io/
-
-  Copyright 2014 The Netty Project
-
-  The Netty Project licenses this file to you under the Apache License,
-  version 2.0 (the "License"); you may not use this file except in compliance
-  with the License. You may obtain a copy of the License at:
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-  License for the specific language governing permissions and limitations
-  under the License.
-
-  Also, please refer to each LICENSE.<component>.txt file, which is located in
-  the 'license' directory of the distribution file, for the license terms of the
-  components that this product depends on.
-
-  -------------------------------------------------------------------------------
-  This product contains the extensions to Java Collections Framework which has
-  been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
-
-    * LICENSE:
-      * license/LICENSE.jsr166y.txt (Public Domain)
-    * HOMEPAGE:
-      * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
-      * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
-
-  This product contains a modified version of Robert Harder's Public Domain
-  Base64 Encoder and Decoder, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.base64.txt (Public Domain)
-    * HOMEPAGE:
-      * http://iharder.sourceforge.net/current/java/base64/
-
-  This product contains a modified portion of 'Webbit', an event based
-  WebSocket and HTTP server, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.webbit.txt (BSD License)
-    * HOMEPAGE:
-      * https://github.com/joewalnes/webbit
-
-  This product contains a modified portion of 'SLF4J', a simple logging
-  facade for Java, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.slf4j.txt (MIT License)
-    * HOMEPAGE:
-      * http://www.slf4j.org/
-
-  This product contains a modified portion of 'ArrayDeque', written by Josh
-  Bloch of Google, Inc:
-
-    * LICENSE:
-      * license/LICENSE.deque.txt (Public Domain)
-
-  This product contains a modified portion of 'Apache Harmony', an open source
-  Java SE, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.harmony.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * http://archive.apache.org/dist/harmony/
-
-  This product contains a modified version of Roland Kuhn's ASL2
-  AbstractNodeQueue, which is based on Dmitriy Vyukov's non-intrusive MPSC queue.
-  It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.abstractnodequeue.txt (Public Domain)
-    * HOMEPAGE:
-      * https://github.com/akka/akka/blob/wip-2.2.3-for-scala-2.11/akka-actor/src/main/java/akka/dispatch/AbstractNodeQueue.java
-
-  This product contains a modified portion of 'jbzip2', a Java bzip2 compression
-  and decompression library written by Matthew J. Francis. It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.jbzip2.txt (MIT License)
-    * HOMEPAGE:
-      * https://code.google.com/p/jbzip2/
-
-  This product contains a modified portion of 'libdivsufsort', a C API library to construct
-  the suffix array and the Burrows-Wheeler transformed string for any input string of
-  a constant-size alphabet written by Yuta Mori. It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.libdivsufsort.txt (MIT License)
-    * HOMEPAGE:
-      * https://code.google.com/p/libdivsufsort/
-
-  This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
-   which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.jctools.txt (ASL2 License)
-    * HOMEPAGE:
-      * https://github.com/JCTools/JCTools
-
-  This product optionally depends on 'JZlib', a re-implementation of zlib in
-  pure Java, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.jzlib.txt (BSD style License)
-    * HOMEPAGE:
-      * http://www.jcraft.com/jzlib/
-
-  This product optionally depends on 'Compress-LZF', a Java library for encoding and
-  decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.compress-lzf.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * https://github.com/ning/compress
-
-  This product optionally depends on 'lz4', a LZ4 Java compression
-  and decompression library written by Adrien Grand. It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.lz4.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * https://github.com/jpountz/lz4-java
-
-  This product optionally depends on 'lzma-java', a LZMA Java compression
-  and decompression library, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.lzma-java.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * https://github.com/jponge/lzma-java
-
-  This product contains a modified portion of 'jfastlz', a Java port of FastLZ compression
-  and decompression library written by William Kinney. It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.jfastlz.txt (MIT License)
-    * HOMEPAGE:
-      * https://code.google.com/p/jfastlz/
-
-  This product contains a modified portion of and optionally depends on 'Protocol Buffers', Google's data
-  interchange format, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.protobuf.txt (New BSD License)
-    * HOMEPAGE:
-      * http://code.google.com/p/protobuf/
-
-  This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
-  a temporary self-signed X.509 certificate when the JVM does not provide the
-  equivalent functionality.  It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.bouncycastle.txt (MIT License)
-    * HOMEPAGE:
-      * http://www.bouncycastle.org/
-
-  This product optionally depends on 'Snappy', a compression library produced
-  by Google Inc, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.snappy.txt (New BSD License)
-    * HOMEPAGE:
-      * http://code.google.com/p/snappy/
-
-  This product optionally depends on 'JBoss Marshalling', an alternative Java
-  serialization API, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
-    * HOMEPAGE:
-      * http://www.jboss.org/jbossmarshalling
-
-  This product optionally depends on 'Caliper', Google's micro-
-  benchmarking framework, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.caliper.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * http://code.google.com/p/caliper/
-
-  This product optionally depends on 'Apache Commons Logging', a logging
-  framework, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.commons-logging.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * http://commons.apache.org/logging/
-
-  This product optionally depends on 'Apache Log4J', a logging framework, which
-  can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.log4j.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * http://logging.apache.org/log4j/
-
-  This product optionally depends on 'Aalto XML', an ultra-high performance
-  non-blocking XML processor, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.aalto-xml.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * http://wiki.fasterxml.com/AaltoHome
-
-  This product contains a modified version of 'HPACK', a Java implementation of
-  the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.hpack.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * https://github.com/twitter/hpack
-
-  This product contains a modified portion of 'Apache Commons Lang', a Java library
-  provides utilities for the java.lang API, which can be obtained at:
-
-    * LICENSE:
-      * license/LICENSE.commons-lang.txt (Apache License 2.0)
-    * HOMEPAGE:
-      * https://commons.apache.org/proper/commons-lang/
-
-  The binary distribution of this product bundles binaries of
-  Commons Codec 1.4,
-  which has the following notices:
-   * src/test/org/apache/commons/codec/language/DoubleMetaphoneTest.javacontains test data from http://aspell.net/test/orig/batch0.tab.Copyright (C) 2002 Kevin Atkinson (kevina@gnu.org)
-    ===============================================================================
-    The content of package org.apache.commons.codec.language.bm has been translated
-    from the original php source code available at http://stevemorse.org/phoneticinfo.htm
-    with permission from the original authors.
-    Original source copyright:Copyright (c) 2008 Alexander Beider & Stephen P. Morse.
-
-  The binary distribution of this product bundles binaries of
-  Commons Lang 2.6,
-  which has the following notices:
-   * This product includes software from the Spring Framework,under the Apache License 2.0 (see: StringUtils.containsWhitespace())
-
-  The binary distribution of this product bundles binaries of
-  Apache Log4j 1.2.17,
-  which has the following notices:
-   * ResolverUtil.java
-      Copyright 2005-2006 Tim Fennell
-    Dumbster SMTP test server
-      Copyright 2004 Jason Paul Kitchen
-    TypeUtil.java
-      Copyright 2002-2012 Ramnivas Laddad, Juergen Hoeller, Chris Beams
-
-  The binary distribution of this product bundles binaries of
-  Java Concurrency in Practice book annotations 1.0,
-  which has the following notices:
-   * Copyright (c) 2005 Brian Goetz and Tim Peierls Released under the Creative
-    Commons Attribution License (http://creativecommons.org/licenses/by/2.5)
-    Official home: http://www.jcip.net Any republication or derived work
-    distributed in source code form must include this copyright and license
-    notice.
-
-  The binary distribution of this product bundles binaries of
-  Jetty 6.1.26,
-  which has the following notices:
-   * ==============================================================
-      Jetty Web Container
-      Copyright 1995-2016 Mort Bay Consulting Pty Ltd.
-     ==============================================================
-
-     The Jetty Web Container is Copyright Mort Bay Consulting Pty Ltd
-     unless otherwise noted.
-
-     Jetty is dual licensed under both
-
-       * The Apache 2.0 License
-         http://www.apache.org/licenses/LICENSE-2.0.html
-
-           and
-
-       * The Eclipse Public 1.0 License
-         http://www.eclipse.org/legal/epl-v10.html
-
-     Jetty may be distributed under either license.
-
-     ------
-     Eclipse
-
-     The following artifacts are EPL.
-      * org.eclipse.jetty.orbit:org.eclipse.jdt.core
-
-     The following artifacts are EPL and ASL2.
-      * org.eclipse.jetty.orbit:javax.security.auth.message
-
-
-     The following artifacts are EPL and CDDL 1.0.
-      * org.eclipse.jetty.orbit:javax.mail.glassfish
-
-
-     ------
-     Oracle
-
-     The following artifacts are CDDL + GPLv2 with classpath exception.
-     https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
-
-      * javax.servlet:javax.servlet-api
-      * javax.annotation:javax.annotation-api
-      * javax.transaction:javax.transaction-api
-      * javax.websocket:javax.websocket-api
-
-     ------
-     Oracle OpenJDK
-
-     If ALPN is used to negotiate HTTP/2 connections, then the following
-     artifacts may be included in the distribution or downloaded when ALPN
-     module is selected.
-
-      * java.sun.security.ssl
-
-     These artifacts replace/modify OpenJDK classes.  The modififications
-     are hosted at github and both modified and original are under GPL v2 with
-     classpath exceptions.
-     http://openjdk.java.net/legal/gplv2+ce.html
-
-
-     ------
-     OW2
-
-     The following artifacts are licensed by the OW2 Foundation according to the
-     terms of http://asm.ow2.org/license.html
-
-     org.ow2.asm:asm-commons
-     org.ow2.asm:asm
-
-
-     ------
-     Apache
-
-     The following artifacts are ASL2 licensed.
-
-     org.apache.taglibs:taglibs-standard-spec
-     org.apache.taglibs:taglibs-standard-impl
-
-
-     ------
-     MortBay
-
-     The following artifacts are ASL2 licensed.  Based on selected classes from
-     following Apache Tomcat jars, all ASL2 licensed.
-
-     org.mortbay.jasper:apache-jsp
-       org.apache.tomcat:tomcat-jasper
-       org.apache.tomcat:tomcat-juli
-       org.apache.tomcat:tomcat-jsp-api
-       org.apache.tomcat:tomcat-el-api
-       org.apache.tomcat:tomcat-jasper-el
-       org.apache.tomcat:tomcat-api
-       org.apache.tomcat:tomcat-util-scan
-       org.apache.tomcat:tomcat-util
-
-     org.mortbay.jasper:apache-el
-       org.apache.tomcat:tomcat-jasper-el
-       org.apache.tomcat:tomcat-el-api
-
-
-     ------
-     Mortbay
-
-     The following artifacts are CDDL + GPLv2 with classpath exception.
-
-     https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
-
-     org.eclipse.jetty.toolchain:jetty-schemas
-
-     ------
-     Assorted
-
-     The UnixCrypt.java code implements the one way cryptography used by
-     Unix systems for simple password protection.  Copyright 1996 Aki Yoshida,
-     modified April 2001  by Iris Van den Broeke, Daniel Deville.
-     Permission to use, copy, modify and distribute UnixCrypt
-     for non-commercial or commercial purposes and without fee is
-     granted provided that the copyright notice appears in all copies./
-
-  The binary distribution of this product bundles binaries of
-  Snappy for Java 1.0.4.1,
-  which has the following notices:
-   * This product includes software developed by Google
-      Snappy: http://code.google.com/p/snappy/ (New BSD License)
-
-     This product includes software developed by Apache
-      PureJavaCrc32C from apache-hadoop-common http://hadoop.apache.org/
-      (Apache 2.0 license)
-
-     This library containd statically linked libstdc++. This inclusion is allowed by
-     "GCC RUntime Library Exception"
-     http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
-
-     == Contributors ==
-       * Tatu Saloranta
-         * Providing benchmark suite
-       * Alec Wysoker
-         * Performance and memory usage improvement
 
 ---
 
@@ -3347,6 +2912,76 @@ libraries:
   - net.minidev: json-smart
 
 ---
+name: JSON simple
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.1
+libraries:
+  - com.googlecode.json-simple: json-simple
+notices:
+  - json-simple: |
+      JSON Simple
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+name: Immutables
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.8.8
+libraries:
+  - org.immutables: value-annotations
+notices:
+  - value-annotations: |
+      Value Annotations
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+
+name: Guardian API
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.1.2
+libraries:
+  - org.apiguardian: apiguardian-api
+notices:
+  - apiguardian-api: |
+      API Guardian APIs
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+
+name: Proj4j
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.2.2
+libraries:
+  - org.locationtech.proj4j: proj4j
+notices:
+  - proj4j: |
+      Java library for converting coordinates between different geospatial coordinate reference systems
+      Copyright 2012-2019 The Apache Software Foundation
+
+---
+
+name: JTS
+license_category: binary
+module: java-core
+license_name: Eclipse Distribution License 1.0
+version: 1.19.0
+libraries:
+  - org.locationtech.jts: jts-core
+  - org.locationtech.jts.io: jts-io-common
+notices:
+  - jts-core: |
+      The JTS Topology Suite is a Java library for creating and manipulating vector geometry.
+      Eclipse Distribution License 1.0
+  - jts-io-common: |
+      Eclipse Distribution License 1.0
+---
 
 name: Apache Avro
 license_category: binary
@@ -3592,7 +3227,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.10.5
+version: 2.12.7
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3839,7 +3474,7 @@ name: commons-cli
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.3.1
+version: 1.5.0
 libraries:
   - commons-cli: commons-cli
 
@@ -4032,7 +3667,7 @@ name: j2objc
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 1.3
+version: 2.8
 libraries:
   - com.google.j2objc: j2objc-annotations
 
@@ -4149,7 +3784,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.21.7
+version: 3.24.0
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -4177,7 +3812,7 @@ name: ANTLR 4 Runtime
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.5.1
+version: 4.5.3
 copyright: The ANTLR Project
 license_file_path: licenses/bin/antlr4-runtime.BSD3
 libraries:
@@ -4302,7 +3937,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.4.3
+version: 42.6.0
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4314,7 +3949,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.4.3
+version: 42.6.0
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4326,7 +3961,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.4.3
+version: 42.6.0
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4338,7 +3973,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.21.7
+version: 3.24.0
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4350,8 +3985,8 @@ libraries:
 name: ICU4J
 license_category: binary
 module: java-core
-license_name: ICU License
-version: 55.1
+license_name: Unicode/ICU License
+version: 73.2
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
@@ -4633,7 +4268,7 @@ name: Rhino
 license_category: binary
 module: java-core
 license_name: Mozilla Public License Version 2.0
-version: 1.7.11
+version: 1.7.14
 copyright: Mozilla and individual contributors.
 license_file_path: licenses/bin/rhino.MPL2
 libraries:
@@ -4697,7 +4332,7 @@ name: XZ
 license_category: binary
 module: java-core
 license_name: Public Domain
-version: 1.8
+version: 1.9
 libraries:
   - org.tukaani: xz
 
@@ -4787,7 +4422,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20190523-1.26.0
+version: v1-rev20230301-2.0.0
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4797,7 +4432,7 @@ name: Google Compute Engine API
 license_category: binary
 module: extensions/gce-extensions
 license_name: Apache License version 2.0
-version: v1-rev20190523-1.26.0
+version: v1-rev20230606-2.0.0
 libraries:
   - com.google.apis: google-api-services-compute
 
@@ -4807,7 +4442,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.32.1
+version: 2.2.0
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4817,7 +4452,7 @@ name: Google HTTP Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.35.2
+version: 1.42.3
 libraries:
   - com.google.http-client: google-http-client
   - com.google.http-client: google-http-client-jackson2
@@ -4828,7 +4463,7 @@ name: Google OAuth Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.0
+version: 1.34.1
 libraries:
   - com.google.oauth-client: google-oauth-client
 
@@ -5239,8 +4874,8 @@ name: "@babel/code-frame"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Sebastian McKenzie
-version: 7.12.11
+copyright: The Babel Team
+version: 7.22.10
 license_file_path: licenses/bin/@babel-code-frame.MIT
 
 ---
@@ -5249,9 +4884,19 @@ name: "@babel/helper-module-imports"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Logan Smyth
-version: 7.13.12
+copyright: The Babel Team
+version: 7.22.5
 license_file_path: licenses/bin/@babel-helper-module-imports.MIT
+
+---
+
+name: "@babel/helper-string-parser"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.22.5
+license_file_path: licenses/bin/@babel-helper-string-parser.MIT
 
 ---
 
@@ -5260,7 +4905,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.19.1
+version: 7.22.5
 license_file_path: licenses/bin/@babel-helper-validator-identifier.MIT
 
 ---
@@ -5270,7 +4915,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.18.6
+version: 7.22.10
 license_file_path: licenses/bin/@babel-highlight.MIT
 
 ---
@@ -5289,8 +4934,8 @@ name: "@babel/types"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Sebastian McKenzie
-version: 7.14.4
+copyright: The Babel Team
+version: 7.22.11
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
@@ -5363,7 +5008,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.20.5
+version: 0.21.1
 
 ---
 
@@ -5704,6 +5349,16 @@ license_file_path: licenses/bin/color-name.MIT
 
 ---
 
+name: "commander"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: TJ Holowaychuk
+version: 2.20.0
+license_file_path: licenses/bin/commander.MIT
+
+---
+
 name: "constant-case"
 license_category: binary
 module: web-console
@@ -5801,6 +5456,16 @@ license_name: BSD-3-Clause License
 copyright: Mike Bostock
 version: 2.0.0
 license_file_path: licenses/bin/d3-color.BSD3
+
+---
+
+name: "d3-dsv"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 2.0.0
+license_file_path: licenses/bin/d3-dsv.BSD3
 
 ---
 
@@ -6169,6 +5834,16 @@ license_name: BSD-3-Clause License
 copyright: Michael Ridgway
 version: 3.3.0
 license_file_path: licenses/bin/hoist-non-react-statics.BSD3
+
+---
+
+name: "iconv-lite"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alexander Shtuchkin
+version: 0.4.24
+license_file_path: licenses/bin/iconv-lite.MIT
 
 ---
 
@@ -6721,6 +6396,16 @@ license_file_path: licenses/bin/resolve.MIT
 
 ---
 
+name: "rw"
+license_category: binary
+module: web-console
+license_name: BSD-3-Clause License
+copyright: Mike Bostock
+version: 1.3.3
+license_file_path: licenses/bin/rw.BSD3
+
+---
+
 name: "safe-buffer"
 license_category: binary
 module: web-console
@@ -6728,6 +6413,16 @@ license_name: MIT License
 copyright: Feross Aboukhadijeh
 version: 5.1.2
 license_file_path: licenses/bin/safe-buffer.MIT
+
+---
+
+name: "safer-buffer"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Nikita Skovoroda
+version: 2.1.2
+license_file_path: licenses/bin/safer-buffer.MIT
 
 ---
 

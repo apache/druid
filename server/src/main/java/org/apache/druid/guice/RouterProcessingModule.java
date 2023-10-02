@@ -29,7 +29,6 @@ import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
@@ -53,7 +52,7 @@ public class RouterProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
+    JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
     MetricsModule.register(binder, ExecutorServiceMonitor.class);
   }
 
@@ -61,8 +60,8 @@ public class RouterProcessingModule implements Module
   @ManageLifecycle
   public QueryProcessingPool getProcessingExecutorPool(DruidProcessingConfig config)
   {
-    if (config.getNumThreadsConfigured() != ExecutorServiceConfig.DEFAULT_NUM_THREADS) {
-      log.error("numThreads[%d] configured, that is ignored on Router", config.getNumThreadsConfigured());
+    if (config.isNumThreadsConfigured()) {
+      log.warn("numThreads[%d] configured, that is ignored on Router", config.getNumThreads());
     }
     return new ForwardingQueryProcessingPool(Execs.dummy());
   }
@@ -80,10 +79,10 @@ public class RouterProcessingModule implements Module
   @Merging
   public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
   {
-    if (config.getNumMergeBuffersConfigured() != DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS) {
-      log.error(
+    if (config.isNumMergeBuffersConfigured()) {
+      log.warn(
           "numMergeBuffers[%d] configured, that is ignored on Router",
-          config.getNumMergeBuffersConfigured()
+          config.getNumMergeBuffers()
       );
     }
     return DummyBlockingPool.instance();

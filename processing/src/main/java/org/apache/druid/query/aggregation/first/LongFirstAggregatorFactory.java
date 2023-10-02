@@ -31,17 +31,22 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
+import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -138,6 +143,25 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+      VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(
+          timeColumn);
+      return new LongFirstVectorAggregator(timeSelector, valueSelector);
+    }
+    return NilVectorAggregator.of(NilVectorAggregator.LONG_NIL_PAIR);
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
+  }
+
+  @Override
   public Comparator getComparator()
   {
     return VALUE_COMPARATOR;
@@ -172,12 +196,6 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new LongFirstAggregatorFactory(name, name, timeColumn);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new LongFirstAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override

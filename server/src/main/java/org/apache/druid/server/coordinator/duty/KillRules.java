@@ -19,64 +19,35 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.Stats;
+import org.joda.time.DateTime;
 
-public class KillRules implements CoordinatorDuty
+public class KillRules extends MetadataCleanupDuty
 {
-  private static final Logger log = new Logger(KillRules.class);
+  private final MetadataRuleManager metadataRuleManager;
 
-  private final long period;
-  private final long retainDuration;
-  private long lastKillTime = 0;
-
-  @Inject
   public KillRules(
-      DruidCoordinatorConfig config
+      DruidCoordinatorConfig config,
+      MetadataRuleManager metadataRuleManager
   )
   {
-    this.period = config.getCoordinatorRuleKillPeriod().getMillis();
-    Preconditions.checkArgument(
-        this.period >= config.getCoordinatorMetadataStoreManagementPeriod().getMillis(),
-        "coordinator rule kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod"
+    super(
+        "rules",
+        "druid.coordinator.kill.rule",
+        config.isRuleKillEnabled(),
+        config.getCoordinatorRuleKillPeriod(),
+        config.getCoordinatorRuleKillDurationToRetain(),
+        Stats.Kill.RULES,
+        config
     );
-    this.retainDuration = config.getCoordinatorRuleKillDurationToRetain().getMillis();
-    Preconditions.checkArgument(this.retainDuration >= 0, "coordinator rule kill retainDuration must be >= 0");
-    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator rule kill retainDuration cannot be greater than current time in ms");
-    log.debug(
-        "Rule Kill Task scheduling enabled with period [%s], retainDuration [%s]",
-        this.period,
-        this.retainDuration
-    );
+    this.metadataRuleManager = metadataRuleManager;
   }
 
   @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
   {
-    long currentTimeMillis = System.currentTimeMillis();
-    if ((lastKillTime + period) < currentTimeMillis) {
-      lastKillTime = currentTimeMillis;
-      long timestamp = currentTimeMillis - retainDuration;
-      try {
-        int ruleRemoved = params.getDatabaseRuleManager().removeRulesForEmptyDatasourcesOlderThan(timestamp);
-        ServiceEmitter emitter = params.getEmitter();
-        emitter.emit(
-            new ServiceMetricEvent.Builder().build(
-                "metadata/kill/rule/count",
-                ruleRemoved
-            )
-        );
-        log.info("Finished running KillRules duty. Removed %,d rule", ruleRemoved);
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to kill rules metadata");
-      }
-    }
-    return params;
+    return metadataRuleManager.removeRulesForEmptyDatasourcesOlderThan(minCreatedTime.getMillis());
   }
 }

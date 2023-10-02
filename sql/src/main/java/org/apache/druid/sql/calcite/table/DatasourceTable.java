@@ -151,7 +151,7 @@ public class DatasourceTable extends DruidTable
   @Override
   public RelNode toRel(final RelOptTable.ToRelContext context, final RelOptTable table)
   {
-    return LogicalTableScan.create(context.getCluster(), table);
+    return LogicalTableScan.create(context.getCluster(), table, context.getTableHints());
   }
 
   @Override

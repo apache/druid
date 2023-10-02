@@ -55,6 +55,7 @@ import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -136,9 +137,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   )
   {
     if (allowList) {
-      return ListFilteredDimensionSpec.filterAllowList(values, factory.makeDimensionSelector(delegate));
+      return ListFilteredDimensionSpec.filterAllowList(values, factory.makeDimensionSelector(delegate), delegate.getExtractionFn() != null);
     } else {
-      return ListFilteredDimensionSpec.filterDenyList(values, factory.makeDimensionSelector(delegate));
+      return ListFilteredDimensionSpec.filterDenyList(values, factory.makeDimensionSelector(delegate), delegate.getExtractionFn() != null);
     }
   }
 
@@ -182,6 +183,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   @Override
   public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
+    if (delegate.getExtractionFn() != null) {
+      return NoIndexesColumnIndexSupplier.getInstance();
+    }
     return new ColumnIndexSupplier()
     {
       @Nullable

@@ -38,11 +38,12 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
@@ -53,7 +54,6 @@ import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
@@ -214,7 +214,7 @@ public class DruidJoinRule extends RelOptRule
       return rexBuilder.makeLiteral(
           RexLiteral.value(rexNode),
           rexBuilder.getTypeFactory().createTypeWithNullability(rexNode.getType(), true),
-          false
+          true
       );
     } else {
       return rexNode;
@@ -242,7 +242,7 @@ public class DruidJoinRule extends RelOptRule
   )
   {
     final List<RexNode> subConditions = decomposeAnd(condition);
-    final List<Pair<RexNode, RexInputRef>> equalitySubConditions = new ArrayList<>();
+    final List<RexEquality> equalitySubConditions = new ArrayList<>();
     final List<RexLiteral> literalSubConditions = new ArrayList<>();
     final int numLeftFields = leftRowType.getFieldCount();
     final Set<RexInputRef> rightColumns = new HashSet<>();
@@ -271,10 +271,12 @@ public class DruidJoinRule extends RelOptRule
 
       RexNode firstOperand;
       RexNode secondOperand;
+      SqlKind comparisonKind;
 
       if (subCondition.isA(SqlKind.INPUT_REF)) {
         firstOperand = rexBuilder.makeLiteral(true);
         secondOperand = subCondition;
+        comparisonKind = SqlKind.EQUALS;
 
         if (!SqlTypeName.BOOLEAN_TYPES.contains(secondOperand.getType().getSqlTypeName())) {
           plannerContext.setPlanningError(
@@ -285,11 +287,12 @@ public class DruidJoinRule extends RelOptRule
           return Optional.empty();
 
         }
-      } else if (subCondition.isA(SqlKind.EQUALS)) {
+      } else if (subCondition.isA(SqlKind.EQUALS) || subCondition.isA(SqlKind.IS_NOT_DISTINCT_FROM)) {
         final List<RexNode> operands = ((RexCall) subCondition).getOperands();
         Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%s]", operands.size());
         firstOperand = operands.get(0);
         secondOperand = operands.get(1);
+        comparisonKind = subCondition.getKind();
       } else {
         // If it's not EQUALS or a BOOLEAN input ref, it's not supported.
         plannerContext.setPlanningError(
@@ -300,11 +303,11 @@ public class DruidJoinRule extends RelOptRule
       }
 
       if (isLeftExpression(firstOperand, numLeftFields) && isRightInputRef(secondOperand, numLeftFields)) {
-        equalitySubConditions.add(Pair.of(firstOperand, (RexInputRef) secondOperand));
+        equalitySubConditions.add(new RexEquality(firstOperand, (RexInputRef) secondOperand, comparisonKind));
         rightColumns.add((RexInputRef) secondOperand);
       } else if (isRightInputRef(firstOperand, numLeftFields)
                  && isLeftExpression(secondOperand, numLeftFields)) {
-        equalitySubConditions.add(Pair.of(secondOperand, (RexInputRef) firstOperand));
+        equalitySubConditions.add(new RexEquality(secondOperand, (RexInputRef) firstOperand, subCondition.getKind()));
         rightColumns.add((RexInputRef) firstOperand);
       } else {
         // Cannot handle this condition.
@@ -336,7 +339,8 @@ public class DruidJoinRule extends RelOptRule
             numLeftFields,
             equalitySubConditions,
             literalSubConditions
-        ));
+        )
+    );
   }
 
   @VisibleForTesting
@@ -375,7 +379,6 @@ public class DruidJoinRule extends RelOptRule
     return rexNode.isA(SqlKind.INPUT_REF) && ((RexInputRef) rexNode).getIndex() >= numLeftFields;
   }
 
-  @VisibleForTesting
   static class ConditionAnalysis
   {
     /**
@@ -387,17 +390,16 @@ public class DruidJoinRule extends RelOptRule
     /**
      * Each equality subcondition is an equality of the form f(LeftRel) = g(RightRel).
      */
-    private final List<Pair<RexNode, RexInputRef>> equalitySubConditions;
+    private final List<RexEquality> equalitySubConditions;
 
     /**
      * Each literal subcondition is... a literal.
      */
     private final List<RexLiteral> literalSubConditions;
 
-
     ConditionAnalysis(
         int numLeftFields,
-        List<Pair<RexNode, RexInputRef>> equalitySubConditions,
+        List<RexEquality> equalitySubConditions,
         List<RexLiteral> literalSubConditions
     )
     {
@@ -417,9 +419,10 @@ public class DruidJoinRule extends RelOptRule
           equalitySubConditions
               .stream()
               .map(
-                  equality -> Pair.of(
-                      RelOptUtil.pushPastProject(equality.lhs, leftProject),
-                      (RexInputRef) RexUtil.shift(equality.rhs, rhsShift)
+                  equality -> new RexEquality(
+                      RelOptUtil.pushPastProject(equality.left, leftProject),
+                      (RexInputRef) RexUtil.shift(equality.right, rhsShift),
+                      equality.kind
                   )
               )
               .collect(Collectors.toList()),
@@ -436,15 +439,16 @@ public class DruidJoinRule extends RelOptRule
           equalitySubConditions
               .stream()
               .map(
-                  equality -> Pair.of(
-                      equality.lhs,
+                  equality -> new RexEquality(
+                      equality.left,
                       (RexInputRef) RexUtil.shift(
                           RelOptUtil.pushPastProject(
-                              RexUtil.shift(equality.rhs, -numLeftFields),
+                              RexUtil.shift(equality.right, -numLeftFields),
                               rightProject
                           ),
                           numLeftFields
-                      )
+                      ),
+                      equality.kind
                   )
               )
               .collect(Collectors.toList()),
@@ -454,8 +458,8 @@ public class DruidJoinRule extends RelOptRule
 
     public boolean onlyUsesMappingsFromRightProject(final Project rightProject)
     {
-      for (Pair<RexNode, RexInputRef> equality : equalitySubConditions) {
-        final int rightIndex = equality.rhs.getIndex() - numLeftFields;
+      for (final RexEquality equality : equalitySubConditions) {
+        final int rightIndex = equality.right.getIndex() - numLeftFields;
 
         if (!rightProject.getProjects().get(rightIndex).isA(SqlKind.INPUT_REF)) {
           return false;
@@ -473,7 +477,7 @@ public class DruidJoinRule extends RelOptRule
               literalSubConditions,
               equalitySubConditions
                   .stream()
-                  .map(equality -> rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, equality.lhs, equality.rhs))
+                  .map(equality -> equality.makeCall(rexBuilder))
                   .collect(Collectors.toList())
           ),
           false
@@ -481,31 +485,55 @@ public class DruidJoinRule extends RelOptRule
     }
 
     @Override
-    public boolean equals(Object o)
+    public String toString()
     {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      ConditionAnalysis that = (ConditionAnalysis) o;
-      return Objects.equals(equalitySubConditions, that.equalitySubConditions) &&
-             Objects.equals(literalSubConditions, that.literalSubConditions);
+      return "ConditionAnalysis{" +
+             "numLeftFields=" + numLeftFields +
+             ", equalitySubConditions=" + equalitySubConditions +
+             ", literalSubConditions=" + literalSubConditions +
+             '}';
+    }
+  }
+
+  /**
+   * Like {@link org.apache.druid.segment.join.Equality} but uses {@link RexNode} instead of
+   * {@link org.apache.druid.math.expr.Expr}.
+   */
+  static class RexEquality
+  {
+    private final RexNode left;
+    private final RexInputRef right;
+    private final SqlKind kind;
+
+    public RexEquality(RexNode left, RexInputRef right, SqlKind kind)
+    {
+      this.left = left;
+      this.right = right;
+      this.kind = kind;
     }
 
-    @Override
-    public int hashCode()
+    public RexNode makeCall(final RexBuilder builder)
     {
-      return Objects.hash(equalitySubConditions, literalSubConditions);
+      final SqlOperator operator;
+
+      if (kind == SqlKind.EQUALS) {
+        operator = SqlStdOperatorTable.EQUALS;
+      } else if (kind == SqlKind.IS_NOT_DISTINCT_FROM) {
+        operator = SqlStdOperatorTable.IS_NOT_DISTINCT_FROM;
+      } else {
+        throw DruidException.defensive("Unexpected operator kind[%s]", kind);
+      }
+
+      return builder.makeCall(operator, left, right);
     }
 
     @Override
     public String toString()
     {
-      return "ConditionAnalysis{" +
-             "equalitySubConditions=" + equalitySubConditions +
-             ", literalSubConditions=" + literalSubConditions +
+      return "RexEquality{" +
+             "left=" + left +
+             ", right=" + right +
+             ", kind=" + kind +
              '}';
     }
   }

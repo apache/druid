@@ -2043,7 +2043,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // filter rewrites.
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "Cannot build hash-join matcher on non-key-based condition: Equality{leftExpr=user, rightColumn='regionName'}"
+        "Cannot build hash-join matcher on non-key-based condition: "
+        + "Equality{leftExpr=user, rightColumn='regionName', includeNull=false}"
     );
 
     JoinTestHelper.verifyCursors(

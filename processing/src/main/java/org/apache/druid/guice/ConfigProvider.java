@@ -31,6 +31,7 @@ import java.util.Map;
 /**
  *
  */
+@Deprecated
 public class ConfigProvider<T> implements Provider<T>
 {
   private static final Logger log = new Logger(ConfigProvider.class);
@@ -38,11 +39,6 @@ public class ConfigProvider<T> implements Provider<T>
   public static <T> void bind(Binder binder, Class<T> clazz)
   {
     binder.bind(clazz).toProvider(of(clazz)).in(LazySingleton.class);
-  }
-
-  public static <T> void bind(Binder binder, Class<T> clazz, Map<String, String> replacements)
-  {
-    binder.bind(clazz).toProvider(of(clazz, replacements)).in(LazySingleton.class);
   }
 
   public static <T> Provider<T> of(Class<T> clazz)

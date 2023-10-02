@@ -188,13 +188,13 @@
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client</artifactId>
-            <version>${com.google.apis.client.version}</version>
+            <version>${com.google.http.client.apis.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client-jackson2</artifactId>
-            <version>${com.google.apis.client.version}</version>
+            <version>${com.google.http.client.apis.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Tests can choose either the MySQL or MariaDB driver. -->
@@ -314,7 +314,7 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-client</artifactId>
-            <version>5.4.0</version>
+            <version>5.5.0</version>
         </dependency>
 
     </dependencies>

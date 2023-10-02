@@ -22,9 +22,11 @@ title: "Expressions"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [native queries](../querying/querying.md) and [Druid SQL](../querying/sql.md).
-> This document describes the native language. For information about functions available in SQL, refer to the
-> [SQL documentation](../querying/sql-scalar.md).
+:::info
+ Apache Druid supports two query languages: [native queries](../querying/querying.md) and [Druid SQL](../querying/sql.md).
+ This document describes the native language. For information about functions available in SQL, refer to the
+ [SQL documentation](../querying/sql-scalar.md).
+:::
 
 Expressions are used in various places in the native query language, including
 [virtual columns](../querying/virtual-columns.md) and [join conditions](../querying/datasource.md#join). They are
@@ -159,7 +161,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |remainder|remainder(x, y) returns the remainder operation on two arguments as prescribed by the IEEE 754 standard|
 |rint|rint(x) returns value that is closest in value to x and is equal to a mathematical integer|
 |round|round(x, y) returns the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is `NaN`, x returns 0. If x is infinity, x will be converted to the nearest finite double. |
-|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. In case y is 0 it returns 0 or `null` if `druid.generic.useDefaultValueForNull=false` |
+|safe_divide|safe_divide(x,y) returns the division of x by y if y is not equal to 0. In case y is 0 it returns `null` or 0 if `druid.generic.useDefaultValueForNull=true` (legacy mode) |
 |scalb|scalb(d, sf) returns d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
 |signum|signum(x) returns the signum function of the argument x|
 |sin|sin(x) returns the trigonometric sine of an angle x|
@@ -181,8 +183,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_ordinal(arr,long) | returns the array element at the 1 based index supplied, or null for an out of range index |
 | array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
 | array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
-| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false`if no matching elements exist in the array. |
-| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `-1` or `null` if `druid.generic.useDefaultValueForNull=false` if no matching elements exist in the array. |
+| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode) if no matching elements exist in the array. |
+| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode) if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
 | array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
@@ -297,7 +299,7 @@ Supported features:
 * constants and identifiers are supported for any column type
 * `cast` is supported for numeric and string types
 * math operators: `+`,`-`,`*`,`/`,`%`,`^` are supported for numeric types
-* logical operators: `!`, `&&`, `||`, are supported for string and numeric types (if `druid.expressions.useStrictBooleans=true`)
+* logical operators: `!`, `&&`, `||`, are supported for string and numeric types
 * comparison operators: `=`, `!=`, `>`, `>=`, `<`, `<=` are supported for string and numeric types
 * math functions: `abs`, `acos`, `asin`, `atan`, `cbrt`, `ceil`, `cos`, `cosh`, `cot`, `exp`, `expm1`, `floor`, `getExponent`, `log`, `log10`, `log1p`, `nextUp`, `rint`, `signum`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDegrees`, `toRadians`, `ulp`, `atan2`, `copySign`, `div`, `hypot`, `max`, `min`, `nextAfter`,  `pow`, `remainder`, `scalb` are supported for numeric types
 * time functions: `timestamp_floor` (with constant granularity argument) is supported for numeric types
@@ -307,9 +309,7 @@ Supported features:
 * other: `parse_long` is supported for numeric and string types
 
 ## Logical operator modes
-Prior to the 0.23 release of Apache Druid, boolean function expressions have inconsistent handling of true and false values, and the logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values similar to many scripting languages, and treat `null` as false, which can result in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison would produce `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. 
-
-After 0.23, while the inconsistent legacy behavior is still the default, it can be optionally be changed by setting `druid.expressions.useStrictBooleans=true`, so that these operations will allow correctly treating `null` values as "unknown" for SQL compatible behavior, and _all boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. Additionally, 
+In Druid 28.0 and later, `druid.expressions.useStrictBooleans=true` is set by default. Logical operations treat `null` values as "unknown" for SQL compatible behavior. _All boolean output functions_ will output 'homogeneous' `LONG` typed boolean values of `1` for `true` and `0` for `false`. 
 
 For the "or" operator:
 * `true || null`, `null || true`, -> `1`
@@ -320,15 +320,8 @@ For the "and" operator:
 * `false && null`, `null && false` -> `0`
 
 Druid currently still retains implicit conversion of `LONG`, `DOUBLE`, and `STRING` types into boolean values in both modes: 
-* `LONG` or `DOUBLE` - any value greater than 0 is considered `true`, else `false`
-* `STRING` - the value `'true'` (case insensitive) is considered `true`, everything else is `false`. 
-
-Legacy behavior:
-* `100 && 11` -> `11`
-* `0.7 || 0.3` -> `0.3`
-* `100 && 0` -> `0`
-* `'troo' && 'true'` -> `'troo'`
-* `'troo' || 'true'` -> `'true'`
+* `LONG` or `DOUBLE`: any value greater than 0 is considered `true`, else `false`.
+* `STRING`: the value `'true'` (case insensitive) is considered `true`, everything else is `false`.
 
 SQL compatible behavior:
 * `100 && 11` -> `1`
@@ -337,4 +330,11 @@ SQL compatible behavior:
 * `'troo' && 'true'` -> `0`
 * `'troo' || 'true'` -> `1`
 
+Prior to Druid 28.0.0, `druid.expressions.useStrictBooleans=false` was the default. In this mode, boolean function expressions have inconsistent handling of true and false values. The logical 'and' and 'or' operators behave in a manner that is incompatible with SQL, even if SQL compatible null handling mode (`druid.generic.useDefaultValueForNull=false`) is enabled. Logical operators also pass through their input values, similar to many scripting languages, and treat `null` as false, which results in some rather strange behavior. Other boolean operations, such as comparisons and equality, retain their input types (e.g. `DOUBLE` comparison produces `1.0` for true and `0.0` for false), while many other boolean functions strictly produce `LONG` typed values of `1` for true and `0` for false. This legacy mode can still be enabled by setting `druid.expressions.useStrictBooleans=false`.
 
+Legacy behavior:
+* `100 && 11` -> `11`
+* `0.7 || 0.3` -> `0.3`
+* `100 && 0` -> `0`
+* `'troo' && 'true'` -> `'troo'`
+* `'troo' || 'true'` -> `'true'`

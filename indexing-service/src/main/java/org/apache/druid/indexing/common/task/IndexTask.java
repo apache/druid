@@ -53,7 +53,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
@@ -253,8 +252,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
     );
   }
 
@@ -524,7 +522,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final DataSchema dataSchema;
       if (determineIntervals) {
         final boolean gotLocks = determineLockGranularityAndTryLock(
-            toolbox.getTaskActionClient(), allocateIntervals, ingestionSchema.getIOConfig()
+            toolbox.getTaskActionClient(),
+            allocateIntervals
         );
         if (!gotLocks) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
@@ -912,9 +911,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
-        toolbox.getTaskActionClient()
-               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish));
+    final TransactionalSegmentPublisher publisher =
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+            toolbox.getTaskActionClient().submit(buildPublishAction(segmentsToBeOverwritten, segmentsToPublish));
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
     if (effectiveId == null) {
@@ -980,8 +979,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         for (Interval interval : tombstoneIntervals) {
           SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
               ingestionSchema,
-              interval.getStart(),
-              toolbox
+              interval.getStart()
           );
           tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
         }
@@ -996,7 +994,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final SegmentsAndCommitMetadata published =
           awaitPublish(driver.publishAll(
               inputSegments,
-              null,
               tombStones,
               publisher,
               annotateFunction

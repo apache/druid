@@ -28,17 +28,14 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -96,12 +93,11 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   {
     setUpClass();
     GroupByQueryConfig config = new GroupByQueryConfig();
-    config.setMaxIntermediateRows(10000);
     final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
 
     final List<Object[]> constructors = new ArrayList<>();
 
-    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory)) {
       final QueryRunner modifiedRunner = new QueryRunner()
       {
         @Override
@@ -109,15 +105,6 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         {
           final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
           TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
-          QueryRunner<ResultRow> newRunner = factory.mergeRunners(
-              Execs.directExecutor(), ImmutableList.of(runner)
-          );
-          QueryToolChest toolChest = factory.getToolchest();
-
-          newRunner = new FinalizeResultsQueryRunner<>(
-              toolChest.mergeResults(toolChest.preMergeQueryDecoration(newRunner)),
-              toolChest
-          );
 
           final String timeDimension = tsQuery.getTimestampResultField();
           final List<VirtualColumn> virtualColumns = new ArrayList<>(
@@ -163,11 +150,12 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
               .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
               .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
               .setVirtualColumns(VirtualColumns.create(virtualColumns))
+              .setLimit(tsQuery.getLimit())
               .setContext(theContext)
               .build();
 
           return Sequences.map(
-              newRunner.run(queryPlus.withQuery(newQuery), responseContext),
+              runner.run(queryPlus.withQuery(newQuery), responseContext),
               new Function<ResultRow, Result<TimeseriesResultValue>>()
               {
                 @Override
@@ -275,8 +263,16 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     );
     Assert.assertEquals(59L, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC));
     Assert.assertEquals(1870, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC));
-    Assert.assertEquals(59.021022D, result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC), 0);
-    Assert.assertEquals(1870.061029D, result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC), 0);
+    Assert.assertEquals(
+        59.021022D,
+        result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC),
+        0
+    );
+    Assert.assertEquals(
+        1870.061029D,
+        result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC),
+        0
+    );
     Assert.assertEquals(59.021023F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC), 0);
     Assert.assertEquals(1870.061F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC), 0);
   }

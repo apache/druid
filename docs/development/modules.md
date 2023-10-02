@@ -351,12 +351,12 @@ This config file adds the configs below to enable a custom coordinator duty.
 ```
 druid.coordinator.dutyGroups=["cleanupMetadata"]
 druid.coordinator.cleanupMetadata.duties=["killSupervisors"]
-druid.coordinator.cleanupMetadata.duty.killSupervisors.retainDuration=PT0M
+druid.coordinator.cleanupMetadata.duty.killSupervisors.durationToRetain=PT0M
 druid.coordinator.cleanupMetadata.period=PT10S
 ```
 
 These configurations create a custom coordinator duty group called `cleanupMetadata` which runs a custom coordinator duty called `killSupervisors` every 10 seconds.
-The custom coordinator duty `killSupervisors` also has a config called `retainDuration` which is set to 0 minute.
+The custom coordinator duty `killSupervisors` also has a config called `durationToRetain` which is set to 0 minute.
 
 ### Routing data through a HTTP proxy for your extension
 

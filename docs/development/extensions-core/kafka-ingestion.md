@@ -135,11 +135,12 @@ The following example demonstrates a supervisor spec for Kafka that uses the `JS
 If you want to parse the Kafka metadata fields in addition to the Kafka payload value contents, you can use the `kafka` input format.
 
 The `kafka` input format wraps around the payload parsing input format and augments the data it outputs with the Kafka event timestamp,
-the Kafka event headers, and the key field that itself can be parsed using any available InputFormat.
+the Kafka topic name, the Kafka event headers, and the key field that itself can be parsed using any available InputFormat.
 
 For example, consider the following structure for a Kafka message that represents a fictitious wiki edit in a development environment:
 
 - **Kafka timestamp**: `1680795276351`
+- **Kafka topic**: `wiki-edits`
 - **Kafka headers**:
   - `env=development`
   - `zone=z1`
@@ -153,6 +154,7 @@ You would configure it as follows:
 
 - `valueFormat`: Define how to parse the payload value. Set this to the payload parsing input format (`{ "type": "json" }`).
 - `timestampColumnName`: Supply a custom name for the Kafka timestamp in the Druid schema to avoid conflicts with columns from the payload. The default is `kafka.timestamp`.
+- `topicColumnName`: Supply a custom name for the Kafka topic in the Druid schema to avoid conflicts with columns from the payload. The default is `kafka.topic`. This field is useful when ingesting data from multiple topics into same datasource.
 - `headerFormat`: The default value `string` decodes strings in UTF-8 encoding from the Kafka header.
    Other supported encoding formats include the following:
    - `ISO-8859-1`: ISO Latin Alphabet No. 1, that is, ISO-LATIN-1.
@@ -174,7 +176,7 @@ You would configure it as follows:
   Note that for `tsv`,`csv`, and `regex` formats, you need to provide a `columns` array to make a valid input format. Only the first one is used, and its name will be ignored in favor of `keyColumnName`.
 - `keyColumnName`: Supply the name for the Kafka key column to avoid conflicts with columns from the payload. The default is `kafka.key`.
 
-Putting it together, the following input format (that uses the default values for `timestampColumnName`, `headerColumnPrefix`, and `keyColumnName`)
+Putting it together, the following input format (that uses the default values for `timestampColumnName`, `topicColumnName`, `headerColumnPrefix`, and `keyColumnName`)
 
 ```json
 {
@@ -203,6 +205,7 @@ would parse the example message as follows:
   "delta": 31,
   "namespace": "Main",
   "kafka.timestamp": 1680795276351,
+  "kafka.topic": "wiki-edits",
   "kafka.header.env": "development",
   "kafka.header.zone": "z1",
   "kafka.key": "wiki-edit"
@@ -213,7 +216,7 @@ For more information on data formats, see [Data formats](../../ingestion/data-fo
 
 Finally, add these Kafka metadata columns to the `dimensionsSpec` or  set your `dimensionsSpec` to auto-detect columns.
      
-The following supervisor spec demonstrates how to ingest the Kafka header, key, and timestamp into Druid dimensions:
+The following supervisor spec demonstrates how to ingest the Kafka header, key, timestamp, and topic into Druid dimensions:
 
 ```
 {
@@ -270,15 +273,16 @@ After Druid ingests the data, you can query the Kafka metadata columns as follow
 SELECT
   "kafka.header.env",
   "kafka.key",
-  "kafka.timestamp"
+  "kafka.timestamp",
+  "kafka.topic"
 FROM "wikiticker"
 ```
 
 This query returns:
 
-| `kafka.header.env` | `kafka.key` | `kafka.timestamp` |
-|--------------------|-----------|---------------|
-| `development`      | `wiki-edit` | `1680795276351` |
+| `kafka.header.env` | `kafka.key` | `kafka.timestamp` | `kafka.topic` |
+|--------------------|-----------|---------------|---------------|
+| `development`      | `wiki-edit` | `1680795276351` | `wiki-edits`  |
 
 For more information, see [`kafka` data format](../../ingestion/data-formats.md#kafka).
 

@@ -98,7 +98,7 @@ import java.util.concurrent.Executor;
 
 public class OverlordTest
 {
-  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000, -1);
+  private static final TaskLocation TASK_LOCATION = TaskLocation.create("dummy", 1000, -1);
 
   private TestingServer server;
   private Timing timing;
@@ -118,6 +118,11 @@ public class OverlordTest
   // Bad task's id must be lexicographically greater than the good task's
   private final String goodTaskId = "aaa";
   private final String badTaskId = "zzz";
+
+  private Task task0;
+  private Task task1;
+  private String taskId0;
+  private String taskId1;
 
   private void setupServerAndCurator() throws Exception
   {
@@ -163,12 +168,18 @@ public class OverlordTest
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
 
+    task0 = NoopTask.create();
+    taskId0 = task0.getId();
+
+    task1 = NoopTask.create();
+    taskId1 = task1.getId();
+
     runTaskCountDownLatches = new HashMap<>();
-    runTaskCountDownLatches.put("0", new CountDownLatch(1));
-    runTaskCountDownLatches.put("1", new CountDownLatch(1));
+    runTaskCountDownLatches.put(taskId0, new CountDownLatch(1));
+    runTaskCountDownLatches.put(taskId1, new CountDownLatch(1));
     taskCompletionCountDownLatches = new HashMap<>();
-    taskCompletionCountDownLatches.put("0", new CountDownLatch(1));
-    taskCompletionCountDownLatches.put("1", new CountDownLatch(1));
+    taskCompletionCountDownLatches.put(taskId0, new CountDownLatch(1));
+    taskCompletionCountDownLatches.put(taskId1, new CountDownLatch(1));
     announcementLatch = new CountDownLatch(1);
     setupServerAndCurator();
     curator.start();
@@ -178,9 +189,9 @@ public class OverlordTest
 
     // Add two tasks with conflicting locks
     // The bad task (The one with a lexicographically larger name) must be failed
-    Task badTask = new NoopTask(badTaskId, badTaskId, "datasource", 10_000, 0, null, null, null);
+    Task badTask = new NoopTask(badTaskId, badTaskId, "datasource", 10_000, 0, null);
     TaskLock badLock = new TimeChunkLock(null, badTaskId, "datasource", Intervals.ETERNITY, "version1", 50);
-    Task goodTask = new NoopTask(goodTaskId, goodTaskId, "datasource", 0, 0, null, null, null);
+    Task goodTask = new NoopTask(goodTaskId, goodTaskId, "datasource", 0, 0, null);
     TaskLock goodLock = new TimeChunkLock(null, goodTaskId, "datasource", Intervals.ETERNITY, "version0", 50);
     taskStorage.insert(goodTask, TaskStatus.running(goodTaskId));
     taskStorage.insert(badTask, TaskStatus.running(badTaskId));
@@ -271,57 +282,53 @@ public class OverlordTest
     taskCompletionCountDownLatches.get(goodTaskId).countDown();
     waitForTaskStatus(goodTaskId, TaskState.SUCCESS);
 
-    final String taskId_0 = "0";
-    NoopTask task_0 = NoopTask.create(taskId_0, 0);
-    response = overlordResource.taskPost(task_0, req);
+    response = overlordResource.taskPost(task0, req);
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("task", taskId_0), response.getEntity());
+    Assert.assertEquals(ImmutableMap.of("task", taskId0), response.getEntity());
 
     // Duplicate task - should fail
-    response = overlordResource.taskPost(task_0, req);
+    response = overlordResource.taskPost(task0, req);
     Assert.assertEquals(400, response.getStatus());
 
     // Task payload for task_0 should be present in taskStorage
-    response = overlordResource.getTaskPayload(taskId_0);
-    Assert.assertEquals(task_0, ((TaskPayloadResponse) response.getEntity()).getPayload());
+    response = overlordResource.getTaskPayload(taskId0);
+    Assert.assertEquals(task0, ((TaskPayloadResponse) response.getEntity()).getPayload());
 
     // Task not present in taskStorage - should fail
     response = overlordResource.getTaskPayload("whatever");
     Assert.assertEquals(404, response.getStatus());
 
     // Task status of the submitted task should be running
-    response = overlordResource.getTaskStatus(taskId_0);
-    Assert.assertEquals(taskId_0, ((TaskStatusResponse) response.getEntity()).getTask());
+    response = overlordResource.getTaskStatus(taskId0);
+    Assert.assertEquals(taskId0, ((TaskStatusResponse) response.getEntity()).getTask());
     Assert.assertEquals(
-        TaskStatus.running(taskId_0).getStatusCode(),
+        TaskStatus.running(taskId0).getStatusCode(),
         ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
     );
 
     // Simulate completion of task_0
-    taskCompletionCountDownLatches.get(taskId_0).countDown();
+    taskCompletionCountDownLatches.get(taskId0).countDown();
     // Wait for taskQueue to handle success status of task_0
-    waitForTaskStatus(taskId_0, TaskState.SUCCESS);
+    waitForTaskStatus(taskId0, TaskState.SUCCESS);
 
     // Manually insert task in taskStorage
     // Verifies sync from storage
-    final String taskId_1 = "1";
-    NoopTask task_1 = NoopTask.create(taskId_1, 0);
-    taskStorage.insert(task_1, TaskStatus.running(taskId_1));
+    taskStorage.insert(task1, TaskStatus.running(taskId1));
     // Wait for task runner to run task_1
-    runTaskCountDownLatches.get(taskId_1).await();
+    runTaskCountDownLatches.get(taskId1).await();
 
     response = overlordResource.getRunningTasks(null, req);
     // 1 task that was manually inserted should be in running state
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
     final TaskStatusPlus taskResponseObject = ((List<TaskStatusPlus>) response
         .getEntity()).get(0);
-    Assert.assertEquals(taskId_1, taskResponseObject.getId());
+    Assert.assertEquals(taskId1, taskResponseObject.getId());
     Assert.assertEquals(TASK_LOCATION, taskResponseObject.getLocation());
 
     // Simulate completion of task_1
-    taskCompletionCountDownLatches.get(taskId_1).countDown();
+    taskCompletionCountDownLatches.get(taskId1).countDown();
     // Wait for taskQueue to handle success status of task_1
-    waitForTaskStatus(taskId_1, TaskState.SUCCESS);
+    waitForTaskStatus(taskId1, TaskState.SUCCESS);
 
     // should return number of tasks which are not in running state
     response = overlordResource.getCompleteTasks(null, req);

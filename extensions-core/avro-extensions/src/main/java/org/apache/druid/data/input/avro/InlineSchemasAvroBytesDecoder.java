@@ -36,7 +36,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
-import java.io.EOFException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
@@ -101,35 +100,26 @@ public class InlineSchemasAvroBytesDecoder implements AvroBytesDecoder
   public GenericRecord parse(ByteBuffer bytes)
   {
     if (bytes.remaining() < 5) {
-      throw new ParseException(null, "record must have at least 5 bytes carrying version and schemaId");
+      throw new ParseException(null, "Record must have at least 5 bytes carrying version and schemaId");
     }
 
     byte version = bytes.get();
     if (version != V1) {
-      throw new ParseException(null, "found record of arbitrary version [%s]", version);
+      throw new ParseException(null, "Found record of arbitrary version[%s]", version);
     }
 
     int schemaId = bytes.getInt();
     Schema schemaObj = schemaObjs.get(schemaId);
     if (schemaObj == null) {
-      throw new ParseException(null, "Failed to find schema for id [%s]", schemaId);
+      throw new ParseException(null, "Failed to find schema for id[%s]", schemaId);
     }
 
     DatumReader<GenericRecord> reader = new GenericDatumReader<>(schemaObj);
     try (ByteBufferInputStream inputStream = new ByteBufferInputStream(Collections.singletonList(bytes))) {
       return reader.read(null, DecoderFactory.get().binaryDecoder(inputStream, null));
     }
-    catch (EOFException eof) {
-      // waiting for avro v1.9.0 (#AVRO-813)
-      throw new ParseException(
-          null,
-          eof,
-          "Avro's unnecessary EOFException, detail: [%s]",
-          "https://issues.apache.org/jira/browse/AVRO-813"
-      );
-    }
     catch (Exception e) {
-      throw new ParseException(null, e, "Fail to decode avro message with schemaId [%s].", schemaId);
+      throw new ParseException(null, e, "Failed to read Avro message with schema id[%s]", schemaId);
     }
   }
 }

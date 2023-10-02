@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,6 +37,8 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
+
+import javax.annotation.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -104,7 +107,7 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true);
+    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null);
   }
 
   /**
@@ -118,10 +121,11 @@ public class SqlSegmentsMetadataQuery
    */
   public CloseableIterator<DataSegment> retrieveUnusedSegments(
       final String dataSource,
-      final Collection<Interval> intervals
+      final Collection<Interval> intervals,
+      @Nullable final Integer limit
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit);
   }
 
   /**
@@ -145,13 +149,13 @@ public class SqlSegmentsMetadataQuery
     final PreparedBatch batch =
         handle.prepareBatch(
             StringUtils.format(
-                "UPDATE %s SET used = ? WHERE datasource = ? AND id = ?",
+                "UPDATE %s SET used = ?, used_status_last_updated = ? WHERE datasource = ? AND id = ?",
                 dbTables.getSegmentsTable()
             )
         );
 
     for (SegmentId segmentId : segmentIds) {
-      batch.add(used, dataSource, segmentId.toString());
+      batch.add(used, DateTimes.nowUtc().toString(), dataSource, segmentId.toString());
     }
 
     final int[] segmentChanges = batch.execute();
@@ -172,12 +176,13 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used WHERE dataSource = :dataSource",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource",
                   dbTables.getSegmentsTable()
               )
           )
           .bind("dataSource", dataSource)
           .bind("used", false)
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
           .execute();
     } else if (Intervals.canCompareEndpointsAsStrings(interval)
                && interval.getStart().getYear() == interval.getEnd().getYear()) {
@@ -187,7 +192,7 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used WHERE dataSource = :dataSource AND %s",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource AND %s",
                   dbTables.getSegmentsTable(),
                   IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
               )
@@ -196,12 +201,13 @@ public class SqlSegmentsMetadataQuery
           .bind("used", false)
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
+          .bind("used_status_last_updated", DateTimes.nowUtc().toString())
           .execute();
     } else {
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
           Iterators.transform(
-              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true),
+              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, null),
               DataSegment::getId
           )
       );
@@ -209,11 +215,58 @@ public class SqlSegmentsMetadataQuery
     }
   }
 
+  /**
+   * Retrieve the used segment for a given id if it exists in the metadata store and null otherwise
+   */
+  public DataSegment retrieveUsedSegmentForId(String id)
+  {
+
+    final String query = "SELECT payload FROM %s WHERE used = true AND id = :id";
+
+    final Query<Map<String, Object>> sql = handle
+        .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
+        .bind("id", id);
+
+    final ResultIterator<DataSegment> resultIterator =
+        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+           .iterator();
+
+    if (resultIterator.hasNext()) {
+      return resultIterator.next();
+    }
+
+    return null;
+  }
+
+  /**
+   * Retrieve the segment for a given id if it exists in the metadata store and null otherwise
+   */
+  public DataSegment retrieveSegmentForId(String id)
+  {
+
+    final String query = "SELECT payload FROM %s WHERE id = :id";
+
+    final Query<Map<String, Object>> sql = handle
+        .createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
+        .bind("id", id);
+
+    final ResultIterator<DataSegment> resultIterator =
+        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+           .iterator();
+
+    if (resultIterator.hasNext()) {
+      return resultIterator.next();
+    }
+
+    return null;
+  }
+
   private CloseableIterator<DataSegment> retrieveSegments(
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
-      final boolean used
+      final boolean used,
+      @Nullable final Integer limit
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -259,6 +312,9 @@ public class SqlSegmentsMetadataQuery
         .setFetchSize(connector.getStreamingFetchSize())
         .bind("used", used)
         .bind("dataSource", dataSource);
+    if (null != limit) {
+      sql.setMaxRows(limit);
+    }
 
     if (compareAsString) {
       final Iterator<Interval> iterator = intervals.iterator();

@@ -30,7 +30,8 @@ cp -R docker $SHARED_DIR/docker
 
 pushd ../
 rm -rf distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin
-mvn -Pskip-static-checks,skip-tests -T1C -Danimal.sniffer.skip=true -Dcheckstyle.skip=true -Dweb.console.skip=true -Dcyclonedx.skip=true -Denforcer.skip=true -Dforbiddenapis.skip=true -Dmaven.javadoc.skip=true -Dpmd.skip=true -Dspotbugs.skip=true install -Pintegration-test
+# using parallel build here may not yield significant speedups
+mvn -B -Pskip-static-checks,skip-tests -Dweb.console.skip=true install -Pintegration-test
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/bin $SHARED_DIR/docker/bin
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions
@@ -62,15 +63,10 @@ then
   mkdir -p $HADOOP_GCS_DIR
   ## We put same version in both commands but as we have an if, correct code path will always be executed as this is generated script.
   ## <TODO> Remove if
-  if [ -n "${HADOOP_VERSION}" ] && [ "${HADOOP_VERSION:0:1}" == "3" ]; then
-    "$SHARED_DIR/docker/bin/run-java" -cp "$SHARED_DIR/docker/lib/*" -Ddruid.extensions.hadoopDependenciesDir="$SHARED_DIR/hadoop-dependencies" org.apache.druid.cli.Main tools pull-deps -h org.apache.hadoop:hadoop-client-api:${hadoop.compile.version} -h org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version} -h org.apache.hadoop:hadoop-aws:${hadoop.compile.version} -h org.apache.hadoop:hadoop-azure:${hadoop.compile.version}
-    curl https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar --output $HADOOP_GCS_DIR/gcs-connector-hadoop3-latest.jar
-    cp $HADOOP_GCS_DIR/gcs-connector-hadoop3-latest.jar $DRUID_HDFS_EXT
-  else
-    "$SHARED_DIR/docker/bin/run-java" -cp "$SHARED_DIR/docker/lib/*" -Ddruid.extensions.hadoopDependenciesDir="$SHARED_DIR/hadoop-dependencies" org.apache.druid.cli.Main tools pull-deps -h org.apache.hadoop:hadoop-client:${hadoop.compile.version} -h org.apache.hadoop:hadoop-aws:${hadoop.compile.version} -h org.apache.hadoop:hadoop-azure:${hadoop.compile.version}
-    curl https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar --output $HADOOP_GCS_DIR/gcs-connector-hadoop2-latest.jar
-    cp $HADOOP_GCS_DIR/gcs-connector-hadoop2-latest.jar $DRUID_HDFS_EXT
-  fi
+  "$SHARED_DIR/docker/bin/run-java" -cp "$SHARED_DIR/docker/lib/*" -Ddruid.extensions.hadoopDependenciesDir="$SHARED_DIR/hadoop-dependencies" org.apache.druid.cli.Main tools pull-deps -h org.apache.hadoop:hadoop-client-api:${hadoop.compile.version} -h org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version} -h org.apache.hadoop:hadoop-aws:${hadoop.compile.version} -h org.apache.hadoop:hadoop-azure:${hadoop.compile.version}
+  curl https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar --output $HADOOP_GCS_DIR/gcs-connector-hadoop3-latest.jar
+  cp $HADOOP_GCS_DIR/gcs-connector-hadoop3-latest.jar $DRUID_HDFS_EXT
+
   cp $HADOOP_AWS_DIR/hadoop-aws-${hadoop.compile.version}.jar $DRUID_HDFS_EXT
   cp $HADOOP_AZURE_DIR/hadoop-azure-${hadoop.compile.version}.jar $DRUID_HDFS_EXT
 fi

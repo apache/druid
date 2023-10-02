@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+
 .flexible-query-input {
   position: relative;
 
@@ -23,5 +25,47 @@
     position: absolute;
     width: 100%;
     height: 100%;
+  }
+
+  .sub-query-highlight {
+    position: absolute;
+    background: $gray1;
+  }
+
+  .sub-query-gutter-marker {
+    cursor: pointer;
+
+    &:before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      background: $blue3;
+      border-radius: 2px;
+    }
+
+    &:after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 5px;
+      width: 0;
+      height: 0;
+      border-top: 3px solid transparent;
+      border-bottom: 3px solid transparent;
+      border-left: 6px solid $white;
+    }
+
+    &:hover {
+      &:before {
+        background: $blue2;
+      }
+
+      &:after {
+        border-left-color: $gray5;
+      }
+    }
   }
 }

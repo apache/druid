@@ -108,7 +108,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
       );
     }
 
-    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(
+        plannerContext,
+        virtualColumnRegistry,
+        args.get(0),
+        rexNodes.get(0)
+    );
 
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
@@ -116,9 +121,14 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(
+                plannerContext,
+                virtualColumnRegistry,
+                args.get(1),
+                rexNodes.get(1)
+            ),
             outputType,
-            -1
+            null
         );
         break;
       case 3:
@@ -127,13 +137,22 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           maxStringBytes = RexLiteral.intValue(rexNodes.get(2));
         }
         catch (AssertionError ae) {
-          plannerContext.setPlanningError("The third argument '%s' to function '%s' is not a number", rexNodes.get(2), aggregateCall.getName());
+          plannerContext.setPlanningError(
+              "The third argument '%s' to function '%s' is not a number",
+              rexNodes.get(2),
+              aggregateCall.getName()
+          );
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
-            EarliestLatestAnySqlAggregator.getColumnName(plannerContext, virtualColumnRegistry, args.get(1), rexNodes.get(1)),
+            EarliestLatestAnySqlAggregator.getColumnName(
+                plannerContext,
+                virtualColumnRegistry,
+                args.get(1),
+                rexNodes.get(1)
+            ),
             outputType,
             maxStringBytes
         );

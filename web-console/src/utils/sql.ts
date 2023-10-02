@@ -16,7 +16,22 @@
  * limitations under the License.
  */
 
-import { SqlColumn, SqlExpression, SqlFunction, SqlLiteral, SqlStar } from '@druid-toolkit/query';
+import type { SqlBase } from '@druid-toolkit/query';
+import {
+  SqlColumn,
+  SqlExpression,
+  SqlFunction,
+  SqlLiteral,
+  SqlQuery,
+  SqlStar,
+} from '@druid-toolkit/query';
+
+import type { RowColumn } from './general';
+import { offsetToRowColumn } from './general';
+
+export function prettyPrintSql(b: SqlBase): string {
+  return b.prettyTrim(50).toString();
+}
 
 export function timeFormatToSql(timeFormat: string): SqlExpression | undefined {
   switch (timeFormat) {
@@ -59,4 +74,73 @@ export function convertToGroupByExpression(ex: SqlExpression): SqlExpression | u
   if (newEx instanceof SqlColumn) return newEx;
 
   return newEx.as((ex.getOutputName() || 'grouped').replace(/^[a-z]+_/i, ''));
+}
+
+function extractQueryPrefix(text: string): string {
+  let q = SqlQuery.parse(text);
+
+  // The parser will parse a SELECT query with a partitionedByClause and clusteredByClause but that is not valid, remove them from the query
+  if (!q.getIngestTable() && (q.partitionedByClause || q.clusteredByClause)) {
+    q = q.changePartitionedByClause(undefined).changeClusteredByClause(undefined);
+  }
+
+  return q.toString().trimEnd();
+}
+
+export function findSqlQueryPrefix(text: string): string | undefined {
+  try {
+    return extractQueryPrefix(text);
+  } catch (e) {
+    const startOffset = e.location?.start?.offset;
+    if (typeof startOffset !== 'number') return;
+    const prefix = text.slice(0, startOffset);
+    // Try to trim to where the error came from
+    try {
+      return extractQueryPrefix(prefix);
+    } catch {
+      // Try to trim out last word
+      try {
+        return extractQueryPrefix(prefix.replace(/\s*\w+$/, ''));
+      } catch {
+        return;
+      }
+    }
+  }
+}
+
+export interface QuerySlice {
+  startOffset: number;
+  startRowColumn: RowColumn;
+  endOffset: number;
+  endRowColumn: RowColumn;
+  sql: string;
+}
+
+export function findAllSqlQueriesInText(text: string): QuerySlice[] {
+  const found: QuerySlice[] = [];
+
+  let remainingText = text;
+  let offset = 0;
+  let m: RegExpExecArray | null = null;
+  do {
+    m = /SELECT|WITH|INSERT|REPLACE/i.exec(remainingText);
+    if (m) {
+      const sql = findSqlQueryPrefix(remainingText.slice(m.index));
+      const advanceBy = m.index + m[0].length; // Skip the initial word
+      if (sql) {
+        const endIndex = m.index + sql.length;
+        found.push({
+          startOffset: offset + m.index,
+          startRowColumn: offsetToRowColumn(text, offset + m.index)!,
+          endOffset: offset + endIndex,
+          endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
+          sql,
+        });
+      }
+      remainingText = remainingText.slice(advanceBy);
+      offset += advanceBy;
+    }
+  } while (m);
+
+  return found;
 }

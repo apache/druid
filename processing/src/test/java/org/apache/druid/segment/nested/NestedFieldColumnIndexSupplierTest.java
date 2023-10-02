@@ -442,7 +442,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("b", "z"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("b", "z"))
     );
 
     // 10 rows
@@ -607,7 +607,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("b", "z"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("b", "z"))
     );
 
     // 10 rows
@@ -728,7 +728,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("1", "3"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("1", "3"))
     );
 
     // 10 rows
@@ -880,7 +880,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("3", "100"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("3", "100"))
     );
 
     // 10 rows
@@ -1025,7 +1025,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("1.2", "3.3", "5.0"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("1.2", "3.3", "5.0"))
     );
 
     // 10 rows
@@ -1162,7 +1162,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("1.2", "3.3"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("1.2", "3.3"))
     );
 
     // 10 rows
@@ -1277,7 +1277,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("b", "z", "9.9", "300"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("b", "z", "9.9", "300"))
     );
 
     // 10 rows
@@ -1485,7 +1485,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     // circuit early and return nothing
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("0"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("0"))
     );
     Assert.assertNull(singleTypeStringSupplier.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));
     Assert.assertNull(singleTypeLongSupplier.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));

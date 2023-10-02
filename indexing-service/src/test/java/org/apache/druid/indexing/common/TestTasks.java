@@ -84,6 +84,8 @@ public class TestTasks
   @JsonTypeName("unending")
   public static class UnendingTask extends AbstractTask
   {
+    private Thread runningThread;
+
     @JsonCreator
     public UnendingTask(@JsonProperty("id") String id)
     {
@@ -105,12 +107,16 @@ public class TestTasks
     @Override
     public void stopGracefully(TaskConfig taskConfig)
     {
+      if (runningThread != null) {
+        runningThread.interrupt();
+      }
     }
 
     @Override
     public TaskStatus runTask(TaskToolbox toolbox) throws Exception
     {
-      while (!Thread.currentThread().isInterrupted()) {
+      runningThread = Thread.currentThread();
+      while (!runningThread.isInterrupted()) {
         Thread.sleep(1000);
       }
       return TaskStatus.failure(getId(), "Dummy task status failure for testing");

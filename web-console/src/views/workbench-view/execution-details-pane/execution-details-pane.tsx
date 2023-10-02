@@ -95,7 +95,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
                 ? String(execution.sqlQuery)
                 : JSONBig.stringify(execution.nativeQuery, undefined, 2)
             }
-            autoHeight={false}
+            leaveBackground
           />
         );
 

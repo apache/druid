@@ -29,7 +29,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
-import org.apache.calcite.rel.rules.ProjectCorrelateTransposeRule;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
@@ -115,11 +115,11 @@ public class DruidRules
       retVal.add(DruidOuterQueryRule.WINDOW);
     }
 
+    // Adding unnest specific rules
     if (plannerContext.featureAvailable(EngineFeature.UNNEST)) {
       retVal.add(new DruidUnnestRule(plannerContext));
       retVal.add(new DruidCorrelateUnnestRule(plannerContext));
-      retVal.add(ProjectCorrelateTransposeRule.INSTANCE);
-      retVal.add(CorrelateFilterLTransposeRule.instance());
+      retVal.add(CoreRules.PROJECT_CORRELATE_TRANSPOSE);
       retVal.add(DruidFilterUnnestRule.instance());
       retVal.add(DruidFilterUnnestRule.DruidProjectOnUnnestRule.instance());
     }

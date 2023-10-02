@@ -110,7 +110,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   {
     final Iterable<Object[]> baseConstructors = QueryRunnerTestHelper.cartesian(
         // runners
-        QueryRunnerTestHelper.makeQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
@@ -148,13 +148,13 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
-  protected final QueryRunner runner;
+  protected final QueryRunner<Result<TimeseriesResultValue>> runner;
   protected final boolean descending;
   protected final boolean vectorize;
   private final List<AggregatorFactory> aggregatorFactoryList;
 
   public TimeseriesQueryRunnerTest(
-      QueryRunner runner,
+      QueryRunner<Result<TimeseriesResultValue>> runner,
       boolean descending,
       boolean vectorize,
       List<AggregatorFactory> aggregatorFactoryList
@@ -169,9 +169,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testEmptyTimeseries()
   {
-    // Cannot vectorize due to "doubleFirst" aggregator.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -1960,9 +1957,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesWithFirstLastAggregator()
   {
-    // Cannot vectorize due to "doubleFirst", "doubleLast" aggregators.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -2965,16 +2959,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    // Must create a toolChest so we can run mergeResults.
-    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
-
-    // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
-    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
-        toolChest.mergeResults(runner),
-        toolChest
-    );
-
-    final List list = finalRunner.run(QueryPlus.wrap(query)).toList();
+    final List list = runner.run(QueryPlus.wrap(query)).toList();
     Assert.assertEquals(10, list.size());
   }
 
