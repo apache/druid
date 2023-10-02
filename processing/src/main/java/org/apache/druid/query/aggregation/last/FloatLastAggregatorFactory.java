@@ -35,7 +35,6 @@ import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetric
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
