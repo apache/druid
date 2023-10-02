@@ -19,40 +19,21 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-
-import javax.annotation.Nullable;
-
-public abstract class AbstractSerializableLongObjectPairSerde<T extends SerializablePair<Long, ?>> extends
-    ComplexMetricSerde
+public class SerializablePairLongFloatColumnHeader extends AbstractSerializablePairLongObjectColumnHeader<SerializablePairLongFloat>
 {
-  private final Class<T> pairClass;
-
-  AbstractSerializableLongObjectPairSerde(Class<T> pairClass)
+  SerializablePairLongFloatColumnHeader(byte[] bytes, long minValue)
   {
-    this.pairClass = pairClass;
+    super(bytes, minValue);
+  }
+
+  SerializablePairLongFloatColumnHeader(int version, boolean useIntegerDeltas, long minTimestamp)
+  {
+    super(version, useIntegerDeltas, minTimestamp);
   }
 
   @Override
-  public ComplexMetricExtractor<?> getExtractor()
+  public SerializablePairLongFloatDeltaEncodedStagedSerde createSerde()
   {
-    return new ComplexMetricExtractor<Object>()
-    {
-      @Override
-      public Class<T> extractedClass()
-      {
-        return pairClass;
-      }
-
-      @Nullable
-      @Override
-      public Object extractValue(InputRow inputRow, String metricName)
-      {
-        return inputRow.getRaw(metricName);
-      }
-    };
+    return new SerializablePairLongFloatDeltaEncodedStagedSerde(minValue, isUseIntegerDeltas());
   }
 }

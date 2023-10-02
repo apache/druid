@@ -48,7 +48,7 @@ public class SerializablePairLongStringColumnSerializer implements GenericColumn
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final ByteBufferProvider byteBufferProvider;
 
-  private State state = State.START;
+  private AbstractSerializablePairLongObjectColumnSerializer.State state = AbstractSerializablePairLongObjectColumnSerializer.State.START;
   private SerializablePairLongStringBufferStore bufferStore;
   private SerializablePairLongStringBufferStore.TransferredBuffer transferredBuffer;
 
@@ -64,20 +64,20 @@ public class SerializablePairLongStringColumnSerializer implements GenericColumn
   @Override
   public void open() throws IOException
   {
-    Preconditions.checkState(state == State.START || state == State.OPEN, "open called in invalid state %s", state);
+    Preconditions.checkState(state == AbstractSerializablePairLongObjectColumnSerializer.State.START || state == AbstractSerializablePairLongObjectColumnSerializer.State.OPEN, "open called in invalid state %s", state);
 
-    if (state == State.START) {
+    if (state == AbstractSerializablePairLongObjectColumnSerializer.State.START) {
       bufferStore = new SerializablePairLongStringBufferStore(
           new SerializedStorage<>(segmentWriteOutMedium.makeWriteOutBytes(), STAGED_SERDE)
       );
-      state = State.OPEN;
+      state = AbstractSerializablePairLongObjectColumnSerializer.State.OPEN;
     }
   }
 
   @Override
   public void serialize(ColumnValueSelector<? extends SerializablePairLongString> selector) throws IOException
   {
-    Preconditions.checkState(state == State.OPEN, "serialize called in invalid state %s", state);
+    Preconditions.checkState(state == AbstractSerializablePairLongObjectColumnSerializer.State.OPEN, "serialize called in invalid state %s", state);
 
     SerializablePairLongString pairLongString = selector.getObject();
 
@@ -88,7 +88,7 @@ public class SerializablePairLongStringColumnSerializer implements GenericColumn
   public long getSerializedSize() throws IOException
   {
     Preconditions.checkState(
-        state != State.START,
+        state != AbstractSerializablePairLongObjectColumnSerializer.State.START,
         "getSerializedSize called in invalid state %s (must have opened at least)",
         state
     );
@@ -101,23 +101,16 @@ public class SerializablePairLongStringColumnSerializer implements GenericColumn
   @Override
   public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
   {
-    Preconditions.checkState(state != State.START, "writeTo called in invalid state %s", state);
+    Preconditions.checkState(state != AbstractSerializablePairLongObjectColumnSerializer.State.START, "writeTo called in invalid state %s", state);
     transferToRowWriterIfNecessary();
     transferredBuffer.writeTo(channel, smoosher);
   }
 
   private void transferToRowWriterIfNecessary() throws IOException
   {
-    if (state == State.OPEN) {
+    if (state == AbstractSerializablePairLongObjectColumnSerializer.State.OPEN) {
       transferredBuffer = bufferStore.transferToRowWriter(byteBufferProvider, segmentWriteOutMedium);
-      state = State.CLOSED;
+      state = AbstractSerializablePairLongObjectColumnSerializer.State.CLOSED;
     }
-  }
-
-  private enum State
-  {
-    START,
-    OPEN,
-    CLOSED,
   }
 }

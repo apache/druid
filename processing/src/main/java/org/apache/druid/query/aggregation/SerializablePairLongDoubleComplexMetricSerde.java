@@ -21,7 +21,11 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.serde.cell.NativeClearedByteBufferProvider;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -45,6 +49,25 @@ public class SerializablePairLongDoubleComplexMetricSerde extends AbstractSerial
   public String getTypeName()
   {
     return TYPE_NAME;
+  }
+
+  @Override
+  public GenericColumnSerializer<SerializablePairLongDouble> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  {
+    return new SerializablePairLongDoubleColumnSerializer(
+        segmentWriteOutMedium,
+        NativeClearedByteBufferProvider.INSTANCE
+    );
+  }
+
+  @Override
+  public void deserializeColumn(ByteBuffer buffer, ColumnBuilder columnBuilder)
+  {
+    SerializablePairLongDoubleComplexColumn.Builder builder =
+        new SerializablePairLongDoubleComplexColumn.Builder(buffer)
+            .setByteBufferProvier(NativeClearedByteBufferProvider.INSTANCE);
+
+    columnBuilder.setComplexColumnSupplier(builder::build);
   }
 
   @Override

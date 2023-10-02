@@ -21,7 +21,11 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.serde.cell.NativeClearedByteBufferProvider;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -46,6 +50,26 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
   {
     return TYPE_NAME;
   }
+
+  @Override
+  public GenericColumnSerializer<SerializablePairLongFloat> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  {
+    return new SerializablePairLongFloatColumnSerializer(
+        segmentWriteOutMedium,
+        NativeClearedByteBufferProvider.INSTANCE
+    );
+  }
+
+  @Override
+  public void deserializeColumn(ByteBuffer buffer, ColumnBuilder columnBuilder)
+  {
+    SerializablePairLongFloatComplexColumn.Builder builder =
+        new SerializablePairLongFloatComplexColumn.Builder(buffer)
+            .setByteBufferProvier(NativeClearedByteBufferProvider.INSTANCE);
+
+    columnBuilder.setComplexColumnSupplier(builder::build);
+  }
+
 
   @Override
   public ObjectStrategy<SerializablePairLongFloat> getObjectStrategy()

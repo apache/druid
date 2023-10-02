@@ -19,40 +19,33 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.apache.druid.segment.serde.ComplexMetricSerde;
-
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
-public abstract class AbstractSerializableLongObjectPairSerde<T extends SerializablePair<Long, ?>> extends
-    ComplexMetricSerde
+public class SerializablePairLongFloatSimpleStagedSerde extends AbstractSerializablePairLongObjectSimpleStagedSerde<SerializablePairLongFloat>
 {
-  private final Class<T> pairClass;
-
-  AbstractSerializableLongObjectPairSerde(Class<T> pairClass)
+  public SerializablePairLongFloatSimpleStagedSerde()
   {
-    this.pairClass = pairClass;
+    super(SerializablePairLongFloat.class);
   }
 
+  @Nullable
   @Override
-  public ComplexMetricExtractor<?> getExtractor()
+  public SerializablePairLongFloat deserialize(ByteBuffer byteBuffer)
   {
-    return new ComplexMetricExtractor<Object>()
-    {
-      @Override
-      public Class<T> extractedClass()
-      {
-        return pairClass;
-      }
+    if (byteBuffer.remaining() == 0) {
+      return null;
+    }
 
-      @Nullable
-      @Override
-      public Object extractValue(InputRow inputRow, String metricName)
-      {
-        return inputRow.getRaw(metricName);
-      }
-    };
+    ByteBuffer readOnlyBuffer = byteBuffer.asReadOnlyBuffer().order(ByteOrder.nativeOrder());
+    long lhs = readOnlyBuffer.getLong();
+
+    Float rhs = null;
+    if (readOnlyBuffer.hasRemaining()) {
+      rhs = readOnlyBuffer.getFloat();
+    }
+
+    return new SerializablePairLongFloat(lhs, rhs);
   }
 }
