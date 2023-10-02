@@ -5,6 +5,7 @@ sql: |
     dim1,
     COUNT(dim1) OVER () cc
   FROM druid.foo
+  WHERE dim1>'0'
 
 expectedOperators:
   - type: "naivePartition"
@@ -19,11 +20,11 @@ expectedOperators:
           filter:
             type: not
             field: {"type":"null","column":"dim1"}
-          name: "w0"
+          name: null
 expectedResults:
-  - [ "", 1.0 ]
-#  SELECT 
-#  col3 , #
-#  LAG(col3) OVER ( PARTITION BY col3 ORDER BY col1 ) LAG_col3 
-#  FROM "fewRowsAllData.parquet"
+  - ["10.1",5]
+  - ["2",5]
+  - ["1",5]
+  - ["def",5]
+  - ["abc",5]
   
