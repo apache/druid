@@ -135,9 +135,7 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupLong(@Nullable Long value)
   {
     if (longDictionary == null) {
-      final Path longFile = makeTempFile(
-          StringUtils.urlEncode(name) + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
-      );
+      final Path longFile = makeTempFile(name + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME);
       longBuffer = mapWriter(longFile, longDictionaryWriter);
       longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
       // reset position
@@ -153,11 +151,14 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupDouble(@Nullable Double value)
   {
     if (doubleDictionary == null) {
-      final Path doubleFile = makeTempFile(
-          StringUtils.urlEncode(name) + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
-      );
+      final Path doubleFile = makeTempFile(name + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME);
       doubleBuffer = mapWriter(doubleFile, doubleDictionaryWriter);
-      doubleDictionary = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES).get();
+      doubleDictionary = FixedIndexed.read(
+          doubleBuffer,
+          TypeStrategies.DOUBLE,
+          ByteOrder.nativeOrder(),
+          Double.BYTES
+      ).get();
       // reset position
       doubleBuffer.position(0);
     }
@@ -171,9 +172,7 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupArray(@Nullable int[] value)
   {
     if (arrayDictionary == null) {
-      final Path arrayFile = makeTempFile(
-          StringUtils.urlEncode(name) + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME
-      );
+      final Path arrayFile = makeTempFile(name + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME);
       arrayBuffer = mapWriter(arrayFile, arrayDictionaryWriter);
       arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
       // reset position
@@ -245,7 +244,7 @@ public final class DictionaryIdLookup implements Closeable
   private Path makeTempFile(String name)
   {
     try {
-      return Files.createTempFile(name, ".tmp");
+      return Files.createTempFile(StringUtils.urlEncode(name), null);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
