@@ -46,8 +46,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Once all the values in the non-null arrays are over, writes {@link #ARRAY_TERMINATOR}. This is to aid the byte
  * comparison, and also let the reader know that the number of elements in the array are over.
  * <p>
- * The format doesn't add the number of elements in the array at the beginning, though that would have been more
- * convenient to keep the written array value byte comparable
+ * The format doesn't add the number of elements in the array at the beginning, so that the serialization of the arrays
+ * are byte-by-byte comparable.
  * <p>
  * Examples:
  * 1. null
@@ -138,7 +138,7 @@ public class NumericArrayFieldWriter implements FieldWriter
       return requiredSize;
     } else {
 
-      List<? extends Number> list = FrameWriterUtils.getNumericArrayFromNumericArray(row);
+      List<? extends Number> list = FrameWriterUtils.getNumericArrayFromObject(row);
 
       if (list == null) {
         int requiredSize = Byte.BYTES;
@@ -211,6 +211,10 @@ public class NumericArrayFieldWriter implements FieldWriter
 
       NumericFieldWriter writer = writerFactory.get(columnValueSelector);
 
+      // First byte is reserved for null marker of the array
+      // Next [(1 + Numeric Size) x Number of elements of array] bytes are reserved for the elements of the array and
+      //  their null markers
+      // Last byte is reserved for array termination
       int requiredSize = Byte.BYTES + (writer.getNumericSizeBytes() + Byte.BYTES) * list.size() + Byte.BYTES;
 
       if (requiredSize > maxSize) {

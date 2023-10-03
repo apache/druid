@@ -54,7 +54,7 @@ public class FieldReaders
         return DoubleFieldReader.forPrimitive();
 
       case STRING:
-        return new StringFieldReader(false);
+        return new StringFieldReader();
 
       case COMPLEX:
         return ComplexFieldReader.createFromType(columnType);
@@ -62,7 +62,7 @@ public class FieldReaders
       case ARRAY:
         switch (Preconditions.checkNotNull(columnType.getElementType().getType(), "array elementType")) {
           case STRING:
-            return new StringFieldReader(true);
+            return new StringArrayFieldReader();
 
           case LONG:
             return new LongArrayFieldReader();

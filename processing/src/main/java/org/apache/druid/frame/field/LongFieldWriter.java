@@ -24,6 +24,8 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 /**
  * Wraps a {@link BaseLongColumnValueSelector} and writes individual values into frame rows.
+ *
+ * @see NumericFieldWriter for the details of the byte-format that it writes as
  */
 public class LongFieldWriter extends NumericFieldWriter
 {

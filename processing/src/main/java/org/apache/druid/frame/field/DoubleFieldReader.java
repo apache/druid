@@ -28,6 +28,9 @@ import org.apache.druid.segment.column.ValueType;
 
 /**
  * Reads the values produced by {@link DoubleFieldWriter}
+ *
+ * @see DoubleFieldWriter
+ * @see NumericFieldWriter for the details of the byte-format that it expects for reading
  */
 public class DoubleFieldReader extends NumericFieldReader
 {

@@ -30,20 +30,16 @@ import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.row.FrameCursorFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
-import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -61,28 +57,15 @@ public class FrameReader
   // Field readers, for row-based frames.
   private final List<FieldReader> fieldReaders;
 
-  /**
-   * Currently, only ROW_BASED frames support numerical array columns, while the COLUMNAR frames donot. While creating
-   * a FrameReader, for types unsupported by COLUMNAR frames, we populate this field to denote that the FrameReader is
-   * "incomplete" and can't be used to read the columnar frame. However, the FrameReader performs as expected for the
-   * row-based frames.
-   * In short, this is a temporary measure till columnar frames support the numerical array types to punt the unsupported
-   * type check for the numerical arrays (for COLUMNAR frames only) at the usage time, rather than the creation time
-   */
-  private final Optional<Pair<String, ColumnType>> unsupportedColumnAndType;
-
-
   private FrameReader(
       final RowSignature signature,
       final List<FrameColumnReader> columnReaders,
-      final List<FieldReader> fieldReaders,
-      final Optional<Pair<String, ColumnType>> unsupportedColumnAndType
+      final List<FieldReader> fieldReaders
   )
   {
     this.signature = signature;
     this.columnReaders = columnReaders;
     this.fieldReaders = fieldReaders;
-    this.unsupportedColumnAndType = unsupportedColumnAndType;
   }
 
   /**
@@ -105,7 +88,6 @@ public class FrameReader
 
     final List<FrameColumnReader> columnReaders = new ArrayList<>(signature.size());
     final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
-    Optional<Pair<String, ColumnType>> unsupportedColumnAndType = Optional.empty();
 
     for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
       final ColumnType columnType =
@@ -116,27 +98,10 @@ public class FrameReader
           );
 
       fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
-
-      // If we encounter a numeric array type, then don't throw the error immediately since the reader can be used to
-      // read only the ROW_BASED frames. Rather, set the optional, and throw the appropriate error message when the reader
-      // tries to read COLUMNAR frame. This should go away once the COLUMNAR frames also start supporting the numeric
-      // array
-      if (columnType.getType() == ValueType.ARRAY
-          && Preconditions.checkNotNull(
-          columnType.getElementType(),
-          "Element type for array column [%s]",
-          signature.getColumnName(columnNumber)
-      ).getType().isNumeric()
-      ) {
-        if (!unsupportedColumnAndType.isPresent()) {
-          unsupportedColumnAndType = Optional.of(Pair.of(signature.getColumnName(columnNumber), columnType));
-        }
-      } else {
-        columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
-      }
+      columnReaders.add(FrameColumnReaders.create(signature.getColumnName(columnNumber), columnNumber, columnType));
     }
 
-    return new FrameReader(signature, columnReaders, fieldReaders, unsupportedColumnAndType);
+    return new FrameReader(signature, columnReaders, fieldReaders);
   }
 
   public RowSignature signature()
@@ -163,7 +128,6 @@ public class FrameReader
         case COLUMNAR:
           // Better than frameReader.frameSignature().getColumnCapabilities(columnName), because this method has more
           // insight into what's actually going on with this column (nulls, multivalue, etc).
-          throwIfIncompleteColumnReaders();
           return columnReaders.get(columnNumber).readColumn(frame).getCapabilities();
         default:
           return signature.getColumnCapabilities(columnName);
@@ -178,7 +142,6 @@ public class FrameReader
   {
     switch (frame.type()) {
       case COLUMNAR:
-        throwIfIncompleteColumnReaders();
         return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, columnReaders);
       case ROW_BASED:
         return new FrameCursorFactory(frame, this, fieldReaders);
@@ -198,14 +161,5 @@ public class FrameReader
     FrameWriterUtils.verifySortColumns(keyColumns, signature);
 
     return FrameComparisonWidgetImpl.create(frame, signature, keyColumns, fieldReaders.subList(0, keyColumns.size()));
-  }
-
-  private void throwIfIncompleteColumnReaders()
-  {
-    unsupportedColumnAndType.ifPresent(
-        val -> {
-          throw new UnsupportedColumnTypeException(val.lhs, val.rhs);
-        }
-    );
   }
 }

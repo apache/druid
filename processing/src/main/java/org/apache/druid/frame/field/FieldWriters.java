@@ -64,7 +64,6 @@ public class FieldWriters
     }
 
     switch (columnType.getType()) {
-
       case LONG:
         return makeLongWriter(columnSelectorFactory, columnName);
 
@@ -81,18 +80,13 @@ public class FieldWriters
         return makeComplexWriter(columnSelectorFactory, columnName, columnType.getComplexTypeName());
 
       case ARRAY:
-
         switch (columnType.getElementType().getType()) {
-
           case STRING:
             return makeStringArrayWriter(columnSelectorFactory, columnName);
-
           case LONG:
             return makeLongArrayWriter(columnSelectorFactory, columnName);
-
           case FLOAT:
             return makeFloatArrayWriter(columnSelectorFactory, columnName);
-
           case DOUBLE:
             return makeDoubleArrayWriter(columnSelectorFactory, columnName);
         }

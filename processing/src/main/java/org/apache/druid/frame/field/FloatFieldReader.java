@@ -28,6 +28,9 @@ import org.apache.druid.segment.column.ValueType;
 
 /**
  * Reads values written by {@link FloatFieldWriter}.
+ *
+ * @see FloatFieldWriter
+ * @see NumericFieldWriter for the details of the byte-format that it expects for reading
  */
 public class FloatFieldReader extends NumericFieldReader
 {

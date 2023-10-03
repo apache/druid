@@ -24,6 +24,8 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 /**
  * Wraps a {@link BaseDoubleColumnValueSelector} and writes field values.
+ *
+ * @see NumericFieldWriter for the details of the byte-format that it writes as
  */
 public class DoubleFieldWriter extends NumericFieldWriter
 {
