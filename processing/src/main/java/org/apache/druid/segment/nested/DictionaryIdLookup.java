@@ -99,7 +99,7 @@ public final class DictionaryIdLookup implements Closeable
       // for strings because of this. if other type dictionary writers could potentially use multiple internal files
       // in the future, we should transition them to using this approach as well (or build a combination smoosher and
       // mapper so that we can have a mutable smoosh)
-      File stringSmoosh = FileUtils.createTempDir(name + "__stringTempSmoosh");
+      File stringSmoosh = FileUtils.createTempDir(StringUtils.urlEncode(name) + "__stringTempSmoosh");
       final String fileName = NestedCommonFormatColumnSerializer.getInternalFileName(
           name,
           NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
@@ -135,7 +135,9 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupLong(@Nullable Long value)
   {
     if (longDictionary == null) {
-      Path longFile = makeTempFile(name + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME);
+      final Path longFile = makeTempFile(
+          StringUtils.urlEncode(name) + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
+      );
       longBuffer = mapWriter(longFile, longDictionaryWriter);
       longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
       // reset position
@@ -151,7 +153,9 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupDouble(@Nullable Double value)
   {
     if (doubleDictionary == null) {
-      Path doubleFile = makeTempFile(name + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME);
+      final Path doubleFile = makeTempFile(
+          StringUtils.urlEncode(name) + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
+      );
       doubleBuffer = mapWriter(doubleFile, doubleDictionaryWriter);
       doubleDictionary = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES).get();
       // reset position
@@ -167,7 +171,9 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupArray(@Nullable int[] value)
   {
     if (arrayDictionary == null) {
-      Path arrayFile = makeTempFile(name + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME);
+      final Path arrayFile = makeTempFile(
+          StringUtils.urlEncode(name) + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME
+      );
       arrayBuffer = mapWriter(arrayFile, arrayDictionaryWriter);
       arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
       // reset position
