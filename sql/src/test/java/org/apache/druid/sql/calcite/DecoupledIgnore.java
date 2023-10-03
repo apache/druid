@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.UOE;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -37,52 +36,23 @@ import java.util.regex.Pattern;
 import static org.junit.Assert.assertThrows;
 
 /**
- * Can be used to mark tests which are not-yet supported for some reason.
+ * Can be used to mark tests which are not-yet supported in decoupled mode.
  *
- * In case a testcase marked with this annotation fails - it means that the
- * testcase no longer fails with the annotated expectation.
- *
- * During usage; the annotation process have to be added to the testclass.
- * Ensure that it's loaded as the most outer-rule by using order=0 - otherwise
- * it may interfere with other rules:
- * <code>
- *   @Rule(order = 0)
- *   public NegativeTestProcessor decoupledIgnoreProcessor = new NegativeTestProcessor();
- *
- *   @NegativeTest
- *   @Test
- *   public void testA() {
- *   }
- * </code>
- *
+ * In case a testcase marked with this annotation fails - it may mean that the
+ * testcase no longer needs that annotation.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface NegativeTest
+public @interface DecoupledIgnore
 {
-  Modes value() default Modes.NOT_ENOUGH_RULES;
+  Modes mode() default Modes.NOT_ENOUGH_RULES;
 
   enum Modes
   {
     PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
     CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
-    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
-
-    COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
-    NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
-    BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
-    NPE(DruidException.class, "java.lang.NullPointerException"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),
-    CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
-    MISSING_DESC(DruidException.class, "function signature DESC"),
-    RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
-    ALLDATA_CSV(DruidException.class, "allData.csv"),
-    BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
-    INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword");
-
-
+    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -100,18 +70,17 @@ public @interface NegativeTest
   };
 
   /**
-   * Processes {@link NegativeTest} annotations.
+   * Processes {@link DecoupledIgnore} annotations.
    *
    * Ensures that test cases disabled with that annotation can still not pass.
    * If the error is as expected; the testcase is marked as "ignored".
    */
-  class NegativeTestProcessor implements TestRule
+  class DecoupledIgnoreProcessor implements TestRule
   {
     @Override
     public Statement apply(Statement base, Description description)
     {
-      NegativeTest annotation = description.getAnnotation(NegativeTest.class);
-
+      DecoupledIgnore annotation = description.getAnnotation(DecoupledIgnore.class);
       if (annotation == null) {
         return base;
       }
@@ -120,22 +89,23 @@ public @interface NegativeTest
         @Override
         public void evaluate()
         {
-          Modes ignoreMode = annotation.value();
           Throwable e = assertThrows(
-              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
-              ignoreMode.throwableClass,
+              "Expected that this testcase will fail - it might got fixed?",
+              annotation.mode().throwableClass,
               base::evaluate
               );
 
           String trace = Throwables.getStackTraceAsString(e);
-          Matcher m = annotation.value().getPattern().matcher(trace);
+          Matcher m = annotation.mode().getPattern().matcher(trace);
 
           if (!m.find()) {
-            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.value().regex, e);
+            throw new AssertionError("Exception stactrace doesn't match regex: " + annotation.mode().regex, e);
           }
-          throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
+          throw new AssumptionViolatedException("Test is not-yet supported in Decoupled mode");
         }
       };
     }
   }
+
+
 }

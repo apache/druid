@@ -1056,7 +1056,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
-    for (int i = 0; i < Math.min(results.size(),expectedResults.size()); i++) {
+    for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(
           StringUtils.format("result #%d: %s", i + 1, sql),
           expectedResults.get(i),
