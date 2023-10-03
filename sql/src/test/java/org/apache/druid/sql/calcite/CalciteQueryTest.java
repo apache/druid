@@ -2470,6 +2470,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
 
     requireMergeBuffers(3);
+
+    if (NullHandling.sqlCompatible()) {
+      // Cannot vectorize due to "istrue" operator.
+      cannotVectorize();
+    }
+
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
@@ -2489,9 +2495,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setGranularity(Granularities.ALL)
                                             .setVirtualColumns(expressionVirtualColumn(
                                                 "v0",
-                                                NullHandling.replaceWithDefault()
-                                                ? "(\"cnt\" == 1)"
-                                                : "istrue((\"cnt\" == 1))",
+                                                NullHandling.sqlCompatible()
+                                                ? "istrue((\"cnt\" == 1))"
+                                                : "(\"cnt\" == 1)",
                                                 ColumnType.LONG
                                             ))
                                             .setDimensions(dimensions(
@@ -2733,7 +2739,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NegativeTest(Modes.PLAN_MISMATCH)
   @Test
   public void testTopNWithSelectProjections()
   {
@@ -2750,7 +2755,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
-                .postAggregators(expressionPostAgg("p0", "substring(\"d0\", 1, -1)"))
+                .postAggregators(expressionPostAgg("s0", "substring(\"d0\", 1, -1)"))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -5682,15 +5687,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NegativeTest(Modes.ERROR_HANDLING)
   @Test
-  public void testUnplannableScanOrderByNonTime()
+  public void testUnplannableQueries()
   {
-    // Scan can ORDER BY non-time in MSQ.
     notMsqCompatible();
+    // All of these queries are unplannable because they rely on features Druid doesn't support.
+    // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
+    // It's also here so when we do support these features, we can have "real" tests for these queries.
 
-    assertQueryIsUnplannable(
+    final Map<String, String> queries = ImmutableMap.of(
+        // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "SQL query requires order by non-time column [[dim1 ASC]], which is not supported."
+        "SQL query requires order by non-time column [[dim1 ASC]], which is not supported.",
+
+        // JOIN condition with not-equals (<>).
+        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+        + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
+        "SQL requires a join with 'NOT_EQUALS' condition that is not supported.",
+
+        // JOIN condition with a function of both sides.
+        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+        + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
+        "SQL requires a join with 'GREATER_THAN' condition that is not supported."
     );
+
+    for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
+      assertQueryIsUnplannable(queryErrorPair.getKey(), queryErrorPair.getValue());
+    }
   }
 
   @Test
@@ -8944,6 +8966,65 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+  @Test
+  public void testLookupReplaceMissingValueWith()
+  {
+    // Cannot vectorize due to extraction dimension specs.
+    cannotVectorize();
+
+    final RegisteredLookupExtractionFn extractionFn1 = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        "Missing_Value",
+        null,
+        true
+    );
+    final RegisteredLookupExtractionFn extractionFnRMVNull = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        null,
+        null,
+        true
+    );
+    testQuery(
+        "SELECT LOOKUP(dim1, 'lookyloo', 'Missing_Value'), LOOKUP(dim1, 'lookyloo', null) as rmvNull, COUNT(*) FROM foo group by 1,2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d0",
+                                    ColumnType.STRING,
+                                    extractionFn1
+                                ),
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d1",
+                                    ColumnType.STRING,
+                                    extractionFnRMVNull
+                                )
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"Missing_Value", NullHandling.defaultStringValue(), 5L},
+            new Object[]{"xabc", "xabc", 1L}
+        )
+    );
+  }
 
   @Test
   public void testCountDistinctOfLookup()
@@ -11620,7 +11701,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NegativeTest(Modes.CANNOT_CONVERT)
   @Test
   public void testPostAggWithTimeseries()
   {
@@ -11651,7 +11731,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      expressionPostAgg("p0", "(\"a0\" + \"a1\")")
+                      expressionPostAgg("s0", "(\"a0\" + \"a1\")")
                   )
                   .descending(true)
                   .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
@@ -11664,7 +11744,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NegativeTest(Modes.PLAN_MISMATCH)
   @Test
   public void testPostAggWithTopN()
   {
@@ -11713,7 +11792,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new FieldAccessPostAggregator(null, "a0:count")
                         )
                     ),
-                    expressionPostAgg("p0", "(\"a1\" + \"a2\")")
+                    expressionPostAgg("s0", "(\"a1\" + \"a2\")")
                 )
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(5)

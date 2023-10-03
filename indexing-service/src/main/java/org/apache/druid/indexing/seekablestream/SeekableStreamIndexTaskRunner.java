@@ -1422,7 +1422,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     log.info("Stopping forcefully (status: [%s])", status);
     stopRequested.set(true);
-    runThread.interrupt();
+    // Interrupt if the task has started to run
+    if (runThread != null) {
+      runThread.interrupt();
+    }
   }
 
   public void stopGracefully()

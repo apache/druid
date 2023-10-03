@@ -107,19 +107,21 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private final TestUtils testUtils = new TestUtils();
+  protected final TestUtils testUtils = new TestUtils();
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
   private SegmentCacheManagerFactory segmentCacheManagerFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
+  private File baseDir;
 
   @Before
   public void setUpIngestionTestBase() throws IOException
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     temporaryFolder.create();
+    baseDir = temporaryFolder.newFolder();
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
@@ -223,6 +225,30 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         null,
         objectMapper
     );
+  }
+
+  public TaskToolbox createTaskToolbox(TaskConfig config, Task task)
+  {
+    return new TaskToolbox.Builder()
+        .config(config)
+        .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
+        .taskActionClient(createActionClient(task))
+        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+        .dataSegmentKiller(new NoopDataSegmentKiller())
+        .joinableFactory(NoopJoinableFactory.INSTANCE)
+        .jsonMapper(objectMapper)
+        .taskWorkDir(baseDir)
+        .indexIO(getIndexIO())
+        .indexMergerV9(testUtils.getIndexMergerV9Factory()
+                                .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .taskReportFileWriter(new NoopTestTaskReportFileWriter())
+        .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
+        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .rowIngestionMetersFactory(testUtils.getRowIngestionMetersFactory())
+        .appenderatorsManager(new TestAppenderatorsManager())
+        .taskLogPusher(null)
+        .attemptId("1")
+        .build();
   }
 
   public IndexIO getIndexIO()
@@ -383,7 +409,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .dataSegmentKiller(new NoopDataSegmentKiller())
             .joinableFactory(NoopJoinableFactory.INSTANCE)
             .jsonMapper(objectMapper)
-            .taskWorkDir(temporaryFolder.newFolder())
+            .taskWorkDir(baseDir)
             .indexIO(getIndexIO())
             .indexMergerV9(testUtils.getIndexMergerV9Factory()
                                     .create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))

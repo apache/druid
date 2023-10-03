@@ -41,6 +41,7 @@ public class MetricsEmittingQueryProcessingPool extends ForwardingQueryProcessin
   {
     if (delegate() instanceof PrioritizedExecutorService) {
       emitter.emit(metricBuilder.setMetric("segment/scan/pending", ((PrioritizedExecutorService) delegate()).getQueueSize()));
+      emitter.emit(metricBuilder.setMetric("segment/scan/active", ((PrioritizedExecutorService) delegate()).getActiveTasks()));
     }
   }
 

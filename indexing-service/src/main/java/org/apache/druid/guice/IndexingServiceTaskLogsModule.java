@@ -29,6 +29,7 @@ import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.apache.druid.tasklogs.TaskPayloadManager;
 
 /**
  */
@@ -48,5 +49,6 @@ public class IndexingServiceTaskLogsModule implements Module
 
     binder.bind(TaskLogPusher.class).to(TaskLogs.class);
     binder.bind(TaskLogKiller.class).to(TaskLogs.class);
+    binder.bind(TaskPayloadManager.class).to(TaskLogs.class);
   }
 }

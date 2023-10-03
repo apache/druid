@@ -43,7 +43,6 @@ Base64
 Base64-encoded
 ByteBuffer
 bottlenecked
-cartesian
 concat
 CIDR
 CORS
@@ -1131,6 +1130,7 @@ simpleJson
 dimensionSpec
 flattenSpec
 binaryAsString
+replaceMissingValueWith
 sslFactory
 sslMode
 Proto
