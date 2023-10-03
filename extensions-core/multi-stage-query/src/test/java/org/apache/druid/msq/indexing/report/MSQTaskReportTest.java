@@ -35,7 +35,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.exec.SegmentLoadWaiter;
+import org.apache.druid.msq.exec.SegmentLoadStatusFetcher;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
@@ -92,8 +92,8 @@ public class MSQTaskReportTest
         new Object[]{"bar"}
     );
 
-    SegmentLoadWaiter.SegmentLoadWaiterStatus status = new SegmentLoadWaiter.SegmentLoadWaiterStatus(
-        SegmentLoadWaiter.State.WAITING,
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = new SegmentLoadStatusFetcher.SegmentLoadWaiterStatus(
+        SegmentLoadStatusFetcher.State.WAITING,
         DateTimes.nowUtc(),
         200L,
         100,
@@ -156,8 +156,8 @@ public class MSQTaskReportTest
   @Test
   public void testSerdeErrorReport() throws Exception
   {
-    SegmentLoadWaiter.SegmentLoadWaiterStatus status = new SegmentLoadWaiter.SegmentLoadWaiterStatus(
-        SegmentLoadWaiter.State.FAILED,
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = new SegmentLoadStatusFetcher.SegmentLoadWaiterStatus(
+        SegmentLoadStatusFetcher.State.FAILED,
         DateTimes.nowUtc(),
         200L,
         100,
@@ -205,8 +205,8 @@ public class MSQTaskReportTest
   @Test
   public void testWriteTaskReport() throws Exception
   {
-    SegmentLoadWaiter.SegmentLoadWaiterStatus status = new SegmentLoadWaiter.SegmentLoadWaiterStatus(
-        SegmentLoadWaiter.State.SUCCESS,
+    SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = new SegmentLoadStatusFetcher.SegmentLoadWaiterStatus(
+        SegmentLoadStatusFetcher.State.SUCCESS,
         DateTimes.nowUtc(),
         200L,
         100,

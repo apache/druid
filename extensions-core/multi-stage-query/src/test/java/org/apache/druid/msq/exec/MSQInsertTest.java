@@ -186,6 +186,95 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertWithUnnestInline()
+  {
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{1692226800000L, 1L},
+        new Object[]{1692226800000L, 2L},
+        new Object[]{1692226800000L, 3L}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("d", ColumnType.LONG)
+                                            .build();
+
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select TIME_PARSE('2023-08-16T23:00') as __time, d from UNNEST(ARRAY[1,2,3]) as unnested(d) PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertWithUnnest()
+  {
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, "a"},
+        new Object[]{946684800000L, "b"},
+        new Object[]{946771200000L, "b"},
+        new Object[]{946771200000L, "c"},
+        new Object[]{946857600000L, "d"},
+        new Object[]{978307200000L, NullHandling.sqlCompatible() ? "" : null},
+        new Object[]{978393600000L, null},
+        new Object[]{978480000000L, null}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("d", ColumnType.STRING)
+                                            .build();
+
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select __time, d from foo,UNNEST(MV_TO_ARRAY(dim3)) as unnested(d) PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertWithUnnestWithVirtualColumns()
+  {
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, 1.0f},
+        new Object[]{946684800000L, 1.0f},
+        new Object[]{946771200000L, 2.0f},
+        new Object[]{946771200000L, 2.0f},
+        new Object[]{946857600000L, 3.0f},
+        new Object[]{946857600000L, 3.0f},
+        new Object[]{978307200000L, 4.0f},
+        new Object[]{978307200000L, 4.0f},
+        new Object[]{978393600000L, 5.0f},
+        new Object[]{978393600000L, 5.0f},
+        new Object[]{978480000000L, 6.0f},
+        new Object[]{978480000000L, 6.0f}
+    );
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("d", ColumnType.FLOAT)
+                                            .build();
+
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select __time, d from foo,UNNEST(ARRAY[m1,m2]) as unnested(d) PARTITIONED BY ALL")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .verifyResults();
+
+  }
+
+  @Test
   public void testInsertOnExternalDataSource() throws IOException
   {
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");

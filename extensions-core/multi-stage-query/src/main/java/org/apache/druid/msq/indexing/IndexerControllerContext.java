@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -65,6 +66,12 @@ public class IndexerControllerContext implements ControllerContext
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.workerManager = new IndexerWorkerManagerClient(overlordClient);
+  }
+
+  @Override
+  public ServiceEmitter emitter()
+  {
+    return toolbox.getEmitter();
   }
 
   @Override
