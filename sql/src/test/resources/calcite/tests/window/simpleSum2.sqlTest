@@ -1,0 +1,31 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+  	dim1,
+    count(333) OVER () cc
+  FROM foo
+
+expectedOperators:
+  - type: "naiveSort"
+    columns:
+      - column: dim1
+        direction: ASC
+  - type: naivePartition
+    partitionColumns: []
+  - type: "window"
+    processor:
+      type: "rank"
+      group: [ "dim1" ]
+      outputColumn: w0
+      asPercent: false
+
+expectedResults:
+  - [ 946684800000, 1, 1 ]
+  - [ 946771200000, 1, 2 ]
+  - [ 946857600000, 1, 3 ]
+  - [ 978307200000, 1, 4 ]
+  - [ 978393600000, 1, 5 ]
+  - [ 978480000000, 1, 6 ]
+
+  
