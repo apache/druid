@@ -81,6 +81,7 @@ public class Aggregations
   }
 
   @Nullable
+  @Deprecated
   public static List<DruidExpression> getArgumentsForSimpleAggregator(
       final RexBuilder rexBuilder,
       final PlannerContext plannerContext,
