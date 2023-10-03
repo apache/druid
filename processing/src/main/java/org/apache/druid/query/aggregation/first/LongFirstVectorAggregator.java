@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -55,6 +55,6 @@ public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
   public Object get(ByteBuffer buf, int position)
   {
     final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
+    return new SerializablePairLongLong(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
   }
 }

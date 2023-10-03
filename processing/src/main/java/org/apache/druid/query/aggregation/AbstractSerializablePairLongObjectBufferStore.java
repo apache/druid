@@ -101,7 +101,7 @@ public abstract class AbstractSerializablePairLongObjectBufferStore<T extends Se
     }
 
     @Override
-    public long getSerializedSize() throws IOException
+    public long getSerializedSize()
     {
       return columnHeader.getSerializedSize() + cellWriter.getSerializedSize();
     }
