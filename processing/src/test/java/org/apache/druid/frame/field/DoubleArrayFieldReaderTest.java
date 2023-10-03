@@ -58,31 +58,42 @@ public class DoubleArrayFieldReaderTest extends InitializedNullHandlingTest
   private static final Object[] DOUBLES_ARRAY_1 = new Object[]{
       Double.MAX_VALUE,
       Double.MIN_VALUE,
+      null,
       Double.POSITIVE_INFINITY,
       Double.NEGATIVE_INFINITY,
       Double.MIN_NORMAL,
+      null,
       0.0d,
       1.234234d,
+      Double.NaN,
       -1.344234d,
       129123.123123,
       -21312213.33,
+      null,
       1111.0,
-      23.0
+      23.0,
+      null,
   };
 
   private static final Object[] DOUBLES_ARRAY_2 = new Object[]{
+      null,
       Double.MAX_VALUE,
       12.234234d,
       -21.344234d,
       Double.POSITIVE_INFINITY,
+      null,
       Double.MIN_VALUE,
       129123.123123,
+      null,
       0.0d,
       Double.MIN_NORMAL,
       1111.0,
+      Double.NaN,
       Double.NEGATIVE_INFINITY,
+      null,
       -2133.33,
-      23.0
+      23.0,
+      null
   };
   //CHECKSTYLE.ON: Regexp
 

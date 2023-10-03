@@ -56,22 +56,30 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
 
   //CHECKSTYLE.OFF: Regexp
   private static final Object[] FLOATS_ARRAY_1 = new Object[]{
+      null,
       Float.MIN_VALUE,
       Float.MAX_VALUE,
       Float.MIN_NORMAL,
+      null,
       Float.POSITIVE_INFINITY,
       Float.NEGATIVE_INFINITY,
+      null,
       0.0f,
       1.234234f,
       -1.344234f,
+      Float.NaN,
       129123.123123f,
+      null,
       -21312213.33f,
       1111.0f,
+      null,
       23.0f
   };
 
   private static final Object[] FLOATS_ARRAY_2 = new Object[]{
+      null,
       Float.MAX_VALUE,
+      null,
       Float.POSITIVE_INFINITY,
       -0.0f,
       0.0f,
@@ -83,7 +91,10 @@ public class FloatArrayFieldReaderTest extends InitializedNullHandlingTest
       Float.NEGATIVE_INFINITY,
       -1111.0f,
       1223.0f,
-      Float.MIN_NORMAL
+      Float.MIN_NORMAL,
+      null,
+      Float.NaN,
+      null
   };
   //CHECKSTYLE.ON: Regexp
 

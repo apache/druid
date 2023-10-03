@@ -64,12 +64,14 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   };
 
   private static final Object[] LONGS_ARRAY_2 = new Object[]{
+      null,
       234L,
       Long.MAX_VALUE,
       null,
       Long.MIN_VALUE,
       0L,
-      -234L
+      -234L,
+      null
   };
 
   private static final List<Long> LONGS_LIST_1;
