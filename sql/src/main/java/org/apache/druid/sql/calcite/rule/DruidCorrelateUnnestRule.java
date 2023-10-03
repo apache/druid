@@ -174,6 +174,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
                 )
             );
 
+    relBuilder.convert(correlate.getRowType(), false);
     final RelNode build = relBuilder.build();
     call.transformTo(build);
   }

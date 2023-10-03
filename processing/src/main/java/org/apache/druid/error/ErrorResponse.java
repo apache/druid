@@ -204,7 +204,7 @@ public class ErrorResponse
             {
               return bob.forPersona(cause.getTargetPersona())
                         .ofCategory(cause.getCategory())
-                        .build(cause, cause.getMessage())
+                        .build(cause, "%s", cause.getMessage())
                         .withContext(cause.getContext());
             }
           }
