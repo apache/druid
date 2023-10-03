@@ -66,8 +66,6 @@ public class DruidConvertletTable implements SqlRexConvertletTable
                    .add(SqlStdOperatorTable.UNION_ALL)
                    .add(SqlStdOperatorTable.NULLIF)
                    .add(SqlStdOperatorTable.COALESCE)
-                   .add(SqlStdOperatorTable.NULLS_FIRST)
-                   .add(SqlStdOperatorTable.NULLS_LAST)
                    .add(SqlLibraryOperators.NVL)
                    .build();
 

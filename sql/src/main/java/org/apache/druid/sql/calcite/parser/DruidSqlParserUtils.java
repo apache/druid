@@ -403,18 +403,6 @@ public class DruidSqlParserUtils
             clusteredByNode
         );
       }
-      if (clusteredByNode.isA(ImmutableSet.of(SqlKind.NULLS_FIRST))) {
-        throw InvalidSqlInput.exception(
-            "Invalid CLUSTERED BY clause [%s]: cannot do NULLS_X.",
-            clusteredByNode
-        );
-      }
-      if (clusteredByNode.isA(ImmutableSet.of(SqlKind.NULLS_LAST))) {
-        throw InvalidSqlInput.exception(
-            "Invalid CLUSTERED BY clause [%s]: cannot do NULLS_X.",
-            clusteredByNode
-        );
-      }
 
       // Calcite already throws Ordinal out of range exception for positive non-existent ordinals. This negative ordinal check
       // is for completeness and is fixed in later Calcite versions.
