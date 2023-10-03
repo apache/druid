@@ -40,11 +40,11 @@ public class QueryCountStatsMonitor extends AbstractMonitor
   @Inject
   public QueryCountStatsMonitor(
       QueryCountStatsProvider statsProvider,
-      @Merging BlockingPool<ByteBuffer> mergeBufferPoolIn
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool
   )
   {
     this.statsProvider = statsProvider;
-    mergeBufferPool = mergeBufferPoolIn;
+    this.mergeBufferPool = mergeBufferPool;
   }
 
   @Override
@@ -72,8 +72,8 @@ public class QueryCountStatsMonitor extends AbstractMonitor
       }
     }
 
-    long pendingQueries = this.mergeBufferPool.getPendingQueries();
-    emitter.emit(builder.setMetric("mergeBuffer/pendingQueries", pendingQueries));
+    long pendingQueries = this.mergeBufferPool.getPendingRequests();
+    emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", pendingQueries));
     return true;
   }
 

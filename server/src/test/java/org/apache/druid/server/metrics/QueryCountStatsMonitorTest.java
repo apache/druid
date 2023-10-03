@@ -111,11 +111,11 @@ public class QueryCountStatsMonitorTest
     Assert.assertEquals(3L, (long) resultMap.get("query/interrupted/count"));
     Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
     Assert.assertEquals(10L, (long) resultMap.get("query/count"));
-    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingQueries"));
+    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
 
   }
 
-  @Test
+  @Test(timeout = 2_000L)
   public void testMonitoringMergeBuffer()
   {
     executorService.submit(() -> {
@@ -125,10 +125,10 @@ public class QueryCountStatsMonitorTest
     int count = 0;
     try {
       // wait at most 10 secs for the executor thread to block
-      while (mergeBufferPool.getPendingQueries() == 0) {
+      while (mergeBufferPool.getPendingRequests() == 0) {
         Thread.sleep(100);
         count++;
-        if (count >= 100) {
+        if (count >= 20) {
           break;
         }
       }
@@ -138,7 +138,7 @@ public class QueryCountStatsMonitorTest
       boolean ret = monitor.doMonitor(emitter);
       Assert.assertTrue(ret);
 
-      List<Number> numbers = emitter.getMetricValues("mergeBuffer/pendingQueries", Collections.emptyMap());
+      List<Number> numbers = emitter.getMetricValues("mergeBuffer/pendingRequests", Collections.emptyMap());
       Assert.assertEquals(1, numbers.size());
       Assert.assertEquals(1, numbers.get(0).intValue());
     }

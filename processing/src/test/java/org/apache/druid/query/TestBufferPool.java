@@ -133,7 +133,7 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
   }
 
   @Override
-  public long getPendingQueries()
+  public long getPendingRequests()
   {
     return 0;
   }

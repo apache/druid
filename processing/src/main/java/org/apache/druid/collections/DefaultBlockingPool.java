@@ -49,7 +49,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   private final Condition notEnough;
   private final int maxSize;
 
-  private final AtomicLong pendingQueries;
+  private final AtomicLong pendingRequests;
 
   public DefaultBlockingPool(
       Supplier<T> generator,
@@ -65,7 +65,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
 
     this.lock = new ReentrantLock();
     this.notEnough = lock.newCondition();
-    this.pendingQueries = new AtomicLong();
+    this.pendingRequests = new AtomicLong();
   }
 
   @Override
@@ -95,7 +95,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
     checkInitialized();
     try {
-      pendingQueries.incrementAndGet();
+      pendingRequests.incrementAndGet();
       final List<T> objects = timeoutMs > 0 ? pollObjects(elementNum, timeoutMs) : pollObjects(elementNum);
       return objects.stream().map(this::wrapObject).collect(Collectors.toList());
     }
@@ -103,7 +103,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       throw new RuntimeException(e);
     }
     finally {
-      pendingQueries.decrementAndGet();
+      pendingRequests.decrementAndGet();
     }
   }
 
@@ -112,21 +112,21 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   {
     checkInitialized();
     try {
-      pendingQueries.incrementAndGet();
+      pendingRequests.incrementAndGet();
       return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
     finally {
-      pendingQueries.incrementAndGet();
+      pendingRequests.incrementAndGet();
     }
   }
 
   @Override
-  public long getPendingQueries()
+  public long getPendingRequests()
   {
-    return pendingQueries.get();
+    return pendingRequests.get();
   }
 
   private List<T> pollObjects(int elementNum) throws InterruptedException

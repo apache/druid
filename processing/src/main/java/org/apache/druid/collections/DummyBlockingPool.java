@@ -57,7 +57,7 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public long getPendingQueries()
+  public long getPendingRequests()
   {
     return 0;
   }
