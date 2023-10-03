@@ -40,6 +40,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -107,11 +108,12 @@ public class CountSqlAggregator implements SqlAggregator
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final Project project,
+      final InputAccessor inputAccessor,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
   {
+    Project project = inputAccessor.getProject();
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
         rexBuilder,
         plannerContext,

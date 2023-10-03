@@ -85,7 +85,7 @@ public interface SqlAggregator
         finalizeAggregations);
   }
 
-  Aggregation toDruidAggregation(
+  default Aggregation toDruidAggregation(
       PlannerContext plannerContext,
       RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
@@ -95,5 +95,7 @@ public interface SqlAggregator
       Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
-  );
+  ) {
+    throw new RuntimeException("unimplemented fallback method!");
+  }
 }
