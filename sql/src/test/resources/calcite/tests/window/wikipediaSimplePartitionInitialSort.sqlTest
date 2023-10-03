@@ -1,4 +1,4 @@
-type: "failingTest"
+type: "operatorValidation"
 
 # Like wikipediaSimplePartition, but requires re-sorting the input data because the order of the GROUP BY
 # does not match the required order for window partitioning. ("t" and "countryIsoCode" are flipped.)

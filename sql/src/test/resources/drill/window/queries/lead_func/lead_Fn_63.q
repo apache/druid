@@ -1,1 +1,1 @@
-SELECT c8 , LEAD(c8) OVER( PARTITION BY c2 ORDER BY c2,c8 ) LEAD_c8,c2 FROM ( SELECT distinct col8 c8, col1 c1, col2 c2 FROM "fewRowsAllData.parquet" WHERE col2 IN ("CO","GA","IA","NH","MN","WY")) sub_query
+SELECT c8 , LEAD(c8) OVER( PARTITION BY c2 ORDER BY c2,c8 ) LEAD_c8,c2 FROM ( SELECT distinct col8 c8, col1 c1, col2 c2 FROM "fewRowsAllData.parquet" WHERE col2 IN ('CO','GA','IA','NH','MN','WY')) sub_query
