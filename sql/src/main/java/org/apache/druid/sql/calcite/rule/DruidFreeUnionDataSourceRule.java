@@ -80,7 +80,8 @@ public class DruidFreeUnionDataSourceRule extends RelOptRule
       call.transformTo(
           DruidFreeUnionDataSourceRel.create(
               (Union) newUnionRel,
-              getColumnNames(firstDruidRel, plannerContext).get(),
+//              getColumnNames(firstDruidRel, plannerContext).get(),
+              unionRel.getRowType().getFieldNames(),
               firstDruidRel.getPlannerContext()
           )
       );
@@ -88,7 +89,8 @@ public class DruidFreeUnionDataSourceRule extends RelOptRule
       call.transformTo(
           DruidFreeUnionDataSourceRel.create(
               unionRel,
-              getColumnNames(firstDruidRel, plannerContext).get(),
+//              getColumnNames(firstDruidRel, plannerContext).get(),
+              unionRel.getRowType().getFieldNames(),
               firstDruidRel.getPlannerContext()
           )
       );
@@ -111,7 +113,8 @@ public class DruidFreeUnionDataSourceRule extends RelOptRule
     if (!unionRel.all && null != plannerContext) {
       plannerContext.setPlanningError("SQL requires 'UNION' but only 'UNION ALL' is supported.");
     }
-    return unionRel.all && isUnionCompatible(first, second, plannerContext);
+//    return unionRel.all && isUnionCompatible(first, second, plannerContext);
+    return unionRel.all;
   }
 
   /**

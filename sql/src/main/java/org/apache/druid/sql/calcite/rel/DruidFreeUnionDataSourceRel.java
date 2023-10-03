@@ -137,13 +137,15 @@ public class DruidFreeUnionDataSourceRel extends DruidRel<DruidFreeUnionDataSour
         signature = query.getOutputRowSignature();
       }
 
-      if (signature.getColumnNames().equals(query.getOutputRowSignature().getColumnNames())) {
-        dataSources.add(dataSource);
-      } else {
-        getPlannerContext().setPlanningError(
-            "There is a mismatch between the output row signature of input tables and the row signature of union output.");
-        throw new CannotBuildQueryException(druidRel);
-      }
+      dataSources.add(dataSource);
+
+//      if (signature.getColumnNames().equals(query.getOutputRowSignature().getColumnNames())) {
+//        dataSources.add(dataSource);
+//      } else {
+//        getPlannerContext().setPlanningError(
+//            "There is a mismatch between the output row signature of input tables and the row signature of union output.");
+//        throw new CannotBuildQueryException(druidRel);
+//      }
     }
 
     if (signature == null) {
@@ -153,9 +155,9 @@ public class DruidFreeUnionDataSourceRel extends DruidRel<DruidFreeUnionDataSour
 
     // Sanity check: the columns we think we're building off must equal the "unionColumnNames" registered at
     // creation time.
-    if (!signature.getColumnNames().equals(unionColumnNames)) {
-      throw new CannotBuildQueryException(unionRel);
-    }
+//    if (!signature.getColumnNames().equals(unionColumnNames)) {
+//      throw new CannotBuildQueryException(unionRel);
+//    }
 
     return partialQuery.build(
         new UnionDataSource(dataSources),
