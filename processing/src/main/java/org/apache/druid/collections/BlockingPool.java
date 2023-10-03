@@ -44,7 +44,7 @@ public interface BlockingPool<T>
   List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum);
 
   /**
-   * Return the count of pending queries blocking in this queue for merge buffers
+   * Return the count of pending queries waiting for merge buffers
    *
    * @return count of pending queries
    */

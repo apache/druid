@@ -51,7 +51,6 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
 
   private final AtomicLong pendingQueries;
 
-
   public DefaultBlockingPool(
       Supplier<T> generator,
       int limit
@@ -66,7 +65,6 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
 
     this.lock = new ReentrantLock();
     this.notEnough = lock.newCondition();
-
     this.pendingQueries = new AtomicLong();
   }
 
@@ -118,8 +116,10 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
-      pendingQueries.incrementAndGet();
       throw new RuntimeException(e);
+    }
+    finally {
+      pendingQueries.incrementAndGet();
     }
   }
 
