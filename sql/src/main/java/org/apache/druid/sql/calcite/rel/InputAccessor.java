@@ -27,6 +27,9 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import javax.annotation.Nullable;
 
 /**
@@ -81,6 +84,14 @@ public class InputAccessor
   public Project getProject()
   {
     return project;
+  }
+
+  public List<RexNode> getFields(List<Integer> argList)
+  {
+    return argList
+        .stream()
+        .map(i -> getField(i))
+        .collect(Collectors.toList());
   }
 
 }
