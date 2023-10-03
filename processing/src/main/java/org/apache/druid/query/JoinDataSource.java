@@ -401,9 +401,13 @@ public class JoinDataSource implements DataSource
                 )
             );
 
+            final Function<SegmentReference, SegmentReference> baseMapFn = left.createSegmentMapFunction(
+                query,
+                cpuTimeAccumulator
+            );
             return baseSegment ->
                 new HashJoinSegment(
-                    baseSegment,
+                    baseMapFn.apply(baseSegment),
                     baseFilterToUse,
                     GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
                     joinFilterPreAnalysis
@@ -516,6 +520,18 @@ public class JoinDataSource implements DataSource
               joinDataSource.getConditionAnalysis()
           )
       );
+    }
+
+    // Handling for cases when the left side of a join is an UnnestDataSource or a FilteredDataSource
+    // the base data source for the analysis needs to look deeper into the base of the datasources
+    while (current instanceof UnnestDataSource) {
+      final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+      current = unnestDataSource.getBase();
+    }
+
+    while (current instanceof FilteredDataSource) {
+      final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
+      current = filteredDataSource.getBase();
     }
 
     // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the

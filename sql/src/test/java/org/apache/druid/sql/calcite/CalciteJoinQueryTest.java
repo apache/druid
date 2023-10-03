@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
@@ -49,6 +50,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -5911,6 +5913,111 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(expectedQuery),
         ImmutableList.of(
             new Object[]{6L}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinsWithUnnestOnLeft()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with t1 as (\n"
+        + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
+        + ")\n"
+        + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN numfoo as t2\n"
+        + "ON t1.d3 = t2.\"dim2\"",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .columns("dim2")
+                                .legacy(false)
+                                .context(context)
+                                .build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0.dim2\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("_j0.dim2", "dim3", "j0.unnest")
+                .context(context)
+                .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"}
+        ) : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"", "", ""}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinsWithUnnestOverFilteredDSOnLeft()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with t1 as (\n"
+        + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3) where dim2='a'\n"
+        + ")\n"
+        + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN numfoo as t2\n"
+        + "ON t1.d3 = t2.\"dim2\"",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            FilteredDataSource.create(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                equality("dim2", "a", ColumnType.STRING)
+                            ),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .columns("dim2")
+                                .legacy(false)
+                                .context(context)
+                                .build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0.dim2\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("_j0.dim2", "dim3", "j0.unnest")
+                .context(context)
+                .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"}
+        ) : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"", "", ""}
         )
     );
   }
