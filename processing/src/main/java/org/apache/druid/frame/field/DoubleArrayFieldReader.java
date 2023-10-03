@@ -37,14 +37,15 @@ public class DoubleArrayFieldReader extends NumericArrayFieldReader
   {
     return new NumericArrayFieldSelector<Double>(memory, fieldPointer)
     {
+      final SettableFieldPointer fieldPointer = new SettableFieldPointer();
+      final ColumnValueSelector<?> columnValueSelector =
+          DoubleFieldReader.forArray().makeColumnValueSelector(memory, fieldPointer);
 
       @Nullable
       @Override
-      public Double getIndividualValueAtMemory(Memory memory, long position)
+      public Double getIndividualValueAtMemory(long position)
       {
-        ColumnValueSelector<?> columnValueSelector =
-            DoubleFieldReader.forArray()
-                             .makeColumnValueSelector(memory, new ConstantFieldPointer(position));
+        fieldPointer.setPosition(position);
         if (columnValueSelector.isNull()) {
           return null;
         }

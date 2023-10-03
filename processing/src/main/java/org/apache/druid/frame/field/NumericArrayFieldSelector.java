@@ -46,7 +46,7 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
   /**
    * Memory containing the serialized values of the array
    */
-  private final Memory memory;
+  protected final Memory memory;
 
   /**
    * Pointer to location in the memory. The callers are expected to update the pointer's position to the start of the
@@ -134,7 +134,7 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
    * Returns the value of the individual element written at the given position
    */
   @Nullable
-  public abstract ElementType getIndividualValueAtMemory(Memory memory, long position);
+  public abstract ElementType getIndividualValueAtMemory(long position);
 
   /**
    * Returns the field size that each element in the reader array consumes. It is usually 1 + ElementType.SIZE, to hold
@@ -193,7 +193,7 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
 
       // If terminator not seen, then read the field at that location, and increment the position by the element's field
       // size to read the next element.
-      currentRow.add(getIndividualValueAtMemory(memory, position));
+      currentRow.add(getIndividualValueAtMemory(position));
       position += getIndividualFieldSize();
     }
 

@@ -37,14 +37,15 @@ public class LongArrayFieldReader extends NumericArrayFieldReader
   {
     return new NumericArrayFieldSelector<Long>(memory, fieldPointer)
     {
+      final SettableFieldPointer fieldPointer = new SettableFieldPointer();
+      final ColumnValueSelector<?> columnValueSelector =
+          LongFieldReader.forArray().makeColumnValueSelector(memory, fieldPointer);
 
       @Nullable
       @Override
-      public Long getIndividualValueAtMemory(Memory memory, long position)
+      public Long getIndividualValueAtMemory(long position)
       {
-        ColumnValueSelector<?> columnValueSelector =
-            LongFieldReader.forArray()
-                           .makeColumnValueSelector(memory, new ConstantFieldPointer(position));
+        fieldPointer.setPosition(position);
         if (columnValueSelector.isNull()) {
           return null;
         }
