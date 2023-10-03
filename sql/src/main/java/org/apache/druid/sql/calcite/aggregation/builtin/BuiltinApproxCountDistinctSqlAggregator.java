@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
@@ -50,6 +49,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -77,19 +77,15 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final Project project,
+      final InputAccessor inputAccessor,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
   {
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
-    final RexNode rexNode = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        Iterables.getOnlyElement(aggregateCall.getArgList())
-    );
+    final RexNode rexNode = inputAccessor.getField(
+        Iterables.getOnlyElement(aggregateCall.getArgList()));
 
     final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
     if (arg == null) {
