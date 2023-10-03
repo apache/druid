@@ -1,1 +1,1 @@
-select * from (SELECT col2 , col4 , LEAD ( col4 ) OVER ( PARTITION BY col2 ORDER BY col2 , col4 ) lead_col4, col8 , LAG( col8 ) OVER ( PARTITION BY col2 ORDER BY col2 , col8 ) lag_col8 FROM "fewRowsAllData.parquet" ) sub_query where col2 IN ("CO","GA","MN","VT","WY")
+select * from (SELECT col2 , col4 , LEAD ( col4 ) OVER ( PARTITION BY col2 ORDER BY col2 , col4 ) lead_col4, col8 , LAG( col8 ) OVER ( PARTITION BY col2 ORDER BY col2 , col8 ) lag_col8 FROM "fewRowsAllData.parquet" ) sub_query where col2 IN ('CO','GA','MN','VT','WY')

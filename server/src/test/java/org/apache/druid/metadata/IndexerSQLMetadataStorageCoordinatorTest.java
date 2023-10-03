@@ -33,7 +33,9 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -48,6 +50,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
@@ -57,9 +60,9 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
+import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
@@ -68,8 +71,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -80,9 +85,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -330,6 +332,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
+    derbyConnector.createUpgradeSegmentsTable();
     derbyConnector.createPendingSegmentsTable();
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
@@ -403,6 +406,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
+  private List<DataSegment> retrieveUsedSegments()
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    return derbyConnector.retryWithHandle(
+        handle -> handle.createQuery("SELECT payload FROM " + table + " WHERE used = true ORDER BY id")
+                        .map((index, result, context) -> JacksonUtils.readValue(mapper, result.getBytes(1), DataSegment.class))
+                        .list()
+    );
+  }
+
   private List<String> retrieveUnusedSegmentIds()
   {
     final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
@@ -449,6 +462,208 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           return true;
         }
     );
+  }
+
+  private Map<String, String> getSegmentsCommittedDuringReplaceTask(String taskId)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getUpgradeSegmentsTable();
+    return derbyConnector.retryWithHandle(handle -> {
+      final String sql = StringUtils.format(
+          "SELECT segment_id, lock_version FROM %1$s WHERE task_id = :task_id",
+          table
+      );
+
+      ResultIterator<Pair<String, String>> resultIterator = handle
+          .createQuery(sql)
+          .bind("task_id", taskId)
+          .map(
+              (index, r, ctx) -> Pair.of(r.getString("segment_id"), r.getString("lock_version"))
+          )
+          .iterator();
+
+      final Map<String, String> segmentIdToLockVersion = new HashMap<>();
+      while (resultIterator.hasNext()) {
+        Pair<String, String> result = resultIterator.next();
+        segmentIdToLockVersion.put(result.lhs, result.rhs);
+      }
+      return segmentIdToLockVersion;
+    });
+  }
+
+  private void insertIntoUpgradeSegmentsTable(Map<DataSegment, ReplaceTaskLock> segmentToTaskLockMap)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getUpgradeSegmentsTable();
+    derbyConnector.retryWithHandle(
+        handle -> {
+          PreparedBatch preparedBatch = handle.prepareBatch(
+              StringUtils.format(
+                  StringUtils.format(
+                      "INSERT INTO %1$s (task_id, segment_id, lock_version) "
+                      + "VALUES (:task_id, :segment_id, :lock_version)",
+                      table
+                  )
+              )
+          );
+          for (Map.Entry<DataSegment, ReplaceTaskLock> entry : segmentToTaskLockMap.entrySet()) {
+            final DataSegment segment = entry.getKey();
+            final ReplaceTaskLock lock = entry.getValue();
+            preparedBatch.add()
+                         .bind("task_id", lock.getSupervisorTaskId())
+                         .bind("segment_id", segment.getId().toString())
+                         .bind("lock_version", lock.getVersion());
+          }
+
+          final int[] affectedRows = preparedBatch.execute();
+          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+          if (!succeeded) {
+            throw new ISE("Failed to insert upgrade segments in DB");
+          }
+          return true;
+        }
+    );
+  }
+
+  @Test
+  public void testCommitAppendSegments()
+  {
+    final String v1 = "2023-01-01";
+    final String v2 = "2023-01-02";
+    final String v3 = "2023-01-03";
+    final String lockVersion = "2024-01-01";
+
+    final String replaceTaskId = "replaceTask1";
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock(
+        replaceTaskId,
+        Intervals.of("2023-01-01/2023-01-03"),
+        lockVersion
+    );
+
+    final Set<DataSegment> appendSegments = new HashSet<>();
+    final Set<DataSegment> expectedSegmentsToUpgrade = new HashSet<>();
+    for (int i = 0; i < 10; i++) {
+      final DataSegment segment = createSegment(
+          Intervals.of("2023-01-01/2023-01-02"),
+          v1,
+          new LinearShardSpec(i)
+      );
+      appendSegments.add(segment);
+      expectedSegmentsToUpgrade.add(segment);
+    }
+
+    for (int i = 0; i < 10; i++) {
+      final DataSegment segment = createSegment(
+          Intervals.of("2023-01-02/2023-01-03"),
+          v2,
+          new LinearShardSpec(i)
+      );
+      appendSegments.add(segment);
+      expectedSegmentsToUpgrade.add(segment);
+    }
+
+    for (int i = 0; i < 10; i++) {
+      final DataSegment segment = createSegment(
+          Intervals.of("2023-01-03/2023-01-04"),
+          v3,
+          new LinearShardSpec(i)
+      );
+      appendSegments.add(segment);
+    }
+
+    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
+        = expectedSegmentsToUpgrade.stream()
+                                   .collect(Collectors.toMap(s -> s, s -> replaceLock));
+
+    // Commit the segment and verify the results
+    SegmentPublishResult commitResult
+        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock);
+    Assert.assertTrue(commitResult.isSuccess());
+    Assert.assertEquals(appendSegments, commitResult.getSegments());
+
+    // Verify the segments present in the metadata store
+    Assert.assertEquals(
+        appendSegments,
+        ImmutableSet.copyOf(retrieveUsedSegments())
+    );
+
+    // Verify entries in the segment task lock table
+    final Set<String> expectedUpgradeSegmentIds
+        = expectedSegmentsToUpgrade.stream()
+                                   .map(s -> s.getId().toString())
+                                   .collect(Collectors.toSet());
+    final Map<String, String> observedSegmentToLock = getSegmentsCommittedDuringReplaceTask(replaceTaskId);
+    Assert.assertEquals(expectedUpgradeSegmentIds, observedSegmentToLock.keySet());
+
+    final Set<String> observedLockVersions = new HashSet<>(observedSegmentToLock.values());
+    Assert.assertEquals(1, observedLockVersions.size());
+    Assert.assertEquals(replaceLock.getVersion(), Iterables.getOnlyElement(observedLockVersions));
+  }
+
+  @Test
+  public void testCommitReplaceSegments()
+  {
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
+    final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
+    final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
+          "2023-01-0" + i,
+          ImmutableMap.of("path", "a-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new LinearShardSpec(0),
+          9,
+          100
+      );
+      segmentsAppendedWithReplaceLock.add(segment);
+      appendedSegmentToReplaceLockMap.put(segment, replaceLock);
+    }
+    insertUsedSegments(segmentsAppendedWithReplaceLock);
+    insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap);
+
+    final Set<DataSegment> replacingSegments = new HashSet<>();
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-01/2023-02-01"),
+          "2023-02-01",
+          ImmutableMap.of("path", "b-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new NumberedShardSpec(i, 9),
+          9,
+          100
+      );
+      replacingSegments.add(segment);
+    }
+
+    coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock));
+
+    Assert.assertEquals(
+        2L * segmentsAppendedWithReplaceLock.size() + replacingSegments.size(),
+        retrieveUsedSegmentIds().size()
+    );
+
+    final Set<DataSegment> usedSegments = new HashSet<>(retrieveUsedSegments());
+
+    Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
+    usedSegments.removeAll(segmentsAppendedWithReplaceLock);
+
+    Assert.assertTrue(usedSegments.containsAll(replacingSegments));
+    usedSegments.removeAll(replacingSegments);
+
+    Assert.assertEquals(segmentsAppendedWithReplaceLock.size(), usedSegments.size());
+    for (DataSegment segmentReplicaWithNewVersion : usedSegments) {
+      boolean hasBeenCarriedForward = false;
+      for (DataSegment appendedSegment : segmentsAppendedWithReplaceLock) {
+        if (appendedSegment.getLoadSpec().equals(segmentReplicaWithNewVersion.getLoadSpec())) {
+          hasBeenCarriedForward = true;
+          break;
+        }
+      }
+      Assert.assertTrue(hasBeenCarriedForward);
+    }
   }
 
   @Test
@@ -2337,5 +2552,21 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             )
         )
     );
+  }
+
+  private static class DS
+  {
+    static final String WIKI = "wiki";
+  }
+
+  private DataSegment createSegment(Interval interval, String version, ShardSpec shardSpec)
+  {
+    return DataSegment.builder()
+                      .dataSource(DS.WIKI)
+                      .interval(interval)
+                      .version(version)
+                      .shardSpec(shardSpec)
+                      .size(100)
+                      .build();
   }
 }

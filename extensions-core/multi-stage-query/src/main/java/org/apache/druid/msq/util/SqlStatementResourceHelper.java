@@ -234,7 +234,7 @@ public class SqlStatementResourceHelper
           null,
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build(taskResponse.getStatus().getErrorMsg()).toErrorResponse()
+                        .build("%s", taskResponse.getStatus().getErrorMsg()).toErrorResponse()
       ));
     }
 
