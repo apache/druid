@@ -26,7 +26,6 @@ spec:
         druid.task.group.id: "id"
         druid.task.datasource: "datasource"
       annotations:
-        task: "H4sIAAAAAAAAAD2MvQ4CIRCE32VqijsTG1qLi7W+wArEbHICrmC8EN7dJf40k/lmJtNQthxgEVPKMGCvXsXgKqnm4x89FTqlKm6MBzw+YCA1nvmm8W4/TQYuxRJeBbZ17cJ3ZhvoSbzShVcu2zLOf9cS7pUl+ANlclrCzr2/AQUK0FqZAAAA"
         tls.enabled: "false"
         task.id: "id"
         task.type: "noop"
@@ -44,9 +43,5 @@ spec:
               value: "id"
             - name: "LOAD_BROADCAST_SEGMENTS"
               value: "false"
-            - name: "TASK_JSON"
-              valueFrom:
-                fieldRef:
-                  fieldPath: "metadata.annotations['task']"
           image: one
           name: primary

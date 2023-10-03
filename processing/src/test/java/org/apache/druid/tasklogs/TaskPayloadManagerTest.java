@@ -19,10 +19,25 @@
 
 package org.apache.druid.tasklogs;
 
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.commons.lang.NotImplementedException;
+import org.junit.Assert;
+import org.junit.Test;
 
-
-@ExtensionPoint
-public interface TaskLogs extends TaskLogStreamer, TaskLogPusher, TaskLogKiller, TaskPayloadManager
+public class TaskPayloadManagerTest implements TaskPayloadManager
 {
+  @Test
+  public void test_streamTaskPayload()
+  {
+    Assert.assertThrows(NotImplementedException.class,
+        () -> this.streamTaskPayload("id")
+    );
+  }
+
+  @Test
+  public void test_pushTaskPayload()
+  {
+    Assert.assertThrows(NotImplementedException.class,
+        () -> this.pushTaskPayload("id", null)
+    );
+  }
 }
