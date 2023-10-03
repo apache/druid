@@ -47,7 +47,7 @@ public class LoadedSegmentDataProviderFactory
       ChannelCounters channelCounters
   )
   {
-    return new LoadedSegmentDataProviderImpl(
+    return new LoadedSegmentDataProvider(
         dataSource,
         channelCounters,
         serviceClientFactory,
