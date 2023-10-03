@@ -28,11 +28,15 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -46,6 +50,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeThat;
 
 /**
  * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
@@ -116,15 +124,14 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       }
     };
 
-    if ("failingTest".equals(input.type)) {
-      return;
-    }
+    assumeThat(input.type, Matchers.not(TestType.failingTest));
 
-    if ("operatorValidation".equals(input.type)) {
+    if (input.type == TestType.operatorValidation) {
       testBuilder()
           .skipVectorize(true)
           .sql(input.sql)
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              QueryContexts.ENABLE_DEBUG, true))
           .addCustomVerification(QueryVerification.ofResults(results -> {
             if (results.exception != null) {
               throw new RE(results.exception, "Failed to execute because of exception.");
@@ -140,7 +147,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
             // and aggregations=[CountAggregatorFactory{name='w0'}, LongSumAggregatorFactory{fieldName='a0', expression='null', name='w1'}]}}]}
             // These 2 tests are marked as failingTests to unblock testing at this moment
 
-            final WindowOperatorQuery query = (WindowOperatorQuery) results.recordedQueries.get(0);
+            final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
             for (int i = 0; i < input.expectedOperators.size(); ++i) {
               final OperatorFactory expectedOperator = input.expectedOperators.get(i);
               final OperatorFactory actualOperator = query.getOperators().get(i);
@@ -199,6 +206,14 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)
+  {
+    assertEquals(1, queries.size());
+    Object query = queries.get(0);
+    assertTrue(query instanceof WindowOperatorQuery);
+    return (WindowOperatorQuery) query;
+  }
+
   private void maybeDumpActualResults(
       Function<Object, String> toStrFn, List<Object[]> results
   )
@@ -212,8 +227,13 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   public static class WindowQueryTestInputClass
   {
+    enum TestType
+    {
+      failingTest,
+      operatorValidation
+    }
     @JsonProperty
-    public String type;
+    public TestType type;
 
     @JsonProperty
     public String sql;

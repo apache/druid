@@ -42,11 +42,11 @@ spec:
               value: "/tmp"
             - name: "TASK_ID"
               value: "id"
+            - name: "LOAD_BROADCAST_SEGMENTS"
+              value: "false"
             - name: "TASK_JSON"
               valueFrom:
                 fieldRef:
                   fieldPath: "metadata.annotations['task']"
-            - name: "LOAD_BROADCAST_SEGMENTS"
-              value: "false"
           image: one
           name: primary
