@@ -576,7 +576,11 @@ public class DruidQuery
           rowSignature,
           virtualColumnRegistry,
           rexBuilder,
-          partialQuery.getSelectProject(),
+          InputAccessorXYZ.buildFor(
+              rexBuilder,
+              rowSignature,
+              partialQuery.getSelectProject(),
+              null),
           aggregations,
           aggName,
           aggCall,

@@ -32,6 +32,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessorXYZ;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -58,7 +59,7 @@ public class GroupByRules
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
-      final Project project,
+      final InputAccessorXYZ inputAccessorXYZ,
       final List<Aggregation> existingAggregations,
       final String name,
       final AggregateCall call,
@@ -74,11 +75,7 @@ public class GroupByRules
     if (call.filterArg >= 0) {
       // AGG(xxx) FILTER(WHERE yyy)
 
-      final RexNode expression = Expressions.fromFieldAccess(
-            rexBuilder.getTypeFactory(),
-            rowSignature,
-            project,
-            call.filterArg);
+      final RexNode expression = inputAccessorXYZ.getField(call.filterArg);
 
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
@@ -141,7 +138,7 @@ public class GroupByRules
         rexBuilder,
         name,
         call,
-        project,
+        inputAccessorXYZ.getProject(),
         existingAggregationsWithSameFilter,
         finalizeAggregations
     );

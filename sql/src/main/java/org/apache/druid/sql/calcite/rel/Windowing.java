@@ -177,7 +177,11 @@ public class Windowing
               sourceRowSignature,
               null,
               rexBuilder,
-              partialQuery.getSelectProject(),
+              InputAccessorXYZ.buildFor(
+                  rexBuilder,
+                  sourceRowSignature,
+                  partialQuery.getSelectProject(),
+                  window.constants),
               Collections.emptyList(),
               aggName,
               aggregateCall,
