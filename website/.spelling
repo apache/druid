@@ -1130,6 +1130,7 @@ simpleJson
 dimensionSpec
 flattenSpec
 binaryAsString
+replaceMissingValueWith
 sslFactory
 sslMode
 Proto

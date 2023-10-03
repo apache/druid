@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 
 import java.io.IOException;
 
@@ -31,4 +32,10 @@ public interface TaskAdapter
 
   Task toTask(Job from) throws IOException;
 
+  K8sTaskId getTaskId(Job from);
+
+  /**
+   * Method for exposing to external classes whether the task has its task payload bundled by the adapter or relies on a external system
+   */
+  boolean shouldUseDeepStorageForTaskPayload(Task task) throws IOException;
 }

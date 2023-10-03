@@ -129,7 +129,8 @@ public class DruidPeonClientIntegrationTest
         taskConfig,
         startupLoggingConfig,
         druidNode,
-        jsonMapper
+        jsonMapper,
+        null
     );
     String taskBasePath = "/home/taskDir";
     PeonCommandContext context = new PeonCommandContext(Collections.singletonList(

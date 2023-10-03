@@ -220,9 +220,7 @@ public class CalciteTests
       null
   );
 
-  public static final Injector INJECTOR = new CalciteTestInjectorBuilder()
-      .withDefaultMacroTable()
-      .build();
+  public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
 
   private CalciteTests()
   {
@@ -318,7 +316,7 @@ public class CalciteTests
 
   public static ExprMacroTable createExprMacroTable()
   {
-    return QueryFrameworkUtils.createExprMacroTable(INJECTOR);
+    return INJECTOR.getInstance(ExprMacroTable.class);
   }
 
   public static JoinableFactoryWrapper createJoinableFactoryWrapper()

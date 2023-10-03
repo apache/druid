@@ -46,6 +46,10 @@ import java.io.IOException;
 
 public class MaterializedViewQueryTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private DataSourceOptimizer optimizer;
 
