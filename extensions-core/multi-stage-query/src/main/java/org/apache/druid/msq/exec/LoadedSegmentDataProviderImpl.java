@@ -144,7 +144,7 @@ public class LoadedSegmentDataProviderImpl implements LoadedSegmentDataProvider
       return statusSequencePair;
     }
     catch (Exception e) {
-      log.error("Exception while fetching rows from dataservers.");
+      log.error(e, "Exception while fetching rows for query[%s] from dataservers[%s].", query, servers);
       throw new IOE(e, "Exception while fetching rows from dataservers.");
     }
   }

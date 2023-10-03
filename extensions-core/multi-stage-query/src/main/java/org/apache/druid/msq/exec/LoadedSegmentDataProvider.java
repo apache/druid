@@ -42,7 +42,6 @@ public interface LoadedSegmentDataProvider
   enum DataServerQueryStatus
   {
     SUCCESS,
-    HANDOFF,
-    FAILED
+    HANDOFF
   }
 }
