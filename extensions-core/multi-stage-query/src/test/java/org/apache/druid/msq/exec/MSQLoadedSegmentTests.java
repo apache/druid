@@ -96,8 +96,8 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   public void testSelectWithLoadedSegmentsOnFoo() throws IOException
   {
     RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
                                                .add("dim1", ColumnType.STRING)
-                                               .add("dim2", ColumnType.STRING)
                                                .build();
 
     doReturn(
@@ -106,8 +106,8 @@ public class MSQLoadedSegmentTests extends MSQTestBase
             Yielders.each(
                 Sequences.simple(
                     ImmutableList.of(
-                        new Object[]{"5", "qwe"},
-                        new Object[]{"123", "tyu"}
+                        new Object[]{1L, "qwe"},
+                        new Object[]{1L, "tyu"}
                     )
                 )
             )
@@ -117,14 +117,14 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         .fetchRowsFromDataServer(any(), any(), any(), any(), any());
 
     testSelectQuery()
-        .setSql("select dim1, dim2 from foo")
+        .setSql("select cnt, dim1 from foo")
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(
                        newScanQueryBuilder()
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
-                           .columns("dim1", "dim2")
+                           .columns("cnt", "dim1")
                            .context(defaultScanQueryContext(REALTIME_QUERY_CTX, resultSignature))
                            .build()
                    )
@@ -136,14 +136,14 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         .setQueryContext(REALTIME_QUERY_CTX)
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{"", "a"},
-            new Object[]{"5", "qwe"},
-            new Object[]{"10.1", null},
-            new Object[]{"123", "tyu"},
-            new Object[]{"2", ""},
-            new Object[]{"1", "a"},
-            new Object[]{"def", "abc"},
-            new Object[]{"abc", null}
+            new Object[]{1L, ""},
+            new Object[]{1L, "qwe"},
+            new Object[]{1L, "10.1"},
+            new Object[]{1L, "tyu"},
+            new Object[]{1L, "2"},
+            new Object[]{1L, "1"},
+            new Object[]{1L, "def"},
+            new Object[]{1L, "abc"}
         ))
         .verifyResults();
   }
