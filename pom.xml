@@ -707,9 +707,9 @@
                 <version>3.3.6</version>
             </dependency>
             <dependency>
-                <groupId>net.spy</groupId>
-                <artifactId>spymemcached</artifactId>
-                <version>2.12.3</version>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>elasticache-java-cluster-client</artifactId>
+                <version>1.2.0</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>

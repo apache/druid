@@ -1616,13 +1616,13 @@ libraries:
 
 ---
 
-name: Spymemcached
+name: aws-elasticache-cluster-client-memcached-for-java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.3
+version: 1.2.0
 libraries:
-  - net.spy: spymemcached
+  - com.amazonaws: elasticache-java-cluster-client
 
 ---
 
