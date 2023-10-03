@@ -30,6 +30,8 @@ import javax.annotation.Nullable;
 
 /**
  * Reads the fields created by the {@link NumericFieldWriter}. See the Javadoc for the writer for format details
+ *
+ * @see NumericFieldWriter
  */
 public abstract class NumericFieldReader implements FieldReader
 {
@@ -81,21 +83,34 @@ public abstract class NumericFieldReader implements FieldReader
     return true;
   }
 
+  /**
+   * Creates a column value selector for the element written at fieldPointer's position in the memory.
+   * The nullilty check is handled by the nullIndicatorByte
+   */
   public abstract ColumnValueSelector<?> getColumnValueSelector(
       Memory memory,
       ReadableFieldPointer fieldPointer,
       byte nullIndicatorByte
   );
 
+  /**
+   * {@link ValueType} of the inheritor's element
+   */
   public abstract ValueType getValueType();
 
+  /**
+   * Helper class which allows the inheritors to fetch the nullity of the field located at fieldPointer's position in
+   * the dataRegion.
+   *
+   * The implementations of the column value selectors returned by the {@link #getColumnValueSelector} can inherit this
+   * class and call {@link #_isNull()} in their {@link ColumnValueSelector#isNull()} to offload the responsibility of
+   * detecting null elements to this Selector, instead of reworking the null handling
+   */
   public abstract static class Selector
   {
-
     private final Memory dataRegion;
     private final ReadableFieldPointer fieldPointer;
     private final byte nullIndicatorByte;
-
 
     public Selector(
         final Memory dataRegion,

@@ -22,13 +22,9 @@ package org.apache.druid.frame.field;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Reader class for the fields written by {@link NumericArrayFieldWriter}. See the Javadoc for the writer for more
@@ -61,131 +57,4 @@ public abstract class NumericArrayFieldReader implements FieldReader
     return true;
   }
 
-  public abstract static class Selector<T extends Number> implements ColumnValueSelector
-  {
-    private final Memory memory;
-    private final ReadableFieldPointer fieldPointer;
-
-    private long currentFieldPosition = -1;
-
-    private final List<T> currentRow = new ArrayList<>();
-    private boolean currentRowIsNull;
-
-    public Selector(final Memory memory, final ReadableFieldPointer fieldPointer)
-    {
-      this.memory = memory;
-      this.fieldPointer = fieldPointer;
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-
-    }
-
-    @Nullable
-    @Override
-    public Object getObject()
-    {
-      final List<T> currentArray = computeCurrentArray();
-
-      if (currentArray == null) {
-        return null;
-      }
-
-      return currentArray.toArray();
-    }
-
-    @Override
-    public Class classOfObject()
-    {
-      return Object.class;
-    }
-
-    @Override
-    public double getDouble()
-    {
-      return 0;
-    }
-
-    @Override
-    public float getFloat()
-    {
-      return 0;
-    }
-
-    @Override
-    public long getLong()
-    {
-      return 0;
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      long position = fieldPointer.position();
-      final byte firstByte = memory.getByte(position);
-      return firstByte == NumericArrayFieldWriter.NULL_ROW;
-    }
-
-    @Nullable
-    public abstract T getIndividualValueAtMemory(Memory memory, long position);
-
-    public abstract int getIndividualFieldSize();
-
-    @Nullable
-    private List<T> computeCurrentArray()
-    {
-      final long fieldPosition = fieldPointer.position();
-
-      if (fieldPosition != currentFieldPosition) {
-        updateCurrentArray(fieldPosition);
-      }
-
-      this.currentFieldPosition = fieldPosition;
-
-      if (currentRowIsNull) {
-        return null;
-      }
-      return currentRow;
-
-    }
-
-    private void updateCurrentArray(final long fieldPosition)
-    {
-      currentRow.clear();
-      currentRowIsNull = false;
-
-      long position = fieldPosition;
-      long limit = memory.getCapacity();
-
-      if (isNull()) {
-        currentRowIsNull = true;
-        return;
-      }
-
-      // Adding a check here to prevent the position from potentially overflowing
-      if (position < limit) {
-        position++;
-      }
-
-      boolean rowTerminatorSeen = false;
-
-      while (position < limit) {
-        final byte kind = memory.getByte(position);
-
-        if (kind == NumericArrayFieldWriter.ARRAY_TERMINATOR) {
-          rowTerminatorSeen = true;
-          break;
-        }
-
-        currentRow.add(getIndividualValueAtMemory(memory, position));
-        position += getIndividualFieldSize();
-      }
-
-      if (!rowTerminatorSeen) {
-        throw DruidException.defensive("Unexpected end of field");
-      }
-    }
-  }
 }

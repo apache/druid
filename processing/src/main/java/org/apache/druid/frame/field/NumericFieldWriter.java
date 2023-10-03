@@ -43,6 +43,8 @@ import org.apache.druid.segment.BaseNullableColumnValueSelector;
  * while the array's element's writers used 0x01 and 0x02 to denote null and non-null byte respectively
  *
  * Values produced by the writer are sortable without decoding
+ *
+ * @see NumericArrayFieldWriter for examples of how this class serializes the field for numeric arrays
  */
 public abstract class NumericFieldWriter implements FieldWriter
 {

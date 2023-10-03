@@ -35,7 +35,7 @@ public class LongArrayFieldReader extends NumericArrayFieldReader
       ReadableFieldPointer fieldPointer
   )
   {
-    return new NumericArrayFieldReader.Selector<Long>(memory, fieldPointer)
+    return new NumericArrayFieldSelector<Long>(memory, fieldPointer)
     {
 
       @Nullable

@@ -35,7 +35,7 @@ public class DoubleArrayFieldReader extends NumericArrayFieldReader
       ReadableFieldPointer fieldPointer
   )
   {
-    return new Selector<Double>(memory, fieldPointer)
+    return new NumericArrayFieldSelector<Double>(memory, fieldPointer)
     {
 
       @Nullable

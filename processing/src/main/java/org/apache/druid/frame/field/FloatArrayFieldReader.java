@@ -35,7 +35,7 @@ public class FloatArrayFieldReader extends NumericArrayFieldReader
       ReadableFieldPointer fieldPointer
   )
   {
-    return new Selector<Float>(memory, fieldPointer)
+    return new NumericArrayFieldSelector<Float>(memory, fieldPointer)
     {
 
       @Nullable
