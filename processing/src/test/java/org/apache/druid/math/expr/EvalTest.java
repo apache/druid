@@ -99,6 +99,21 @@ public class EvalTest extends InitializedNullHandlingTest
       Assert.assertTrue(evalDouble("2.0 == 2.0", bindings) > 0.0);
       Assert.assertTrue(evalDouble("2.0 != 1.0", bindings) > 0.0);
 
+      Assert.assertEquals(1L, evalLong("notdistinctfrom(2.0, 2.0)", bindings));
+      Assert.assertEquals(1L, evalLong("isdistinctfrom(2.0, 1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("notdistinctfrom(2.0, 1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("isdistinctfrom(2.0, 2.0)", bindings));
+
+      Assert.assertEquals(0L, evalLong("istrue(0.0)", bindings));
+      Assert.assertEquals(1L, evalLong("isfalse(0.0)", bindings));
+      Assert.assertEquals(1L, evalLong("nottrue(0.0)", bindings));
+      Assert.assertEquals(0L, evalLong("notfalse(0.0)", bindings));
+
+      Assert.assertEquals(1L, evalLong("istrue(1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("isfalse(1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("nottrue(1.0)", bindings));
+      Assert.assertEquals(1L, evalLong("notfalse(1.0)", bindings));
+
       Assert.assertTrue(evalDouble("!-1.0", bindings) > 0.0);
       Assert.assertTrue(evalDouble("!0.0", bindings) > 0.0);
       Assert.assertFalse(evalDouble("!2.0", bindings) > 0.0);
@@ -120,6 +135,21 @@ public class EvalTest extends InitializedNullHandlingTest
       Assert.assertEquals(1L, evalLong("2.0 <= 2.0", bindings));
       Assert.assertEquals(1L, evalLong("2.0 == 2.0", bindings));
       Assert.assertEquals(1L, evalLong("2.0 != 1.0", bindings));
+
+      Assert.assertEquals(1L, evalLong("notdistinctfrom(2.0, 2.0)", bindings));
+      Assert.assertEquals(1L, evalLong("isdistinctfrom(2.0, 1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("notdistinctfrom(2.0, 1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("isdistinctfrom(2.0, 2.0)", bindings));
+
+      Assert.assertEquals(0L, evalLong("istrue(0.0)", bindings));
+      Assert.assertEquals(1L, evalLong("isfalse(0.0)", bindings));
+      Assert.assertEquals(1L, evalLong("nottrue(0.0)", bindings));
+      Assert.assertEquals(0L, evalLong("notfalse(0.0)", bindings));
+
+      Assert.assertEquals(1L, evalLong("istrue(1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("isfalse(1.0)", bindings));
+      Assert.assertEquals(0L, evalLong("nottrue(1.0)", bindings));
+      Assert.assertEquals(1L, evalLong("notfalse(1.0)", bindings));
 
       Assert.assertEquals(1L, evalLong("!-1.0", bindings));
       Assert.assertEquals(1L, evalLong("!0.0", bindings));
@@ -166,6 +196,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertTrue(evalLong("9223372036854775807 <= 9223372036854775807", bindings) > 0);
     Assert.assertTrue(evalLong("9223372036854775807 == 9223372036854775807", bindings) > 0);
     Assert.assertTrue(evalLong("9223372036854775807 != 9223372036854775806", bindings) > 0);
+    Assert.assertTrue(evalLong("notdistinctfrom(9223372036854775807, 9223372036854775807)", bindings) > 0);
+    Assert.assertTrue(evalLong("isdistinctfrom(9223372036854775807, 9223372036854775806)", bindings) > 0);
 
     assertEquals(9223372036854775807L, evalLong("9223372036854775806 + 1", bindings));
     assertEquals(9223372036854775806L, evalLong("9223372036854775807 - 1", bindings));
@@ -199,6 +231,192 @@ public class EvalTest extends InitializedNullHandlingTest
         eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString()
     );
     assertEquals("x", eval("nvl(if(x == 9223372036854775806, '', 'x'), 'NULL')", bindings).asString());
+  }
+
+  @Test
+  public void testIsNotDistinctFrom()
+  {
+    assertEquals(
+        1L,
+        new Function.IsNotDistinctFromFunc()
+            .apply(
+                ImmutableList.of(
+                    new NullLongExpr(),
+                    new NullLongExpr()
+                ),
+                InputBindings.nilBindings()
+            )
+            .value()
+    );
+
+    assertEquals(
+        0L,
+        new Function.IsNotDistinctFromFunc()
+            .apply(
+                ImmutableList.of(
+                    new LongExpr(0L),
+                    new NullLongExpr()
+                ),
+                InputBindings.nilBindings()
+            )
+            .value()
+    );
+
+    assertEquals(
+        1L,
+        new Function.IsNotDistinctFromFunc()
+            .apply(
+                ImmutableList.of(
+                    new LongExpr(0L),
+                    new LongExpr(0L)
+                ),
+                InputBindings.nilBindings()
+            )
+            .value()
+    );
+  }
+
+  @Test
+  public void testIsDistinctFrom()
+  {
+    assertEquals(
+        0L,
+        new Function.IsDistinctFromFunc()
+            .apply(
+                ImmutableList.of(
+                    new NullLongExpr(),
+                    new NullLongExpr()
+                ),
+                InputBindings.nilBindings()
+            )
+            .value()
+    );
+
+    assertEquals(
+        1L,
+        new Function.IsDistinctFromFunc()
+            .apply(
+                ImmutableList.of(
+                    new LongExpr(0L),
+                    new NullLongExpr()
+                ),
+                InputBindings.nilBindings()
+            )
+            .value()
+    );
+
+    assertEquals(
+        0L,
+        new Function.IsDistinctFromFunc()
+            .apply(
+                ImmutableList.of(
+                    new LongExpr(0L),
+                    new LongExpr(0L)
+                ),
+                InputBindings.nilBindings()
+            )
+            .value()
+    );
+  }
+
+  @Test
+  public void testIsFalse()
+  {
+    assertEquals(
+        0L,
+        new Function.IsFalseFunc()
+            .apply(ImmutableList.of(new NullLongExpr()), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        1L,
+        new Function.IsFalseFunc()
+            .apply(ImmutableList.of(new LongExpr(0L)), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        0L,
+        new Function.IsFalseFunc()
+            .apply(ImmutableList.of(new LongExpr(1L)), InputBindings.nilBindings())
+            .value()
+    );
+  }
+
+  @Test
+  public void testIsTrue()
+  {
+    assertEquals(
+        0L,
+        new Function.IsTrueFunc()
+            .apply(ImmutableList.of(new NullLongExpr()), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        0L,
+        new Function.IsTrueFunc()
+            .apply(ImmutableList.of(new LongExpr(0L)), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        1L,
+        new Function.IsTrueFunc()
+            .apply(ImmutableList.of(new LongExpr(1L)), InputBindings.nilBindings())
+            .value()
+    );
+  }
+
+  @Test
+  public void testIsNotFalse()
+  {
+    assertEquals(
+        1L,
+        new Function.IsNotFalseFunc()
+            .apply(ImmutableList.of(new NullLongExpr()), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        0L,
+        new Function.IsNotFalseFunc()
+            .apply(ImmutableList.of(new LongExpr(0L)), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        1L,
+        new Function.IsNotFalseFunc()
+            .apply(ImmutableList.of(new LongExpr(1L)), InputBindings.nilBindings())
+            .value()
+    );
+  }
+
+  @Test
+  public void testIsNotTrue()
+  {
+    assertEquals(
+        1L,
+        new Function.IsNotTrueFunc()
+            .apply(ImmutableList.of(new NullLongExpr()), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        1L,
+        new Function.IsNotTrueFunc()
+            .apply(ImmutableList.of(new LongExpr(0L)), InputBindings.nilBindings())
+            .value()
+    );
+
+    assertEquals(
+        0L,
+        new Function.IsNotTrueFunc()
+            .apply(ImmutableList.of(new LongExpr(1L)), InputBindings.nilBindings())
+            .value()
+    );
   }
 
   @Test
@@ -1031,6 +1249,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(1L, eval("['a','b',null,'c'] >= stringArray", bindings).value());
     Assert.assertEquals(1L, eval("['a','b',null,'c'] == stringArray", bindings).value());
     Assert.assertEquals(0L, eval("['a','b',null,'c'] != stringArray", bindings).value());
+    Assert.assertEquals(1L, eval("notdistinctfrom(['a','b',null,'c'], stringArray)", bindings).value());
+    Assert.assertEquals(0L, eval("isdistinctfrom(['a','b',null,'c'], stringArray)", bindings).value());
     Assert.assertEquals(1L, eval("['a','b',null,'c'] <= stringArray", bindings).value());
     Assert.assertEquals(0L, eval("['a','b',null,'c'] < stringArray", bindings).value());
 
@@ -1038,6 +1258,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(1L, eval("[1,null,2,3] >= longArray", bindings).value());
     Assert.assertEquals(1L, eval("[1,null,2,3] == longArray", bindings).value());
     Assert.assertEquals(0L, eval("[1,null,2,3] != longArray", bindings).value());
+    Assert.assertEquals(1L, eval("notdistinctfrom([1,null,2,3], longArray)", bindings).value());
+    Assert.assertEquals(0L, eval("isdistinctfrom([1,null,2,3], longArray)", bindings).value());
     Assert.assertEquals(1L, eval("[1,null,2,3] <= longArray", bindings).value());
     Assert.assertEquals(0L, eval("[1,null,2,3] < longArray", bindings).value());
 
@@ -1045,6 +1267,8 @@ public class EvalTest extends InitializedNullHandlingTest
     Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] >= doubleArray", bindings).value());
     Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] == doubleArray", bindings).value());
     Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] != doubleArray", bindings).value());
+    Assert.assertEquals(1L, eval("notdistinctfrom([1.1,2.2,3.3,null], doubleArray)", bindings).value());
+    Assert.assertEquals(0L, eval("isdistinctfrom([1.1,2.2,3.3,null], doubleArray)", bindings).value());
     Assert.assertEquals(1L, eval("[1.1,2.2,3.3,null] <= doubleArray", bindings).value());
     Assert.assertEquals(0L, eval("[1.1,2.2,3.3,null] < doubleArray", bindings).value());
   }

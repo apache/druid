@@ -141,6 +141,35 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
     for (Long aLong : LONGS) {
       writer.write(aLong);
     }
+    Iterator<Long> longIterator = writer.getIterator();
+    int ctr = 0;
+    int totalCount = withNull ? 1 + LONGS.length : LONGS.length;
+    for (int i = 0; i < totalCount; i++) {
+      if (withNull) {
+        if (i == 0) {
+          Assert.assertNull(writer.get(i));
+        } else {
+          Assert.assertEquals(" index: " + i, LONGS[i - 1], writer.get(i));
+        }
+      } else {
+        Assert.assertEquals(" index: " + i, LONGS[i], writer.get(i));
+      }
+    }
+    while (longIterator.hasNext()) {
+      if (withNull) {
+        if (ctr == 0) {
+          Assert.assertNull(longIterator.next());
+          Assert.assertNull(writer.get(ctr));
+        } else {
+          Assert.assertEquals(LONGS[ctr - 1], longIterator.next());
+          Assert.assertEquals(LONGS[ctr - 1], writer.get(ctr));
+        }
+      } else {
+        Assert.assertEquals(LONGS[ctr], longIterator.next());
+        Assert.assertEquals(LONGS[ctr], writer.get(ctr));
+      }
+      ctr++;
+    }
     WritableByteChannel channel = new WritableByteChannel()
     {
       @Override

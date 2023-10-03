@@ -17,20 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.guice.annotations;
+package org.apache.druid.tasklogs;
 
-import com.google.inject.BindingAnnotation;
+import org.apache.commons.lang.NotImplementedException;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-/**
- */
-@BindingAnnotation
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface CoordinatorIndexingServiceDuty
+public class TaskPayloadManagerTest implements TaskPayloadManager
 {
+  @Test
+  public void test_streamTaskPayload()
+  {
+    Assert.assertThrows(NotImplementedException.class,
+        () -> this.streamTaskPayload("id")
+    );
+  }
+
+  @Test
+  public void test_pushTaskPayload()
+  {
+    Assert.assertThrows(NotImplementedException.class,
+        () -> this.pushTaskPayload("id", null)
+    );
+  }
 }

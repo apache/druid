@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -87,6 +88,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -372,6 +374,87 @@ public class QueryResourceTest
     Assert.assertEquals(
         overrideConfigValue,
         testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
+    );
+  }
+
+
+  @Test
+  public void testQueryThrowsRuntimeExceptionFromLifecycleExecute() throws IOException
+  {
+    String embeddedExceptionMessage = "Embedded Exception Message!";
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    QuerySegmentWalker querySegmentWalker = new QuerySegmentWalker()
+    {
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForIntervals(
+          Query<T> query,
+          Iterable<Interval> intervals
+      )
+      {
+        throw new RuntimeException("something", new RuntimeException(embeddedExceptionMessage));
+      }
+
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForSegments(
+          Query<T> query,
+          Iterable<SegmentDescriptor> specs
+      )
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+
+    queryResource = new QueryResource(
+
+        new QueryLifecycleFactory(null, null, null, null, null, null, null, Suppliers.ofInstance(overrideConfig))
+        {
+          @Override
+          public QueryLifecycle factorize()
+          {
+            return new QueryLifecycle(
+                WAREHOUSE,
+                querySegmentWalker,
+                new DefaultGenericQueryMetricsFactory(),
+                new NoopServiceEmitter(),
+                testRequestLogger,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                overrideConfig,
+                new AuthConfig(),
+                System.currentTimeMillis(),
+                System.nanoTime())
+            {
+              @Override
+              public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
+              {
+                Assert.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
+              }
+            };
+          }
+        },
+        jsonMapper,
+        smileMapper,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    final Response response = expectSynchronousRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+
+    final ErrorResponse entity = (ErrorResponse) response.getEntity();
+    MatcherAssert.assertThat(
+        entity.getUnderlyingException(),
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.RUNTIME_FAILURE, "legacyQueryException")
+            .expectMessageIs("something")
     );
   }
 

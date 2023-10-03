@@ -133,3 +133,35 @@ jobs:
 
       - name: Run IT
         run: ${{ inputs.script }}
+
+      - name: Collect docker logs on failure
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: |
+          mkdir docker-logs
+          for c in $(docker ps -a --format="{{.Names}}")
+          do
+            docker logs $c > ./docker-logs/$c.log
+          done
+
+      - name: Tar docker logs
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: tar cvzf ./docker-logs.tgz ./docker-logs
+
+      - name: Upload docker logs to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        uses: actions/upload-artifact@master
+        with:
+          name: IT-${{ inputs.it }} docker logs (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
+          path: docker-logs.tgz
+
+      - name: Collect service logs on failure
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        run: |
+          tar cvzf ./service-logs.tgz ~/shared/logs
+
+      - name: Upload Druid service logs to GitHub
+        if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
+        uses: actions/upload-artifact@master
+        with:
+          name: IT-${{ inputs.it }} service logs (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
+          path: service-logs.tgz

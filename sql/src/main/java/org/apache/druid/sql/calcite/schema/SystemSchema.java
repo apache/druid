@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
@@ -822,21 +821,7 @@ public class SystemSchema extends AbstractSchema
             public Object[] current()
             {
               final TaskStatusPlus task = it.next();
-              @Nullable final String host = task.getLocation().getHost();
-              @Nullable final String hostAndPort;
 
-              if (host == null) {
-                hostAndPort = null;
-              } else {
-                final int port;
-                if (task.getLocation().getTlsPort() >= 0) {
-                  port = task.getLocation().getTlsPort();
-                } else {
-                  port = task.getLocation().getPort();
-                }
-
-                hostAndPort = HostAndPort.fromParts(host, port).toString();
-              }
               return new Object[]{
                   task.getId(),
                   task.getGroupId(),
@@ -847,8 +832,8 @@ public class SystemSchema extends AbstractSchema
                   toStringOrNull(task.getStatusCode()),
                   toStringOrNull(task.getRunnerStatusCode()),
                   task.getDuration() == null ? 0L : task.getDuration(),
-                  hostAndPort,
-                  host,
+                  task.getLocation().getLocation(),
+                  task.getLocation().getHost(),
                   (long) task.getLocation().getPort(),
                   (long) task.getLocation().getTlsPort(),
                   task.getErrorMsg()

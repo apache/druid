@@ -926,6 +926,15 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testDecodeBase64UTF()
+  {
+    assertExpr("decode_base64_utf8('aGVsbG8=')", "hello");
+    assertExpr("decode_base64_utf8('V2hlbiBhbiBvbmlvbiBpcyBjdXQsIGNlcnRhaW4gKGxhY2hyeW1hdG9yKSBjb21wb3VuZHMgYXJlIHJlbGVhc2VkIGNhdXNpbmcgdGhlIG5lcnZlcyBhcm91bmQgdGhlIGV5ZXMgKGxhY3JpbWFsIGdsYW5kcykgdG8gYmVjb21lIGlycml0YXRlZC4=')", "When an onion is cut, certain (lachrymator) compounds are released causing the nerves around the eyes (lacrimal glands) to become irritated.");
+    assertExpr("decode_base64_utf8('eyJ0ZXN0IjogMX0=')", "{\"test\": 1}");
+    assertExpr("decode_base64_utf8('')", NullHandling.sqlCompatible() ? "" : null);
+  }
+
+  @Test
   public void testComplexDecode()
   {
     TypeStrategiesTest.NullableLongPair expected = new TypeStrategiesTest.NullableLongPair(1L, 2L);
