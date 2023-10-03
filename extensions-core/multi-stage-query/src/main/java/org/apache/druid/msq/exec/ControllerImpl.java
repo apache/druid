@@ -463,14 +463,16 @@ public class ControllerImpl implements Controller
       }
     }
 
+    boolean shouldWaitForSegmentLoad = MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context());
 
     try {
       releaseTaskLocks();
       cleanUpDurableStorageIfNeeded();
 
       if (queryKernel != null && queryKernel.isSuccess()) {
-        if (segmentLoadWaiter != null) {
-          // If successful and there are segments created, segmentLoadWaiter should wait for them to become available.
+        if (shouldWaitForSegmentLoad && segmentLoadWaiter != null) {
+          // If successful, there are segments created and segment load is enabled, segmentLoadWaiter should wait
+          // for them to become available.
           segmentLoadWaiter.waitForSegmentsToLoad();
         }
       }
@@ -1363,15 +1365,17 @@ public class ControllerImpl implements Controller
         }
       } else {
         Set<String> versionsToAwait = segmentsWithTombstones.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
-        segmentLoadWaiter = new SegmentLoadStatusFetcher(
-            context.injector().getInstance(BrokerClient.class),
-            context.jsonMapper(),
-            task.getId(),
-            task.getDataSource(),
-            versionsToAwait,
-            segmentsWithTombstones.size(),
-            true
-        );
+        if (MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context())) {
+          segmentLoadWaiter = new SegmentLoadStatusFetcher(
+              context.injector().getInstance(BrokerClient.class),
+              context.jsonMapper(),
+              task.getId(),
+              task.getDataSource(),
+              versionsToAwait,
+              segmentsWithTombstones.size(),
+              true
+          );
+        }
         performSegmentPublish(
             context.taskActionClient(),
             SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones)
@@ -1379,15 +1383,17 @@ public class ControllerImpl implements Controller
       }
     } else if (!segments.isEmpty()) {
       Set<String> versionsToAwait = segments.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
-      segmentLoadWaiter = new SegmentLoadStatusFetcher(
-          context.injector().getInstance(BrokerClient.class),
-          context.jsonMapper(),
-          task.getId(),
-          task.getDataSource(),
-          versionsToAwait,
-          segments.size(),
-          true
-      );
+      if (MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context())) {
+        segmentLoadWaiter = new SegmentLoadStatusFetcher(
+            context.injector().getInstance(BrokerClient.class),
+            context.jsonMapper(),
+            task.getId(),
+            task.getDataSource(),
+            versionsToAwait,
+            segments.size(),
+            true
+        );
+      }
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
