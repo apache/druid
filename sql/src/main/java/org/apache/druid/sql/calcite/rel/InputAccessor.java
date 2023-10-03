@@ -27,6 +27,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
+import javax.annotation.Nullable;
+
 /**
  * Enables simpler access to input expressions.
  *
@@ -42,8 +44,8 @@ public class InputAccessor
   public static InputAccessor buildFor(
       RexBuilder rexBuilder,
       RowSignature sourceRowSignature,
-      Project project,
-      ImmutableList<RexLiteral> constants)
+      @Nullable Project project,
+      @Nullable ImmutableList<RexLiteral> constants)
   {
     return new InputAccessor(rexBuilder, sourceRowSignature, project, constants);
   }
@@ -61,16 +63,16 @@ public class InputAccessor
 
   }
 
-  public RexNode getField(int filterArg)
+  public RexNode getField(int argIndex)
   {
-    if (filterArg < sourceRowSignature.size()) {
+    if (argIndex < sourceRowSignature.size()) {
       return Expressions.fromFieldAccess(
           rexBuilder.getTypeFactory(),
           sourceRowSignature,
           project,
-          filterArg);
+          argIndex);
     } else {
-      return constants.get(filterArg - sourceRowSignature.size());
+      return constants.get(argIndex - sourceRowSignature.size());
     }
 
   }
