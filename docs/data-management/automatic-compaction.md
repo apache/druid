@@ -162,7 +162,7 @@ To get statistics by API, send a [`GET` request](../api-reference/automatic-comp
 
 ## Examples
 
-The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-strategies). The examples in this section do not change the underlying data.
+The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-guidelines). The examples in this section do not change the underlying data.
 
 ### Change segment granularity
 
