@@ -55,7 +55,7 @@ jobs:
 
       - name: packaging check
         run: |
-          ./.github/scripts/setup_generate_license.sh
+          ./.github/scripts/setup_generate_license.sh && false
           ${MVN} clean install -Prat --fail-at-end \
           -pl '!benchmarks, !distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Dweb.console.skip=false -T1C
           ${MVN} install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end \
@@ -183,3 +183,13 @@ jobs:
           web-console/script/druid start
           (cd web-console && npm run test-e2e)
           web-console/script/druid stop
+
+  retry-on-cancelation:
+    needs: [ static-checks, web-checks, intellij-inspections ]
+    #    if: ${{ always() && contains(needs.*.result, 'cancelled') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print job status
+        env:
+          NEEDS_CONTEXT: ${{ toJson(needs) }}
+          run: echo "$NEEDS_CONTEXT"

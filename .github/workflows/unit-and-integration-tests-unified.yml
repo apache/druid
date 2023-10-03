@@ -141,3 +141,13 @@ jobs:
     needs: unit-tests
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
+
+  retry-on-cancelation:
+    needs: [ build, unit-tests-phase2, unit-tests, standard-its, revised-its ]
+    #    if: ${{ always() && contains(needs.*.result, 'cancelled') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print needs context
+        env:
+          NEEDS_CONTEXT: ${{ toJson(needs) }}
+          run: echo "$NEEDS_CONTEXT"
