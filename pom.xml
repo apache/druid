@@ -129,6 +129,7 @@
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
         <com.google.apis.storage.version>v1-rev20230301-2.0.0</com.google.apis.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
+        <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
         <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
@@ -1674,6 +1675,7 @@
                         <argLine>
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
+                            ${jdk.security.manager.allow.argLine}
                             -Xmx1500m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -1827,6 +1829,19 @@
           </properties>
         </profile>
         <profile>
+            <id>java-12+</id>
+            <activation>
+                <jdk>[12,)</jdk>
+            </activation>
+            <properties>
+                <jdk.security.manager.allow.argLine>
+                  <!-- required for system-rules with Java >= 18 https://github.com/stefanbirkner/system-rules/issues/85 -->
+                  <!-- this option is only available starting in Java 12 -->
+                    -Djava.security.manager=allow
+                </jdk.security.manager.allow.argLine>
+            </properties>
+        </profile>
+        <profile>
             <id>java-9+</id>
             <activation>
                 <jdk>[9,)</jdk>
@@ -1858,8 +1873,6 @@
 
                     <!-- required for certain EqualsVerifier tests (not required in production) -->
                     --add-opens=java.base/java.util=ALL-UNNAMED
-                    <!-- required for system-rules with Java >= 18 https://github.com/stefanbirkner/system-rules/issues/85 -->
-                    -Djava.security.manager=allow
                 </jdk.strong.encapsulation.argLine>
             </properties>
             <build>
