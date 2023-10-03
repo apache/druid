@@ -401,9 +401,14 @@ public class JoinDataSource implements DataSource
                 )
             );
 
+            final Function<SegmentReference, SegmentReference> baseMapFn = left.createSegmentMapFunction(
+                query,
+                cpuTimeAccumulator
+            );
+
             return baseSegment ->
                 new HashJoinSegment(
-                    baseSegment,
+                    baseMapFn.apply(baseSegment),
                     baseFilterToUse,
                     GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
                     joinFilterPreAnalysis

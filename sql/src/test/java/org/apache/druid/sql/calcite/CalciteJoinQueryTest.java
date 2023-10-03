@@ -5689,7 +5689,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       return results;
     }
   }
-  
+
 
   @Test
   public void testJoinsWithUnnestOnLeft()
