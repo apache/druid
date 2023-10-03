@@ -29,8 +29,22 @@ import org.apache.druid.query.Query;
 import java.io.IOException;
 import java.util.function.Function;
 
+/**
+ * Class responsible for querying dataservers and retriving results for a given query. Also queries the coordinator
+ * to check if a segment has been handed off.
+ */
 public interface LoadedSegmentDataProvider
 {
+  /**
+   * Queries a data server and returns a {@link Yielder} for the results, retrying if needed. If a dataserver indicates
+   * that the segment was not found, checks with the coordinator to see if the segment was handed off.
+   * - If the segment was handed off, returns with a {@link DataServerQueryStatus#HANDOFF} status.
+   * - If the segment was not handed off, retries with the known list of servers and throws an exception if the retry
+   * count is exceeded.
+   *
+   * @param <QueryType> result return type for the query from the data server
+   * @param <RowType> type of the result rows after parsing from QueryType object
+   */
   <RowType, QueryType> Pair<DataServerQueryStatus, Yielder<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       RichSegmentDescriptor segmentDescriptor,
@@ -39,9 +53,19 @@ public interface LoadedSegmentDataProvider
       Closer closer
   ) throws IOException;
 
+  /**
+   * Represents the status of fetching a segment from a data server
+   */
   enum DataServerQueryStatus
   {
+    /**
+     * Segment was found on the data server and fetched successfully.
+     */
     SUCCESS,
+    /**
+     * Segment was not found on the realtime server as it has been handed off to a historical. Only returned while
+     * querying a realtime server.
+     */
     HANDOFF
   }
 }

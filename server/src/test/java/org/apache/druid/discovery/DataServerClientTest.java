@@ -57,7 +57,7 @@ public class DataServerClientTest
   DataServerClient target;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     jsonMapper = DruidServiceTestUtils.newJsonMapper();
     serviceClient = new MockServiceClient();

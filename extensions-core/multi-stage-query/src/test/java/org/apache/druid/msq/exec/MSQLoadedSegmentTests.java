@@ -87,7 +87,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
   );
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     loadedSegmentsMetadata.add(new ImmutableSegmentLoadInfo(LOADED_SEGMENT_1, ImmutableSet.of(DATA_SERVER_1)));
   }

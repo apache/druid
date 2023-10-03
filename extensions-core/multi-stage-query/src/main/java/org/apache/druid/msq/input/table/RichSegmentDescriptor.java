@@ -33,14 +33,14 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Like {@link SegmentDescriptor}, but provides both the full interval and the clipped interval for a segment.
- * (SegmentDescriptor only provides the clipped interval.)
+ * Like {@link SegmentDescriptor}, but provides both the full interval and the clipped interval for a segment
+ * (SegmentDescriptor only provides the clipped interval.), as well as the metadata of the servers it is loaded on.
  * <br>
  * To keep the serialized form lightweight, the full interval is only serialized if it is different from the
  * clipped interval.
  * <br>
  * It is possible to deserialize this class as {@link SegmentDescriptor}. However, going the other direction is
- * not a good idea, because the {@link #fullInterval} will not end up being set correctly.
+ * not a good idea, because the {@link #fullInterval} and {@link #servers} will not end up being set correctly.
  */
 public class RichSegmentDescriptor extends SegmentDescriptor
 {
