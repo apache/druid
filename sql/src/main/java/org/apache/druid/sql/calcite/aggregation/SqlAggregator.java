@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -62,6 +63,28 @@ public interface SqlAggregator
    * @return aggregation, or null if the call cannot be translated
    */
   @Nullable
+  default Aggregation toDruidAggregation(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
+      RexBuilder rexBuilder,
+      String name,
+      AggregateCall aggregateCall,
+      InputAccessor inputAccessor,
+      List<Aggregation> existingAggregations,
+      boolean finalizeAggregations
+  ) {
+    return toDruidAggregation(plannerContext,
+        rowSignature,
+        virtualColumnRegistry,
+        rexBuilder,
+        name,
+        aggregateCall,
+        inputAccessor.getProject(),
+        existingAggregations,
+        finalizeAggregations);
+  }
+
   Aggregation toDruidAggregation(
       PlannerContext plannerContext,
       RowSignature rowSignature,

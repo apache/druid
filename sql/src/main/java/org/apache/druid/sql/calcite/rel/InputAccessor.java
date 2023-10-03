@@ -27,9 +27,13 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
+/**
+ * Enables simpler access to input expressions.
+ *
+ * In case of aggregates it provides the constants transparently for aggregates.
+ */
 public class InputAccessor
 {
-
   private final Project project;
   private final ImmutableList<RexLiteral> constants;
   private final RexBuilder rexBuilder;

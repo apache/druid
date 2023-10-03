@@ -137,7 +137,7 @@ public class GroupByRules
         rexBuilder,
         name,
         call,
-        inputAccessor.getProject(),
+        inputAccessor,
         existingAggregationsWithSameFilter,
         finalizeAggregations
     );
