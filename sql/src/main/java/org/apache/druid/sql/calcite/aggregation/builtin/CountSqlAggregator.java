@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -108,7 +107,6 @@ public class CountSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    Project project = inputAccessor.getProject();
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
         rexBuilder,
         plannerContext,
@@ -135,7 +133,7 @@ public class CountSqlAggregator implements SqlAggregator
             rexBuilder,
             name,
             aggregateCall,
-            project,
+            inputAccessor,
             existingAggregations,
             finalizeAggregations
         );
