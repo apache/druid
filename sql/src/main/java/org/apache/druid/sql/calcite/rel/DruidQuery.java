@@ -576,7 +576,7 @@ public class DruidQuery
           rowSignature,
           virtualColumnRegistry,
           rexBuilder,
-          InputAccessorXYZ.buildFor(
+          InputAccessor.buildFor(
               rexBuilder,
               rowSignature,
               partialQuery.getSelectProject(),

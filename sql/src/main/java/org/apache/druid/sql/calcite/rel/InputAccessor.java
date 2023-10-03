@@ -27,7 +27,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
-public class InputAccessorXYZ
+public class InputAccessor
 {
 
   private final Project project;
@@ -35,16 +35,16 @@ public class InputAccessorXYZ
   private final RexBuilder rexBuilder;
   private final RowSignature sourceRowSignature;
 
-  public static InputAccessorXYZ buildFor(
+  public static InputAccessor buildFor(
       RexBuilder rexBuilder,
       RowSignature sourceRowSignature,
       Project project,
       ImmutableList<RexLiteral> constants)
   {
-    return new InputAccessorXYZ(rexBuilder, sourceRowSignature, project, constants);
+    return new InputAccessor(rexBuilder, sourceRowSignature, project, constants);
   }
 
-  private InputAccessorXYZ(
+  private InputAccessor(
       RexBuilder rexBuilder,
       RowSignature sourceRowSignature,
       Project project,

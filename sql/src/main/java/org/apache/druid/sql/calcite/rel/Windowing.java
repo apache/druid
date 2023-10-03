@@ -177,7 +177,7 @@ public class Windowing
               sourceRowSignature,
               null,
               rexBuilder,
-              InputAccessorXYZ.buildFor(
+              InputAccessor.buildFor(
                   rexBuilder,
                   sourceRowSignature,
                   partialQuery.getSelectProject(),
