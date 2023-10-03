@@ -34,6 +34,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -58,9 +59,9 @@ public class GroupingSqlAggregator implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
-      List<Aggregation> existingAggregations,
-      boolean finalizeAggregations
+      final InputAccessor inputAccessor,
+      final List<Aggregation> existingAggregations,
+      final boolean finalizeAggregations
   )
   {
     List<String> arguments = aggregateCall.getArgList()
@@ -68,7 +69,7 @@ public class GroupingSqlAggregator implements SqlAggregator
                                           .map(i -> getColumnName(
                                               plannerContext,
                                               rowSignature,
-                                              project,
+                                              inputAccessor.getProject(),
                                               virtualColumnRegistry,
                                               rexBuilder.getTypeFactory(),
                                               i
