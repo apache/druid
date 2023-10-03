@@ -28,6 +28,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -62,6 +63,29 @@ public class Aggregations
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final AggregateCall call,
+      @Nullable final InputAccessor inputAccessor
+  )
+  {
+    final List<DruidExpression> args = call
+        .getArgList()
+        .stream()
+        .map(i -> inputAccessor.getField(i))
+        .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, rowSignature, rexNode))
+        .collect(Collectors.toList());
+
+    if (args.stream().noneMatch(Objects::isNull)) {
+      return args;
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
+  public static List<DruidExpression> getArgumentsForSimpleAggregator(
+      final RexBuilder rexBuilder,
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final AggregateCall call,
       @Nullable final Project project
   )
   {
@@ -78,6 +102,7 @@ public class Aggregations
       return null;
     }
   }
+
 
   /**
    * Translate a Calcite {@link RexNode} to a Druid expression for the aggregators that require numeric type inputs.

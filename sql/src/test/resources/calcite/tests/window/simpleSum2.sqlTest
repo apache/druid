@@ -7,25 +7,21 @@ sql: |
   FROM foo
 
 expectedOperators:
-  - type: "naiveSort"
-    columns:
-      - column: dim1
-        direction: ASC
   - type: naivePartition
     partitionColumns: []
   - type: "window"
     processor:
-      type: "rank"
-      group: [ "dim1" ]
-      outputColumn: w0
-      asPercent: false
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - { type: "count", name: "w0" }
 
 expectedResults:
-  - [ 946684800000, 1, 1 ]
-  - [ 946771200000, 1, 2 ]
-  - [ 946857600000, 1, 3 ]
-  - [ 978307200000, 1, 4 ]
-  - [ 978393600000, 1, 5 ]
-  - [ 978480000000, 1, 6 ]
+  - ["",6]
+  - ["10.1",6]
+  - ["2",6]
+  - ["1",6]
+  - ["def",6]
+  - ["abc",6]
 
   

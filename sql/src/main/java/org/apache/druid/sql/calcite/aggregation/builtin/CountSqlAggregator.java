@@ -70,15 +70,10 @@ public class CountSqlAggregator implements SqlAggregator
       final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final AggregateCall aggregateCall,
-      final Project project
+      final InputAccessor inputAccessor
   )
   {
-    final RexNode rexNode = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        Iterables.getOnlyElement(aggregateCall.getArgList())
-    );
+    final RexNode rexNode = inputAccessor.getField(Iterables.getOnlyElement(aggregateCall.getArgList()));
 
     if (rexNode.getType().isNullable()) {
       final DimFilter nonNullFilter = Expressions.toFilter(
@@ -119,13 +114,14 @@ public class CountSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         aggregateCall,
-        project
+        inputAccessor
     );
 
     if (args == null) {
       return null;
     }
 
+    // FIXME: is-all-literal
     if (args.isEmpty()) {
       // COUNT(*)
       return Aggregation.create(new CountAggregatorFactory(name));
@@ -156,7 +152,7 @@ public class CountSqlAggregator implements SqlAggregator
             virtualColumnRegistry,
             rexBuilder,
             aggregateCall,
-            project
+            inputAccessor
       );
 
       return Aggregation.create(theCount);

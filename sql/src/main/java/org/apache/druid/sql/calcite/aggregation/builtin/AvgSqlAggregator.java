@@ -41,6 +41,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -89,7 +90,7 @@ public class AvgSqlAggregator implements SqlAggregator
         virtualColumnRegistry,
         rexBuilder,
         aggregateCall,
-        project
+        InputAccessor.buildFor(rexBuilder, rowSignature, project, null)
     );
 
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
