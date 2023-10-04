@@ -25,6 +25,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.DecoupledIgnore.DecoupledIgnoreProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.junit.Ignore;
 import org.junit.Rule;
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
