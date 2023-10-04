@@ -401,10 +401,15 @@ public class JoinDataSource implements DataSource
                 )
             );
 
-            final Function<SegmentReference, SegmentReference> baseMapFn = left.createSegmentMapFunction(
-                query,
-                cpuTimeAccumulator
-            );
+            final Function<SegmentReference, SegmentReference> baseMapFn;
+            if (left instanceof JoinDataSource) {
+              baseMapFn = Function.identity();
+            } else {
+              baseMapFn = left.createSegmentMapFunction(
+                  query,
+                  cpuTimeAccumulator
+              );
+            }
 
             return baseSegment ->
                 new HashJoinSegment(
@@ -509,32 +514,32 @@ public class JoinDataSource implements DataSource
     DimFilter currentDimFilter = null;
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
-    while (current instanceof JoinDataSource) {
-      final JoinDataSource joinDataSource = (JoinDataSource) current;
-      current = joinDataSource.getLeft();
-      currentDimFilter = validateLeftFilter(current, joinDataSource.getLeftFilter());
-      preJoinableClauses.add(
-          new PreJoinableClause(
-              joinDataSource.getRightPrefix(),
-              joinDataSource.getRight(),
-              joinDataSource.getJoinType(),
-              joinDataSource.getConditionAnalysis()
-          )
-      );
+    // There can be queries like
+    // Join of Unnest of Join of Unnest of Filter
+    // so these checks are needed to be ORed
+    // to get the base
+    while (current instanceof JoinDataSource || current instanceof UnnestDataSource || current instanceof FilteredDataSource) {
+      if (current instanceof JoinDataSource) {
+        final JoinDataSource joinDataSource = (JoinDataSource) current;
+        current = joinDataSource.getLeft();
+        currentDimFilter = validateLeftFilter(current, joinDataSource.getLeftFilter());
+        preJoinableClauses.add(
+            new PreJoinableClause(
+                joinDataSource.getRightPrefix(),
+                joinDataSource.getRight(),
+                joinDataSource.getJoinType(),
+                joinDataSource.getConditionAnalysis()
+            )
+        );
+      } else if (current instanceof UnnestDataSource) {
+        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+        current = unnestDataSource.getBase();
+      } else {
+        final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
+        current = filteredDataSource.getBase();
+      }
     }
-    // somu: addition start
 
-    while (current instanceof UnnestDataSource) {
-      final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-      current = unnestDataSource.getBase();
-    }
-
-    while (current instanceof FilteredDataSource) {
-      final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
-      current = filteredDataSource.getBase();
-    }
-
-    // somu: addition end
 
     // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
     // going-up order. So reverse them.
