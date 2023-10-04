@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "markdown-spellcheck": "^1.3.1",
-    "postcss": "^8.4.24",
+    "postcss": "^8.4.31",
     "sass": "^1.62.1"
   },
   "dependencies": {
