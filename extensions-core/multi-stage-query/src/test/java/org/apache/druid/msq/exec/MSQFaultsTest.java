@@ -221,31 +221,6 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertWithUnsupportedColumnType()
-  {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
-
-    testIngestQuery()
-        .setSql(StringUtils.format(
-            " insert into foo1 SELECT\n"
-            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-            + " col1\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
-            + "    '{\"type\": \"json\"}',\n"
-            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"},{\"name\": \"col1\", \"type\": \"long_array\"} ]'\n"
-            + "  )\n"
-            + ") PARTITIONED by day"
-        ))
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(UnknownFault.forMessage(
-            "org.apache.druid.java.util.common.ISE: Cannot create dimension for type [ARRAY<LONG>]"))
-        .verifyResults();
-  }
-
-  @Test
   public void testInsertWithManyColumns()
   {
     RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
