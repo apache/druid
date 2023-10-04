@@ -84,7 +84,8 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     taskMaster.resetPeonsForNewServers(currentServers);
 
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    final SegmentLoadingConfig segmentLoadingConfig = params.getSegmentLoadingConfig();
+    final SegmentLoadingConfig segmentLoadingConfig
+        = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegments().size());
 
     final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
     cancelLoadsOnDecommissioningServers(cluster);
@@ -93,7 +94,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     collectHistoricalStats(cluster, stats);
     collectUsedSegmentStats(params, stats);
 
-    int numBalancerThreads = params.getCoordinatorDynamicConfig().getBalancerComputeThreads();
+    final int numBalancerThreads = segmentLoadingConfig.getBalancerComputeThreads();
     final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(numBalancerThreads);
     log.info(
         "Using balancer strategy [%s] with [%d] threads.",
@@ -103,6 +104,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     return params.buildFromExisting()
                  .withDruidCluster(cluster)
                  .withBalancerStrategy(balancerStrategy)
+                 .withSegmentLoadingConfig(segmentLoadingConfig)
                  .withSegmentAssignerUsing(loadQueueManager)
                  .build();
   }

@@ -221,7 +221,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             accessor: d => d.index,
             width: 100,
             Cell({ value }) {
-              const taskId = `${execution.id}-worker${value}`;
+              const taskId = `${execution.id}-worker${value}_0`;
               return (
                 <TableClickableCell
                   hoverIcon={IconNames.SHARE}

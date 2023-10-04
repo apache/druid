@@ -1504,7 +1504,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
           e,
           new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
-                  "Query planning failed for unknown reason, our best guess is this "
+                  "Query could not be planned. A possible reason is "
                   + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
                   + "but the table queried doesn't contain a __time column.  "
                   + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"
@@ -3642,6 +3642,105 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 new Object[]{"abc", "abc"}
             ),
             0
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testInnerJoin(Map<String, Object> queryContext)
+  {
+    testQuery(
+        "SELECT s.dim1, t.dim1\n"
+        + "FROM foo as s\n"
+        + "INNER JOIN foo as t "
+        + "ON s.dim1 = t.dim1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(newScanQueryBuilder()
+                                                .dataSource(CalciteTests.DATASOURCE1)
+                                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                                .columns(ImmutableList.of("dim1"))
+                                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                .context(QUERY_CONTEXT_DEFAULT)
+                                                .build()),
+                        "j0.",
+                        "(\"dim1\" == \"j0.dim1\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1", "j0.dim1")
+                .context(queryContext)
+                .build()
+        ),
+        sortIfSortBased(
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of(
+                new Object[]{"", ""},
+                new Object[]{"10.1", "10.1"},
+                new Object[]{"2", "2"},
+                new Object[]{"1", "1"},
+                new Object[]{"def", "def"},
+                new Object[]{"abc", "abc"}
+            )
+            : ImmutableList.of(
+                new Object[]{"10.1", "10.1"},
+                new Object[]{"2", "2"},
+                new Object[]{"1", "1"},
+                new Object[]{"def", "def"},
+                new Object[]{"abc", "abc"}
+            ),
+            0
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinWithExplicitIsNotDistinctFromCondition(Map<String, Object> queryContext)
+  {
+    // Like "testInnerJoin", but uses IS NOT DISTINCT FROM instead of equals.
+
+    testQuery(
+        "SELECT s.dim1, t.dim1\n"
+        + "FROM foo as s\n"
+        + "INNER JOIN foo as t "
+        + "ON s.dim1 IS NOT DISTINCT FROM t.dim1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(newScanQueryBuilder()
+                                                .dataSource(CalciteTests.DATASOURCE1)
+                                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                                .columns(ImmutableList.of("dim1"))
+                                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                .context(QUERY_CONTEXT_DEFAULT)
+                                                .build()),
+                        "j0.",
+                        "notdistinctfrom(\"dim1\",\"j0.dim1\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1", "j0.dim1")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", ""},
+            new Object[]{"10.1", "10.1"},
+            new Object[]{"2", "2"},
+            new Object[]{"1", "1"},
+            new Object[]{"def", "def"},
+            new Object[]{"abc", "abc"}
         )
     );
   }

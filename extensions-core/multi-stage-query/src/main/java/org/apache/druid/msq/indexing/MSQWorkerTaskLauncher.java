@@ -182,7 +182,19 @@ public class MSQWorkerTaskLauncher
    */
   public void stop(final boolean interrupt)
   {
-    if (state.compareAndSet(State.STARTED, State.STOPPED)) {
+    if (state.compareAndSet(State.NEW, State.STOPPED)) {
+      state.set(State.STOPPED);
+      if (interrupt) {
+        cancelTasksOnStop.set(true);
+      }
+
+      synchronized (taskIds) {
+        // Wake up sleeping mainLoop.
+        taskIds.notifyAll();
+      }
+      exec.shutdown();
+      stopFuture.set(null);
+    } else if (state.compareAndSet(State.STARTED, State.STOPPED)) {
       if (interrupt) {
         cancelTasksOnStop.set(true);
       }
@@ -466,9 +478,13 @@ public class MSQWorkerTaskLauncher
   public WorkerCount getWorkerTaskCount()
   {
     synchronized (taskIds) {
-      int runningTasks = fullyStartedTasks.size();
-      int pendingTasks = desiredTaskCount - runningTasks;
-      return new WorkerCount(runningTasks, pendingTasks);
+      if (stopFuture.isDone()) {
+        return new WorkerCount(0, 0);
+      } else {
+        int runningTasks = fullyStartedTasks.size();
+        int pendingTasks = desiredTaskCount - runningTasks;
+        return new WorkerCount(runningTasks, pendingTasks);
+      }
     }
   }
 

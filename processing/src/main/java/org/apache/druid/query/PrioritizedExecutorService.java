@@ -203,6 +203,14 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   {
     return delegateQueue.size();
   }
+
+  /**
+   * Returns the approximate number of tasks being run by the thread pool currently.
+   */
+  public int getActiveTasks()
+  {
+    return threadPoolExecutor.getActiveCount();
+  }
 }
 
 class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
