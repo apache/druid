@@ -290,7 +290,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     return columnName;
   }
 
-  static class EarliestLatestReturnTypeInference implements SqlReturnTypeInference
+  public static class EarliestLatestReturnTypeInference implements SqlReturnTypeInference
   {
     private final int ordinal;
 
