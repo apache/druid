@@ -37,6 +37,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -59,6 +60,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
+                  .add(MultiStageQueryContext.CTX_IS_REINDEX)
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
@@ -112,8 +114,8 @@ public class MSQTaskSqlEngine implements SqlEngine
       case TIME_BOUNDARY_QUERY:
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
-      case UNNEST:
         return false;
+      case UNNEST:
       case CAN_SELECT:
       case CAN_INSERT:
       case CAN_REPLACE:

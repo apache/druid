@@ -285,12 +285,6 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return delegate.getRequiredColumns();
-  }
-
-  @Override
   public boolean equals(final Object o)
   {
     if (this == o) {

@@ -30,6 +30,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -134,7 +135,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+  public Set<DataSegment> commitSegments(Set<DataSegment> segments)
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
@@ -157,15 +158,32 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public SegmentPublishResult announceHistoricalSegments(
+  public SegmentPublishResult commitReplaceSegments(
+      Set<DataSegment> replaceSegments,
+      Set<ReplaceTaskLock> locksHeldByReplaceTask
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(replaceSegments));
+  }
+
+  @Override
+  public SegmentPublishResult commitAppendSegments(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(appendSegments));
+  }
+
+  @Override
+  public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
-      Set<DataSegment> segmentsToDrop,
-      DataSourceMetadata oldCommitMetadata,
-      DataSourceMetadata newCommitMetadata
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata
   )
   {
     // Don't actually compare metadata, just do it!
-    return SegmentPublishResult.ok(announceHistoricalSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(segments));
   }
 
   @Override
@@ -227,6 +245,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public void updateSegmentMetadata(Set<DataSegment> segments)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public DataSegment retrieveSegmentForId(final String id, boolean includeUnused)
+  {
+    return null;
   }
 
   public Set<DataSegment> getPublished()

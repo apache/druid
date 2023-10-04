@@ -18,9 +18,50 @@
 #
 
 #
-# Pull Request Labeler Github Action Configuration: https://github.com/marketplace/actions/labeler
+# Pull Request Labeler GitHub Action Configuration: https://github.com/marketplace/actions/labeler
 
-"Area - Documentation":
-  - "docs/**/*"
-  - "website/**"
-  - "examples/quickstart/jupyter-notebooks/*"
+'Area - Batch Ingestion':
+  - 'indexing-hadoop/**'
+  - 'extensions-core/multi-stage-query/**'
+
+'Area - Dependencies':
+  - '**/pom.xml'
+  - 'licenses.yaml'
+
+'Area - Documentation':
+  - 'docs/**/*'
+  - 'website/**'
+  - 'examples/quickstart/jupyter-notebooks/**'
+
+'Area - Ingestion':
+  - 'indexing-service/**'
+
+'Area - Lookups':
+  - 'extensions-core/lookups-cached-global/**'
+  - 'extensions-core/lookups-cached-single/**'
+  - 'extensions-core/kafka-extraction-namespace/**'
+
+'Area - Metrics/Event Emitting':
+  - 'processing/src/main/java/org/apache/druid/java/util/metrics/**'
+  - 'processing/src/main/java/org/apache/druid/java/util/emitter/**'
+  - 'extensions-contrib/*-emitter/**'
+
+'Area - MSQ':
+  - 'extensions-core/multi-stage-query/**'
+
+'Area - Querying':
+  - 'sql/**'
+  - 'extensions-core/multi-stage-query/src/main/java/org/apache/druid/msq/sql/**'
+
+'Area - Segment Format and Ser/De':
+  - 'processing/src/main/java/org/apache/druid/segment/**'
+
+'Area - Streaming Ingestion':
+  - 'extensions-core/kafka-indexing-service/**'
+  - 'extensions-core/kinesis-indexing-service/**'
+
+'Area - Web Console':
+  - 'web-console/**'
+
+'Kubernetes':
+  - 'extensions-contrib/kubernetes-overlord-extensions/**'

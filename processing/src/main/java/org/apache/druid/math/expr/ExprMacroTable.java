@@ -44,7 +44,8 @@ import java.util.stream.Collectors;
 public class ExprMacroTable
 {
   private static final List<ExprMacro> BUILT_IN = ImmutableList.of(
-      new BuiltInExprMacros.ComplexDecodeBase64ExprMacro()
+      new BuiltInExprMacros.ComplexDecodeBase64ExprMacro(),
+      new BuiltInExprMacros.StringDecodeBase64UTFExprMacro()
   );
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
 

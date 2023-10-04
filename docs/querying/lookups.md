@@ -62,6 +62,12 @@ SELECT
 FROM sales
 GROUP BY 1
 ```
+The lookup function also accepts the 3rd argument called `replaceMissingValueWith` as a constant string. If your value is missing a lookup for the queried key, the lookup function returns the result value from `replaceMissingValueWith`
+For example:
+```
+LOOKUP(store, 'store_to_country', 'NA')
+```
+If value is missing from `store_to_country` lookup for given key 'store' then it will return `NA`.
 
 They can also be queried using the [JOIN operator](datasource.md#join):
 
@@ -109,9 +115,11 @@ But this one is not, since both "2" and "3" map to the same value:
 To tell Druid that your lookup is injective, you must specify `"injective" : true` in the lookup configuration. Druid
 will not detect this automatically.
 
-> Currently, the injective lookup optimization is not triggered when lookups are inputs to a
-> [join datasource](datasource.md#join). It is only used when lookup functions are used directly, without the join
-> operator.
+:::info
+ Currently, the injective lookup optimization is not triggered when lookups are inputs to a
+ [join datasource](datasource.md#join). It is only used when lookup functions are used directly, without the join
+ operator.
+:::
 
 Dynamic Configuration
 ---------------------

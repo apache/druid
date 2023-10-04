@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -421,5 +422,20 @@ public class Filters
     }
 
     return retVal;
+  }
+
+  public static int countNumberOfFilters(@Nullable Filter filter)
+  {
+    if (filter == null) {
+      return 0;
+    }
+    if (filter instanceof BooleanFilter) {
+      return ((BooleanFilter) filter).getFilters()
+                                     .stream()
+                                     .map(f -> countNumberOfFilters(f))
+                                     .mapToInt(Integer::intValue)
+                                     .sum();
+    }
+    return 1;
   }
 }

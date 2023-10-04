@@ -71,12 +71,13 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+  public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
   {
     final String path = StringUtils.format(
-        "/druid/coordinator/v1/metadata/datasources/%s/segments/%s",
+        "/druid/coordinator/v1/metadata/datasources/%s/segments/%s?includeUnused=%s",
         StringUtils.urlEncode(dataSource),
-        StringUtils.urlEncode(segmentId)
+        StringUtils.urlEncode(segmentId),
+        includeUnused ? "true" : "false"
     );
 
     return FutureUtils.transform(

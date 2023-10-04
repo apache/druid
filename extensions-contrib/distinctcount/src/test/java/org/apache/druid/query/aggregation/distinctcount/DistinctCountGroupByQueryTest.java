@@ -65,7 +65,6 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
   public void setup()
   {
     final GroupByQueryConfig config = new GroupByQueryConfig();
-    config.setMaxIntermediateRows(10000);
     this.resourceCloser = Closer.create();
     this.factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         config,

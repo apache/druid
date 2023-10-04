@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -96,32 +97,38 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, int maxNumValues)
+  public ColumnValuesWithUniqueFlag getMatchableColumnValues(String columnName, boolean includeNull, int maxNumValues)
   {
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.canGetKeySet()) {
       final Set<String> keys = extractor.keySet();
 
-      final Set<String> nullEquivalentValues = new HashSet<>();
-      nullEquivalentValues.add(null);
-      if (NullHandling.replaceWithDefault()) {
-        nullEquivalentValues.add(NullHandling.defaultStringValue());
-      }
+      final Set<String> nonMatchingValues;
 
-      // size() of Sets.difference is slow; avoid it.
-      int nonNullKeys = keys.size();
-
-      for (String value : nullEquivalentValues) {
-        if (keys.contains(value)) {
-          nonNullKeys--;
+      if (includeNull) {
+        nonMatchingValues = Collections.emptySet();
+      } else {
+        nonMatchingValues = new HashSet<>();
+        nonMatchingValues.add(null);
+        if (NullHandling.replaceWithDefault()) {
+          nonMatchingValues.add(NullHandling.defaultStringValue());
         }
       }
 
-      if (nonNullKeys > maxNumValues) {
+      // size() of Sets.difference is slow; avoid it.
+      int matchingKeys = keys.size();
+
+      for (String value : nonMatchingValues) {
+        if (keys.contains(value)) {
+          matchingKeys--;
+        }
+      }
+
+      if (matchingKeys > maxNumValues) {
         return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
-      } else if (nonNullKeys == keys.size()) {
+      } else if (matchingKeys == keys.size()) {
         return new ColumnValuesWithUniqueFlag(keys, true);
       } else {
-        return new ColumnValuesWithUniqueFlag(Sets.difference(keys, nullEquivalentValues), true);
+        return new ColumnValuesWithUniqueFlag(Sets.difference(keys, nonMatchingValues), true);
       }
     } else {
       return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
@@ -129,7 +136,7 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public Optional<Set<String>> getCorrelatedColumnValues(
+  public Optional<InDimFilter.ValuesSet> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
       String retrievalColumnName,
@@ -140,13 +147,13 @@ public class LookupJoinable implements Joinable
     if (!ALL_COLUMNS.contains(searchColumnName) || !ALL_COLUMNS.contains(retrievalColumnName)) {
       return Optional.empty();
     }
-    Set<String> correlatedValues;
+    InDimFilter.ValuesSet correlatedValues;
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
       if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
-        correlatedValues = ImmutableSet.of(searchColumnValue);
+        correlatedValues = InDimFilter.ValuesSet.of(searchColumnValue);
       } else {
         // This should not happen in practice because the column to be joined on must be a key.
-        correlatedValues = Collections.singleton(extractor.apply(searchColumnValue));
+        correlatedValues = InDimFilter.ValuesSet.of(extractor.apply(searchColumnValue));
       }
     } else {
       if (!allowNonKeyColumnSearch) {
@@ -154,11 +161,11 @@ public class LookupJoinable implements Joinable
       }
       if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
         // This should not happen in practice because the column to be joined on must be a key.
-        correlatedValues = ImmutableSet.of(searchColumnValue);
+        correlatedValues = InDimFilter.ValuesSet.of(searchColumnValue);
       } else {
         // Lookup extractor unapply only provides a list of strings, so we can't respect
         // maxCorrelationSetSize easily. This should be handled eventually.
-        correlatedValues = ImmutableSet.copyOf(extractor.unapply(searchColumnValue));
+        correlatedValues = InDimFilter.ValuesSet.copyOf(extractor.unapply(searchColumnValue));
       }
     }
     return Optional.of(correlatedValues);

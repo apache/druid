@@ -105,7 +105,7 @@ public class CoordinatorClientImplTest
                    .build();
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def"),
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=false"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(segment)
@@ -113,7 +113,32 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         segment,
-        coordinatorClient.fetchUsedSegment("xyz", "def").get()
+        coordinatorClient.fetchSegment("xyz", "def", false).get()
+    );
+  }
+
+  @Test
+  public void test_fetchSegment() throws Exception
+  {
+    final DataSegment segment =
+        DataSegment.builder()
+                   .dataSource("xyz")
+                   .interval(Intervals.of("2000/3000"))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 1))
+                   .size(1)
+                   .build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=true"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segment)
+    );
+
+    Assert.assertEquals(
+        segment,
+        coordinatorClient.fetchSegment("xyz", "def", true).get()
     );
   }
 

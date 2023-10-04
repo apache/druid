@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.Objects;
 
 /**
@@ -90,6 +89,14 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return interval;
   }
 
+  /**
+   * This field has been deprecated as "kill" tasks should not be responsible for
+   * marking segments as unused. Instead, users should call the Coordinator API
+   * {@code /{dataSourceName}/markUnused} to explicitly mark segments as unused.
+   * Segments may also be marked unused by the Coordinator if they become overshadowed
+   * or have a {@code DropRule} applied to them.
+   */
+  @Deprecated
   @JsonProperty
   public Boolean getMarkAsUnused()
   {

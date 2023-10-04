@@ -69,7 +69,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {
@@ -95,7 +95,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
 
     for (DataSegment segment : segments) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("segment/moved/bytes", segment.getSize()));
+      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/moved/bytes", segment.getSize()));
     }
 
     return null;
