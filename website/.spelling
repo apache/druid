@@ -2323,3 +2323,6 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+markUnused
+markUsed
+segmentId
