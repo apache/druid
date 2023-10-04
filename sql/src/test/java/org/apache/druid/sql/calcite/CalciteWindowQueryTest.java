@@ -89,18 +89,56 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   }
 
   private final String filename;
+  private final TestCase testCase;
 
-  public CalciteWindowQueryTest(
-      String filename
-  )
+  public CalciteWindowQueryTest(String filename) throws Exception
   {
+    this.testCase= new TestCase(filename);
     this.filename = filename;
+  }
+
+  class TestCase {
+    private WindowQueryTestInputClass input;
+
+    public  TestCase(String filename) throws Exception {
+      final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
+
+      final Object objectFromYaml = YAML_JACKSON.readValue(systemResource, Object.class);
+
+      final ObjectMapper queryJackson = queryFramework().queryJsonMapper();
+      input = queryJackson.convertValue(objectFromYaml, WindowQueryTestInputClass.class);
+
+      Function<Object, String> jacksonToString = value -> {
+        try {
+          return queryJackson.writeValueAsString(value);
+        }
+        catch (JsonProcessingException e) {
+          throw new RE(e);
+        }
+      };
+
+}
+
+    public TestType getType()
+    {
+      return input.type;
+    }
+
+    public String getSql()
+    {
+      return input.sql
+          ;
+
+    }
+
   }
 
   @Test
   @SuppressWarnings("unchecked")
   public void windowQueryTest() throws IOException
   {
+
+//    TestCase tc = new TestCase();
     final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
     final Object objectFromYaml = YAML_JACKSON.readValue(systemResource, Object.class);
@@ -117,12 +155,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       }
     };
 
-    assumeThat(input.type, Matchers.not(TestType.failingTest));
+    assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
 
-    if (input.type == TestType.operatorValidation) {
+    if (testCase.getType() == TestType.operatorValidation) {
       testBuilder()
           .skipVectorize(true)
-          .sql(input.sql)
+          .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
               QueryContexts.ENABLE_DEBUG, true))
           .addCustomVerification(QueryVerification.ofResults(results -> {

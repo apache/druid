@@ -2,11 +2,11 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-    dim1,
     dim2,
-    LAG(dim1,111) OVER ()
+    LAG(dim2,1) OVER ()
   FROM foo
-  GROUP BY dim1,dim2
+  WHERE dim2 is null or length(dim2)>0
+  GROUP BY dim2
 
 expectedOperators:
   - type: "naivePartition"
@@ -16,11 +16,8 @@ expectedOperators:
       type: "offset"
       inputColumn: "d0"
       outputColumn: "w0"
-      offset: -111
+      offset: -1
 expectedResults:
-  - ["","a",null]
-  - ["1","a",null]
-  - ["10.1",null,null]
-  - ["2","",null]
-  - ["abc",null,null]
-  - ["def","abc",null]
+  - [null,null]
+  - ["a",null]
+  - ["abc","a"]
