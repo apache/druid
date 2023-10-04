@@ -52,6 +52,7 @@ import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -132,24 +133,10 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         final OperatorFactory expectedOperator = input.expectedOperators.get(i);
         final OperatorFactory actualOperator = query.getOperators().get(i);
         if (!expectedOperator.validateEquivalent(actualOperator)) {
-          // This assertion always fails because the validate equivalent
-          // failed, but we do it anyway
-          // so that we get values in the output of the failed test to make it
-          // easier to
-          // debug what happened. Note, we use the Jackson representation when
-          // showing the diff. There is
-          // a chance that this representation is exactly equivalent, but the
-          // validation call is still failing
-          // this is probably indicative of a bug where something that needs
-          // to be serialized by Jackson
-          // currently is not. Check your getters.
-
-          // prepend different values so that we are guaranteed that it is
-          // always different
-          String expected = "e " + queryJackson.writeValueAsString(expectedOperator);
-          String actual = "a " + queryJackson.writeValueAsString(actualOperator);
-
-          Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
+          assertEquals("Operator Mismatch, index[" + i + "]",
+              queryJackson.writeValueAsString(expectedOperator),
+              queryJackson.writeValueAsString(actualOperator));
+          fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
         }
       }
       final RowSignature outputSignature = query.getRowSignature();
