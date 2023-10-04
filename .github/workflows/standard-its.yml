@@ -159,6 +159,7 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-8-${{ github.sha }}
+          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
 
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true'
