@@ -36,12 +36,12 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.CursorAndCloseable;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.IterableRowsCursorHelper;
@@ -57,6 +57,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -284,11 +285,15 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       final Function<?, Object[]> mapper = getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames());
       final Iterable<Object[]> formattedRows = Lists.newArrayList(Iterables.transform(rows, (Function) mapper));
 
-      CursorAndCloseable cursor = IterableRowsCursorHelper.getCursorFromIterable(formattedRows, rowSignature);
+      Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromIterable(
+          formattedRows,
+          rowSignature
+      );
+      Cursor cursor = cursorAndCloseable.lhs;
+      Closeable closeable = cursorAndCloseable.rhs;
       cursors.add(cursor);
-
       // Cursors created from iterators don't have any resources, therefore this is mostly a defensive check
-      closer.register(cursor);
+      closer.register(closeable);
     }
 
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
