@@ -66,6 +66,7 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
@@ -6017,6 +6018,88 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ) : ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"", "", ""}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinsWithUnnestOverJoin()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with t1 as (\n"
+        + "select * from (SELECT * from foo JOIN (select dim2 as t from foo where dim2 IN ('a','b','ab','abc')) ON dim2=t), "
+        + " unnest(MV_TO_ARRAY(\"dim3\")) as u(d3) \n"
+        + ")\n"
+        + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN numfoo as t2\n"
+        + "ON t1.d3 = t2.\"dim2\"",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    newScanQueryBuilder()
+                                        .intervals(querySegmentSpec(Filtration.eternity()))
+                                        .dataSource(CalciteTests.DATASOURCE1)
+                                        .filters(new InDimFilter("dim2", ImmutableList.of("a", "b", "ab", "abc"), null))
+                                        .legacy(false)
+                                        .context(context)
+                                        .columns("dim2")
+                                        .build()
+                                ),
+                                "j0.",
+                                "(\"dim2\" == \"j0.dim2\")",
+                                JoinType.INNER
+                            ),
+                            expressionVirtualColumn("_j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .dataSource(CalciteTests.DATASOURCE3)
+                                .columns("dim2")
+                                .legacy(false)
+                                .context(context)
+                                .build()
+                        ),
+                        "__j0.",
+                        "(\"_j0.unnest\" == \"__j0.dim2\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__j0.dim2", "_j0.unnest", "dim3")
+                .context(context)
+                .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"}
+        ) : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"", "", ""},
+            new Object[]{"", "", ""},
+            new Object[]{"", "", ""},
             new Object[]{"", "", ""}
         )
     );
