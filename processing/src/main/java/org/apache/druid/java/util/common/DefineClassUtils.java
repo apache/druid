@@ -175,7 +175,7 @@ public class DefineClassUtils
    * This method is referenced in Java 8 using method handle, therefore it is not actually unused, and shouldn't be
    * removed (till Java 8 is supported)
    */
-  //noinspection unused
+  @SuppressWarnings("unused") // method is referenced and used in defineClassJava8
   static int getArrayLength(byte[] bytes)
   {
     return bytes.length;
