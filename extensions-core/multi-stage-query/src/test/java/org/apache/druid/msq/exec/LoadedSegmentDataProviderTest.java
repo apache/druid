@@ -122,8 +122,7 @@ public class LoadedSegmentDataProviderTest
   @Test
   public void testFetchRowsFromServer() throws IOException
   {
-    doReturn(Sequences.simple(ImmutableList.of(scanResultValue)))
-        .when(dataServerClient).run(any(), any(), any());
+    doReturn(Sequences.simple(ImmutableList.of(scanResultValue))).when(dataServerClient).run(any(), any(), any(), any());
 
     Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> dataServerQueryStatusYielderPair = target.fetchRowsFromDataServer(
         query,
@@ -148,11 +147,10 @@ public class LoadedSegmentDataProviderTest
   public void testHandoff() throws IOException
   {
     doAnswer(invocation -> {
-               ResponseContext responseContext = invocation.getArgument(1);
-               responseContext.addMissingSegments(ImmutableList.of(SEGMENT_1));
-               return Sequences.empty();
-             }
-    ).when(dataServerClient).run(any(), any(), any());
+      ResponseContext responseContext = invocation.getArgument(1);
+      responseContext.addMissingSegments(ImmutableList.of(SEGMENT_1));
+      return Sequences.empty();
+    }).when(dataServerClient).run(any(), any(), any(), any());
     doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, SEGMENT_1);
 
     Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> dataServerQueryStatusYielderPair = target.fetchRowsFromDataServer(
@@ -172,11 +170,10 @@ public class LoadedSegmentDataProviderTest
   public void testQueryFail()
   {
     doAnswer(invocation -> {
-               ResponseContext responseContext = invocation.getArgument(1);
-               responseContext.addMissingSegments(ImmutableList.of(SEGMENT_1));
-               return Sequences.empty();
-             }
-    ).when(dataServerClient).run(any(), any(), any());
+      ResponseContext responseContext = invocation.getArgument(1);
+      responseContext.addMissingSegments(ImmutableList.of(SEGMENT_1));
+      return Sequences.empty();
+    }).when(dataServerClient).run(any(), any(), any(), any());
     doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, SEGMENT_1);
 
     Assert.assertThrows(IOE.class, () ->

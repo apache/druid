@@ -29,6 +29,7 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
@@ -73,7 +74,7 @@ public class DataServerClient
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
 
-  public <T> Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType)
+  public <T> Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType, Closer closer)
   {
     final String basePath = "/druid/v2/";
     final String cancelPath = basePath + query.getId();
@@ -92,6 +93,7 @@ public class DataServerClient
         new DataServerResponseHandler(query, responseContext, objectMapper)
     );
 
+    closer.register(() -> resultStreamFuture.cancel(true));
     Futures.addCallback(
         resultStreamFuture,
         new FutureCallback<InputStream>()

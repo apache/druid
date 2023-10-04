@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -107,7 +108,8 @@ public class DataServerClientTest
     Sequence<ScanResultValue> result = target.run(
         query,
         responseContext,
-        jsonMapper.getTypeFactory().constructType(ScanResultValue.class)
+        jsonMapper.getTypeFactory().constructType(ScanResultValue.class),
+        Closer.create()
     );
 
     Assert.assertEquals(ImmutableList.of(scanResultValue), result.toList());

@@ -125,7 +125,7 @@ public class LoadedSegmentDataProvider
     try {
       statusSequencePair = RetryUtils.retry(
           () -> {
-            Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType);
+            Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType, closer);
             final List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
             // Only one segment is fetched, so this should be empty if it was fetched
             if (missingSegments.isEmpty()) {
@@ -153,7 +153,7 @@ public class LoadedSegmentDataProvider
               }
             }
           },
-          input -> true,
+          throwable -> !(throwable instanceof QueryInterruptedException && throwable.getCause() instanceof InterruptedException),
           numRetriesOnMissingSegments
       );
 
