@@ -56,5 +56,4 @@ public abstract class NumericArrayFieldReader implements FieldReader
   {
     return true;
   }
-
 }
