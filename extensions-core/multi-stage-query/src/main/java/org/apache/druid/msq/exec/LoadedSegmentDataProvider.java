@@ -22,12 +22,12 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -39,11 +39,13 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.rpc.FixedSetServiceLocator;
+import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
@@ -144,7 +146,7 @@ public class LoadedSegmentDataProvider
                 return Pair.of(DataServerQueryStatus.HANDOFF, null);
               } else {
                 log.error("Segment[%s] could not be found on data server, but segment was not handed off.", segmentDescriptor);
-                throw new ISE(
+                throw new IOE(
                     "Segment[%s] could not be found on data server, but segment was not handed off.",
                     segmentDescriptor
                 );
@@ -157,9 +159,21 @@ public class LoadedSegmentDataProvider
 
       return statusSequencePair;
     }
+    catch (QueryInterruptedException e) {
+      if (e.getCause() instanceof RpcException) {
+        // In the case that all the realtime servers for a segment are gone (for example, if they were scaled down),
+        // we would also be unable to fetch the segment. Check if the segment was handed off, just in case.
+        boolean wasHandedOff = checkSegmentHandoff(coordinatorClient, dataSource, segmentDescriptor);
+        if (wasHandedOff) {
+          log.debug("Segment[%s] was handed off.", segmentDescriptor);
+          return Pair.of(DataServerQueryStatus.HANDOFF, null);
+        }
+      }
+      throw new IOE(e, "Exception while fetching rows for query from dataservers[%s]", servers);
+    }
     catch (Exception e) {
-      log.error(e, "Exception while fetching rows for query[%s] from dataservers[%s].", query, servers);
-      throw new IOE(e, "Exception while fetching rows from dataservers.");
+      Throwables.propagateIfPossible(e, IOE.class);
+      throw new IOE(e, "Exception while fetching rows for query from dataservers[%s]", servers);
     }
   }
 
@@ -176,13 +190,19 @@ public class LoadedSegmentDataProvider
       CoordinatorClient coordinatorClient,
       String dataSource,
       SegmentDescriptor segmentDescriptor
-  ) throws Exception
+  ) throws IOE
   {
-    Boolean wasHandedOff = RetryUtils.retry(
-        () -> FutureUtils.get(coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor), true),
-        input -> true,
-        RetryUtils.DEFAULT_MAX_TRIES
-    );
+    Boolean wasHandedOff;
+    try {
+      wasHandedOff = RetryUtils.retry(
+          () -> FutureUtils.get(coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor), true),
+          input -> true,
+          DEFAULT_NUM_TRIES
+      );
+    }
+    catch (Exception e) {
+      throw new IOE(e, "Could not contact coordinator");
+    }
 
     return Boolean.TRUE.equals(wasHandedOff);
   }
