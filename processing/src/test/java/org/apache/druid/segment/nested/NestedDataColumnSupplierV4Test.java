@@ -41,7 +41,9 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
+import org.apache.druid.segment.NestedDataColumnHandlerV4;
 import org.apache.druid.segment.NestedDataColumnIndexerV4;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
@@ -226,6 +228,9 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
     Assert.assertTrue(holder.getColumnFormat() instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4);
+    Assert.assertTrue(holder.getColumnFormat().getColumnHandler("test") instanceof NestedDataColumnHandlerV4);
+    NestedDataColumnSchema schema = (NestedDataColumnSchema) holder.getColumnFormat().getColumnSchema("test");
+    Assert.assertEquals(4, schema.getFormatVersion());
     try (NestedDataComplexColumn column = (NestedDataComplexColumn) holder.getColumn()) {
       smokeTest(column);
     }
