@@ -1,1 +1,1 @@
-SELECT AVG(col_int) OVER (PARTITION BY col_char_2) avg_int, col_char_2, col_int FROM "smlTbl.parquet" WHERE col_vchar_52 = "GXXXXXXXXXXXXXXXXXXXXXXXXXHXXXXXXXXXXXXXXXXXXXXXXXXI"
+SELECT AVG(col_int) OVER (PARTITION BY col_char_2) avg_int, col_char_2, col_int FROM "smlTbl.parquet" WHERE col_vchar_52 = 'GXXXXXXXXXXXXXXXXXXXXXXXXXHXXXXXXXXXXXXXXXXXXXXXXXXI'

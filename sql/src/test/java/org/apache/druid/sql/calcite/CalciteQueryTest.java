@@ -8966,6 +8966,65 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+  @Test
+  public void testLookupReplaceMissingValueWith()
+  {
+    // Cannot vectorize due to extraction dimension specs.
+    cannotVectorize();
+
+    final RegisteredLookupExtractionFn extractionFn1 = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        "Missing_Value",
+        null,
+        true
+    );
+    final RegisteredLookupExtractionFn extractionFnRMVNull = new RegisteredLookupExtractionFn(
+        null,
+        "lookyloo",
+        false,
+        null,
+        null,
+        true
+    );
+    testQuery(
+        "SELECT LOOKUP(dim1, 'lookyloo', 'Missing_Value'), LOOKUP(dim1, 'lookyloo', null) as rmvNull, COUNT(*) FROM foo group by 1,2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d0",
+                                    ColumnType.STRING,
+                                    extractionFn1
+                                ),
+                                new ExtractionDimensionSpec(
+                                    "dim1",
+                                    "d1",
+                                    ColumnType.STRING,
+                                    extractionFnRMVNull
+                                )
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"Missing_Value", NullHandling.defaultStringValue(), 5L},
+            new Object[]{"xabc", "xabc", 1L}
+        )
+    );
+  }
 
   @Test
   public void testCountDistinctOfLookup()

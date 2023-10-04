@@ -1798,7 +1798,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedValidationErrorMatcher(
             new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
                 .expectMessageIs(
-                    "Query planning failed for unknown reason, our best guess is this "
+                    "Query could not be planned. A possible reason is "
                     + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
                     + "but the table queried doesn't contain a __time column.  "
                     + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"

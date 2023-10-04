@@ -1,1 +1,1 @@
-SELECT DISTINCT col8, LEAD(col8 ) OVER ( PARTITION BY col6 ORDER BY col8,col6 nulls LAST ) LEAD_col8, col6 FROM "fewRowsAllData.parquet" WHERE col6 = true and col8 < cast("10:13:15.330" as time) order by col8
+SELECT DISTINCT col8, LEAD(col8 ) OVER ( PARTITION BY col6 ORDER BY col8,col6 nulls LAST ) LEAD_col8, col6 FROM "fewRowsAllData.parquet" WHERE col6 = true and col8 < cast('10:13:15.330' as time) order by col8
