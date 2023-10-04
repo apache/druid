@@ -163,6 +163,36 @@ public class OvershadowableManagerTest
         Collections.emptyList(),
         overshadowedGroups
     );
+
+  }
+
+  @Test
+  public void testHandleOutOfRangeFindOvershadowedBy()
+  {
+    final List<PartitionChunk<OvershadowableInteger>> expectedOvershadowedChunks = new ArrayList<>();
+    PartitionChunk<OvershadowableInteger> chunk = newNonRootChunk(32001, 32003, 1, 1);
+    manager.addChunk(chunk);
+    expectedOvershadowedChunks.add(chunk);
+    manager.addChunk(newNonRootChunk(32001, 32005, 2, 1));
+    manager.addChunk(newNonRootChunk(32767, 32768, 3, 1));
+    manager.addChunk(newNonRootChunk(32768, 32769, 3, 1));
+
+    List<AtomicUpdateGroup<OvershadowableInteger>> overshadowedGroups = manager.findOvershadowedBy(
+            RootPartitionRange.of(32000, 32767),
+            (short) 4,
+            State.OVERSHADOWED
+    );
+    Assert.assertEquals(
+            expectedOvershadowedChunks.stream().map(AtomicUpdateGroup::new).collect(Collectors.toList()),
+            overshadowedGroups
+    );
+
+    overshadowedGroups = manager.findOvershadowedBy(
+            RootPartitionRange.of(32769, 32769),
+            (short) 10,
+            State.VISIBLE
+    );
+    Assert.assertTrue(overshadowedGroups.isEmpty());
   }
 
   @Test

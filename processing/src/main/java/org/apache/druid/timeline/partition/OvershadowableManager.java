@@ -39,6 +39,7 @@ import it.unimi.dsi.fastutil.shorts.ShortSortedSet;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.Overshadowable;
 
 import javax.annotation.Nullable;
@@ -85,6 +86,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     OVERSHADOWED
   }
 
+  private static final Logger log = new Logger(OvershadowableManager.class);
   private final Map<Integer, PartitionChunk<T>> knownPartitionChunks; // served segments
 
   // (start partitionId, end partitionId) -> minorVersion -> atomicUpdateGroup
@@ -418,7 +420,8 @@ class OvershadowableManager<T extends Overshadowable<T>>
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {
-    final RootPartitionRange lowFence = new RootPartitionRange(partitionId, partitionId);
+    final short partitionIdLowFence = partitionId < 0 ? Short.MAX_VALUE : partitionId;
+    final RootPartitionRange lowFence = new RootPartitionRange(partitionIdLowFence, partitionIdLowFence);
     final RootPartitionRange highFence = new RootPartitionRange(Short.MAX_VALUE, Short.MAX_VALUE);
     return stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
   }
@@ -1054,6 +1057,13 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
     private RootPartitionRange(short startPartitionId, short endPartitionId)
     {
+      if (startPartitionId < 0 || endPartitionId < 0) {
+        log.error(
+            "PartitionId [%s],[%s] possibly out of range of Short.MAX_VALUE, please compact your segements or reduce number of segments in time peroid ",
+            startPartitionId,
+            endPartitionId
+        );
+      }
       this.startPartitionId = startPartitionId;
       this.endPartitionId = endPartitionId;
     }
