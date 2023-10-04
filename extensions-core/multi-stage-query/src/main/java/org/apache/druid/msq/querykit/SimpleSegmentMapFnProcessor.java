@@ -17,68 +17,59 @@
  * under the License.
  */
 
-package org.apache.druid.msq.querykit.results;
+package org.apache.druid.msq.querykit;
 
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
-import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
-import org.apache.druid.java.util.common.Unit;
+import org.apache.druid.query.Query;
+import org.apache.druid.segment.SegmentReference;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
-public class QueryResultsFrameProcessor implements FrameProcessor<Object>
+/**
+ * Processor that creates a segment mapping function that does *not* require broadcast join data. The resulting segment
+ * mapping function embeds the joinable data within itself, and can be applied anywhere that would otherwise have used
+ * {@link org.apache.druid.query.JoinDataSource#createSegmentMapFunction(Query, AtomicLong)}.
+ *
+ * @see BroadcastJoinSegmentMapFnProcessor processor that creates a segment mapping function when there is
+ * broadcast input
+ */
+public class SimpleSegmentMapFnProcessor implements FrameProcessor<Function<SegmentReference, SegmentReference>>
 {
-  private final ReadableFrameChannel inChannel;
-  private final WritableFrameChannel outChannel;
+  private final Query<?> query;
 
-  public QueryResultsFrameProcessor(
-      final ReadableFrameChannel inChannel,
-      final WritableFrameChannel outChannel
-  )
+  public SimpleSegmentMapFnProcessor(final Query<?> query)
   {
-    this.inChannel = inChannel;
-    this.outChannel = outChannel;
+    this.query = query;
   }
 
   @Override
   public List<ReadableFrameChannel> inputChannels()
   {
-    return Collections.singletonList(inChannel);
+    return Collections.emptyList();
   }
 
   @Override
   public List<WritableFrameChannel> outputChannels()
   {
-    return Collections.singletonList(outChannel);
+    return Collections.emptyList();
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Function<SegmentReference, SegmentReference>> runIncrementally(final IntSet readableInputs)
   {
-    if (readableInputs.isEmpty()) {
-      return ReturnOrAwait.awaitAll(1);
-    }
-    if (inChannel.isFinished()) {
-      return ReturnOrAwait.returnObject(Unit.instance());
-    }
-    writeFrame(inChannel.read());
-    return ReturnOrAwait.awaitAll(1);
+    return ReturnOrAwait.returnObject(query.getDataSource().createSegmentMapFunction(query, new AtomicLong()));
   }
 
   @Override
-  public void cleanup() throws IOException
+  public void cleanup()
   {
-    FrameProcessors.closeAll(inputChannels(), outputChannels());
-  }
-
-  private void writeFrame(final Frame frame) throws IOException
-  {
-    outChannel.write(frame);
+    // Nothing to do.
   }
 }
