@@ -2,8 +2,8 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-    dim2,
-    COUNT(dim2) OVER () cc
+    m1,
+    SUM(m1) OVER () cc
   FROM druid.foo
 
 expectedOperators:
@@ -14,16 +14,13 @@ expectedOperators:
       type: "framedAgg"
       frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
       aggregations:
-        - type: "filtered"
-          aggregator: {"type":"count","name":"w0"}
-          filter:
-            type: not
-            field: {"type":"null","column":"dim2"}
-          name: null
+        - type: "doubleSum"
+          name: "w0"
+          fieldName: "m1"
 expectedResults:
-  - ["a",6]
-  - [null,6]
-  - ["",6]
-  - ["a",6]
-  - ["abc",6]
-  - [null,6]
+  - [1.0,21.0]
+  - [2.0,21.0]
+  - [3.0,21.0]
+  - [4.0,21.0]
+  - [5.0,21.0]
+  - [6.0,21.0]
