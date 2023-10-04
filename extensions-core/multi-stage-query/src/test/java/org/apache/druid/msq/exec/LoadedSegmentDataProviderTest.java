@@ -87,7 +87,7 @@ public class LoadedSegmentDataProviderTest
   private LoadedSegmentDataProvider target;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     dataServerClient = mock(DataServerClient.class);
     coordinatorClient = mock(CoordinatorClient.class);

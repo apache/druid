@@ -22,6 +22,7 @@ package org.apache.druid.msq.input.table;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
@@ -31,6 +32,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.utils.CollectionUtils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.function.Function;
@@ -42,6 +44,7 @@ import java.util.function.Supplier;
 public class SegmentWithDescriptor
 {
   private final Supplier<? extends ResourceHolder<Segment>> segmentSupplier;
+  @Nullable
   private final LoadedSegmentDataProvider loadedSegmentDataProvider;
   private final RichSegmentDescriptor descriptor;
 
@@ -56,7 +59,7 @@ public class SegmentWithDescriptor
    */
   public SegmentWithDescriptor(
       final Supplier<? extends ResourceHolder<Segment>> segmentSupplier,
-      final LoadedSegmentDataProvider loadedSegmentDataProvider,
+      final @Nullable LoadedSegmentDataProvider loadedSegmentDataProvider,
       final RichSegmentDescriptor descriptor
   )
   {
@@ -86,6 +89,9 @@ public class SegmentWithDescriptor
       Closer closer
   ) throws IOException
   {
+    if (loadedSegmentDataProvider == null) {
+      throw new RE("loadedSegmentDataProvider was null. Fetching segments from servers is not supported for segment[%s]", descriptor);
+    }
     return loadedSegmentDataProvider.fetchRowsFromDataServer(query, descriptor, mappingFunction, queryResultType, closer);
   }
 
@@ -112,15 +118,12 @@ public class SegmentWithDescriptor
       return false;
     }
     SegmentWithDescriptor that = (SegmentWithDescriptor) o;
-    return Objects.equals(segmentSupplier, that.segmentSupplier) && Objects.equals(
-        loadedSegmentDataProvider,
-        that.loadedSegmentDataProvider
-    ) && Objects.equals(descriptor, that.descriptor);
+    return Objects.equals(segmentSupplier, that.segmentSupplier) && Objects.equals(descriptor, that.descriptor);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segmentSupplier, loadedSegmentDataProvider, descriptor);
+    return Objects.hash(segmentSupplier, descriptor);
   }
 }
