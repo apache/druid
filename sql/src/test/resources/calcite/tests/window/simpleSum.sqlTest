@@ -1,4 +1,4 @@
-type: "failingTest"
+type: "operatorValidation"
 
 sql: |
   SELECT

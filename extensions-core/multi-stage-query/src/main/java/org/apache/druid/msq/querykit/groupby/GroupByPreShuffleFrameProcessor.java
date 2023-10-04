@@ -21,7 +21,6 @@ package org.apache.druid.msq.querykit.groupby;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -36,6 +35,7 @@ import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -54,6 +54,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
@@ -74,26 +75,22 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
 
   private Yielder<ResultRow> resultYielder;
   private FrameWriter frameWriter;
-  private long rowsOutput;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
-      final ReadableInput baseInput,
-      final Int2ObjectMap<ReadableInput> sideChannels,
       final GroupingEngine groupingEngine,
+      final ReadableInput baseInput,
+      final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
-      final long memoryReservedForBroadcastJoin
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
   {
     super(
-        query,
         baseInput,
-        sideChannels,
+        segmentMapFn,
         outputChannelHolder,
-        frameWriterFactoryHolder,
-        memoryReservedForBroadcastJoin
+        frameWriterFactoryHolder
     );
     this.query = query;
     this.groupingEngine = groupingEngine;
@@ -114,7 +111,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Long> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
       Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<ResultRow>> statusSequencePair =
@@ -130,14 +127,14 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     populateFrameWriterAndFlushIfNeeded();
 
     if (resultYielder == null || resultYielder.isDone()) {
-      return ReturnOrAwait.returnObject(rowsOutput);
+      return ReturnOrAwait.returnObject(Unit.instance());
     } else {
       return ReturnOrAwait.runAgain();
     }
   }
 
   @Override
-  protected ReturnOrAwait<Long> runWithSegment(final SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
@@ -155,14 +152,14 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     populateFrameWriterAndFlushIfNeeded();
 
     if (resultYielder == null || resultYielder.isDone()) {
-      return ReturnOrAwait.returnObject(rowsOutput);
+      return ReturnOrAwait.returnObject(Unit.instance());
     } else {
       return ReturnOrAwait.runAgain();
     }
   }
 
   @Override
-  protected ReturnOrAwait<Long> runWithInputChannel(
+  protected ReturnOrAwait<Unit> runWithInputChannel(
       final ReadableFrameChannel inputChannel,
       final FrameReader inputFrameReader
   ) throws IOException
@@ -184,7 +181,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         resultYielder = Yielders.each(rowSequence);
       } else if (inputChannel.isFinished()) {
         flushFrameWriterIfNeeded();
-        return ReturnOrAwait.returnObject(rowsOutput);
+        return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.awaitAll(inputChannels().size());
       }
@@ -247,7 +244,6 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
       frameWriter.close();
       frameWriter = null;
-      rowsOutput += frame.numRows();
     }
   }
 
