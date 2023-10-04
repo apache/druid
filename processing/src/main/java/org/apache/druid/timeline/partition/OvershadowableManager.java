@@ -418,9 +418,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {
-    final RootPartitionRange lowFench = new RootPartitionRange(partitionId, partitionId);
+    final RootPartitionRange lowFence = new RootPartitionRange(partitionId, partitionId);
     final RootPartitionRange highFence = new RootPartitionRange(Short.MAX_VALUE, Short.MAX_VALUE);
-    return stateMap.subMap(lowFench, false, highFence, false).entrySet().iterator();
+    return stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
   }
 
   /**
