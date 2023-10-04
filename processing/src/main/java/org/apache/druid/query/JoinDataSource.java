@@ -293,6 +293,77 @@ public class JoinDataSource implements DataSource
   }
 
   @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query,
+      AtomicLong cpuTimeAccumulator
+  )
+  {
+    return createSegmentMapFunctionInternal(
+        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
+        analysis.getPreJoinableClauses(),
+        cpuTimeAccumulator,
+        analysis.getBaseQuery().orElse(query)
+    );
+  }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    DataSource current = newSource;
+    DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
+
+    for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
+      current = JoinDataSource.create(
+          current,
+          clause.getDataSource(),
+          clause.getPrefix(),
+          clause.getCondition(),
+          clause.getJoinType(),
+          joinBaseFilter,
+          this.joinableFactoryWrapper
+      );
+      joinBaseFilter = null;
+    }
+    return current;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
+    if (clauses.isEmpty()) {
+      throw new IAE("No join clauses to build the cache key for data source [%s]", this);
+    }
+
+    final CacheKeyBuilder keyBuilder;
+    keyBuilder = new CacheKeyBuilder(JoinableFactoryWrapper.JOIN_OPERATION);
+    if (analysis.getJoinBaseTableFilter().isPresent()) {
+      keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
+    }
+    for (PreJoinableClause clause : clauses) {
+      final Optional<byte[]> bytes =
+          joinableFactoryWrapper.getJoinableFactory()
+                                .computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
+      if (!bytes.isPresent()) {
+        // Encountered a data source which didn't support cache yet
+        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
+        return new byte[]{};
+      }
+      keyBuilder.appendByteArray(bytes.get());
+      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+      keyBuilder.appendString(clause.getPrefix());
+      keyBuilder.appendString(clause.getJoinType().name());
+    }
+    return keyBuilder.build();
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    return analysis;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -329,6 +400,11 @@ public class JoinDataSource implements DataSource
            '}';
   }
 
+  private DataSourceAnalysis getAnalysisForDataSource()
+  {
+    final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
+    return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
+  }
 
   /**
    * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
@@ -343,7 +419,7 @@ public class JoinDataSource implements DataSource
    *                           {@link DataSourceAnalysis} and "query" is the original
    *                           query from the end user.
    */
-  public Function<SegmentReference, SegmentReference> createSegmentMapFn(
+  private Function<SegmentReference, SegmentReference> createSegmentMapFunctionInternal(
       @Nullable final Filter baseFilter,
       final List<PreJoinableClause> clauses,
       final AtomicLong cpuTimeAccumulator,
@@ -411,85 +487,6 @@ public class JoinDataSource implements DataSource
           }
         }
     );
-  }
-
-
-  @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTimeAccumulator
-  )
-  {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        cpuTimeAccumulator,
-        analysis.getBaseQuery().orElse(query)
-    );
-    return segmentMapFn;
-  }
-
-  @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    DataSource current = newSource;
-    DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
-
-    for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-      current = JoinDataSource.create(
-          current,
-          clause.getDataSource(),
-          clause.getPrefix(),
-          clause.getCondition(),
-          clause.getJoinType(),
-          joinBaseFilter,
-          this.joinableFactoryWrapper
-      );
-      joinBaseFilter = null;
-    }
-    return current;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
-    if (clauses.isEmpty()) {
-      throw new IAE("No join clauses to build the cache key for data source [%s]", this);
-    }
-
-    final CacheKeyBuilder keyBuilder;
-    keyBuilder = new CacheKeyBuilder(JoinableFactoryWrapper.JOIN_OPERATION);
-    if (analysis.getJoinBaseTableFilter().isPresent()) {
-      keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
-    }
-    for (PreJoinableClause clause : clauses) {
-      final Optional<byte[]> bytes =
-          joinableFactoryWrapper.getJoinableFactory()
-                                .computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
-      if (!bytes.isPresent()) {
-        // Encountered a data source which didn't support cache yet
-        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
-        return new byte[]{};
-      }
-      keyBuilder.appendByteArray(bytes.get());
-      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
-      keyBuilder.appendString(clause.getPrefix());
-      keyBuilder.appendString(clause.getJoinType().name());
-    }
-    return keyBuilder.build();
-  }
-
-  private DataSourceAnalysis getAnalysisForDataSource()
-  {
-    final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
-    return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return analysis;
   }
 
   /**

@@ -785,7 +785,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
                   StringUtils.format(
-                      "Query planning failed for unknown reason, our best guess is this [%s]",
+                      "Query could not be planned. A possible reason is [%s]",
                       expectedError
                   )
               )
