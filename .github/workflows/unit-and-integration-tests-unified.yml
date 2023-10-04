@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '8', '11', '17' ]
+        jdk: [ '8', '11', '17', '21' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ 11, 17 ]
+        jdk: [ 11, 17, 21 ]
     name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
