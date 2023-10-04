@@ -75,6 +75,10 @@ public class DimensionSchemaUtils
           switch (type.getElementType().getType()) {
             case STRING:
               return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
+            case LONG:
+            case FLOAT:
+            case DOUBLE:
+              return new AutoTypeColumnSchema(column);
             default:
               throw new ISE("Cannot create dimension for type [%s]", type.toString());
           }
