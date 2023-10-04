@@ -134,19 +134,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public Collection<DataSegment> retrieveUsedSegmentsForIntervals(
       final String dataSource,
       final List<Interval> intervals,
-      final Segments visibility
+      final Segments visibility,
+      final String createdBefore
   )
   {
     if (intervals == null || intervals.isEmpty()) {
       throw new IAE("null/empty intervals");
     }
-    return doRetrieveUsedSegments(dataSource, intervals, visibility);
+    return doRetrieveUsedSegments(dataSource, intervals, visibility, createdBefore);
   }
 
   @Override
   public Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return doRetrieveUsedSegments(dataSource, Collections.emptyList(), visibility);
+    return doRetrieveUsedSegments(dataSource, Collections.emptyList(), visibility, null);
   }
 
   /**
@@ -155,17 +156,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private Collection<DataSegment> doRetrieveUsedSegments(
       final String dataSource,
       final List<Interval> intervals,
-      final Segments visibility
+      final Segments visibility,
+      final String createdBefore
   )
   {
     return connector.retryWithHandle(
         handle -> {
           if (visibility == Segments.ONLY_VISIBLE) {
             final SegmentTimeline timeline =
-                getTimelineForIntervalsWithHandle(handle, dataSource, intervals);
+                getTimelineForIntervalsWithHandle(handle, dataSource, intervals, createdBefore);
             return timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           } else {
-            return retrieveAllUsedSegmentsForIntervalsWithHandle(handle, dataSource, intervals);
+            return retrieveAllUsedSegmentsForIntervalsWithHandle(handle, dataSource, intervals, createdBefore);
           }
         }
     );
@@ -280,12 +282,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private SegmentTimeline getTimelineForIntervalsWithHandle(
       final Handle handle,
       final String dataSource,
-      final List<Interval> intervals
+      final List<Interval> intervals,
+      final String createdBefore
   ) throws IOException
   {
     try (final CloseableIterator<DataSegment> iterator =
              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                     .retrieveUsedSegments(dataSource, intervals)) {
+                                     .retrieveUsedSegments(dataSource, intervals, createdBefore)) {
       return SegmentTimeline.forSegments(iterator);
     }
   }
@@ -293,12 +296,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private Collection<DataSegment> retrieveAllUsedSegmentsForIntervalsWithHandle(
       final Handle handle,
       final String dataSource,
-      final List<Interval> intervals
+      final List<Interval> intervals,
+      final String createdBefore
   ) throws IOException
   {
     try (final CloseableIterator<DataSegment> iterator =
              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                     .retrieveUsedSegments(dataSource, intervals)) {
+                                     .retrieveUsedSegments(dataSource, intervals, createdBefore)) {
       final List<DataSegment> retVal = new ArrayList<>();
       iterator.forEachRemaining(retVal::add);
       return retVal;
@@ -1228,7 +1232,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Get the time chunk and associated data segments for the given interval, if any
     final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
-        getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval))
+        getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval), null)
             .lookup(interval);
 
     if (existingChunks.size() > 1) {
@@ -1439,7 +1443,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalsWithHandle(
         handle,
         dataSource,
-        ImmutableList.of(interval)
+        ImmutableList.of(interval),
+        null
     ).lookup(interval);
 
     if (existingChunks.size() > 1) {

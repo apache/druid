@@ -104,10 +104,19 @@ public class SqlSegmentsMetadataQuery
    */
   public CloseableIterator<DataSegment> retrieveUsedSegments(
       final String dataSource,
+      final Collection<Interval> intervals,
+      final String createdBefore
+  )
+  {
+    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null, createdBefore);
+  }
+
+  public CloseableIterator<DataSegment> retrieveUsedSegments(
+      final String dataSource,
       final Collection<Interval> intervals
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null);
+    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null, null);
   }
 
   /**
@@ -125,7 +134,7 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit, null);
   }
 
   /**
@@ -207,7 +216,7 @@ public class SqlSegmentsMetadataQuery
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
           Iterators.transform(
-              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, null),
+              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, null, null),
               DataSegment::getId
           )
       );
@@ -266,7 +275,8 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
       final boolean used,
-      @Nullable final Integer limit
+      @Nullable final Integer limit,
+      @Nullable final String createdBefore
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -274,6 +284,10 @@ public class SqlSegmentsMetadataQuery
 
     final StringBuilder sb = new StringBuilder();
     sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
+
+    if (createdBefore != null) {
+      sb.append(" AND created_date <= :createdBefore");
+    }
 
     if (compareAsString && !intervals.isEmpty()) {
       sb.append(" AND (");
@@ -314,6 +328,10 @@ public class SqlSegmentsMetadataQuery
         .bind("dataSource", dataSource);
     if (null != limit) {
       sql.setMaxRows(limit);
+    }
+
+    if (createdBefore != null) {
+      sql.bind("createdBefore", createdBefore);
     }
 
     if (compareAsString) {

@@ -110,6 +110,7 @@ public interface IndexerMetadataStorageCoordinator
    *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
    *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
    *                   {@link Segments}.
+   * @param createdBefore The time before which the segments were created.
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
    *         requested intervals.
    *
@@ -121,8 +122,19 @@ public interface IndexerMetadataStorageCoordinator
   Collection<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
-      Segments visibility
+      Segments visibility,
+      String createdBefore
   );
+
+  default Collection<DataSegment> retrieveUsedSegmentsForIntervals(
+      String dataSource,
+      List<Interval> intervals,
+      Segments visibility
+  )
+  {
+    return retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility, null);
+  }
+
 
   /**
    * see {@link #retrieveUnusedSegmentsForInterval(String, Interval, Integer)}

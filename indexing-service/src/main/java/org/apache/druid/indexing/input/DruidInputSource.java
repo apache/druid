@@ -48,7 +48,7 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.RetrieveLockedSegmentsAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.overlord.Segments;
@@ -553,10 +553,9 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       try {
         usedSegments = toolbox.getTaskActionClient()
                               .submit(
-                                  new RetrieveUsedSegmentsAction(
+                                  new RetrieveLockedSegmentsAction(
                                       dataSource,
-                                      null,
-                                      Collections.singletonList(interval),
+                                      interval,
                                       Segments.ONLY_VISIBLE
                                   )
                               );
