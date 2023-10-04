@@ -163,7 +163,6 @@ public class OvershadowableManagerTest
         Collections.emptyList(),
         overshadowedGroups
     );
-
   }
 
   @Test
