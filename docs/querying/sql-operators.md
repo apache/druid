@@ -31,8 +31,10 @@ sidebar_label: "Operators"
 -->
 
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 Operators in [Druid SQL](./sql.md) typically operate on one or two values and return a result based on the values. Types of operators in Druid SQL include arithmetic, comparison, logical, and more, as described here. 
@@ -77,7 +79,9 @@ Also see the [CONCAT function](sql-scalar.md#string-functions).
 |Operator|Description|
 |--------|-----------|
 |`x = y` |Equal to|
+|`x IS NOT DISTINCT FROM y`|Equal to, considering `NULL` as a value. Never returns `NULL`.|
 |`x <> y`|Not equal to|
+|`x IS DISTINCT FROM y`|Not equal to, considering `NULL` as a value. Never returns `NULL`.|
 |`x > y` |Greater than|
 |`x >= y`|Greater than or equal to|
 |`x < y` |Less than|

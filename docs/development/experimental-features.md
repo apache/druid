@@ -57,4 +57,3 @@ Note that this document does not track the status of contrib extensions, all of 
 
 - [Configuration reference](../configuration/index.md)
    - `CLOSED_SEGMENTS_SINKS` mode
-   - Expression processing configuration `druid.expressions.allowNestedArrays`

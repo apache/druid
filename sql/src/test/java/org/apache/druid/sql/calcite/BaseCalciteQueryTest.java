@@ -203,7 +203,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ImmutableMap.<String, Object>builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .put(PlannerContext.CTX_ENABLE_UNNEST, true)
                   .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY =
@@ -284,10 +283,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   private static SqlTestFramework queryFramework;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
-  @Rule
+  @Rule(order = 1)
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Rule
+  @Rule(order = 2)
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
@@ -786,7 +785,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
                   StringUtils.format(
-                      "Query planning failed for unknown reason, our best guess is this [%s]",
+                      "Query could not be planned. A possible reason is [%s]",
                       expectedError
                   )
               )

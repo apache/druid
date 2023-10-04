@@ -63,7 +63,7 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
         query,
         baseInput,
         sideChannels,
-        frameContext.groupByStrategySelector(),
+        frameContext.groupingEngine(),
         outputChannelHolder,
         frameWriterFactoryHolder,
         frameContext.memoryParameters().getBroadcastJoinMemory()

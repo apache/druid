@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.curator.shaded.com.google.common.base.Verify;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -47,12 +48,14 @@ public class Tasks
   public static final boolean DEFAULT_FORCE_TIME_CHUNK_LOCK = true;
   public static final boolean DEFAULT_STORE_COMPACTION_STATE = false;
   public static final boolean DEFAULT_USE_MAX_MEMORY_ESTIMATES = false;
+  public static final TaskLockType DEFAULT_TASK_LOCK_TYPE = TaskLockType.EXCLUSIVE;
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
-  public static final String USE_SHARED_LOCK = "useSharedLock";
   public static final String STORE_EMPTY_COLUMNS_KEY = "storeEmptyColumns";
+  public static final String USE_SHARED_LOCK = "useSharedLock";
+  public static final String TASK_LOCK_TYPE = "taskLockType";
 
   /**
    * Context flag denoting if maximum possible values should be used to estimate
@@ -68,7 +71,7 @@ public class Tasks
    * This context is used in compaction. When it is set in the context, the segments created by the task
    * will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
    * See {@link org.apache.druid.timeline.DataSegment} and {@link
-   * org.apache.druid.server.coordinator.duty.NewestSegmentFirstIterator} for more details.
+   * org.apache.druid.server.coordinator.compact.NewestSegmentFirstIterator} for more details.
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 

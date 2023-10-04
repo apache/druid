@@ -72,10 +72,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     resource = new SqlStatementResource(
         sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         indexingServiceClient,
-        localFileStorageConnector
+        localFileStorageConnector,
+        authorizerMapper
     );
   }
 
@@ -273,10 +273,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     SqlStatementResource resourceWithDurableStorage = new SqlStatementResource(
         sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         indexingServiceClient,
-        NilStorageConnector.getInstance()
+        NilStorageConnector.getInstance(),
+        authorizerMapper
     );
 
     String errorMessage = "The sql statement api cannot read from the select destination [durableStorage] provided in "

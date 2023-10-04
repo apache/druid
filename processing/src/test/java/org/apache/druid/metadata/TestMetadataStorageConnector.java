@@ -55,6 +55,12 @@ public class TestMetadataStorageConnector implements MetadataStorageConnector
   }
 
   @Override
+  public void createUpgradeSegmentsTable()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void createRulesTable()
   {
     throw new UnsupportedOperationException();

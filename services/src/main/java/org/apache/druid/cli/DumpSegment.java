@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -55,7 +54,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DirectQueryProcessingPool;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -81,7 +79,6 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -733,39 +730,10 @@ public class DumpSegment extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-            binder.bind(DruidProcessingConfig.class).toInstance(
-                new DruidProcessingConfig()
-                {
-                  @Override
-                  public String getFormatString()
-                  {
-                    return "processing-%s";
-                  }
-
-                  @Override
-                  public int intermediateComputeSizeBytes()
-                  {
-                    return 100 * 1024 * 1024;
-                  }
-
-                  @Override
-                  public int getNumThreads()
-                  {
-                    return 1;
-                  }
-
-                }
-            );
-            binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
-          }
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
         }
     );
   }
