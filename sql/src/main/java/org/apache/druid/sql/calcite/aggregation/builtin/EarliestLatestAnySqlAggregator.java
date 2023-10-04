@@ -340,5 +340,14 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           Optionality.FORBIDDEN
       );
     }
+
+    public org.apache.calcite.sql.SqlNode rewriteCall(org.apache.calcite.sql.validate.SqlValidator validator, org.apache.calcite.sql.SqlCall call)
+    {
+      // I think the best chance would be to to try to rewrite it here
+      // biggest question is kinda like which is the time column
+      // look inside SqlCoalesceFunction for a sample how a rewrite is done around here
+      return call;
+    }
   }
+
 }
