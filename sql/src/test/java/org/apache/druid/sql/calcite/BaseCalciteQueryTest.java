@@ -120,19 +120,20 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
 
 import static org.junit.Assert.assertEquals;
 
@@ -1084,7 +1085,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           expectedCell = NullHandling.defaultValueForType(queryResults.signature.getColumnType(i).get().getType());
         }
         assertEquals(
-            String.format("column content mismatch at %d,%d", row, i),
+            String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, i),
             expectedCell,
             resultCell);
       }

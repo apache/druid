@@ -49,8 +49,8 @@ public class QueryVerification
         for (QueryTestRunner.QueryResults queryResults : execStep.results()) {
           try {
             verifier.verifyResults(queryResults);
-          } catch (Exception e)
-          {
+          }
+          catch (Exception e) {
             throw new RuntimeException("Exception during verification!", e);
           }
         }
