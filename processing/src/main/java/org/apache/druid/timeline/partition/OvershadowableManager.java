@@ -420,6 +420,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {
+    // remediate submap `fromKey > toKey` issue when partitionId overflows
     final short partitionIdLowFence = partitionId < 0 ? Short.MAX_VALUE : partitionId;
     final RootPartitionRange lowFence = new RootPartitionRange(partitionIdLowFence, partitionIdLowFence);
     final RootPartitionRange highFence = new RootPartitionRange(Short.MAX_VALUE, Short.MAX_VALUE);
