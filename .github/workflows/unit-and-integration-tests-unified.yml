@@ -62,9 +62,11 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: setup jdk${{ matrix.jdk }}
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_${{ matrix.jdk }}_X64" >> $GITHUB_ENV
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ matrix.jdk }}
+          cache: 'maven'
 
       - name: Cache Maven m2 repository
         id: maven

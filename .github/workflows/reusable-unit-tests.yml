@@ -59,8 +59,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup jdk${{ inputs.jdk }}
-        run: echo "JAVA_HOME=$JAVA_HOME_${{ inputs.jdk }}_X64" >> $GITHUB_ENV
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ inputs.jdk }}
+          cache: 'maven'
 
       - name: Restore Maven repository
         id: maven-restore
