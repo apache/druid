@@ -101,13 +101,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   @SuppressWarnings("unchecked")
   public void windowQueryTest() throws IOException
   {
-    final Function<String, String> stringManipulator;
-    if (NullHandling.sqlCompatible()) {
-      stringManipulator = s -> "".equals(s) ? null : s;
-    } else {
-      stringManipulator = Function.identity();
-    }
-
     final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
     final Object objectFromYaml = YAML_JACKSON.readValue(systemResource, Object.class);
@@ -194,9 +187,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                       default:
                         throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
                     }
-                  } else if (result[i] instanceof String) {
-                    result[i] = stringManipulator.apply((String) result[i]);
                   }
+                } else {
+                  result[i] = NullHandling.defaultValueForType(types[i].getType());
                 }
               }
             }

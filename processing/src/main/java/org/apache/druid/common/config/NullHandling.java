@@ -22,6 +22,7 @@ package org.apache.druid.common.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
@@ -156,6 +157,28 @@ public class NullHandling
       return (T) defaultDoubleValue();
     } else if (clazz == String.class) {
       return (T) defaultStringValue();
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Returns the default value for the given {@link ValueType}.
+   *
+   * May be null or non-null based on the current SQL-compatible null handling mode.
+   */
+  @Nullable
+  @SuppressWarnings("unchecked")
+  public static Object defaultValueForType(ValueType type)
+  {
+    if (type == ValueType.FLOAT) {
+      return defaultFloatValue();
+    } else if (type == ValueType.DOUBLE) {
+      return defaultDoubleValue();
+    } else if (type == ValueType.LONG) {
+      return defaultLongValue();
+    } else if (type == ValueType.STRING) {
+      return defaultStringValue();
     } else {
       return null;
     }

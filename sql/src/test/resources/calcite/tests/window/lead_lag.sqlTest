@@ -3,41 +3,24 @@ type: "operatorValidation"
 sql: |
   SELECT
     dim1,
+    dim2,
     LAG(dim1,111) OVER ()
   FROM foo
-  WHERE length(dim1) = 0 and dim1 is not null
-  GROUP BY dim1
+  GROUP BY dim1,dim2
 
 expectedOperators:
   - type: "naivePartition"
     partitionColumns: []
   - type: "window"
     processor:
-      type: "composing"
-      processors:
-        - type: "offset"
-          inputColumn: "d0"
-          outputColumn: "w0"
-          offset: -2
-        - type: "offset"
-          inputColumn: "d0"
-          outputColumn: "w1"
-          offset: -1
-        - type: "offset"
-          inputColumn: "d0"
-          outputColumn: "w2"
-          offset: 0
-        - type: "offset"
-          inputColumn: "d0"
-          outputColumn: "w3"
-          offset: 0
-        - type: "offset"
-          inputColumn: "d0"
-          outputColumn: "w4"
-          offset: 1
-        - type: "offset"
-          inputColumn: "d0"
-          outputColumn: "w5"
-          offset: 2
+      type: "offset"
+      inputColumn: "d0"
+      outputColumn: "w0"
+      offset: -111
 expectedResults:
-  - ["",null,null,"","",null,null]
+  - ["","a",null]
+  - ["1","a",null]
+  - ["10.1",null,null]
+  - ["2","",null]
+  - ["abc",null,null]
+  - ["def","abc",null]
