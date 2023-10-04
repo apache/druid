@@ -2,8 +2,8 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-    m1,
-    COUNT(m1) OVER () cc
+    dim2,
+    COUNT(dim2) OVER () cc
   FROM druid.foo
 
 expectedOperators:
@@ -18,12 +18,12 @@ expectedOperators:
           aggregator: {"type":"count","name":"w0"}
           filter:
             type: not
-            field: {"type":"null","column":"m1"}
+            field: {"type":"null","column":"dim2"}
           name: null
 expectedResults:
-  - [1.0,6]
-  - [2.0,6]
-  - [3.0,6]
-  - [4.0,6]
-  - [5.0,6]
-  - [6.0,6]
+  - ["a",6]
+  - [null,6]
+  - ["",6]
+  - ["a",6]
+  - ["abc",6]
+  - [null,6]
