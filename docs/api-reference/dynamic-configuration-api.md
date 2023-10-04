@@ -23,6 +23,7 @@ sidebar_label: Dynamic configuration
   ~ under the License.
   -->
 
+
 This document describes the API endpoints to retrieve and manage dynamic configurations for the [Coordinator](../design/coordinator.md) and [Overlord](../design/overlord.md) in Apache Druid.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port.
