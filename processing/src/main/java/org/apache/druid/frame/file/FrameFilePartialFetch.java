@@ -74,6 +74,11 @@ public class FrameFilePartialFetch
     return exceptionCaught != null;
   }
 
+  public long getBytesRead()
+  {
+    return bytesRead;
+  }
+
   /**
    * Future that resolves when it is a good time to request the next chunk of the frame file.
    *
