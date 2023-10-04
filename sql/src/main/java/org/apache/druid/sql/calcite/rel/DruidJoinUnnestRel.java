@@ -29,7 +29,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Set;
 
 
@@ -55,7 +54,7 @@ public class DruidJoinUnnestRel extends DruidRel<DruidJoinUnnestRel>
   private final DruidUnnestRel unnestRel;
   private final DruidRel<?> rightRel;
 
-  private PartialDruidQuery partialDruidQuery;
+  private final PartialDruidQuery partialDruidQuery;
 
   private final Join join;
 
@@ -113,7 +112,7 @@ public class DruidJoinUnnestRel extends DruidRel<DruidJoinUnnestRel>
   @Override
   public DruidQuery toDruidQuery(boolean finalizeAggregations)
   {
-    throw new CannotBuildQueryException("Cannot execute UNNEST directly");
+    throw new CannotBuildQueryException("Cannot execute JOIN with just an UNNEST on left directly");
   }
 
   @Override
@@ -160,6 +159,7 @@ public class DruidJoinUnnestRel extends DruidRel<DruidJoinUnnestRel>
   @Override
   public Set<String> getDataSourceNames()
   {
-    return Collections.emptySet();
+    // left is only unnest which will be re-written outside
+    return rightRel.getDataSourceNames();
   }
 }
