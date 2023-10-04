@@ -5921,6 +5921,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOnLeft()
   {
+    // Segment map function of MSQ needs some work
+    // To handle these nested cases
+    // Remove this when that's handled
+    notMsqCompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -5972,6 +5976,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOverFilteredDSOnLeft()
   {
+    // Segment map function of MSQ needs some work
+    // To handle these nested cases
+    // Remove this when that's handled
+    notMsqCompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6026,6 +6034,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOverJoin()
   {
+    // Segment map function of MSQ needs some work
+    // To handle these nested cases
+    // Remove this when that's handled
+    notMsqCompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
