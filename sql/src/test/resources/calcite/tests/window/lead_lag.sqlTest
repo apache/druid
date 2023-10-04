@@ -2,13 +2,6 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-<<<<<<< HEAD
-    dim2,
-    LAG(dim2,1) OVER ()
-  FROM foo
-  WHERE dim2 is null or length(dim2)>0
-  GROUP BY dim2
-=======
     dim1,
     LAG(dim1,2) OVER (),
     LAG(dim1) OVER (),
@@ -19,23 +12,12 @@ sql: |
   FROM foo
   WHERE length(dim1) > 1
   GROUP BY dim1
->>>>>>> apache/master
 
 expectedOperators:
   - type: "naivePartition"
     partitionColumns: []
   - type: "window"
     processor:
-<<<<<<< HEAD
-      type: "offset"
-      inputColumn: "d0"
-      outputColumn: "w0"
-      offset: -1
-expectedResults:
-  - [null,null]
-  - ["a",null]
-  - ["abc","a"]
-=======
       type: "composing"
       processors:
         - type: "offset"
@@ -66,4 +48,3 @@ expectedResults:
   - ["10.1",null,null,"10.1","10.1","abc","def"]
   - ["abc",null,"10.1","abc","abc","def",null]
   - ["def","10.1","abc","def","def",null,null]
->>>>>>> apache/master
