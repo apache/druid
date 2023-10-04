@@ -35,6 +35,8 @@ import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
+import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
+import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -97,18 +99,20 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     this.filename = filename;
   }
 
-  class TestCase {
+  class TestCase implements QueryResultsVerifier {
     private WindowQueryTestInputClass input;
+    private ObjectMapper queryJackson;
+    private Function<Object, String> jacksonToString;
 
     public  TestCase(String filename) throws Exception {
       final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
       final Object objectFromYaml = YAML_JACKSON.readValue(systemResource, Object.class);
 
-      final ObjectMapper queryJackson = queryFramework().queryJsonMapper();
+      queryJackson = queryFramework().queryJsonMapper();
       input = queryJackson.convertValue(objectFromYaml, WindowQueryTestInputClass.class);
 
-      Function<Object, String> jacksonToString = value -> {
+      jacksonToString = value -> {
         try {
           return queryJackson.writeValueAsString(value);
         }
@@ -131,30 +135,87 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     }
 
+    @Override
+    public void verifyResults(QueryResults results)
+    {
+      {
+        if (results.exception != null) {
+          throw new RE(results.exception, "Failed to execute because of exception.");
+        }
+
+        Assert.assertEquals(1, results.recordedQueries.size());
+        // 2 tests are failing at this moment on this check
+        // They are wikipediaFramedAggregations.sqlTest and wikipediaAggregationsMultipleOrdering.sqlTest
+        // Calcite 1.35 plans them as an external scan over a windowOperator
+        // with an additional COUNT(*) to replace intervals with no data
+        // and then adding a virtual column to filter it out
+        // For example, ExpressionVirtualColumn{name='v0', expression='case_searched(("w0" > 0),"w1",null
+        // and aggregations=[CountAggregatorFactory{name='w0'}, LongSumAggregatorFactory{fieldName='a0', expression='null', name='w1'}]}}]}
+        // These 2 tests are marked as failingTests to unblock testing at this moment
+
+        final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
+        for (int i = 0; i < input.expectedOperators.size(); ++i) {
+          final OperatorFactory expectedOperator = input.expectedOperators.get(i);
+          final OperatorFactory actualOperator = query.getOperators().get(i);
+          if (!expectedOperator.validateEquivalent(actualOperator)) {
+            // This assertion always fails because the validate equivalent failed, but we do it anyway
+            // so that we get values in the output of the failed test to make it easier to
+            // debug what happened.  Note, we use the Jackson representation when showing the diff.  There is
+            // a chance that this representation is exactly equivalent, but the validation call is still failing
+            // this is probably indicative of a bug where something that needs to be serialized by Jackson
+            // currently is not.  Check your getters.
+
+            // prepend different values so that we are guaranteed that it is always different
+            String expected = "e " + jacksonToString.apply(expectedOperator);
+            String actual = "a " + jacksonToString.apply(actualOperator);
+
+            Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
+          }
+        }
+        final RowSignature outputSignature = query.getRowSignature();
+        ColumnType[] types = new ColumnType[outputSignature.size()];
+        for (int i = 0; i < outputSignature.size(); ++i) {
+          types[i] = outputSignature.getColumnType(i).get();
+          Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
+        }
+
+        maybeDumpActualResults(jacksonToString, results.results);
+        for (Object[] result : input.expectedResults) {
+          for (int i = 0; i < result.length; i++) {
+            // Jackson deserializes numbers as the minimum size required to store the value.  This means that
+            // Longs can become Integer objects and then they fail equality checks.  We read the expected
+            // results using Jackson, so, we coerce the expected results to the type expected.
+            if (result[i] != null) {
+              if (result[i] instanceof Number) {
+                switch (types[i].getType()) {
+                  case LONG:
+                    result[i] = ((Number) result[i]).longValue();
+                    break;
+                  case DOUBLE:
+                    result[i] = ((Number) result[i]).doubleValue();
+                    break;
+                  case FLOAT:
+                    result[i] = ((Number) result[i]).floatValue();
+                    break;
+                  default:
+                    throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
+                }
+              }
+            } else {
+              result[i] = NullHandling.defaultValueForType(types[i].getType());
+            }
+          }
+        }
+        assertResultsEquals(filename, input.expectedResults, results.results);
+      }
+    }
+
   }
 
   @Test
   @SuppressWarnings("unchecked")
   public void windowQueryTest() throws IOException
   {
-
-//    TestCase tc = new TestCase();
-    final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
-
-    final Object objectFromYaml = YAML_JACKSON.readValue(systemResource, Object.class);
-
-    final ObjectMapper queryJackson = queryFramework().queryJsonMapper();
-    final WindowQueryTestInputClass input = queryJackson.convertValue(objectFromYaml, WindowQueryTestInputClass.class);
-
-    Function<Object, String> jacksonToString = value -> {
-      try {
-        return queryJackson.writeValueAsString(value);
-      }
-      catch (JsonProcessingException e) {
-        throw new RE(e);
-      }
-    };
-
     assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
 
     if (testCase.getType() == TestType.operatorValidation) {
@@ -163,76 +224,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
               QueryContexts.ENABLE_DEBUG, true))
-          .addCustomVerification(QueryVerification.ofResults(results -> {
-            if (results.exception != null) {
-              throw new RE(results.exception, "Failed to execute because of exception.");
-            }
-
-            Assert.assertEquals(1, results.recordedQueries.size());
-            // 2 tests are failing at this moment on this check
-            // They are wikipediaFramedAggregations.sqlTest and wikipediaAggregationsMultipleOrdering.sqlTest
-            // Calcite 1.35 plans them as an external scan over a windowOperator
-            // with an additional COUNT(*) to replace intervals with no data
-            // and then adding a virtual column to filter it out
-            // For example, ExpressionVirtualColumn{name='v0', expression='case_searched(("w0" > 0),"w1",null
-            // and aggregations=[CountAggregatorFactory{name='w0'}, LongSumAggregatorFactory{fieldName='a0', expression='null', name='w1'}]}}]}
-            // These 2 tests are marked as failingTests to unblock testing at this moment
-
-            final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
-            for (int i = 0; i < input.expectedOperators.size(); ++i) {
-              final OperatorFactory expectedOperator = input.expectedOperators.get(i);
-              final OperatorFactory actualOperator = query.getOperators().get(i);
-              if (!expectedOperator.validateEquivalent(actualOperator)) {
-                // This assertion always fails because the validate equivalent failed, but we do it anyway
-                // so that we get values in the output of the failed test to make it easier to
-                // debug what happened.  Note, we use the Jackson representation when showing the diff.  There is
-                // a chance that this representation is exactly equivalent, but the validation call is still failing
-                // this is probably indicative of a bug where something that needs to be serialized by Jackson
-                // currently is not.  Check your getters.
-
-                // prepend different values so that we are guaranteed that it is always different
-                String expected = "e " + jacksonToString.apply(expectedOperator);
-                String actual = "a " + jacksonToString.apply(actualOperator);
-
-                Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
-              }
-            }
-            final RowSignature outputSignature = query.getRowSignature();
-            ColumnType[] types = new ColumnType[outputSignature.size()];
-            for (int i = 0; i < outputSignature.size(); ++i) {
-              types[i] = outputSignature.getColumnType(i).get();
-              Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
-            }
-
-            maybeDumpActualResults(jacksonToString, results.results);
-            for (Object[] result : input.expectedResults) {
-              for (int i = 0; i < result.length; i++) {
-                // Jackson deserializes numbers as the minimum size required to store the value.  This means that
-                // Longs can become Integer objects and then they fail equality checks.  We read the expected
-                // results using Jackson, so, we coerce the expected results to the type expected.
-                if (result[i] != null) {
-                  if (result[i] instanceof Number) {
-                    switch (types[i].getType()) {
-                      case LONG:
-                        result[i] = ((Number) result[i]).longValue();
-                        break;
-                      case DOUBLE:
-                        result[i] = ((Number) result[i]).doubleValue();
-                        break;
-                      case FLOAT:
-                        result[i] = ((Number) result[i]).floatValue();
-                        break;
-                      default:
-                        throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
-                    }
-                  }
-                } else {
-                  result[i] = NullHandling.defaultValueForType(types[i].getType());
-                }
-              }
-            }
-            assertResultsEquals(filename, input.expectedResults, results.results);
-          }))
+          .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
   }
