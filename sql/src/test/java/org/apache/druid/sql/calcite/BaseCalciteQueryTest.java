@@ -120,9 +120,6 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import javax.annotation.Nullable;
-
-import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -134,6 +131,10 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
@@ -1057,9 +1058,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  /**
+   * Validates the results with slight loosening in case {@link NullHandling} is not sql compatible.
+   *
+   * In case {@link NullHandling#replaceWithDefault()} an expected results of <code>null</code> accepts
+   * both <code>null</code> and the default value for that column as actual result.
+   */
   public void assertResultsValid(String message, List<Object[]> expected, QueryResults queryResults)
   {
-
     List<Object[]> results = queryResults.results;
     int numRows = Math.min(results.size(), expected.size());
     for (int row = 0; row < numRows; row++) {
@@ -1071,8 +1077,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         Object resultCell = resultRow[i];
         Object expectedCell = expectedRow[i];
 
-        if(expectedCell == null) {
-          if(resultCell == null) {
+        if (expectedCell == null) {
+          if (resultCell == null) {
             continue;
           }
           expectedCell = NullHandling.defaultValueForType(queryResults.signature.getColumnType(i).get().getType());
@@ -1082,9 +1088,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             expectedCell,
             resultCell);
       }
-
     }
-
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)

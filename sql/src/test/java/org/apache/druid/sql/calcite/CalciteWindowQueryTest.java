@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableMap;
@@ -50,7 +49,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -99,7 +97,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   {
     private WindowQueryTestInputClass input;
     private ObjectMapper queryJackson;
-    private Function<Object, String> jacksonToString;
 
     public TestCase(String filename) throws Exception
     {
@@ -109,14 +106,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
       queryJackson = queryFramework().queryJsonMapper();
       input = queryJackson.convertValue(objectFromYaml, WindowQueryTestInputClass.class);
-
-      jacksonToString = value -> {
-        try {
-          return queryJackson.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-          throw new RE(e);
-        }
-      };
 
     }
 
@@ -131,7 +120,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void verifyResults(QueryResults results)
+    public void verifyResults(QueryResults results) throws Exception
     {
       if (results.exception != null) {
         throw new RE(results.exception, "Failed to execute because of exception.");
@@ -157,8 +146,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
           // prepend different values so that we are guaranteed that it is
           // always different
-          String expected = "e " + jacksonToString.apply(expectedOperator);
-          String actual = "a " + jacksonToString.apply(actualOperator);
+          String expected = "e " + queryJackson.writeValueAsString(expectedOperator);
+          String actual = "a " + queryJackson.writeValueAsString(actualOperator);
 
           Assert.assertEquals("Operator Mismatch, index[" + i + "]", expected, actual);
         }
@@ -170,7 +159,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
       }
 
-      maybeDumpActualResults(jacksonToString, results.results);
+      maybeDumpActualResults(results.results);
       for (Object[] result : input.expectedResults) {
         for (int i = 0; i < result.length; i++) {
           // Jackson deserializes numbers as the minimum size required to
@@ -181,28 +170,32 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           // type expected.
           if (result[i] != null) {
             if (result[i] instanceof Number) {
-              switch (types[i].getType())
-              {
-              case LONG:
-                result[i] = ((Number) result[i]).longValue();
-                break;
-              case DOUBLE:
-                result[i] = ((Number) result[i]).doubleValue();
-                break;
-              case FLOAT:
-                result[i] = ((Number) result[i]).floatValue();
-                break;
-              default:
-                throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
+              switch (types[i].getType()) {
+                case LONG:
+                  result[i] = ((Number) result[i]).longValue();
+                  break;
+                case DOUBLE:
+                  result[i] = ((Number) result[i]).doubleValue();
+                  break;
+                case FLOAT:
+                  result[i] = ((Number) result[i]).floatValue();
+                  break;
+                default:
+                  throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
               }
             }
           }
         }
       }
-
       assertResultsValid(filename, input.expectedResults, results);
     }
 
+    private void maybeDumpActualResults(List<Object[]> results) throws Exception
+    {
+      for (Object[] row : results) {
+        System.out.println("  - " + queryJackson.writeValueAsString(row));
+      }
+    }
   }
 
   @Test
@@ -232,16 +225,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     return (WindowOperatorQuery) query;
   }
 
-  private void maybeDumpActualResults(
-      Function<Object, String> toStrFn, List<Object[]> results
-  )
-  {
-    if (DUMP_ACTUAL_RESULTS) {
-      for (Object[] result : results) {
-        System.out.println("  - " + toStrFn.apply(result));
-      }
-    }
-  }
 
   public static class WindowQueryTestInputClass
   {
