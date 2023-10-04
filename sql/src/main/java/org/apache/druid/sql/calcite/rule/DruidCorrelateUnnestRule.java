@@ -31,6 +31,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
@@ -43,7 +44,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidCorrelateUnnestRel;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidJoinUnnestRel;
-import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnnestRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
@@ -179,11 +179,23 @@ public class DruidCorrelateUnnestRule extends RelOptRule
       // create a join rel
       // with left as druidCorrelateUnnest
       // and right as rightRel.getRight()
-      // need to fix the condition
-      Join j = ((DruidJoinUnnestRel) rightRel).getJoin();
+      // Say the left has fields (f1, f2, f3)
+      // Unnest has only 1 dimension (f4)
+      // Right has dimensions (r1, r2, r3, r4)
+      // Join condition was between unnest and right
+      // so operands were 0 and k where 0<=k<4
+      // The updated join condition after the transpose
+      // will be the index + size of left
+      // Using a shuttle to do it and create a rexCall in the process
+      final Join j = ((DruidJoinUnnestRel) rightRel).getJoin();
+      final RexCall condition = (RexCall) j.getCondition();
+      UpdateJoinConditionAfterCorrJoinTransposeShuttle jctShuttle = new UpdateJoinConditionAfterCorrJoinTransposeShuttle(
+          druidCorrelateUnnest.getRowType().getFieldCount() - 1);
+      final List<RexNode> out = jctShuttle.visitList(condition.getOperands());
+      final RexCall updatedJoinCondition = condition.clone(condition.getType(), out);
       Join updatedJoin = j.copy(
           correlate.getTraitSet(),
-          j.getCondition(),
+          updatedJoinCondition,
           druidCorrelateUnnest,
           ((DruidJoinUnnestRel) rightRel).getRightRel(),
           j.getJoinType(),
@@ -223,6 +235,31 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     relBuilder.convert(correlate.getRowType(), false);
     final RelNode build = relBuilder.build();
     call.transformTo(build);
+  }
+
+  private static class UpdateJoinConditionAfterCorrJoinTransposeShuttle extends RexShuttle
+  {
+    private final int leftSize;
+
+
+    private UpdateJoinConditionAfterCorrJoinTransposeShuttle(int leftSize)
+    {
+      this.leftSize = leftSize;
+    }
+
+    @Override
+    public void visitList(
+        Iterable<? extends RexNode> exprs,
+        List<RexNode> out
+    )
+    {
+      for (RexNode r : exprs) {
+        if (r instanceof RexInputRef) {
+          final RexNode updatedExpr = new RexInputRef(((RexInputRef) r).getIndex() + leftSize, r.getType());
+          out.add(updatedExpr);
+        }
+      }
+    }
   }
 
   /**
