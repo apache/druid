@@ -40,7 +40,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.CloseableCursor;
+import org.apache.druid.query.CursorAndCloseable;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
@@ -558,7 +558,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   )
   {
     final RowSignature rowSignature = resultArraySignature(query);
-    final CloseableCursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+    final CursorAndCloseable cursor = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
     );

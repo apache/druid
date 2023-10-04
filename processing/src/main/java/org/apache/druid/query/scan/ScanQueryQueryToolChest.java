@@ -41,7 +41,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.CloseableCursor;
+import org.apache.druid.query.CursorAndCloseable;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.IterableRowsCursorHelper;
@@ -284,7 +284,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       final Function<?, Object[]> mapper = getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames());
       final Iterable<Object[]> formattedRows = Lists.newArrayList(Iterables.transform(rows, (Function) mapper));
 
-      CloseableCursor cursor = IterableRowsCursorHelper.getCursorFromIterable(formattedRows, rowSignature);
+      CursorAndCloseable cursor = IterableRowsCursorHelper.getCursorFromIterable(formattedRows, rowSignature);
       cursors.add(cursor);
 
       // Cursors created from iterators don't have any resources, therefore this is mostly a defensive check

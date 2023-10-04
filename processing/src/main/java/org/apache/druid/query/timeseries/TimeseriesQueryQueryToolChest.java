@@ -43,7 +43,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.CloseableCursor;
+import org.apache.druid.query.CursorAndCloseable;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
@@ -474,7 +474,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final RowSignature rowSignature = resultArraySignature(query);
-    final CloseableCursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+    final CursorAndCloseable cursor = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
     );

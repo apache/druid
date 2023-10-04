@@ -49,7 +49,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.CloseableCursor;
+import org.apache.druid.query.CursorAndCloseable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
@@ -726,7 +726,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     );
 
 
-    CloseableCursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+    CursorAndCloseable cursor = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
     );

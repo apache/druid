@@ -30,12 +30,11 @@ import java.io.IOException;
  * {@link Cursor} that also has a {@link #close()}. Used for cursors that hold some resources and need to be closed by
  * the caller
  */
-public interface CloseableCursor extends Cursor, Closeable
+public interface CursorAndCloseable extends Cursor, Closeable
 {
-  static CloseableCursor cursorWithCloseable(Cursor cursor, Closeable closeable)
+  static CursorAndCloseable create(Cursor cursor, Closeable closeable)
   {
-
-    return new CloseableCursor()
+    return new CursorAndCloseable()
     {
       @Override
       public void close() throws IOException
