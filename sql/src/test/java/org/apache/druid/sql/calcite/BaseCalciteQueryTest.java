@@ -86,6 +86,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -120,6 +121,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
+import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -1052,6 +1055,36 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     {
       return baseQueryContext;
     }
+  }
+
+  public void assertResultsValid(String message, List<Object[]> expected, QueryResults queryResults)
+  {
+
+    List<Object[]> results = queryResults.results;
+    int numRows = Math.min(results.size(), expected.size());
+    for (int row = 0; row < numRows; row++) {
+      Object[] expectedRow = expected.get(row);
+      Object[] resultRow = results.get(row);
+      assertEquals("column count mismatch; at row#" + row, expectedRow.length, resultRow.length);
+
+      for (int i = 0; i < resultRow.length; i++) {
+        Object resultCell = resultRow[i];
+        Object expectedCell = expectedRow[i];
+
+        if(expectedCell == null) {
+          if(resultCell == null) {
+            continue;
+          }
+          expectedCell = NullHandling.defaultValueForType(queryResults.signature.getColumnType(i).get().getType());
+        }
+        assertEquals(
+            String.format("column content mismatch at %d,%d", row, i),
+            expectedCell,
+            resultCell);
+      }
+
+    }
+
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)

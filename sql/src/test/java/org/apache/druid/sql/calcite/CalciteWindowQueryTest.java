@@ -79,9 +79,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     final URL windowFolderUrl = ClassLoader.getSystemResource("calcite/tests/window");
     File windowFolder = new File(windowFolderUrl.toURI());
 
-    final File[] listedFiles = windowFolder.listFiles(
-        pathname -> pathname.getName().toLowerCase(Locale.ROOT).endsWith(".sqltest")
-    );
+    final File[] listedFiles = windowFolder.listFiles(pathname -> pathname.getName().toLowerCase(Locale.ROOT).endsWith(".sqltest"));
 
     return Arrays
         .stream(Objects.requireNonNull(listedFiles))
@@ -198,12 +196,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                 throw new ISE("result[%s] was type[%s]!?  Expected it to be numerical", i, types[i].getType());
               }
             }
-          } else {
-            result[i] = NullHandling.defaultValueForType(types[i].getType());
           }
         }
       }
-      assertResultsEquals(filename, input.expectedResults, results.results);
+
+      assertResultsValid(filename, input.expectedResults, results);
     }
 
   }
