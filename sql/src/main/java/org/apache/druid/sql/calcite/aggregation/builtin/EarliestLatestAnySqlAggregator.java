@@ -352,6 +352,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         SqlCall call
     )
     {
+      // Rewrite EARLIEST to EARLIEST_BY and LATEST to LATEST_BY to make
+      // reference to __time column explicit so that Calcite tracks it
+
       List<SqlNode> operands = call.getOperandList();
 
       SqlParserPos pos = call.getParserPosition();
