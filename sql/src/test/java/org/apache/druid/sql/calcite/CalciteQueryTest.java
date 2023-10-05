@@ -9689,7 +9689,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 0L,
                 Long.MIN_VALUE,
                 Long.MAX_VALUE,
-                0L,
+                Double.NaN,
                 Double.NaN
             }
             : new Object[]{0L, 0L, 0L, null, null, null, null, null, null, null, null}
@@ -10004,7 +10004,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 0L,
                 Long.MIN_VALUE,
                 Long.MAX_VALUE,
-                0L,
+                Double.NaN,
                 Double.NaN
             }
             : new Object[]{"a", 0L, 0L, 0L, null, null, null, null, null, null, null, null}
