@@ -59,11 +59,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # skip the "cache: maven" step from setup-jave since we restore it below
       - uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: ${{ inputs.jdk }}
-          cache: 'maven'
 
       - name: Restore Maven repository
         id: maven-restore
