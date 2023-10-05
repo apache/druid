@@ -70,7 +70,7 @@ public class Aggregations
         .getArgList()
         .stream()
         .map(i -> inputAccessor.getField(i))
-        .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, rowSignature, rexNode))
+        .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, inputAccessor.getInputRowSignature(), rexNode))
         .collect(Collectors.toList());
 
     if (args.stream().noneMatch(Objects::isNull)) {
