@@ -6116,4 +6116,73 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testSelfJoinsWithUnnestOnLeftAndRight()
+  {
+    // Segment map function of MSQ needs some work
+    // To handle these nested cases
+    // Remove this when that's handled
+    msqIncompatible();
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with t1 as (\n"
+        + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
+        + ")\n"
+        + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN t1 as t2\n"
+        + "ON t1.d3 = t2.d3",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .dataSource(UnnestDataSource.create(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                    null
+                                ))
+                                .columns("dim2", "j0.unnest")
+                                .legacy(false)
+                                .context(context)
+                                .build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0.j0.unnest\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("_j0.dim2", "dim3", "j0.unnest")
+                .context(context)
+                .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "b", "a"},
+            new Object[]{"[\"a\",\"b\"]", "b", ""},
+            new Object[]{"[\"b\",\"c\"]", "b", "a"},
+            new Object[]{"[\"b\",\"c\"]", "b", ""},
+            new Object[]{"[\"b\",\"c\"]", "c", ""},
+            new Object[]{"d", "d", ""}
+        ) : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]", "a", "a"},
+            new Object[]{"[\"a\",\"b\"]", "b", "a"},
+            new Object[]{"[\"a\",\"b\"]", "b", null},
+            new Object[]{"[\"b\",\"c\"]", "b", "a"},
+            new Object[]{"[\"b\",\"c\"]", "b", null},
+            new Object[]{"[\"b\",\"c\"]", "c", null},
+            new Object[]{"d", "d", ""},
+            new Object[]{"", "", "a"}
+        )
+    );
+  }
 }
