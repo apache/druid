@@ -47,8 +47,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -65,12 +63,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
+public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandlingTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private JoinableFactory joinableFactory;
   private StorageAdapter adapter;
   private File testDataFile1;
   private File testDataFile2;
@@ -81,9 +78,6 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
   public void setUp() throws IOException
   {
     final ArenaMemoryAllocator allocator = ArenaMemoryAllocator.createOnHeap(10_000);
-
-    joinableFactory = QueryStackTests.makeJoinableFactoryFromDefault(null, null, null);
-
     adapter = new QueryableIndexStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
 
     // File 1: the entire test dataset.
@@ -127,14 +121,15 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     channelReaders.add(frameReader1);
     channelReaders.add(frameReader2);
 
-    final BroadcastJoinHelper broadcastJoinHelper = new BroadcastJoinHelper(
+    final BroadcastJoinSegmentMapFnProcessor broadcastJoinReader = new BroadcastJoinSegmentMapFnProcessor(
+        null /* Query; not used for the methods we're testing */,
         sideStageChannelNumberMap,
         channels,
         channelReaders,
         25_000_000L // High enough memory limit that we won't hit it
     );
 
-    Assert.assertEquals(ImmutableSet.of(1, 2), broadcastJoinHelper.getSideChannelNumbers());
+    Assert.assertEquals(ImmutableSet.of(1, 2), broadcastJoinReader.getSideChannelNumbers());
 
     boolean doneReading = false;
     while (!doneReading) {
@@ -142,7 +137,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
       for (int i = 1; i < channels.size(); i++) {
         readableInputs.add(i); // Frame file channels are always ready, so this is OK.
       }
-      doneReading = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
+      doneReading = broadcastJoinReader.buildBroadcastTablesIncrementally(readableInputs);
     }
 
     Assert.assertTrue(channels.get(1).isFinished());
@@ -150,21 +145,21 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         new InputNumberDataSource(0),
-        broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(0))
+        broadcastJoinReader.inlineChannelData(new InputNumberDataSource(0))
     );
 
     Assert.assertEquals(
         new InputNumberDataSource(1),
-        broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(1))
+        broadcastJoinReader.inlineChannelData(new InputNumberDataSource(1))
     );
 
     Assert.assertEquals(
         new InputNumberDataSource(2),
-        broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(2))
+        broadcastJoinReader.inlineChannelData(new InputNumberDataSource(2))
     );
 
     final List<Object[]> rowsFromStage3 =
-        ((InlineDataSource) broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(3))).getRowsAsList();
+        ((InlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(3))).getRowsAsList();
     Assert.assertEquals(1209, rowsFromStage3.size());
 
     FrameTestUtil.assertRowsEqual(
@@ -173,7 +168,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     );
 
     final List<Object[]> rowsFromStage4 =
-        ((InlineDataSource) broadcastJoinHelper.inlineChannelData(new InputNumberDataSource(4))).getRowsAsList();
+        ((InlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(4))).getRowsAsList();
     Assert.assertEquals(2, rowsFromStage4.size());
 
     FrameTestUtil.assertRowsEqual(
@@ -181,7 +176,7 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
         Sequences.simple(rowsFromStage4.stream().map(Arrays::asList).collect(Collectors.toList()))
     );
 
-    final DataSource inlinedJoinDataSource = broadcastJoinHelper.inlineChannelData(
+    final DataSource inlinedJoinDataSource = broadcastJoinReader.inlineChannelData(
         JoinDataSource.create(
             new InputNumberDataSource(0),
             new InputNumberDataSource(4),
@@ -216,7 +211,8 @@ public class BroadcastJoinHelperTest extends InitializedNullHandlingTest
     final List<FrameReader> channelReaders = new ArrayList<>();
     channelReaders.add(frameReader1);
 
-    final BroadcastJoinHelper broadcastJoinHelper = new BroadcastJoinHelper(
+    final BroadcastJoinSegmentMapFnProcessor broadcastJoinHelper = new BroadcastJoinSegmentMapFnProcessor(
+        null /* Query; not used for the methods we're testing */,
         sideStageChannelNumberMap,
         channels,
         channelReaders,
