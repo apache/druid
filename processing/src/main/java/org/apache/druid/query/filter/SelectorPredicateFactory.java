@@ -40,10 +40,12 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
   private volatile DruidLongPredicate longPredicate;
   private volatile DruidFloatPredicate floatPredicate;
   private volatile DruidDoublePredicate doublePredicate;
+  private final boolean isNullUnknown;
 
   public SelectorPredicateFactory(@Nullable String value)
   {
     this.value = value;
+    this.isNullUnknown = value != null;
   }
 
   @Override
@@ -76,7 +78,7 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
   @Override
   public boolean isNullInputUnknown()
   {
-    return value != null;
+    return isNullUnknown;
   }
 
   private void initLongPredicate()

@@ -537,7 +537,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
       if (castForComparison == null) {
-        return ValueMatchers.makeAlwaysFalseMatcher(selector, multiValue);
+        return ValueMatchers.makeAlwaysFalseDimensionMatcher(selector, multiValue);
       }
       return ValueMatchers.makeStringValueMatcher(selector, castForComparison.asString(), multiValue);
     }
@@ -547,7 +547,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
       if (castForComparison == null) {
-        return ValueMatchers.makeAlwaysFalseMatcher(selector);
+        return ValueMatchers.makeAlwaysFalseNumericMatcher(selector);
       }
       return ValueMatchers.makeFloatValueMatcher(selector, (float) castForComparison.asDouble());
     }
@@ -557,7 +557,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
       if (castForComparison == null) {
-        return ValueMatchers.makeAlwaysFalseMatcher(selector);
+        return ValueMatchers.makeAlwaysFalseNumericMatcher(selector);
       }
       return ValueMatchers.makeDoubleValueMatcher(selector, castForComparison.asDouble());
     }
@@ -567,7 +567,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
       if (castForComparison == null) {
-        return ValueMatchers.makeAlwaysFalseMatcher(selector);
+        return ValueMatchers.makeAlwaysFalseNumericMatcher(selector);
       }
       return ValueMatchers.makeLongValueMatcher(selector, castForComparison.asLong());
     }

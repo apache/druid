@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -798,14 +799,14 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
 
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
         IndexedInts ithRow = vector[i];
-        if (ithRow.size() == 0) {
+        final int size = ithRow.size();
+        if (size == 0) {
           strings[i] = null;
-        } else if (ithRow.size() == 1) {
+        } else if (size == 1) {
           strings[i] = lookupName(ithRow.get(0));
         } else {
-          List<String> row = new ArrayList<>(ithRow.size());
-          // noinspection SSBasedInspection
-          for (int j = 0; j < ithRow.size(); j++) {
+          List<String> row = Lists.newArrayListWithCapacity(size);
+          for (int j = 0; j < size; j++) {
             row.add(lookupName(ithRow.get(j)));
           }
           strings[i] = row;

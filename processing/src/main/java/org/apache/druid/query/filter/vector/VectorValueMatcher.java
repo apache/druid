@@ -178,8 +178,8 @@ public interface VectorValueMatcher extends VectorSizeInspector
               if (row.size() == 0) {
                 selection[numRows++] = rowNum;
               } else {
-                //noinspection SSBasedInspection
-                for (int j = 0; j < row.size(); j++) {
+                final int size = row.size();
+                for (int j = 0; j < size; j++) {
                   if (NullHandling.isNullOrEquivalent(selector.lookupName(row.get(j)))) {
                     selection[numRows++] = rowNum;
                     break;
@@ -216,8 +216,8 @@ public interface VectorValueMatcher extends VectorSizeInspector
               if (row.size() == 0) {
                 selection[numRows++] = rowNum;
               } else {
-                //noinspection SSBasedInspection
-                for (int j = 0; j < row.size(); j++) {
+                final int size = row.size();
+                for (int j = 0; j < size; j++) {
                   if (row.get(j) == nullId) {
                     selection[numRows++] = rowNum;
                     break;

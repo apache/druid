@@ -129,8 +129,10 @@ public class FilteredVectorOffset implements VectorOffset
         return;
       }
 
-      final ReadableVectorMatch match = filterMatcher.match(VectorMatch.allTrue(baseOffset.getCurrentVectorSize()),
-                                                            false);
+      final ReadableVectorMatch match = filterMatcher.match(
+          VectorMatch.allTrue(baseOffset.getCurrentVectorSize()),
+          false
+      );
 
       if (match.isAllTrue(baseOffset.getCurrentVectorSize())) {
         currentVectorSize = baseOffset.getCurrentVectorSize();

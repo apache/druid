@@ -155,9 +155,9 @@ values are treated as zeroes. This was the default prior to Druid 28.0.0.
 The [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations)
 runtime property controls Druid's boolean logic mode. For the most SQL compliant behavior, set this to `true` (the default).
 
-When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic for
+When `druid.expressions.useStrictBooleans = true`, Druid uses [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) for
 [expressions](math-expr.md) evaluation, such as `expression` virtual columns or `expression` filters.
-If `druid.generic.useDefaultValueForNull = false` in addition to `druid.expressions.useStrictBooleans = true`, Druid also uses three-valued logic for native filters.
+If `druid.generic.useDefaultValueForNull = false` (in combination with `druid.expressions.useStrictBooleans = true`), Druid also uses three-valued logic for native filters.
 
 When `druid.expressions.useStrictBooleans = false` (legacy mode), Druid uses two-valued logic for expressions, and if `druid.generic.useDefaultValueForNull = true`, Druid uses two-valued logic for native filters, even if `druid.expressions.useStrictBooleans = true`.
 

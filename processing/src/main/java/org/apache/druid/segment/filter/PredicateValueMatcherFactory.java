@@ -99,7 +99,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
       if (matchesNull) {
         return ValueMatchers.allTrue();
       }
-      return ValueMatchers.makeAlwaysFalseMatcher(selector);
+      return ValueMatchers.makeAlwaysFalseObjectMatcher(selector);
     } else {
       // use the object predicate
       final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnCapabilities);
@@ -140,7 +140,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
       if (predicateMatches) {
         return ValueMatchers.allTrue();
       }
-      return ValueMatchers.makeAlwaysFalseMatcher(selector);
+      return ValueMatchers.makeAlwaysFalseObjectMatcher(selector);
     } else if (!isNumberOrString(selector.classOfObject())) {
       // if column is definitely not a number of string, use the object predicate
       final Predicate<Object> predicate = predicateFactory.makeObjectPredicate();

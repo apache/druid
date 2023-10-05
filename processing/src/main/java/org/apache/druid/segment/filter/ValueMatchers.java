@@ -52,16 +52,26 @@ public class ValueMatchers
     // No instantiation.
   }
 
+  /**
+   * Matcher for constant 'true' condition, where all rows should always match
+   */
   public static ValueMatcher allTrue()
   {
     return AllTrueValueMatcher.instance();
   }
 
+  /**
+   * Matcher for constant 'false' condition, where rows will never be matched
+   */
   public static ValueMatcher allFalse()
   {
     return AllFalseValueMatcher.instance();
   }
 
+  /**
+   * Matcher for constant 'unknown' condition, such as a column of all null values, where rows will never match
+   * unless {@code includeUnknown} is set to true on the match function.
+   */
   public static ValueMatcher allUnknown()
   {
     return AllUnknownValueMatcher.instance();
@@ -170,64 +180,6 @@ public class ValueMatchers
     };
   }
 
-  public static ValueMatcher makeLongValueMatcher(final BaseLongColumnValueSelector selector, final String value)
-  {
-    final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
-    if (matchVal == null) {
-      return makeNumericNullValueMatcher(selector);
-    }
-    return makeLongValueMatcher(selector, matchVal);
-  }
-
-  public static ValueMatcher makeLongValueMatcher(final BaseLongColumnValueSelector selector, long value)
-  {
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches(boolean includeUnknown)
-      {
-        if (selector.isNull()) {
-          return includeUnknown;
-        }
-        return selector.getLong() == value;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("selector", selector);
-      }
-    };
-  }
-
-  public static ValueMatcher makeLongValueMatcher(
-      final BaseLongColumnValueSelector selector,
-      final DruidPredicateFactory predicateFactory
-  )
-  {
-    final DruidLongPredicate predicate = predicateFactory.makeLongPredicate();
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches(boolean includeUnknown)
-      {
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
-        if (selector.isNull()) {
-          return matchNull || predicate.applyNull();
-        }
-        return predicate.applyLong(selector.getLong());
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("selector", selector);
-        inspector.visit("predicate", predicate);
-      }
-    };
-  }
-
-
   /**
    * Creates a predicate-based {@link ValueMatcher} for a float-typed selector.
    *
@@ -262,6 +214,82 @@ public class ValueMatchers
   }
 
   /**
+   * Creates a constant-based {@link ValueMatcher} for a long-typed selector.
+   *
+   * @param selector column selector
+   * @param value    value to match
+   */
+  public static ValueMatcher makeLongValueMatcher(final BaseLongColumnValueSelector selector, final String value)
+  {
+    final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
+    if (matchVal == null) {
+      return makeNumericNullValueMatcher(selector);
+    }
+    return makeLongValueMatcher(selector, matchVal);
+  }
+
+  /**
+   * Creates a constant-based {@link ValueMatcher} for a long-typed selector.
+   *
+   * @param selector column selector
+   * @param value    value to match
+   */
+  public static ValueMatcher makeLongValueMatcher(final BaseLongColumnValueSelector selector, long value)
+  {
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches(boolean includeUnknown)
+      {
+        if (selector.isNull()) {
+          return includeUnknown;
+        }
+        return selector.getLong() == value;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+      }
+    };
+  }
+
+  /**
+   * Creates a predicate-based {@link ValueMatcher} for a long-typed selector.
+   *
+   * @param selector         column selector
+   * @param predicateFactory predicate to match
+   */
+  public static ValueMatcher makeLongValueMatcher(
+      final BaseLongColumnValueSelector selector,
+      final DruidPredicateFactory predicateFactory
+  )
+  {
+    final DruidLongPredicate predicate = predicateFactory.makeLongPredicate();
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches(boolean includeUnknown)
+      {
+        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
+        if (selector.isNull()) {
+          return matchNull || predicate.applyNull();
+        }
+        return predicate.applyLong(selector.getLong());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("selector", selector);
+        inspector.visit("predicate", predicate);
+      }
+    };
+  }
+
+
+  /**
    * Creates a constant-based {@link ValueMatcher} for a double-typed selector.
    *
    * @param selector column selector
@@ -280,6 +308,12 @@ public class ValueMatchers
     return makeDoubleValueMatcher(selector, matchVal);
   }
 
+  /**
+   * Creates a constant-based {@link ValueMatcher} for a double-typed selector.
+   *
+   * @param selector column selector
+   * @param value    value to match
+   */
   public static ValueMatcher makeDoubleValueMatcher(
       final BaseDoubleColumnValueSelector selector,
       final double value
@@ -339,7 +373,12 @@ public class ValueMatchers
     };
   }
 
-  public static ValueMatcher makeAlwaysFalseMatcher(final DimensionSelector selector, boolean multiValue)
+  /**
+   * Create a matcher that should always return false, except when {@code includeUnknown} is set, in which case only
+   * null values will be matched. This is typically used when the filter should never match any actual values, but
+   * still needs to be able to report 'unknown' matches.
+   */
+  public static ValueMatcher makeAlwaysFalseDimensionMatcher(final DimensionSelector selector, boolean multiValue)
   {
     final IdLookup lookup = selector.idLookup();
     // if the column doesn't have null
@@ -351,11 +390,11 @@ public class ValueMatchers
         {
           if (includeUnknown) {
             IndexedInts row = selector.getRow();
-            if (row.size() == 0) {
+            final int size = row.size();
+            if (size == 0) {
               return true;
             }
-            //noinspection SSBasedInspection
-            for (int i = 0; i < row.size(); i++) {
+            for (int i = 0; i < size; i++) {
               if (NullHandling.isNullOrEquivalent(selector.lookupName(row.get(i)))) {
                 return true;
               }
@@ -384,11 +423,11 @@ public class ValueMatchers
           {
             if (includeUnknown) {
               IndexedInts row = selector.getRow();
-              if (row.size() == 0) {
+              final int size = row.size();
+              if (size == 0) {
                 return true;
               }
-              //noinspection SSBasedInspection
-              for (int i = 0; i < row.size(); i++) {
+              for (int i = 0; i < size; i++) {
                 if (row.get(i) == nullId) {
                   return true;
                 }
@@ -422,7 +461,12 @@ public class ValueMatchers
     }
   }
 
-  public static ValueMatcher makeAlwaysFalseMatcher(BaseNullableColumnValueSelector selector)
+  /**
+   * Create a matcher that should always return false, except when {@code includeUnknown} is set, in which case only
+   * null values will be matched. This is typically used when the filter should never match any actual values, but
+   * still needs to be able to report 'unknown' matches.
+   */
+  public static ValueMatcher makeAlwaysFalseNumericMatcher(BaseNullableColumnValueSelector selector)
   {
     return new ValueMatcher()
     {
@@ -440,7 +484,12 @@ public class ValueMatchers
     };
   }
 
-  public static ValueMatcher makeAlwaysFalseMatcher(BaseObjectColumnValueSelector<?> selector)
+  /**
+   * Create a matcher that should always return false, except when {@code includeUnknown} is set, in which case only
+   * null values will be matched. This is typically used when the filter should never match any actual values, but
+   * still needs to be able to report 'unknown' matches.
+   */
+  public static ValueMatcher makeAlwaysFalseObjectMatcher(BaseObjectColumnValueSelector<?> selector)
   {
     return new ValueMatcher()
     {

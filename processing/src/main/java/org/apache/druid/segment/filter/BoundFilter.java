@@ -343,6 +343,7 @@ public class BoundFilter implements Filter
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+    private final boolean isNullUnknown;
 
     BoundDimFilterDruidPredicateFactory(ExtractionFn extractionFn, BoundDimFilter boundDimFilter)
     {
@@ -351,6 +352,11 @@ public class BoundFilter implements Filter
       this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
       this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
       this.doublePredicateSupplier = boundDimFilter.getDoublePredicateSupplier();
+      if (extractionFn != null) {
+        this.isNullUnknown = !doesMatch(extractionFn.apply(null), boundDimFilter);
+      } else {
+        this.isNullUnknown = !doesMatch(null, boundDimFilter);
+      }
     }
 
     @Override
@@ -402,10 +408,7 @@ public class BoundFilter implements Filter
     @Override
     public boolean isNullInputUnknown()
     {
-      if (extractionFn != null) {
-        return !doesMatch(extractionFn.apply(null), boundDimFilter);
-      }
-      return !doesMatch(null, boundDimFilter);
+      return isNullUnknown;
     }
 
     @Override

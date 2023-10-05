@@ -98,6 +98,8 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
         dimension,
         new DruidPredicateFactory()
         {
+          private final boolean isNullUnknown = !bloomKFilter.testBytes(null, 0, 0);
+
           @Override
           public Predicate<String> makeStringPredicate()
           {
@@ -169,7 +171,7 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
           @Override
           public boolean isNullInputUnknown()
           {
-            return !bloomKFilter.testBytes(null, 0, 0);
+            return isNullUnknown;
           }
         },
         extractionFn,

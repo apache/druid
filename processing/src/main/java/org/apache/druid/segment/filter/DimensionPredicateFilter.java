@@ -146,12 +146,14 @@ public class DimensionPredicateFilter implements Filter
     private final Predicate<String> baseStringPredicate;
     private final DruidPredicateFactory predicateFactory;
     private final ExtractionFn extractionFn;
+    private final boolean isNullUnknown;
 
     DelegatingStringPredicateFactory(DruidPredicateFactory predicateFactory, ExtractionFn extractionFn)
     {
       this.predicateFactory = predicateFactory;
       this.baseStringPredicate = predicateFactory.makeStringPredicate();
       this.extractionFn = extractionFn;
+      this.isNullUnknown = !baseStringPredicate.apply(extractionFn.apply(null));
     }
 
     @Override
@@ -220,7 +222,7 @@ public class DimensionPredicateFilter implements Filter
     @Override
     public boolean isNullInputUnknown()
     {
-      return !baseStringPredicate.apply(extractionFn.apply(null));
+      return isNullUnknown;
     }
 
     @Override

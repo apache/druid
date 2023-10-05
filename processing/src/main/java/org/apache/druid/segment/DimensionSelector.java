@@ -187,9 +187,6 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       // does not report value cardinality, but otherwise behaves identically when used for grouping or selecting to a
       // normal multi-value dimension selector (getObject on a row with a single value returns the object instead of
       // the list)
-      if (values.get(0) == null) {
-        return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
-      }
       return constant(values.get(0));
     } else {
       return new ConstantMultiValueDimensionSelector(values);

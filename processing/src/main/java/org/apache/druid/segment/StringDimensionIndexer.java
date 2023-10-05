@@ -391,11 +391,11 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
               {
                 if (includeUnknown) {
                   IndexedInts row = getRow();
-                  if (row.size() == 0) {
+                  final int size = row.size();
+                  if (size == 0) {
                     return true;
                   }
-                  //noinspection SSBasedInspection
-                  for (int i = 0; i < row.size(); i++) {
+                  for (int i = 0; i < size; i++) {
                     if (row.get(i) == nullValueId) {
                       return true;
                     }

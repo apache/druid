@@ -48,6 +48,11 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+/**
+ * Compares values between columns, first converting them all to strings. This filter behaves like "not distinct from",
+ * e.g. given columns x and y, the SQL equivalent would be "x is not distinct from y" (and so ignores
+ * {@code includeUnknown}).
+ */
 public class ColumnComparisonFilter implements Filter
 {
   private final List<DimensionSpec> dimensions;
@@ -87,8 +92,6 @@ public class ColumnComparisonFilter implements Filter
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        // todo (clint): what to do about includeUnknown
-
         // Keep all values to compare against each other.
         String[][] values = new String[valueGetters.size()][];
 
