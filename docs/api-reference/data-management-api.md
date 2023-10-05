@@ -129,7 +129,7 @@ Content-Length: 230
 
 Updates the state of all segments of a datasource to `unused`. This action performs a "soft delete" of the segments from Historicals.
 
-Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
 #### URL 
 
