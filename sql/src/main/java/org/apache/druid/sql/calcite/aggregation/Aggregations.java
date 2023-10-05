@@ -53,7 +53,7 @@ public class Aggregations
    * @param plannerContext SQL planner context
    * @param rowSignature   input row signature
    * @param call           aggregate call object
-   * @param project        project that should be applied before aggregation; may be null
+   * @param inputAccessor  gives access to input fields and schema
    *
    * @return list of expressions corresponding to aggregator arguments, or null if any cannot be translated
    */
