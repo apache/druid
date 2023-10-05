@@ -163,7 +163,7 @@ In the results, notice that the column named `dim3` has nested values like `["a"
 The following is the general syntax for UNNEST:
 
 ```sql
-SELECT column_alias_name FROM datasource, UNNEST(source_expression) AS table_alias_name(column_alias_name)
+SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression) AS table_alias_name(column_alias_name)
 ```
 
 In addition, you must supply the following context parameter:
@@ -179,7 +179,7 @@ For more information about the syntax, see [UNNEST](../querying/sql.md#unnest).
 The following query returns a column called `d3` from the table `nested_data`. `d3` contains the unnested values from the source column `dim3`:
 
 ```sql
-SELECT d3 FROM "nested_data", UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
+SELECT d3 FROM "nested_data" CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
 ```
 
 Notice the MV_TO_ARRAY helper function, which converts the multi-value records in `dim3` to arrays. It is required since `dim3` is a multi-value string dimension.
@@ -191,7 +191,7 @@ If the column you are unnesting is not a string dimension, then you do not need 
 You can unnest into a virtual column (multiple columns treated as one). The following query returns the two source columns and a third virtual column containing the unnested data:
 
 ```sql
-SELECT dim4,dim5,d45 FROM nested_data, UNNEST(ARRAY[dim4,dim5]) AS example_table(d45)
+SELECT dim4,dim5,d45 FROM nested_data CROSS JOIN UNNEST(ARRAY[dim4,dim5]) AS example_table(d45)
 ```
 
 The virtual column `d45` is the product of the two source columns. Notice how the total number of rows has grown. The table `nested_data` had only seven rows originally.
@@ -199,7 +199,7 @@ The virtual column `d45` is the product of the two source columns. Notice how th
 Another way to unnest a virtual column is to concatenate them with ARRAY_CONCAT:
 
 ```sql
-SELECT dim4,dim5,d45 FROM nested_data, UNNEST(ARRAY_CONCAT(dim4,dim5)) AS example_table(d45)
+SELECT dim4,dim5,d45 FROM nested_data CROSS JOIN UNNEST(ARRAY_CONCAT(dim4,dim5)) AS example_table(d45)
 ```
 
 Decide which method to use based on what your goals are.
@@ -221,7 +221,7 @@ The example query returns the following from  the `nested_data` datasource:
 - an unnested virtual column composed of `dim4` and `dim5` aliased to `d45`
 
 ```sql
-SELECT dim3,dim4,dim5,d3,d45 FROM "nested_data", UNNEST(MV_TO_ARRAY("dim3")) AS foo1(d3), UNNEST(ARRAY[dim4,dim5]) AS foo2(d45)
+SELECT dim3,dim4,dim5,d3,d45 FROM "nested_data" CROSS JOIN UNNEST(MV_TO_ARRAY("dim3")) AS foo1(d3) CROSS JOIN UNNEST(ARRAY[dim4,dim5]) AS foo2(d45)
 ```
 
 
@@ -230,7 +230,7 @@ SELECT dim3,dim4,dim5,d3,d45 FROM "nested_data", UNNEST(MV_TO_ARRAY("dim3")) AS 
 The following query uses only three columns from the `nested_data` table as the datasource. From that subset, it unnests the column `dim3` into `d3` and returns `d3`.
 
 ```sql
-SELECT d3 FROM (SELECT dim1, dim2, dim3 FROM "nested_data"), UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
+SELECT d3 FROM (SELECT dim1, dim2, dim3 FROM "nested_data") CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
 ```
 
 ### Unnest with a filter
@@ -242,7 +242,7 @@ You can specify which rows to unnest by including a filter in your query. The fo
 * Returns the records for  the unnested `d3` that have a `dim2` record that matches the filter
 
 ```sql
-SELECT d3 FROM (SELECT * FROM nested_data WHERE dim2 IN ('abc')), UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
+SELECT d3 FROM (SELECT * FROM nested_data WHERE dim2 IN ('abc')) CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3)
 ```
 
 You can also filter the results of an UNNEST clause. The following example unnests the inline array `[1,2,3]` but only returns the rows that match the filter:
@@ -257,7 +257,7 @@ This means that you can run a query like the following where Druid only return r
 - The value of `m1` is less than 2.
 
 ```sql
-SELECT * FROM nested_data, UNNEST(MV_TO_ARRAY("dim3")) AS foo(d3) WHERE d3 IN ('b', 'd') and m1 < 2
+SELECT * FROM nested_data CROSS JOIN UNNEST(MV_TO_ARRAY("dim3")) AS foo(d3) WHERE d3 IN ('b', 'd') and m1 < 2
 ```
 
 The query only returns a single row since only one row meets the conditions. You can see the results change if you modify the filter.
@@ -267,7 +267,7 @@ The query only returns a single row since only one row meets the conditions. You
 The following query unnests `dim3` and then performs a GROUP BY on the output `d3`.
 
 ```sql
-SELECT d3 FROM nested_data, UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3) GROUP BY d3
+SELECT d3 FROM nested_data CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) AS example_table(d3) GROUP BY d3
 ```
 
 You can further transform your results by  including clauses like `ORDER BY d3 DESC` or LIMIT.
