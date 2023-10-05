@@ -31,7 +31,10 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-
+/**
+ * This class serves as a placeholder for the join rel with unnest on left and any druidRel on the right
+ * This is consumed by {@link DruidCorrelateUnnestRel} to transpose the correlate and the join
+ */
 public class DruidJoinUnnestRel extends DruidRel<DruidJoinUnnestRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__");

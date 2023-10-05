@@ -4864,8 +4864,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithUnnestedColumnOnInnerValues()
   {
-    skipVectorize();
-    cannotVectorize();
+    msqIncompatible();
     testQuery(
         "select d3 from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select col from (values('a'),('b')) as t(col))",
         QUERY_CONTEXT_UNNEST,
@@ -4907,8 +4906,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithUnnestedColumnOnInnerQuery()
   {
-    skipVectorize();
-    cannotVectorize();
+    msqIncompatible();
     testQuery(
         "select * from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select dim1 from numfoo)",
         QUERY_CONTEXT_UNNEST,
@@ -4952,8 +4950,54 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithUnnestedColumnOnInnerQuery1()
+  public void testUnnestWithUnnestedColumnOnInnerQueryOnLookup()
   {
+    skipVectorize();
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "select d3 from foo, unnest(mv_to_array(dim3)) as u(d3) where d3 in (select k from lookup.lookyloo)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        UnnestDataSource.create(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            null
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new LookupDataSource("lookyloo"))
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec(
+                                            "k",
+                                            "d0",
+                                            ColumnType.STRING
+                                        ))
+                                        .build()
+                        ),
+                        "_j0.",
+                        "(\"j0.unnest\" == \"_j0.d0\")",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .context(QUERY_CONTEXT_UNNEST)
+                .columns("j0.unnest")
+                .legacy(false)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"a"})
+    );
+  }
+
+  @Test
+  public void testUnnestWithUnnestedColumnWithNullFilter()
+  {
+    msqIncompatible();
     skipVectorize();
     cannotVectorize();
     testQuery(

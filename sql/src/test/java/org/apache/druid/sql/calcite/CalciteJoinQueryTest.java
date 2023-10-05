@@ -5689,7 +5689,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     }
   }
 
-
   @Test
   public void testJoinsWithTwoConditions()
   {

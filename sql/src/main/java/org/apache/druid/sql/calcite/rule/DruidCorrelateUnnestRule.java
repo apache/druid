@@ -68,10 +68,28 @@ import java.util.List;
  * <pre>
  *        LogicalCorrelate
  *           /       \
- *      DruidRel    DruidUnnestDataSourceRel
+ *      DruidRel    DruidRel
  * </pre>
  * This forms the premise of this rule. The goal is to transform the above-mentioned structure in the tree
  * with a new rel {@link DruidCorrelateUnnestRel} which shall be created here.
+ *
+ * Note that the right can be a special rel {@link DruidJoinUnnestRel} where there is a join with unnest on the left
+ * So the inital tree in such a case was
+ * <pre/
+ *          LogicalCorrelate
+ *            /           \
+ *      DruidRel1        LogicalJoin
+ *                        /       \
+ *             DruidUnnestRel    DruidRel2
+ * </pre>
+ * And this rule helps transpose the Correlate and Join thereby creating the Tree
+ * <pre/
+ *               LogicalJoin
+ *               /        \
+ *   LogicalCorrelate    DruidRel2
+ *       /       \
+ *   DruidRel1    DruidUnnestRel
+ * </pre>
  */
 public class DruidCorrelateUnnestRule extends RelOptRule
 {
@@ -104,9 +122,7 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     final DruidRel<?> left = call.rel(1);
     final DruidUnnestRel right;
     final DruidRel<?> rightRel = call.rel(2);
-    // Case of select * from t1, UNNEST(dim) where dim IN (select d from t2)
-    // Here left = t1
-    // rightRel = INNER JOIN ( unnestRel , t2) where unnest.dim = t2.d
+    // Update right if it follows the special pattern of unnest to the left
     if (rightRel instanceof DruidJoinUnnestRel) {
       right = ((DruidJoinUnnestRel) rightRel).getUnnestRel();
     } else {
@@ -173,21 +189,21 @@ public class DruidCorrelateUnnestRule extends RelOptRule
         ),
         plannerContext
     );
-
+    // Move the join out if the right follows the special pattern
     if (rightRel instanceof DruidJoinUnnestRel) {
       // create a join rel
       // with left as druidCorrelateUnnest
       // and right as rightRel.getRight()
-      // Say the left has fields (f1, f2, f3)
-      // Unnest has only 1 dimension (f4)
-      // Right has dimensions (r1, r2, r3, r4)
-      // Join condition was between unnest and right
-      // so operands were 0 and k where 0<=k<4
-      // The updated join condition after the transpose
-      // will be the index + size of left
-      // Using a shuttle to do it and create a rexCall in the process
+      // Rewrite the join condition as the join pointed to offsets
+      // of the join between unnest and DruidRel
+      // But now should point to the offsets of the
+      // join between Correlate and DruidRel
       final Join j = ((DruidJoinUnnestRel) rightRel).getJoin();
       final RexNode condition = j.getCondition();
+      // Last index of left is fieldCount-1
+      // Since unnest is always the 0th index
+      // we need the left to shift the join condition
+      // by adding the index in the shuttle
       UpdateJoinConditionShuttle jctShuttle = new UpdateJoinConditionShuttle(
           druidCorrelateUnnest.getRowType().getFieldCount() - 1);
       final RexNode out = jctShuttle.apply(condition);
