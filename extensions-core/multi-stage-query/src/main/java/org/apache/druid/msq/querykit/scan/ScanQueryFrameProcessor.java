@@ -65,7 +65,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.RowBasedCursor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
@@ -79,6 +78,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -189,12 +189,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       }
 
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(query, jsonMapper);
-      RowBasedCursor<Object[]> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
+      Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
           statusSequencePair.rhs,
           rowSignature
       );
 
-      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(ImmutableList.of(cursorFromIterable)));
+      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(ImmutableList.of(cursorFromIterable.lhs)));
 
       if (cursorYielder.isDone()) {
         // No cursors!
