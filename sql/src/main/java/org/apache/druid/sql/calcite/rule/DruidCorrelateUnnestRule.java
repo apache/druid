@@ -31,7 +31,6 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexInputRef;
@@ -188,14 +187,13 @@ public class DruidCorrelateUnnestRule extends RelOptRule
       // will be the index + size of left
       // Using a shuttle to do it and create a rexCall in the process
       final Join j = ((DruidJoinUnnestRel) rightRel).getJoin();
-      final RexCall condition = (RexCall) j.getCondition();
-      UpdateJoinConditionAfterCorrJoinTransposeShuttle jctShuttle = new UpdateJoinConditionAfterCorrJoinTransposeShuttle(
+      final RexNode condition = j.getCondition();
+      UpdateJoinConditionShuttle jctShuttle = new UpdateJoinConditionShuttle(
           druidCorrelateUnnest.getRowType().getFieldCount() - 1);
-      final List<RexNode> out = jctShuttle.visitList(condition.getOperands());
-      final RexCall updatedJoinCondition = condition.clone(condition.getType(), out);
+      final RexNode out = jctShuttle.apply(condition);
       Join updatedJoin = j.copy(
           correlate.getTraitSet(),
-          updatedJoinCondition,
+          out,
           druidCorrelateUnnest,
           ((DruidJoinUnnestRel) rightRel).getRightRel(),
           j.getJoinType(),
@@ -237,28 +235,20 @@ public class DruidCorrelateUnnestRule extends RelOptRule
     call.transformTo(build);
   }
 
-  private static class UpdateJoinConditionAfterCorrJoinTransposeShuttle extends RexShuttle
+  private static class UpdateJoinConditionShuttle extends RexShuttle
   {
     private final int leftSize;
 
 
-    private UpdateJoinConditionAfterCorrJoinTransposeShuttle(int leftSize)
+    private UpdateJoinConditionShuttle(int leftSize)
     {
       this.leftSize = leftSize;
     }
 
     @Override
-    public void visitList(
-        Iterable<? extends RexNode> exprs,
-        List<RexNode> out
-    )
+    public RexNode visitInputRef(RexInputRef inputRef)
     {
-      for (RexNode r : exprs) {
-        if (r instanceof RexInputRef) {
-          final RexNode updatedExpr = new RexInputRef(((RexInputRef) r).getIndex() + leftSize, r.getType());
-          out.add(updatedExpr);
-        }
-      }
+      return new RexInputRef(inputRef.getIndex() + leftSize, inputRef.getType());
     }
   }
 
