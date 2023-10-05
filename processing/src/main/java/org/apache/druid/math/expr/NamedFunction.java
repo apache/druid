@@ -23,7 +23,6 @@ import net.thisptr.jackson.jq.internal.misc.Strings;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Common stuff for "named" functions of "functional" expressions, such as {@link FunctionExpr},
@@ -38,14 +37,6 @@ public interface NamedFunction
    * Name of the function
    */
   String name();
-
-  /**
-   * Alias of the function
-   */
-  default Optional<String> alias()
-  {
-    return Optional.empty();
-  }
 
   /**
    * Helper method for creating a {@link ExpressionValidationException} with the specified reason

@@ -25,7 +25,6 @@ import org.apache.druid.segment.column.TypeStrategy;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class BuiltInExprMacros
@@ -33,18 +32,17 @@ public class BuiltInExprMacros
   public static class ComplexDecodeBase64ExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "complex_decode_base64";
-    public static final String ALIAS_NAME = "decode_base64_complex";
+    public static final String ALIAS = "decode_base64_complex";
 
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
     @Override
     public String name()
     {
       return NAME;
-    }
-
-    @Override
-    public Optional<String> alias()
-    {
-      return Optional.of(ALIAS_NAME);
     }
 
     @Override
@@ -60,7 +58,7 @@ public class BuiltInExprMacros
 
       public ComplexDecodeBase64Expression(List<Expr> args)
       {
-        super(NAME, args);
+        super(name(), args);
         validationHelperCheckArgumentCount(args, 2);
         final Expr arg0 = args.get(0);
 
@@ -156,7 +154,6 @@ public class BuiltInExprMacros
 
   public static class StringDecodeBase64UTFExprMacro implements ExprMacroTable.ExprMacro
   {
-
     public static final String NAME = "decode_base64_utf8";
 
     @Override
@@ -166,6 +163,11 @@ public class BuiltInExprMacros
       return new StringDecodeBase64UTFExpression(args.get(0));
     }
 
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
     @Override
     public String name()
     {
@@ -176,7 +178,7 @@ public class BuiltInExprMacros
     {
       public StringDecodeBase64UTFExpression(Expr arg)
       {
-        super(NAME, arg);
+        super(name(), arg);
       }
 
       @Override
@@ -220,6 +222,33 @@ public class BuiltInExprMacros
       {
         return eval(InputBindings.nilBindings()).value();
       }
+    }
+  }
+
+  /***
+   * Alias Expression macro to create an alias and delegate operations to the same base macro
+   */
+  public static class AliasExprMacro implements ExprMacroTable.ExprMacro
+  {
+    private final ExprMacroTable.ExprMacro exprMacro;
+    private final String alias;
+
+    public AliasExprMacro(final ExprMacroTable.ExprMacro baseExprMacro, final String alias)
+    {
+      this.exprMacro = baseExprMacro;
+      this.alias = alias;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      return exprMacro.apply(args);
+    }
+
+    @Override
+    public String name()
+    {
+      return alias;
     }
   }
 }

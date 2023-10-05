@@ -325,7 +325,11 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         );
     testQuery(sql, expectedQueries, expectedResults);
-    testQuery(sql.replaceAll("COMPLEX_DECODE_BASE64", "DECODE_BASE64_COMPLEX"), expectedQueries, expectedResults);
+    testQuery(
+        StringUtils.replace(sql, "COMPLEX_DECODE_BASE64", "DECODE_BASE64_COMPLEX"),
+        expectedQueries,
+        expectedResults
+    );
   }
 
   @Test

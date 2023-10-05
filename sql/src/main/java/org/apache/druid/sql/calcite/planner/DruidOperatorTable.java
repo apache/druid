@@ -236,7 +236,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(COMPLEX_DECODE_OPERATOR_CONVERSIONS)
                    .add(new AliasedOperatorConversion(
                        COMPLEX_DECODE_OPERATOR_CONVERSIONS,
-                       BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS_NAME
+                       BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS
                    ))
                    .add(new DecodeBase64UTFOperatorConversion())
                    .build();
