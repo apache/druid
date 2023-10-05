@@ -73,6 +73,10 @@ import java.util.stream.Collectors;
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
  * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
  *
+ * <li><b>ingestStringArraysAsMVDs</b>: Flag to ingest the string arrays using string dimension handlers, which generates
+ * MVDs instead of {@code ARRAY<STRING>}. The flag is undocumented, and provided to preserve legacy behaviour.
+ * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
+ *
  * </ol>
  **/
 public class MultiStageQueryContext
@@ -121,6 +125,11 @@ public class MultiStageQueryContext
   public static final String CTX_INDEX_SPEC = "indexSpec";
 
   public static final String CTX_USE_AUTO_SCHEMAS = "useAutoColumnSchemas";
+  public static final boolean DEFAULT_USE_AUTO_SCHEMAS = false;
+
+  public static final String CTX_INGEST_STRING_ARRAYS_AS_MVDS = "ingestStringArraysAsMVDs";
+  public static final boolean DEFAULT_INGEST_STRING_ARRAYS_AS_MVDS = false;
+
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -243,7 +252,12 @@ public class MultiStageQueryContext
 
   public static boolean useAutoColumnSchemas(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, false);
+    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, DEFAULT_USE_AUTO_SCHEMAS);
+  }
+
+  public static boolean isIngestStringArraysAsMVDs(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_INGEST_STRING_ARRAYS_AS_MVDS, DEFAULT_INGEST_STRING_ARRAYS_AS_MVDS);
   }
 
   /**

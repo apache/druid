@@ -2005,7 +2005,8 @@ public class ControllerImpl implements Controller
                 DimensionSchemaUtils.createDimensionSchema(
                     outputColumnName,
                     type,
-                    MultiStageQueryContext.useAutoColumnSchemas(query.context())
+                    MultiStageQueryContext.useAutoColumnSchemas(query.context()),
+                    MultiStageQueryContext.isIngestStringArraysAsMVDs(query.context())
                 )
             );
           } else if (!isRollupQuery) {
@@ -2054,7 +2055,8 @@ public class ControllerImpl implements Controller
           DimensionSchemaUtils.createDimensionSchema(
               outputColumn,
               type,
-              MultiStageQueryContext.useAutoColumnSchemas(context)
+              MultiStageQueryContext.useAutoColumnSchemas(context),
+              MultiStageQueryContext.isIngestStringArraysAsMVDs(context)
           )
       );
     }

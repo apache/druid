@@ -43,12 +43,13 @@ public class DimensionSchemaUtils
   public static DimensionSchema createDimensionSchema(
       final String column,
       @Nullable final ColumnType type,
-      boolean useAutoType
+      boolean useAutoType,
+      boolean writeStringArraysAsMVDs
   )
   {
     if (useAutoType) {
       // for complex types that are not COMPLEX<json>, we still want to use the handler since 'auto' typing
-      // only works for the 'standard' built-in typesg
+      // only works for the 'standard' built-in types
       if (type != null && type.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(type)) {
         final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
         return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
@@ -57,7 +58,7 @@ public class DimensionSchemaUtils
 
       return new AutoTypeColumnSchema(column);
     } else {
-      // if schema information not available, create a string dimension
+      // if schema information is not available, create a string dimension
       if (type == null) {
         return new StringDimensionSchema(column);
       }
@@ -74,7 +75,11 @@ public class DimensionSchemaUtils
         case ARRAY:
           switch (type.getElementType().getType()) {
             case STRING:
-              return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
+              if (writeStringArraysAsMVDs) {
+                return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
+              } else {
+                return new AutoTypeColumnSchema(column);
+              }
             case LONG:
             case FLOAT:
             case DOUBLE:
