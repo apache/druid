@@ -250,7 +250,7 @@ Accept: application/json, text/plain
 
 Updates the state a group of segments as `used` using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
 
-Interval specifies the start and end times as ISO 8601 strings. `interval=(start/end)` where start is inclusive and end is non-inclusive. Only the segments completely contained within the specified interval will be updated, partially overlapping segments will not be affected.
+For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Only the segments completely contained within the specified interval will be updated; partially overlapping segments will not be affected.
 
 #### URL 
 
