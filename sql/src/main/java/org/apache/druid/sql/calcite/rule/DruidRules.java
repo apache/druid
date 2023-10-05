@@ -95,16 +95,15 @@ public class DruidRules
             DruidOuterQueryRule.WHERE_FILTER,
             DruidOuterQueryRule.SELECT_PROJECT,
             DruidOuterQueryRule.SORT,
-//            new DruidUnionDataSourceRule(plannerContext),
-            new DruidFreeUnionDataSourceRule(plannerContext),
+            new DruidUnionDataSourceRule(plannerContext),
             DruidJoinRule.instance(plannerContext)
         )
     );
 
-    if (plannerContext.featureAvailable(EngineFeature.ALLOW_TOP_LEVEL_UNION_ALL)) {
+//    if (plannerContext.featureAvailable(EngineFeature.ALLOW_TOP_LEVEL_UNION_ALL)) {
       retVal.add(new DruidUnionRule(plannerContext));
       retVal.add(DruidSortUnionRule.instance());
-    }
+//    }
 
     if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
       retVal.add(new DruidQueryRule<>(Window.class, PartialDruidQuery.Stage.WINDOW, PartialDruidQuery::withWindow));

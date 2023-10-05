@@ -29,7 +29,6 @@ import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
-import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
@@ -361,32 +360,9 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testUnionAllUsingUnionDataSourceDisallowed()
+  public void testUnionAllWithDifferentColumnNames()
   {
-    final RowSignature rowSignature =
-        RowSignature.builder().add("__time", ColumnType.LONG).build();
-    // This plans the query using DruidUnionDataSourceRule since the DruidUnionDataSourceRule#isCompatible
-    // returns true (column names, types match, and it is a union on the table data sources).
-    // It gets planned correctly, however MSQ engine cannot plan the query correctly
-    testSelectQuery()
-        .setSql("SELECT * FROM foo\n"
-                + "UNION ALL\n"
-                + "SELECT * FROM foo\n")
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedMSQFault(QueryNotSupportedFault.instance())
-        .verifyResults();
-  }
-
-  @Test
-  public void testUnionAllUsingTopLevelUnionDisallowedWhilePlanning()
-  {
-    // This results in a planning error however the planning error isn't an accurate representation of the actual error.
-    // Calcite tries to plan the query using DruidUnionRule, which passes with native, however fails with MSQ (due to engine
-    // feature ALLOW_TOP_LEVEL_UNION_ALL being absent)
-    // Calcite then tries to write it using DruidUnionDataSourceRule. However, the isCompatible check fails because column
-    // names mismatch. But it sets the planning error with this mismatch, which can be misleading since native queries can
-    // plan fine using the DruidUnionRule (that's disabled in MSQ)
-    // Once MSQ is able to support union datasources, we'd be able to execute this query fine in MSQ
+    // This test fails till MSQ can support arbitrary column names and column types for UNION ALL
     testIngestQuery()
         .setSql(
             "INSERT INTO druid.dst "

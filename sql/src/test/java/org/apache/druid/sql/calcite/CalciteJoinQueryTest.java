@@ -784,7 +784,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testJoinUnionTablesOnLookup(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+    // notMsqCompatible();
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
@@ -4189,7 +4189,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testUnionAllTwoQueriesLeftQueryIsJoin(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+    // notMsqCompatible();
 
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
@@ -4233,7 +4233,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testUnionAllTwoQueriesRightQueryIsJoin(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+    // notMsqCompatible();
 
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
@@ -4276,7 +4276,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testUnionAllTwoQueriesBothQueriesAreJoin()
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+//    notMsqCompatible();
     cannotVectorize();
 
     testQuery(

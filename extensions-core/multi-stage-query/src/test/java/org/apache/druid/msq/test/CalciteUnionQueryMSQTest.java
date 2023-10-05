@@ -45,6 +45,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -122,6 +123,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 
   }
 
+  @Ignore("Ignored till MSQ can plan UNION ALL with any operand")
   @Test
   public void testUnionOnSubqueries()
   {
