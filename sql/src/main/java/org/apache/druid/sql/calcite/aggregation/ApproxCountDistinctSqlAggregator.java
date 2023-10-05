@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.aggregation;
 
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -31,7 +32,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -71,7 +71,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      InputAccessor inputAccessor,
+      Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
@@ -83,7 +83,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         rexBuilder,
         name,
         aggregateCall,
-        inputAccessor,
+        project,
         existingAggregations,
         finalizeAggregations
     );

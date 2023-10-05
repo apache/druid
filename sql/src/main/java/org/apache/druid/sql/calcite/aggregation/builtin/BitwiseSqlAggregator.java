@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -46,7 +47,6 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -127,7 +127,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      InputAccessor inputAccessor,
+      Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
@@ -135,7 +135,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
     final List<DruidExpression> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> inputAccessor.getField(i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 

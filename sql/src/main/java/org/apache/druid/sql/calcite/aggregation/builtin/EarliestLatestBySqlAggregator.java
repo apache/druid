@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -44,12 +45,12 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class EarliestLatestBySqlAggregator implements SqlAggregator
 {
@@ -80,12 +81,16 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final InputAccessor inputAccessor,
+      final Project project,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
   {
-    final List<RexNode> rexNodes = inputAccessor.getFields(aggregateCall.getArgList());
+    final List<RexNode> rexNodes = aggregateCall
+        .getArgList()
+        .stream()
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
+        .collect(Collectors.toList());
 
     final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
 

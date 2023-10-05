@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -37,9 +38,9 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -62,7 +63,7 @@ public class AvgSqlAggregator implements SqlAggregator
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final InputAccessor inputAccessor,
+      final Project project,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
@@ -73,7 +74,7 @@ public class AvgSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         aggregateCall,
-        inputAccessor
+        project
     );
 
     if (arguments == null) {
@@ -88,7 +89,7 @@ public class AvgSqlAggregator implements SqlAggregator
         virtualColumnRegistry,
         rexBuilder,
         aggregateCall,
-        inputAccessor
+        project
     );
 
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
@@ -107,8 +108,12 @@ public class AvgSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      final RexNode resolutionArg = inputAccessor.getField(
-          Iterables.getOnlyElement(aggregateCall.getArgList()));
+      final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
+          rowSignature,
+          project,
+          Iterables.getOnlyElement(aggregateCall.getArgList())
+      );
       fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, resolutionArg.getType());
     }
 

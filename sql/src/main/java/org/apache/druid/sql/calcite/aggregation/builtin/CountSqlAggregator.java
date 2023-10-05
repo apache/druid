@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -39,7 +40,6 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -69,10 +69,15 @@ public class CountSqlAggregator implements SqlAggregator
       final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final AggregateCall aggregateCall,
-      final InputAccessor inputAccessor
+      final Project project
   )
   {
-    final RexNode rexNode = inputAccessor.getField(Iterables.getOnlyElement(aggregateCall.getArgList()));
+    final RexNode rexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
+        rowSignature,
+        project,
+        Iterables.getOnlyElement(aggregateCall.getArgList())
+    );
 
     if (rexNode.getType().isNullable()) {
       final DimFilter nonNullFilter = Expressions.toFilter(
@@ -102,7 +107,7 @@ public class CountSqlAggregator implements SqlAggregator
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final InputAccessor inputAccessor,
+      final Project project,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
@@ -112,14 +117,13 @@ public class CountSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         aggregateCall,
-        inputAccessor
+        project
     );
 
     if (args == null) {
       return null;
     }
 
-    // FIXME: is-all-literal
     if (args.isEmpty()) {
       // COUNT(*)
       return Aggregation.create(new CountAggregatorFactory(name));
@@ -133,7 +137,7 @@ public class CountSqlAggregator implements SqlAggregator
             rexBuilder,
             name,
             aggregateCall,
-            inputAccessor,
+            project,
             existingAggregations,
             finalizeAggregations
         );
@@ -150,7 +154,7 @@ public class CountSqlAggregator implements SqlAggregator
             virtualColumnRegistry,
             rexBuilder,
             aggregateCall,
-            inputAccessor
+            project
       );
 
       return Aggregation.create(theCount);

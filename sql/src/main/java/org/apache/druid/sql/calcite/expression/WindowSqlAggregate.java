@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.druid.java.util.common.UOE;
@@ -27,7 +28,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -60,7 +60,7 @@ public class WindowSqlAggregate implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      InputAccessor inputAccessor,
+      Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
