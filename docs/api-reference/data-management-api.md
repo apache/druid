@@ -347,7 +347,7 @@ Content-Length: 230
 ```
 </details>
 
-### Mark all datasource segments unused
+### Mark all segments unused
 
 Marks the state of all segments of a datasource as unused. This action performs a "soft delete" of the segments from Historicals.
 
@@ -400,7 +400,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-### Mark all datasource segments used
+### Mark all segments used
 
 Marks the state of all unused segments of a datasource as used. The endpoint returns the number of changed segments. 
 
