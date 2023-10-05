@@ -220,35 +220,35 @@ public class ArithmeticPostAggregator implements PostAggregator
   {
     PLUS("+") {
       @Override
-      public double compute(double lhs, double rhs)
+      public Double compute(Double lhs, Double rhs)
       {
         return lhs + rhs;
       }
     },
     MINUS("-") {
       @Override
-      public double compute(double lhs, double rhs)
+      public Double compute(Double lhs, Double rhs)
       {
         return lhs - rhs;
       }
     },
     MULT("*") {
       @Override
-      public double compute(double lhs, double rhs)
+      public Double compute(Double lhs, Double rhs)
       {
         return lhs * rhs;
       }
     },
     DIV("/") {
       @Override
-      public double compute(double lhs, double rhs)
+      public Double compute(Double lhs, Double rhs)
       {
         return (rhs == 0.0) ? 0 : (lhs / rhs);
       }
     },
     QUOTIENT("quotient") {
       @Override
-      public double compute(double lhs, double rhs)
+      public Double compute(Double lhs, Double rhs)
       {
         return lhs / rhs;
       }
@@ -256,7 +256,7 @@ public class ArithmeticPostAggregator implements PostAggregator
 
     POW("pow") {
       @Override
-      public double compute(double lhs, double rhs)
+      public Double compute(Double lhs, Double rhs)
       {
         return Math.pow(lhs, rhs);
       }
@@ -282,7 +282,7 @@ public class ArithmeticPostAggregator implements PostAggregator
       return fn;
     }
 
-    public abstract double compute(double lhs, double rhs);
+    public abstract Double compute(Double lhs, Double rhs);
 
     static Ops lookup(String fn)
     {
