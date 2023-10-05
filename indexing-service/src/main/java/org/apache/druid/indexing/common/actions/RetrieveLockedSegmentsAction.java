@@ -101,10 +101,12 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
   {
     final Set<ReplaceTaskLock> replaceLocksForTask = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
     String createdBefore = null;
-    for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
-      if (replaceLock.getInterval().contains(interval)) {
-        createdBefore = replaceLock.getVersion();
-        break;
+    if (task.getDataSource().equals(dataSource)) {
+      for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
+        if (replaceLock.getInterval().contains(interval)) {
+          createdBefore = replaceLock.getVersion();
+          break;
+        }
       }
     }
     return toolbox.getIndexerMetadataStorageCoordinator()
