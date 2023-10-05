@@ -88,9 +88,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   private final String filename;
 
-  public CalciteWindowQueryTest(String filename) throws Exception
+  public CalciteWindowQueryTest(String filename)
   {
-
     this.filename = filename;
   }
 
