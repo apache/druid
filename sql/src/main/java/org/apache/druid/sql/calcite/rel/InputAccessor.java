@@ -43,6 +43,7 @@ public class InputAccessor
   private final ImmutableList<RexLiteral> constants;
   private final RexBuilder rexBuilder;
   private final RowSignature sourceRowSignature;
+  private final int inputFieldCount;
 
   public static InputAccessor buildFor(
       RexBuilder rexBuilder,
@@ -63,19 +64,20 @@ public class InputAccessor
     this.sourceRowSignature = sourceRowSignature;
     this.project = project;
     this.constants = constants;
-
+    this.inputFieldCount = project != null ? project.getRowType().getFieldCount() : sourceRowSignature.size();
   }
 
   public RexNode getField(int argIndex)
   {
-    if (argIndex < sourceRowSignature.size()) {
+
+    if (argIndex < inputFieldCount) {
       return Expressions.fromFieldAccess(
           rexBuilder.getTypeFactory(),
           sourceRowSignature,
           project,
           argIndex);
     } else {
-      return constants.get(argIndex - sourceRowSignature.size());
+      return constants.get(argIndex - inputFieldCount);
     }
 
   }
