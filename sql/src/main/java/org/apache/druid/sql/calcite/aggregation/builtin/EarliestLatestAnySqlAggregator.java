@@ -361,7 +361,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
       SqlAggFunction aggFunction;
 
-      switch (getName()){
+      switch (getName()) {
         case "EARLIEST":
           aggFunction = EarliestLatestBySqlAggregator.EARLIEST_BY.calciteFunction();
           break;
