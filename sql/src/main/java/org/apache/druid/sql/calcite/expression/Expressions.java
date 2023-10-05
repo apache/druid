@@ -63,7 +63,6 @@ import org.apache.druid.sql.calcite.filtration.Ranges;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
@@ -212,12 +211,14 @@ public class Expressions
    */
   @Nullable
   public static DruidExpression toDruidExpression(
-      final InputAccessor inputAccessor,
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
       final RexNode rexNode
   )
   {
     return toDruidExpressionWithPostAggOperands(
-        inputAccessor,
+        plannerContext,
+        rowSignature,
         rexNode,
         null
     );

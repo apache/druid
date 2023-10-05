@@ -21,10 +21,12 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -57,7 +59,9 @@ public class LiteralSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
+      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
+      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
       final InputAccessor inputAccessor,

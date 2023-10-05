@@ -59,8 +59,11 @@ public class Aggregations
    */
   @Nullable
   public static List<DruidExpression> getArgumentsForSimpleAggregator(
-      final InputAccessor inputAccessor,
-      final AggregateCall call
+      final RexBuilder rexBuilder,
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final AggregateCall call,
+      @Nullable final InputAccessor inputAccessor
   )
   {
     final List<DruidExpression> args = call

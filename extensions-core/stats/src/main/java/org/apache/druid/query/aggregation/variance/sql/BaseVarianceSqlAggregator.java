@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.variance.sql;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -37,6 +38,7 @@ import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -73,7 +75,9 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
+      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
+      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
       InputAccessor inpuAccessor,

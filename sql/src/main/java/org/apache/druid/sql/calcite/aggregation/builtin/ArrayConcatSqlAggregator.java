@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -37,6 +38,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -64,7 +66,9 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
+      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
+      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
       InputAccessor inputAccessor,
