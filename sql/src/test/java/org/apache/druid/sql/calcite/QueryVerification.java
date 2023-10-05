@@ -19,10 +19,6 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidException.Category;
-import org.apache.druid.error.DruidException.Persona;
-
 public class QueryVerification
 {
   public static QueryResultsVerifierFactory ofResults(QueryResultsVerifier verifier)
@@ -55,10 +51,7 @@ public class QueryVerification
             verifier.verifyResults(queryResults);
           }
           catch (Exception e) {
-            throw DruidException.forPersona(Persona.DEVELOPER)
-                .ofCategory(Category.UNCATEGORIZED)
-                .build(e, "Exception during verification!");
-            //            throw new RuntimeException("Exception during verification!", e);
+            throw new RuntimeException("Exception during verification!", e);
           }
         }
       };
