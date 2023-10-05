@@ -62,11 +62,15 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
+      # skip the "cache: maven" step from setup-java. We explicitly use a
+      # different cache key since we cannot reuse it across commits.
       - uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.jdk }}
 
+      # the build step produces SNAPSHOT artifacts into the local maven repository,
+      # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Cache Maven m2 repository
         id: maven
         uses: actions/cache@v3
