@@ -346,7 +346,7 @@ Note that this endpoint returns an HTTP `200 OK` response code even if the datas
 
 #### Header 
 
-The following header is required to make a call to this endpoint.
+The following headers are required for this request:
 
 ```json
 Content-Type: application/json
