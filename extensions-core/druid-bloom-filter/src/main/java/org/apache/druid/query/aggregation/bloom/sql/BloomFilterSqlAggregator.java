@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.bloom.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -45,6 +44,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -70,17 +70,12 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inpuAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
   {
-    final RexNode inputOperand = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(0)
-    );
+    final RexNode inputOperand = inpuAccessor.getField(aggregateCall.getArgList().get(0));
     final DruidExpression input = Expressions.toDruidExpression(
         plannerContext,
         rowSignature,
@@ -92,12 +87,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
 
     final AggregatorFactory aggregatorFactory;
     final String aggName = StringUtils.format("%s:agg", name);
-    final RexNode maxNumEntriesOperand = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(1)
-    );
+    final RexNode maxNumEntriesOperand = inpuAccessor.getField(aggregateCall.getArgList().get(1));
 
     if (!maxNumEntriesOperand.isA(SqlKind.LITERAL)) {
       // maxNumEntriesOperand must be a literal in order to plan.

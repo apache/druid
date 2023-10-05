@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.tuple.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -46,6 +45,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -74,7 +74,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
@@ -86,12 +86,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
     final int nominalEntries;
     final int metricExpressionEndIndex;
     final int lastArgIndex = argList.size() - 1;
-    final RexNode potentialNominalEntriesArg = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        argList.get(lastArgIndex)
-    );
+    final RexNode potentialNominalEntriesArg = inputAccessor.getField(argList.get(lastArgIndex));
 
     if (potentialNominalEntriesArg.isA(SqlKind.LITERAL) &&
         RexLiteral.value(potentialNominalEntriesArg) instanceof Number) {
@@ -107,12 +102,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
     for (int i = 0; i <= metricExpressionEndIndex; i++) {
       final String fieldName;
 
-      final RexNode columnRexNode = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          argList.get(i)
-      );
+      final RexNode columnRexNode = inputAccessor.getField(argList.get(i));
 
       final DruidExpression columnArg = Expressions.toDruidExpression(
           plannerContext,
