@@ -24,7 +24,6 @@ import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -127,7 +126,7 @@ public final class DictionaryIdLookup implements Closeable
     final byte[] bytes = StringUtils.toUtf8Nullable(value);
     final int index = stringDictionary.indexOf(bytes == null ? null : ByteBuffer.wrap(bytes));
     if (index < 0) {
-      throw DruidException.defensive("Value not found in string dictionary");
+      throw DruidException.defensive("Value not found in column[%s] string dictionary", name);
     }
     return index;
   }
@@ -143,7 +142,7 @@ public final class DictionaryIdLookup implements Closeable
     }
     final int index = longDictionary.indexOf(value);
     if (index < 0) {
-      throw DruidException.defensive("Value not found in long dictionary");
+      throw DruidException.defensive("Value not found in column[%s] long dictionary", name);
     }
     return index + longOffset();
   }
@@ -164,7 +163,7 @@ public final class DictionaryIdLookup implements Closeable
     }
     final int index = doubleDictionary.indexOf(value);
     if (index < 0) {
-      throw DruidException.defensive("Value not found in double dictionary");
+      throw DruidException.defensive("Value not found in column[%s] double dictionary", name);
     }
     return index + doubleOffset();
   }
@@ -180,7 +179,7 @@ public final class DictionaryIdLookup implements Closeable
     }
     final int index = arrayDictionary.indexOf(value);
     if (index < 0) {
-      throw DruidException.defensive("Value not found in array dictionary");
+      throw DruidException.defensive("Value not found in column[%s] array dictionary", name);
     }
     return index + arrayOffset();
   }
@@ -320,7 +319,11 @@ public final class DictionaryIdLookup implements Closeable
       public int addToOffset(long numBytesWritten)
       {
         if (numBytesWritten > bytesLeft()) {
-          throw new ISE("Wrote more bytes[%,d] than available[%,d]. Don't do that.", numBytesWritten, bytesLeft());
+          throw DruidException.defensive(
+              "Wrote more bytes[%,d] than available[%,d]. Don't do that.",
+              numBytesWritten,
+              bytesLeft()
+          );
         }
         currOffset += numBytesWritten;
 
