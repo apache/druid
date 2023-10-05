@@ -338,7 +338,7 @@ Content-Length: 230
 
 Updates the state of all `unused` segments of a datasource to `used`. If there are no segments eligible to be marked as `used`, this endpoint will return the property `"numChangedSegments"` and the value `0`. 
 
-Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
 #### URL
 
