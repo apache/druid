@@ -60,6 +60,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -319,7 +320,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   previous.getValue(),
                   current.getValue(),
                   true,
-                  exclusiveStartPartitions
+                  exclusiveStartPartitions,
+                  getTaskLockType()
               )
           );
           previous = current;
@@ -334,7 +336,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 previous.getValue(),
                 endOffsets,
                 false,
-                exclusiveStartPartitions
+                exclusiveStartPartitions,
+                getTaskLockType()
             )
         );
       } else {
@@ -345,7 +348,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap(),
                 endOffsets,
                 false,
-                ioConfig.getStartSequenceNumbers().getExclusivePartitions()
+                ioConfig.getStartSequenceNumbers().getExclusivePartitions(),
+                getTaskLockType()
             )
         );
       }
@@ -923,6 +927,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
+  }
+
+  private TaskLockType getTaskLockType()
+  {
+    return TaskLocks.determineLockTypeForAppend(task.getContext());
   }
 
   private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException
@@ -1709,7 +1718,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               sequenceNumbers,
               endOffsets,
               false,
-              exclusiveStartPartitions
+              exclusiveStartPartitions,
+              getTaskLockType()
           );
 
           log.info(

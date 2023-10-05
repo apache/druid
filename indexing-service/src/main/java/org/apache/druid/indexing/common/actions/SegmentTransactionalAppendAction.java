@@ -26,7 +26,6 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -107,20 +106,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       throw new RuntimeException(e);
     }
 
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-
-    if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
-      for (DataSegment segment : retVal.getSegments()) {
-        IndexTaskUtils.setSegmentDimensions(metricBuilder, segment);
-        toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
-      }
-    } else {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
-    }
-
+    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
     return retVal;
   }
 

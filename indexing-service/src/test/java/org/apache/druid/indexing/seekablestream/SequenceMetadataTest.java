@@ -76,7 +76,8 @@ public class SequenceMetadataTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         true,
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
 
@@ -109,7 +110,8 @@ public class SequenceMetadataTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         true,
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
     TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, false);
 
