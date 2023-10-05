@@ -89,7 +89,6 @@ public class InputAccessor
         .collect(Collectors.toList());
   }
 
-  @Deprecated
   public @Nullable Project getProject()
   {
     return project;
