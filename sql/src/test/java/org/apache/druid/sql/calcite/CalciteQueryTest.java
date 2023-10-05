@@ -678,7 +678,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLatestToLatestByConversion()
   {
-    notMsqCompatible();
+    msqIncompatible();
     testQuery(
         "SELECT LATEST(dim1,10) FROM (SELECT DISTINCT __time, dim1 from foo)",
         ImmutableList.of(
