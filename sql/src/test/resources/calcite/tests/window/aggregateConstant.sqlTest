@@ -2,7 +2,7 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-  	dim1,
+    dim1,
     count(333) OVER () cc
   FROM foo
 
@@ -24,4 +24,3 @@ expectedResults:
   - ["def",6]
   - ["abc",6]
 
-  
