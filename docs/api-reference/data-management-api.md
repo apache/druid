@@ -473,7 +473,7 @@ Accept: application/json, text/plain
 
 Sends a [kill task](../ingestion/tasks.md) for a given interval and datasource. The interval value is an ISO 8601 string delimited by `_`. This request permanently deletes all metadata for unused segments and removes them from deep storage.
 
-Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
 This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:dataSource?kill=true&interval=:interval`
 
