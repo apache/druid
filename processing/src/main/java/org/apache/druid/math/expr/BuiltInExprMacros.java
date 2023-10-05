@@ -225,30 +225,4 @@ public class BuiltInExprMacros
     }
   }
 
-  /***
-   * Alias Expression macro to create an alias and delegate operations to the same base macro
-   */
-  public static class AliasExprMacro implements ExprMacroTable.ExprMacro
-  {
-    private final ExprMacroTable.ExprMacro exprMacro;
-    private final String alias;
-
-    public AliasExprMacro(final ExprMacroTable.ExprMacro baseExprMacro, final String alias)
-    {
-      this.exprMacro = baseExprMacro;
-      this.alias = alias;
-    }
-
-    @Override
-    public Expr apply(List<Expr> args)
-    {
-      return exprMacro.apply(args);
-    }
-
-    @Override
-    public String name()
-    {
-      return alias;
-    }
-  }
 }

@@ -46,7 +46,7 @@ public class ExprMacroTable
   private static final BuiltInExprMacros.ComplexDecodeBase64ExprMacro COMPLEX_DECODE_BASE_64_EXPR_MACRO = new BuiltInExprMacros.ComplexDecodeBase64ExprMacro();
   private static final List<ExprMacro> BUILT_IN = ImmutableList.of(
       COMPLEX_DECODE_BASE_64_EXPR_MACRO,
-      new BuiltInExprMacros.AliasExprMacro(
+      new AliasExprMacro(
           COMPLEX_DECODE_BASE_64_EXPR_MACRO,
           BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS
       ),
