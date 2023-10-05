@@ -248,7 +248,7 @@ Accept: application/json, text/plain
 
 ### Update a group of segments as `used`
 
-Updates the state a group of segments as `used` using the an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
+Updates the state a group of segments as `used` using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
 
 Interval specifies the start and end times as ISO 8601 strings. `interval=(start/end)` where start is inclusive and end is non-inclusive. Only the segments completely contained within the specified interval will be updated, partially overlapping segments will not be affected.
 
