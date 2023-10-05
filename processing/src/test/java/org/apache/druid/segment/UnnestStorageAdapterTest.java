@@ -517,6 +517,30 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testCannotPushdown()
+  {
+    final Filter testQueryFilter = and(ImmutableList.of(
+        not(selector(OUTPUT_COLUMN_NAME, "3")),
+        or(ImmutableList.of(
+            or(ImmutableList.of(
+                selector("newcol", "2"),
+                selector(COLUMNNAME, "2"),
+                and(ImmutableList.of(
+                    selector("newcol", "3"),
+                    selector(COLUMNNAME, "7")
+                ))
+            )),
+            selector(OUTPUT_COLUMN_NAME, "1")
+        ))
+    ));
+    testComputeBaseAndPostUnnestFilters(
+        testQueryFilter,
+        "(newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || multi-string1 = 1)",
+        "(~(unnested-multi-string1 = 3) && (newcol = 2 || multi-string1 = 2 || (newcol = 3 && multi-string1 = 7) || unnested-multi-string1 = 1))"
+    );
+  }
+
+  @Test
   public void test_pushdown_filters_unnested_dimension_with_unnest_adapters()
   {
     final UnnestStorageAdapter unnestStorageAdapter = new UnnestStorageAdapter(

@@ -172,7 +172,7 @@ public class TestDataBuilder
   );
 
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),

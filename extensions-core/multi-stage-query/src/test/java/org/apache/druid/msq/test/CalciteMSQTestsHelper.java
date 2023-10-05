@@ -27,6 +27,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -45,6 +46,7 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -72,7 +74,9 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
+import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
@@ -80,7 +84,6 @@ import org.joda.time.Interval;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -206,7 +209,7 @@ public class CalciteMSQTestsHelper
               .build();
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "1"))
+              .tmpDir(temporaryFolder.newFolder())
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(foo1Schema)
               .rows(ROWS1)
@@ -233,7 +236,7 @@ public class CalciteMSQTestsHelper
               .build();
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "2"))
+              .tmpDir(temporaryFolder.newFolder())
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(indexSchemaDifferentDim3M1Types)
               .rows(ROWS2)
@@ -243,7 +246,7 @@ public class CalciteMSQTestsHelper
         case CalciteTests.BROADCAST_DATASOURCE:
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "3"))
+              .tmpDir(temporaryFolder.newFolder())
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(INDEX_SCHEMA_NUMERIC_DIMS)
               .rows(ROWS1_WITH_NUMERIC_DIMS)
@@ -252,11 +255,35 @@ public class CalciteMSQTestsHelper
         case DATASOURCE5:
           index = IndexBuilder
               .create()
-              .tmpDir(new File(temporaryFolder.newFolder(), "5"))
+              .tmpDir(temporaryFolder.newFolder())
               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
               .schema(INDEX_SCHEMA_LOTS_O_COLUMNS)
               .rows(ROWS_LOTS_OF_COLUMNS)
               .buildMMappedIndex();
+          break;
+        case CalciteArraysQueryTest.DATA_SOURCE_ARRAYS:
+          index = IndexBuilder.create()
+                              .tmpDir(temporaryFolder.newFolder())
+                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                              .schema(
+                                  new IncrementalIndexSchema.Builder()
+                                      .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                                      .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                                      .withMetrics(
+                                          new CountAggregatorFactory("cnt")
+                                      )
+                                      .withRollup(false)
+                                      .build()
+                              )
+                              .inputSource(
+                                  ResourceInputSource.of(
+                                      NestedDataTestUtils.class.getClassLoader(),
+                                      NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+                                  )
+                              )
+                              .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                              .inputTmpDir(temporaryFolder.newFolder())
+                              .buildMMappedIndex();
           break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);

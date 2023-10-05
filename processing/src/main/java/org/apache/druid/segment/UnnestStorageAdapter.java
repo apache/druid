@@ -327,8 +327,7 @@ public class UnnestStorageAdapter implements StorageAdapter
               (BooleanFilter) queryFilter,
               inputColumn,
               inputColumnCapabilites,
-              filterSplitter,
-              isTopLevelAndFilter
+              filterSplitter
           );
           // If rewite on entire query filter is successful then add entire filter to preFilter else skip and only add to post filter.
           if (filterSplitter.getPreFilterCount() == filterSplitter.getOriginalFilterCount()) {
@@ -470,8 +469,7 @@ public class UnnestStorageAdapter implements StorageAdapter
       BooleanFilter queryFilter,
       final String inputColumn,
       final ColumnCapabilities inputColumnCapabilites,
-      final FilterSplitter filterSplitter,
-      final boolean isTopLevelAndFilter
+      final FilterSplitter filterSplitter
   )
   {
     final List<Filter> preFilterList = new ArrayList<>();
@@ -482,8 +480,7 @@ public class UnnestStorageAdapter implements StorageAdapter
               (BooleanFilter) filter,
               inputColumn,
               inputColumnCapabilites,
-              filterSplitter,
-              isTopLevelAndFilter
+              filterSplitter
           );
           if (!andChildFilters.isEmpty()) {
             preFilterList.add(new AndFilter(andChildFilters));
@@ -494,13 +491,14 @@ public class UnnestStorageAdapter implements StorageAdapter
               (BooleanFilter) filter,
               inputColumn,
               inputColumnCapabilites,
-              filterSplitter,
-              false
+              filterSplitter
           );
           preFilterList.add(new OrFilter(orChildFilters));
         } else if (filter instanceof NotFilter) {
+          // nothing to do here...
           continue;
         } else {
+          // can we rewrite
           final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(
               filter,
               inputColumn,
@@ -510,13 +508,6 @@ public class UnnestStorageAdapter implements StorageAdapter
             // this is making sure that we are not pushing the unnest columns filters to base filter without rewriting.
             preFilterList.add(newFilter);
             filterSplitter.addToPreFilterCount(1);
-          }
-          /*
-           Push down the filters to base only if top level is And Filter
-           we can not push down if top level filter is OR or unnestColumn is derived expression like arrays
-           */
-          if (isTopLevelAndFilter && getUnnestInputIfDirectAccess(unnestColumn) != null) {
-            filterSplitter.addPreFilter(newFilter != null ? newFilter : filter);
           }
           filterSplitter.addToOriginalFilterCount(1);
         }
