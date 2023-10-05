@@ -49,7 +49,7 @@ For the interval, specify the start and end times as ISO 8601 strings to identif
 
 #### Request body
 
-The group of segments is sent as a JSON request payload with the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
 |Property|Description|Example|
 |----------|-------------|---------|
