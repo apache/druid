@@ -20,8 +20,6 @@
 package org.apache.druid.sql.calcite.aggregation;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -49,9 +47,7 @@ public class Aggregations
    *
    * 1) They can take direct field accesses or expressions as inputs.
    * 2) They cannot implicitly cast strings to numbers when using a direct field access.
-   *
    * @param plannerContext SQL planner context
-   * @param rowSignature   input row signature
    * @param call           aggregate call object
    * @param inputAccessor  gives access to input fields and schema
    *
@@ -59,11 +55,9 @@ public class Aggregations
    */
   @Nullable
   public static List<DruidExpression> getArgumentsForSimpleAggregator(
-      final RexBuilder rexBuilder,
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final AggregateCall call,
-      @Nullable final InputAccessor inputAccessor
+      final InputAccessor inputAccessor
   )
   {
     final List<DruidExpression> args = call
@@ -79,31 +73,6 @@ public class Aggregations
       return null;
     }
   }
-
-  @Nullable
-  @Deprecated
-  public static List<DruidExpression> getArgumentsForSimpleAggregator(
-      final RexBuilder rexBuilder,
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final AggregateCall call,
-      @Nullable final Project project
-  )
-  {
-    final List<DruidExpression> args = call
-        .getArgList()
-        .stream()
-        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
-        .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, rowSignature, rexNode))
-        .collect(Collectors.toList());
-
-    if (args.stream().noneMatch(Objects::isNull)) {
-      return args;
-    } else {
-      return null;
-    }
-  }
-
 
   /**
    * Translate a Calcite {@link RexNode} to a Druid expression for the aggregators that require numeric type inputs.

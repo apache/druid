@@ -106,9 +106,7 @@ public class CountSqlAggregator implements SqlAggregator
   )
   {
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
-        inputAccessor.getRexBuilder(),
         plannerContext,
-        inputAccessor.getInputRowSignature(),
         aggregateCall,
         inputAccessor
     );

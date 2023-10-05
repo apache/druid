@@ -68,9 +68,7 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     }
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
-        inputAccessor.getRexBuilder(),
         plannerContext,
-        inputAccessor.getInputRowSignature(),
         aggregateCall,
         inputAccessor
     );
