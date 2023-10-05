@@ -196,7 +196,7 @@ public class CalciteMSQTestsHelper
     LoadedSegmentDataProvider loadedSegmentDataProvider = Mockito.mock(LoadedSegmentDataProvider.class);
     try {
       doThrow(new AssertionError("Test does not support loaded segment query"))
-          .when(loadedSegmentDataProvider).fetchRowsFromDataServer(any(), any(), any(), any(), any());
+          .when(loadedSegmentDataProvider).fetchRowsFromDataServer(any(), any(), any(), any());
       doReturn(loadedSegmentDataProvider).when(mockFactory).createLoadedSegmentDataProvider(anyString(), any());
     }
     catch (IOException e) {

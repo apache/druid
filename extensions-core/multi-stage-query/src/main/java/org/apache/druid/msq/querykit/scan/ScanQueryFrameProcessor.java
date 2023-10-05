@@ -180,7 +180,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
           segment.fetchRowsFromDataServer(
               query,
               ScanQueryFrameProcessor::mappingFunction,
-              ScanResultValue.class,
               closer
           );
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {

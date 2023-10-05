@@ -114,7 +114,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
     )
         .when(loadedSegmentDataProvider)
-        .fetchRowsFromDataServer(any(), any(), any(), any(), any());
+        .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt, dim1 from foo")
@@ -168,7 +168,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
     )
         .when(loadedSegmentDataProvider)
-        .fetchRowsFromDataServer(any(), any(), any(), any(), any());
+        .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
@@ -220,7 +220,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                         ImmutableList.of(
                             ResultRow.of(1L, 2L)))))
     ).when(loadedSegmentDataProvider)
-     .fetchRowsFromDataServer(any(), any(), any(), any(), any());
+     .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")
@@ -269,7 +269,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         new ISE("Segment could not be found on data server, but segment was not handed off.")
     )
         .when(loadedSegmentDataProvider)
-        .fetchRowsFromDataServer(any(), any(), any(), any(), any());
+        .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")

@@ -40,8 +40,11 @@ import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.rpc.FixedSetServiceLocator;
@@ -67,13 +70,15 @@ public class LoadedSegmentDataProvider
   private final ServiceClientFactory serviceClientFactory;
   private final CoordinatorClient coordinatorClient;
   private final ObjectMapper objectMapper;
+  private final QueryToolChestWarehouse warehouse;
 
   public LoadedSegmentDataProvider(
       String dataSource,
       ChannelCounters channelCounters,
       ServiceClientFactory serviceClientFactory,
       CoordinatorClient coordinatorClient,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      QueryToolChestWarehouse warehouse
   )
   {
     this.dataSource = dataSource;
@@ -81,6 +86,7 @@ public class LoadedSegmentDataProvider
     this.serviceClientFactory = serviceClientFactory;
     this.coordinatorClient = coordinatorClient;
     this.objectMapper = objectMapper;
+    this.warehouse = warehouse;
   }
 
   @VisibleForTesting
@@ -103,7 +109,6 @@ public class LoadedSegmentDataProvider
       Query<QueryType> query,
       RichSegmentDescriptor segmentDescriptor,
       Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
-      Class<QueryType> resultClass,
       Closer closer
   ) throws IOException
   {
@@ -114,8 +119,11 @@ public class LoadedSegmentDataProvider
 
     Set<DruidServerMetadata> servers = segmentDescriptor.getServers();
     DataServerClient dataServerClient = makeDataServerClient(FixedSetServiceLocator.forDruidServerMetadata(servers));
+    QueryToolChest<QueryType, Query<QueryType>> toolChest = warehouse.getToolChest(query);
+    Function<QueryType, QueryType> preComputeManipulatorFn =
+        toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing());
 
-    final JavaType queryResultType = objectMapper.getTypeFactory().constructType(resultClass);
+    final JavaType queryResultType = toolChest.getBaseResultType();
     final int numRetriesOnMissingSegments = preparedQuery.context().getNumRetriesOnMissingSegments(DEFAULT_NUM_TRIES);
 
     log.debug("Querying severs[%s] for segment[%s], retries:[%d]", servers, segmentDescriptor, numRetriesOnMissingSegments);
@@ -125,7 +133,8 @@ public class LoadedSegmentDataProvider
     try {
       statusSequencePair = RetryUtils.retry(
           () -> {
-            Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType, closer);
+            Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType, closer)
+                                                           .map(preComputeManipulatorFn);
             final List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
             // Only one segment is fetched, so this should be empty if it was fetched
             if (missingSegments.isEmpty()) {

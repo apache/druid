@@ -45,6 +45,7 @@ import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
@@ -105,6 +106,7 @@ public class IndexerWorkerContext implements WorkerContext
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final ObjectMapper smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
+    final QueryToolChestWarehouse warehouse = injector.getInstance(QueryToolChestWarehouse.class);
 
     return new IndexerWorkerContext(
         toolbox,
@@ -118,7 +120,8 @@ public class IndexerWorkerContext implements WorkerContext
         new LoadedSegmentDataProviderFactory(
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
-            smileMapper
+            smileMapper,
+            warehouse
         ),
         serviceClientFactory
     );

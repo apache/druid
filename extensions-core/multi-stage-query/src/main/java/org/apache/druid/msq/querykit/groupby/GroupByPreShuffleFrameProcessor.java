@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.querykit.groupby;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
@@ -46,7 +45,6 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
@@ -101,21 +99,12 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     );
   }
 
-  private GroupByQuery prepareGroupByQuery(GroupByQuery query)
-  {
-    ImmutableMap<String, Object> overridingContext = ImmutableMap.<String, Object>builder()
-                                                                 .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown())
-                                                                 .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
-                                                                 .build();
-    return query.withOverriddenContext(overridingContext);
-  }
-
   @Override
   protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
       Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<ResultRow>> statusSequencePair =
-          segment.fetchRowsFromDataServer(prepareGroupByQuery(query), Function.identity(), ResultRow.class, closer);
+          segment.fetchRowsFromDataServer(groupingEngine.prepareGroupByQuery(query), Function.identity(), closer);
       if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
         log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.",
                  segment.getDescriptor());

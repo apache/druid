@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 public class LoadedSegmentDataProviderFactory
@@ -29,17 +30,19 @@ public class LoadedSegmentDataProviderFactory
   private final CoordinatorClient coordinatorClient;
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
+  private final QueryToolChestWarehouse warehouse;
 
   public LoadedSegmentDataProviderFactory(
       CoordinatorClient coordinatorClient,
       ServiceClientFactory serviceClientFactory,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      QueryToolChestWarehouse warehouse
   )
   {
-
     this.coordinatorClient = coordinatorClient;
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
+    this.warehouse = warehouse;
   }
 
   public LoadedSegmentDataProvider createLoadedSegmentDataProvider(
@@ -52,7 +55,8 @@ public class LoadedSegmentDataProviderFactory
         channelCounters,
         serviceClientFactory,
         coordinatorClient,
-        objectMapper
+        objectMapper,
+        warehouse
     );
   }
 }

@@ -36,9 +36,14 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
+import org.apache.druid.query.MapQueryToolChestWarehouse;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -105,15 +110,21 @@ public class LoadedSegmentDataProviderTest
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2003/2004"))))
         .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-        .context(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 3))
+        .context(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 1))
         .build();
+    QueryToolChestWarehouse queryToolChestWarehouse = new MapQueryToolChestWarehouse(
+        ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+                    .put(ScanQuery.class, new ScanQueryQueryToolChest(null, null))
+                    .build()
+    );
     target = spy(
         new LoadedSegmentDataProvider(
             DATASOURCE1,
             new ChannelCounters(),
             mock(ServiceClientFactory.class),
             coordinatorClient,
-            DruidServiceTestUtils.newJsonMapper()
+            DruidServiceTestUtils.newJsonMapper(),
+            queryToolChestWarehouse
         )
     );
     doReturn(dataServerClient).when(target).makeDataServerClient(any());
@@ -128,7 +139,6 @@ public class LoadedSegmentDataProviderTest
         query,
         SEGMENT_1,
         ScanQueryFrameProcessor::mappingFunction,
-        ScanResultValue.class,
         Closer.create()
     );
 
@@ -157,7 +167,6 @@ public class LoadedSegmentDataProviderTest
         query,
         SEGMENT_1,
         ScanQueryFrameProcessor::mappingFunction,
-        ScanResultValue.class,
         Closer.create()
     );
 
@@ -181,7 +190,6 @@ public class LoadedSegmentDataProviderTest
             query,
             SEGMENT_1,
             ScanQueryFrameProcessor::mappingFunction,
-            ScanResultValue.class,
             Closer.create()
         )
     );

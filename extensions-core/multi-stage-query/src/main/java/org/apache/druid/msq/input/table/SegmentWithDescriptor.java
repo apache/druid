@@ -85,14 +85,13 @@ public class SegmentWithDescriptor
   public <QueryType, RowType> Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
       Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
-      Class<QueryType> queryResultType,
       Closer closer
   ) throws IOException
   {
     if (loadedSegmentDataProvider == null) {
       throw new RE("loadedSegmentDataProvider was null. Fetching segments from servers is not supported for segment[%s]", descriptor);
     }
-    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, descriptor, mappingFunction, queryResultType, closer);
+    return loadedSegmentDataProvider.fetchRowsFromDataServer(query, descriptor, mappingFunction, closer);
   }
 
   /**
