@@ -182,7 +182,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Updates the state a segment as `unused` using the segment ID. This is a "soft delete" of the segment from Historicals. To undo this delete, mark the segments as `used`.
 
-Note that this endpoint returns an HTTP `200 OK` message code even if the segment ID or datasource name does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the segment ID or datasource does not exist.
 
 #### URL
 
