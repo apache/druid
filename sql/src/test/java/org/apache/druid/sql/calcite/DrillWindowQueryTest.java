@@ -427,7 +427,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
                 newVal = 0L;
               } else if (doublePattern.test(val)) {
                 double d = Doubles.tryParse(val);
-                newVal = new Long((long) d);
+                newVal = (long) d;
               } else {
                 Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
                 try {
