@@ -475,7 +475,7 @@ Sends a [kill task](../ingestion/tasks.md) for a given interval and datasource. 
 
 Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
 
-This succeeds the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:dataSource?kill=true&interval=:interval`
+This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:dataSource?kill=true&interval=:interval`
 
 #### URL
 
