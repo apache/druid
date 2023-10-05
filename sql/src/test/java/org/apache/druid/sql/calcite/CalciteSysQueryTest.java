@@ -33,7 +33,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTasksSum()
   {
-    notMsqCompatible();
+    msqIncompatible();
 
     testBuilder()
         .sql("select datasource, sum(duration) from sys.tasks group by datasource")
@@ -50,7 +50,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTasksSumOver()
   {
-    notMsqCompatible();
+    msqIncompatible();
 
     testBuilder()
         .sql("select datasource, sum(duration) over () from sys.tasks group by datasource")
