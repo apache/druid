@@ -25,10 +25,6 @@ sidebar_label: Data management
 
 This topic describes the data management API endpoints for Apache Druid. This includes information on how to mark segments as used or unused and delete them from Druid.
 
-Note that while you can mark segments as used by sending POST requests to the datasource, the Coordinator may subsequently mark segments as unused if they meet any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to used, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
-
-When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as used. Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully. 
-
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
 :::info
@@ -37,9 +33,147 @@ Avoid using indexing or kill tasks and these APIs at the same time for the same 
 
 ## Segment management
 
-### Update a group of segments as unused
+You can mark segments as used by sending POST requests to the datasource, but the Coordinator may subsequently mark segments as unused if they meet any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to used, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
 
-Updates the state of a group of segments as unused using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
+When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as used. Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully. 
+
+### Mark a single segment unused
+
+Marks the state of a segment as unused, using the segment ID. This is a "soft delete" of the segment from Historicals. To undo this action, mark the segments used.
+
+Note that this endpoint returns an HTTP `200 OK` response code even if the segment ID or datasource does not exist.
+
+#### URL
+
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/segments/:segmentId</code>
+
+#### Header 
+
+The following headers are required for this request:
+
+```json
+Content-Type: application/json
+Accept: application/json, text/plain
+```
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+*Successfully updated segment* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+The following example updates the segment `wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z` from datasource `wikipedia_hour` as `unused`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z" \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json, text/plain'
+```
+
+<!--HTTP-->
+
+```HTTP
+DELETE /druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Accept: application/json, text/plain
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Show sample response</summary>
+
+```json
+{
+    "segmentStateChanged": true
+}
+```
+</details>
+
+### Mark a single segment as used
+
+Marks the state of a segment as used, using the segment ID.
+
+#### URL
+
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/segments/:segmentId</code>
+
+#### Header 
+
+The following headers are required for this request:
+
+```json
+Content-Type: application/json
+Accept: application/json, text/plain
+```
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+*Successfully updated segments* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+The following example updates the segment with ID `wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z` to used.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z" \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json, text/plain'
+```
+
+<!--HTTP-->
+
+```HTTP
+POST /druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Accept: application/json, text/plain
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Show sample response</summary>
+
+```json
+{
+    "segmentStateChanged": true
+}
+```
+</details>
+
+### Mark a group of segments unused
+
+Marks the state of a group of segments as unused, using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
@@ -49,7 +183,7 @@ For the interval, specify the start and end times as ISO 8601 strings to identif
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts the following properties:
+The group of segments is sent as a JSON request payload that accepts one of the following properties:
 
 |Property|Description|Example|
 |----------|-------------|---------|
@@ -125,130 +259,9 @@ Content-Length: 230
 ```
 </details>
 
-### Update all datasource segments as unused
+### Mark a group of segments used
 
-Updates the state of all segments of a datasource to unused. This action performs a "soft delete" of the segments from Historicals.
-
-Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
-
-#### URL 
-
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-*Successfully updated segments* 
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-
-#### Sample request
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour"
-```
-
-<!--HTTP-->
-
-```HTTP
-DELETE /druid/coordinator/v1/datasources/wikipedia_hour HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample response
-
-<details>
-  <summary>Show sample response</summary>
-
-```json
-{
-    "numChangedSegments": 24
-}
-```
-</details>
-
-### Update a segment as unused
-
-Updates the state a segment as unused using the segment ID. This is a "soft delete" of the segment from Historicals. To undo this delete, mark the segments as used.
-
-Note that this endpoint returns an HTTP `200 OK` response code even if the segment ID or datasource does not exist.
-
-#### URL
-
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/segments/:segmentId</code>
-
-#### Header 
-
-The following headers are required for this request:
-
-```json
-Content-Type: application/json
-Accept: application/json, text/plain
-```
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-*Successfully updated segment* 
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-
-#### Sample request
-
-The following example updates the segment `wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z` from datasource `wikipedia_hour` as `unused`.
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z" \
---header 'Content-Type: application/json' \
---header 'Accept: application/json, text/plain'
-```
-
-<!--HTTP-->
-
-```HTTP
-DELETE /druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-Content-Type: application/json
-Accept: application/json, text/plain
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample response
-
-<details>
-  <summary>Show sample response</summary>
-
-```json
-{
-    "segmentStateChanged": true
-}
-```
-</details>
-
-### Update a group of segments as used
-
-Updates the state a group of segments as used using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
+Marks the state of a group of segments as used, using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
 
 For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
@@ -334,9 +347,62 @@ Content-Length: 230
 ```
 </details>
 
-### Update all datasource segments as used
+### Mark all datasource segments unused
 
-Updates the state of all unused segments of a datasource to used. The endpoint returns the number of changed segments. 
+Marks the state of all segments of a datasource as unused. This action performs a "soft delete" of the segments from Historicals.
+
+Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
+
+#### URL 
+
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+
+*Successfully updated segments* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+
+```shell
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour"
+```
+
+<!--HTTP-->
+
+```HTTP
+DELETE /druid/coordinator/v1/datasources/wikipedia_hour HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Show sample response</summary>
+
+```json
+{
+    "numChangedSegments": 24
+}
+```
+</details>
+
+### Mark all datasource segments used
+
+Marks the state of all unused segments of a datasource as used. The endpoint returns the number of changed segments. 
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
@@ -397,72 +463,6 @@ Accept: application/json, text/plain
 ```json
 {
     "numChangedSegments": 1
-}
-```
-</details>
-
-### Update a segment as used
-
-Updates the state a segment as used using the segment ID.
-
-#### URL
-
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/segments/:segmentId</code>
-
-#### Header 
-
-The following headers are required for this request:
-
-```json
-Content-Type: application/json
-Accept: application/json, text/plain
-```
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-*Successfully updated segments* 
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-
-#### Sample request
-
-The following example updates the segment with ID `wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z` to used.
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z" \
---header 'Content-Type: application/json' \
---header 'Accept: application/json, text/plain'
-```
-
-<!--HTTP-->
-
-```HTTP
-POST /druid/coordinator/v1/datasources/wikipedia_hour/segments/wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-Content-Type: application/json
-Accept: application/json, text/plain
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample response
-
-<details>
-  <summary>Show sample response</summary>
-
-```json
-{
-    "segmentStateChanged": true
 }
 ```
 </details>
