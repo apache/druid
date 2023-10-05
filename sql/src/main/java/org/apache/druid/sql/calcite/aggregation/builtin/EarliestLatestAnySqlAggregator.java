@@ -26,14 +26,19 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -339,6 +344,45 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           false,
           Optionality.FORBIDDEN
       );
+    }
+
+    @Override
+    public SqlNode rewriteCall(
+        SqlValidator validator,
+        SqlCall call
+    )
+    {
+      List<SqlNode> operands = call.getOperandList();
+
+      SqlParserPos pos = call.getParserPosition();
+
+      SqlAggFunction aggFunction;
+
+      switch (getName()){
+        case "EARLIEST":
+          aggFunction = EarliestLatestBySqlAggregator.EARLIEST_BY.calciteFunction();
+          break;
+        case "LATEST":
+          aggFunction = EarliestLatestBySqlAggregator.LATEST_BY.calciteFunction();
+          break;
+        default:
+          return call;
+      }
+
+      switch (operands.size()) {
+        case 1:
+          return aggFunction.createCall(pos, operands.get(0), new SqlIdentifier(
+              "__time", pos));
+        case 2:
+          return aggFunction.createCall(pos, operands.get(0), new SqlIdentifier(
+              "__time", pos), operands.get(1));
+        default:
+          throw InvalidSqlInput.exception(
+              "Function [%s] expects 1 or 2 arguments but found [%s]",
+              getName(),
+              operands.size()
+          );
+      }
     }
   }
 }
