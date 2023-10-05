@@ -516,6 +516,10 @@ public class JoinDataSource implements DataSource
     // Join of Unnest of Join of Unnest of Filter
     // so these checks are needed to be ORed
     // to get the base
+    // This also means that an addition of a new datasource
+    // Will need an instanceof check here
+    // A future work should look into if the flattenJoin
+    // can be refactored to omit these instanceof checks
     while (current instanceof JoinDataSource || current instanceof UnnestDataSource || current instanceof FilteredDataSource) {
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
