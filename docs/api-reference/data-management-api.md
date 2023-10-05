@@ -411,7 +411,7 @@ Updates the state a segment as `used` using the segment ID.
 
 #### Header 
 
-The following header is required to make a call to this endpoint.
+The following headers are required for this request:
 
 ```json
 Content-Type: application/json
