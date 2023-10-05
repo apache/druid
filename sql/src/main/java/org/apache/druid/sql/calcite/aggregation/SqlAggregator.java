@@ -71,7 +71,7 @@ public interface SqlAggregator
       boolean finalizeAggregations
   ) {
     return toDruidAggregation(plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         virtualColumnRegistry,
         inputAccessor.getRexBuilder(),
         name,

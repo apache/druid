@@ -42,6 +42,7 @@ public class InputAccessor
   private final Project project;
   private final ImmutableList<RexLiteral> constants;
   private final RexBuilder rexBuilder;
+  @Deprecated   // rename
   private final RowSignature sourceRowSignature;
   private final int inputFieldCount;
 
@@ -99,5 +100,11 @@ public class InputAccessor
   public RexBuilder getRexBuilder()
   {
     return rexBuilder;
+  }
+
+
+  public RowSignature getInputRowSignature()
+  {
+    return sourceRowSignature;
   }
 }
