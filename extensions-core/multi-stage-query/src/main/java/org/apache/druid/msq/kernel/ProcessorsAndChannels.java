@@ -19,32 +19,34 @@
 
 package org.apache.druid.msq.kernel;
 
-import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannels;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
 
 /**
  * Returned from {@link FrameProcessorFactory#makeProcessors}.
  *
  * Includes a processor sequence and a list of output channels.
+ *
+ * @param <T> return type of {@link org.apache.druid.frame.processor.FrameProcessor} from {@link #getProcessorManager()}
+ * @param <R> result type of {@link ProcessorManager#result()}
  */
-public class ProcessorsAndChannels<ProcessorClass extends FrameProcessor<T>, T>
+public class ProcessorsAndChannels<T, R>
 {
-  private final Sequence<ProcessorClass> workers;
+  private final ProcessorManager<T, R> processorManager;
   private final OutputChannels outputChannels;
 
   public ProcessorsAndChannels(
-      final Sequence<ProcessorClass> workers,
+      final ProcessorManager<T, R> processorManager,
       final OutputChannels outputChannels
   )
   {
-    this.workers = workers;
+    this.processorManager = processorManager;
     this.outputChannels = outputChannels;
   }
 
-  public Sequence<ProcessorClass> processors()
+  public ProcessorManager<T, R> getProcessorManager()
   {
-    return workers;
+    return processorManager;
   }
 
   public OutputChannels getOutputChannels()

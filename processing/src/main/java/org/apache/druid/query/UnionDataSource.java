@@ -38,7 +38,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * TODO(laksh):
+ * Reperesents a UNION ALL of two or more datasources.
+ *
+ * Native engine can only work with table datasources that are scans or simple mappings (column rename without any
+ * expression applied on top). Therefore, it uses methods like {@link #getTableNames()} and
+ * {@link #getDataSourcesAsTableDataSources()} to assert that the children were TableDataSources.
+ *
+ * MSQ should be able to plan and work with arbitrary datasources.  It also needs to replace the datasource with the
+ * InputNumberDataSource while preparing the query plan.
  */
 public class UnionDataSource implements DataSource
 {
@@ -62,7 +69,9 @@ public class UnionDataSource implements DataSource
   }
 
 
-  // TODO: native only method
+  /**
+   * Asserts that the children of the union are all table data sources before returning the table names
+   */
   @Override
   public Set<String> getTableNames()
   {
@@ -76,7 +85,9 @@ public class UnionDataSource implements DataSource
                       .collect(Collectors.toSet());
   }
 
-  // TODO: native only method
+  /**
+   * Asserts that the children of the union are all table data sources
+   */
   public List<TableDataSource> getDataSourcesAsTableDataSources()
   {
     return dataSources.stream()

@@ -345,7 +345,7 @@ public class DruidPlanner implements Closeable
           return DruidException.forPersona(DruidException.Persona.USER)
                                .ofCategory(DruidException.Category.INVALID_INPUT)
                                .withErrorCode("invalidInput")
-                               .build(inner, inner.getMessage()).withContext("sourceType", "sql");
+                               .build(inner, "%s", inner.getMessage()).withContext("sourceType", "sql");
         } else {
           final String theUnexpectedToken = getUnexpectedTokenString(parseException);
 
@@ -390,14 +390,14 @@ public class DruidPlanner implements Closeable
     catch (RelOptPlanner.CannotPlanException inner) {
       return DruidException.forPersona(DruidException.Persona.USER)
                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                           .build(inner, inner.getMessage());
+                           .build(inner, "%s", inner.getMessage());
     }
     catch (Exception inner) {
       // Anything else. Should not get here. Anything else should already have
       // been translated to a DruidException unless it is an unexpected exception.
       return DruidException.forPersona(DruidException.Persona.ADMIN)
                            .ofCategory(DruidException.Category.UNCATEGORIZED)
-                           .build(inner, inner.getMessage());
+                           .build(inner, "%s", inner.getMessage());
     }
   }
 
