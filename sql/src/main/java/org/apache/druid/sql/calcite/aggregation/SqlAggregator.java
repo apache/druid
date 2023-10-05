@@ -57,7 +57,6 @@ public interface SqlAggregator
    * @param finalizeAggregations  true if this query should include explicit finalization for all of its
    *                              aggregators, where required. This is set for subqueries where Druid's native query
    *                              layer does not do this automatically.
-   *
    * @return aggregation, or null if the call cannot be translated
    */
   @Nullable
@@ -65,7 +64,6 @@ public interface SqlAggregator
       PlannerContext plannerContext,
       RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
       InputAccessor inputAccessor,
@@ -75,7 +73,7 @@ public interface SqlAggregator
     return toDruidAggregation(plannerContext,
         rowSignature,
         virtualColumnRegistry,
-        rexBuilder,
+        inputAccessor.getRexBuilder(),
         name,
         aggregateCall,
         inputAccessor.getProject(),

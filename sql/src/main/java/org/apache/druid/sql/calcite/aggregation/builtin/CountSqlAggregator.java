@@ -99,7 +99,6 @@ public class CountSqlAggregator implements SqlAggregator
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
       final InputAccessor inputAccessor,
@@ -108,7 +107,7 @@ public class CountSqlAggregator implements SqlAggregator
   )
   {
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
-        rexBuilder,
+        inputAccessor.getRexBuilder(),
         plannerContext,
         rowSignature,
         aggregateCall,
@@ -130,7 +129,6 @@ public class CountSqlAggregator implements SqlAggregator
             plannerContext,
             rowSignature,
             virtualColumnRegistry,
-            rexBuilder,
             name,
             aggregateCall,
             inputAccessor,
@@ -148,7 +146,7 @@ public class CountSqlAggregator implements SqlAggregator
             plannerContext,
             rowSignature,
             virtualColumnRegistry,
-            rexBuilder,
+            inputAccessor.getRexBuilder(),
             aggregateCall,
             inputAccessor
       );

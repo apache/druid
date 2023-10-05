@@ -79,13 +79,6 @@ public class InputAccessor
     } else {
       return constants.get(argIndex - inputFieldCount);
     }
-
-  }
-
-  @Deprecated
-  public Project getProject()
-  {
-    return project;
   }
 
   public List<RexNode> getFields(List<Integer> argList)
@@ -96,4 +89,15 @@ public class InputAccessor
         .collect(Collectors.toList());
   }
 
+  @Deprecated
+  public @Nullable Project getProject()
+  {
+    return project;
+  }
+
+
+  public RexBuilder getRexBuilder()
+  {
+    return rexBuilder;
+  }
 }

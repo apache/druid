@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.bloom.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -67,7 +66,6 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       PlannerContext plannerContext,
       RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
       InputAccessor inpuAccessor,

@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.tdigestsketch.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -64,7 +63,6 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
       final InputAccessor inputAccessor,

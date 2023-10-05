@@ -134,7 +134,6 @@ public class GroupByRules
         plannerContext,
         rowSignature,
         virtualColumnRegistry,
-        rexBuilder,
         name,
         call,
         inputAccessor,

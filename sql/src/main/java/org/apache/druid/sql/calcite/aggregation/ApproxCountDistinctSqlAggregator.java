@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.aggregation;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
@@ -68,7 +67,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
       PlannerContext plannerContext,
       RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
       InputAccessor inputAccessor,
@@ -80,7 +78,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         virtualColumnRegistry,
-        rexBuilder,
         name,
         aggregateCall,
         inputAccessor,

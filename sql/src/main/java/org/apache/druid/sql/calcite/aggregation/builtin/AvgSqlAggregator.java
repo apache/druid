@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -59,7 +58,6 @@ public class AvgSqlAggregator implements SqlAggregator
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
       final InputAccessor inputAccessor,
@@ -69,7 +67,7 @@ public class AvgSqlAggregator implements SqlAggregator
   {
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
-        rexBuilder,
+        inputAccessor.getRexBuilder(),
         plannerContext,
         rowSignature,
         aggregateCall,
@@ -86,7 +84,7 @@ public class AvgSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         virtualColumnRegistry,
-        rexBuilder,
+        inputAccessor.getRexBuilder(),
         aggregateCall,
         inputAccessor
     );

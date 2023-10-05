@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -59,7 +58,6 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
       final InputAccessor inputAccessor,
@@ -72,7 +70,7 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     }
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
-        rexBuilder,
+        inputAccessor.getRexBuilder(),
         plannerContext,
         rowSignature,
         aggregateCall,
