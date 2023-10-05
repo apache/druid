@@ -23,11 +23,11 @@ sidebar_label: Data management
   ~ under the License.
   -->
 
-This topic describes the data management API endpoints for Apache Druid. This includes information on how to mark segments as `used` or `unused` and delete them from Druid.
+This topic describes the data management API endpoints for Apache Druid. This includes information on how to mark segments as used or unused and delete them from Druid.
 
-Note that while you can mark segments as `used` by sending POST requests to the datasource, the Coordinator may subsequently mark segments as `unused` if they meet any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to `used`, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
+Note that while you can mark segments as used by sending POST requests to the datasource, the Coordinator may subsequently mark segments as unused if they meet any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to used, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
 
-When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as `used`. Furthermore, it is possible that all segments could be `unused`, yet an indexing task might still be able to read data from these segments and complete successfully. 
+When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as used. Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully. 
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -37,15 +37,15 @@ Avoid using indexing or kill tasks and these APIs at the same time for the same 
 
 ## Segment management
 
-### Update a group of segments as `unused`
+### Update a group of segments as unused
 
-Updates the state of a group of segments as `unused` using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
+Updates the state of a group of segments as unused using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
 
-For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Only the segments completely contained within the specified interval will be updated; partially overlapping segments will not be affected.
+For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
 #### URL 
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:dataSource/markUnused</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource/markUnused</code>
 
 #### Request body
 
@@ -66,7 +66,7 @@ The group of segments is sent as a JSON request payload that accepts the followi
 
 <!--204 NO CONTENT-->
 
-*Invalid dataSource name*
+*Invalid datasource name*
 
 <!--400 BAD REQUEST-->
 
@@ -125,15 +125,15 @@ Content-Length: 230
 ```
 </details>
 
-### Update all datasource segments as `unused`
+### Update all datasource segments as unused
 
-Updates the state of all segments of a datasource to `unused`. This action performs a "soft delete" of the segments from Historicals.
+Updates the state of all segments of a datasource to unused. This action performs a "soft delete" of the segments from Historicals.
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
 #### URL 
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:dataSource</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
 
 #### Responses
 
@@ -178,15 +178,15 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
-### Update a segment as `unused`
+### Update a segment as unused
 
-Updates the state a segment as `unused` using the segment ID. This is a "soft delete" of the segment from Historicals. To undo this delete, mark the segments as `used`.
+Updates the state a segment as unused using the segment ID. This is a "soft delete" of the segment from Historicals. To undo this delete, mark the segments as used.
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the segment ID or datasource does not exist.
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:dataSource/segments/:segmentId</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/segments/:segmentId</code>
 
 #### Header 
 
@@ -246,15 +246,15 @@ Accept: application/json, text/plain
 ```
 </details>
 
-### Update a group of segments as `used`
+### Update a group of segments as used
 
-Updates the state a group of segments as `used` using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
+Updates the state a group of segments as used using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
 
-For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Only the segments completely contained within the specified interval will be updated; partially overlapping segments will not be affected.
+For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
 #### URL 
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:dataSource/markUsed</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource/markUsed</code>
 
 #### Request body
 
@@ -275,7 +275,7 @@ The group of segments is sent as a JSON request payload that accepts the followi
 
 <!--204 NO CONTENT-->
 
-*Invalid dataSource name*
+*Invalid datasource name*
 
 <!--400 BAD REQUEST-->
 
@@ -334,15 +334,15 @@ Content-Length: 230
 ```
 </details>
 
-### Update all datasource segments as `used`
+### Update all datasource segments as used
 
-Updates the state of all `unused` segments of a datasource to `used`. The endpoint returns the number of changed segments. 
+Updates the state of all unused segments of a datasource to used. The endpoint returns the number of changed segments. 
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:dataSource</code>
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/datasources/:datasource</code>
 
 #### Header 
 
@@ -366,7 +366,7 @@ Accept: application/json, text/plain
 
 #### Sample request
 
-The following example updates all `unused` segments of `wikipedia_hour` to `used`. `wikipedia_hour` contains one `unused` segment eligible to be marked as `used`.
+The following example updates all unused segments of `wikipedia_hour` to used. `wikipedia_hour` contains one unused segment eligible to be marked as used.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -401,9 +401,9 @@ Accept: application/json, text/plain
 ```
 </details>
 
-### Update a segment as `used`
+### Update a segment as used
 
-Updates the state a segment as `used` using the segment ID.
+Updates the state a segment as used using the segment ID.
 
 #### URL
 
@@ -432,7 +432,7 @@ Accept: application/json, text/plain
 
 #### Sample request
 
-The following example updates the segment with ID `wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z` to `used`.
+The following example updates the segment with ID `wikipedia_hour_2015-09-12T18:00:00.000Z_2015-09-12T19:00:00.000Z_2023-08-10T04:12:03.860Z` to used.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -475,11 +475,11 @@ Sends a [kill task](../ingestion/tasks.md) for a given interval and datasource. 
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
-This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:dataSource?kill=true&interval=:interval`
+This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:datasource?kill=true&interval=:interval`
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:dataSource/intervals/:interval</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/datasources/:datasource/intervals/:interval</code>
 
 #### Responses
 
