@@ -25,7 +25,7 @@ sidebar_label: Data management
 
 This topic describes the data management API endpoints for Apache Druid. This includes information on how to mark segments as `used` or `unused` and delete them from Druid.
 
-Note that while you can mark segments as `used` by sending POST requests to the datasource, the Coordinator may subsequently mark segments as `unused` if they meet any configured [Drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to `used`, you still need to configure a [Load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
+Note that while you can mark segments as `used` by sending POST requests to the datasource, the Coordinator may subsequently mark segments as `unused` if they meet any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to `used`, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
 
 When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as `used`. Furthermore, it is possible that all segments could be `unused`, yet an indexing task might still be able to read data from these segments and complete successfully. 
 
