@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -44,6 +43,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -71,19 +71,14 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
   {
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
-    final RexNode columnRexNode = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(0)
-    );
+    final RexNode columnRexNode = inputAccessor.getField(aggregateCall.getArgList().get(0));
 
     final DruidExpression columnArg = Expressions.toDruidExpression(plannerContext, rowSignature, columnRexNode);
     if (columnArg == null) {
@@ -92,12 +87,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 
     final int logK;
     if (aggregateCall.getArgList().size() >= 2) {
-      final RexNode logKarg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(1)
-      );
+      final RexNode logKarg = inputAccessor.getField(aggregateCall.getArgList().get(1));
 
       if (!logKarg.isA(SqlKind.LITERAL)) {
         // logK must be a literal in order to plan.
@@ -111,12 +101,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
 
     final String tgtHllType;
     if (aggregateCall.getArgList().size() >= 3) {
-      final RexNode tgtHllTypeArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(2)
-      );
+      final RexNode tgtHllTypeArg = inputAccessor.getField(aggregateCall.getArgList().get(2));
 
       if (!tgtHllTypeArg.isA(SqlKind.LITERAL)) {
         // tgtHllType must be a literal in order to plan.

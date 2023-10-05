@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -42,6 +41,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -65,19 +65,14 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
   {
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
-    final RexNode columnRexNode = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(0)
-    );
+    final RexNode columnRexNode = inputAccessor.getField(aggregateCall.getArgList().get(0));
 
     final DruidExpression columnArg = Expressions.toDruidExpression(plannerContext, rowSignature, columnRexNode);
     if (columnArg == null) {
@@ -86,12 +81,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
 
     final int sketchSize;
     if (aggregateCall.getArgList().size() >= 2) {
-      final RexNode sketchSizeArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(1)
-      );
+      final RexNode sketchSizeArg = inputAccessor.getField(aggregateCall.getArgList().get(1));
 
       if (!sketchSizeArg.isA(SqlKind.LITERAL)) {
         // logK must be a literal in order to plan.
