@@ -68,7 +68,8 @@ public interface SqlAggregator
       InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
-  ) {
+  )
+  {
     return toDruidAggregation(plannerContext,
         inputAccessor.getInputRowSignature(),
         virtualColumnRegistry,
@@ -110,7 +111,8 @@ public interface SqlAggregator
       Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
-  ) {
+  )
+  {
     throw new RuntimeException("unimplemented fallback method!");
   }
 }

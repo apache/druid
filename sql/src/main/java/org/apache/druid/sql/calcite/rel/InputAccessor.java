@@ -27,10 +27,10 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
 
 /**
  * Enables simpler access to input expressions.
@@ -42,30 +42,29 @@ public class InputAccessor
   private final Project project;
   private final ImmutableList<RexLiteral> constants;
   private final RexBuilder rexBuilder;
-  @Deprecated   // rename
-  private final RowSignature sourceRowSignature;
+  private final RowSignature inputRowSignature;
   private final int inputFieldCount;
 
   public static InputAccessor buildFor(
       RexBuilder rexBuilder,
-      RowSignature sourceRowSignature,
+      RowSignature inputRowSignature,
       @Nullable Project project,
       @Nullable ImmutableList<RexLiteral> constants)
   {
-    return new InputAccessor(rexBuilder, sourceRowSignature, project, constants);
+    return new InputAccessor(rexBuilder, inputRowSignature, project, constants);
   }
 
   private InputAccessor(
       RexBuilder rexBuilder,
-      RowSignature sourceRowSignature,
+      RowSignature inputRowSignature,
       Project project,
       ImmutableList<RexLiteral> constants)
   {
     this.rexBuilder = rexBuilder;
-    this.sourceRowSignature = sourceRowSignature;
+    this.inputRowSignature = inputRowSignature;
     this.project = project;
     this.constants = constants;
-    this.inputFieldCount = project != null ? project.getRowType().getFieldCount() : sourceRowSignature.size();
+    this.inputFieldCount = project != null ? project.getRowType().getFieldCount() : inputRowSignature.size();
   }
 
   public RexNode getField(int argIndex)
@@ -74,7 +73,7 @@ public class InputAccessor
     if (argIndex < inputFieldCount) {
       return Expressions.fromFieldAccess(
           rexBuilder.getTypeFactory(),
-          sourceRowSignature,
+          inputRowSignature,
           project,
           argIndex);
     } else {
@@ -105,6 +104,6 @@ public class InputAccessor
 
   public RowSignature getInputRowSignature()
   {
-    return sourceRowSignature;
+    return inputRowSignature;
   }
 }
