@@ -403,7 +403,7 @@ Accept: application/json, text/plain
 
 ### Update a segment as `used`
 
-Updates the state a segment as `used` using the segment's ID. 
+Updates the state a segment as `used` using the segment ID.
 
 #### URL
 
