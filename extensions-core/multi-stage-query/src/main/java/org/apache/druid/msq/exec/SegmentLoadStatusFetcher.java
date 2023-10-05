@@ -145,6 +145,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
     final AtomicReference<Boolean> hasAnySegmentBeenLoaded = new AtomicReference<>(false);
     try {
       FutureUtils.getUnchecked(executorService.submit(() -> {
+        long lastLogMillis = -TimeUnit.MINUTES.toMillis(1);
         try {
           while (!(hasAnySegmentBeenLoaded.get() && versionLoadStatusReference.get().isLoadingComplete())) {
             // Check the timeout and exit if exceeded.
@@ -159,11 +160,14 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
               return;
             }
 
-            log.debug(
-                "Fetching segment load status for datasource[%s] from broker for segment versions[%s]",
-                datasource,
-                versionsInClauseString
-            );
+            if (runningMillis - lastLogMillis >= TimeUnit.MINUTES.toMillis(1)) {
+              lastLogMillis = runningMillis;
+              log.info(
+                  "Fetching segment load status for datasource[%s] from broker for segment versions[%s]",
+                  datasource,
+                  versionsInClauseString
+              );
+            }
 
             // Fetch the load status from the broker
             VersionLoadStatus loadStatus = fetchLoadStatusFromBroker();
@@ -240,7 +244,10 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
     request.setContent(MediaType.APPLICATION_JSON, objectMapper.writeValueAsBytes(sqlQuery));
     String response = brokerClient.sendQuery(request);
 
-    if (response.trim().isEmpty()) {
+    if (response == null) {
+      // Unable to query broker
+      return new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated);
+    } else if (response.trim().isEmpty()) {
       // If no segments are returned for a version, all segments have been dropped by a drop rule.
       return new VersionLoadStatus(0, 0, 0, 0, 0);
     } else {

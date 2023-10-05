@@ -473,6 +473,8 @@ public class ControllerImpl implements Controller
         if (shouldWaitForSegmentLoad && segmentLoadWaiter != null) {
           // If successful, there are segments created and segment load is enabled, segmentLoadWaiter should wait
           // for them to become available.
+          log.info("Controller will now wait for segments to be loaded. The query has already finished executing,"
+                   + " and results will be included once the segments are loaded, even if this query is cancelled now.");
           segmentLoadWaiter.waitForSegmentsToLoad();
         }
       }
