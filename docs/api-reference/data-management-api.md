@@ -336,7 +336,7 @@ Content-Length: 230
 
 ### Update all datasource segments as `used`
 
-Updates the state of all `unused` segments of a datasource to `used`. If there are no segments eligible to be marked as `used`, this endpoint will return the property `"numChangedSegments"` and the value `0`. 
+Updates the state of all `unused` segments of a datasource to `used`. The endpoint returns the number of changed segments. 
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
