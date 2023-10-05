@@ -26,7 +26,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
-import org.apache.curator.shaded.com.google.common.primitives.Doubles;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -401,7 +400,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
   {
     Predicate<String> longPattern = Pattern.compile("^-?[0-9]+$").asPredicate();
-    Predicate<String> doublePattern = Pattern.compile("^-?[0-9]+\\.[0-9]+$").asPredicate();
+    Predicate<String> timePattern = Pattern.compile("^-?[0-9]+$").asPredicate();
     List<Object[]> ret = new ArrayList<>();
     for (String[] row : results) {
       Object[] newRow = new Object[row.length];
@@ -423,11 +422,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
                 newVal = null;
               } else if (longPattern.test(val)) {
                 newVal = Numbers.parseLong(val);
-              } else if ("0E-20".equals(val)) {
-                newVal = 0L;
-              } else if (doublePattern.test(val)) {
-                double d = Doubles.tryParse(val);
-                newVal = new Long((long) d);
               } else {
                 Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
                 try {
