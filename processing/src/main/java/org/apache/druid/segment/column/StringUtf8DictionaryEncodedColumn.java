@@ -50,7 +50,6 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
