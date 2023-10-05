@@ -32,6 +32,7 @@ import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
@@ -40,6 +41,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 
 public class FrameBasedInlineDataSourceSerializerTest
@@ -124,10 +126,11 @@ public class FrameBasedInlineDataSourceSerializerTest
       RowSignature rowSignature
   )
   {
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(
+    Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromIterable(
         inlineDataSource.getRows(),
         rowSignature
     );
+    Cursor cursor = cursorAndCloseable.lhs;
     RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
     Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(
         cursor,
@@ -139,7 +142,7 @@ public class FrameBasedInlineDataSourceSerializerTest
         )
     );
     return new FrameBasedInlineDataSource(
-        frames.map(frame -> new FrameSignaturePair(frame, rowSignature)).toList(),
+        frames.map(frame -> new FrameSignaturePair(frame, rowSignature)).withBaggage(cursorAndCloseable.rhs).toList(),
         modifiedRowSignature
     );
   }

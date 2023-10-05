@@ -53,6 +53,10 @@ public class MaterializedViewQueryTest
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private DataSourceOptimizer optimizer;
 
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Before
   public void setUp()
   {

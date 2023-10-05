@@ -48,7 +48,7 @@ public class IterableRowsCursorHelperTest
   @Test
   public void getCursorFromIterable()
   {
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(rows, rowSignature);
+    Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(rows, rowSignature).lhs;
     testCursorMatchesRowSequence(cursor, rowSignature, rows);
   }
 
@@ -56,7 +56,7 @@ public class IterableRowsCursorHelperTest
   public void getCursorFromSequence()
   {
 
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(Sequences.simple(rows), rowSignature);
+    Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(Sequences.simple(rows), rowSignature).lhs;
     testCursorMatchesRowSequence(cursor, rowSignature, rows);
   }
 
