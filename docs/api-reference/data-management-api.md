@@ -78,7 +78,7 @@ The group of segments is sent as a JSON request payload with the following prope
 
 #### Sample request
 
-The following example updates two segments with IDs `wikipedia_hour_2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z_2023-08-10T04:12:03.860Z` and `wikipedia_hour_2015-09-12T04:00:00.000Z_2015-09-12T05:00:00.000Z_2023-08-10T04:12:03.860Z` as `unused`.
+The following example marks two segments from the `wikipedia_hour` datasource unused based on their segment IDs.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
