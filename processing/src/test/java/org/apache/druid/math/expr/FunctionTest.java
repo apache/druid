@@ -987,7 +987,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     macros.add(drinkMacro);
     List<String> aliases = Arrays.asList("tea", "coffee", "chai", "chaha", "kevha", "chay");
     for (String tea : aliases) {
-      macros.add(new AliasExprMacro(drinkMacro, tea));
+      macros.add(new ExprMacroTable.AliasExprMacro(drinkMacro, tea));
     }
     final ExprMacroTable exprMacroTable = new ExprMacroTable(macros);
     final Expr happiness = new StringExpr("happiness");
