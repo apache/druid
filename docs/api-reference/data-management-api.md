@@ -258,7 +258,7 @@ Interval specifies the start and end times as ISO 8601 strings. `interval=(start
 
 #### Request body
 
-The group of segments is sent as a JSON request payload with the following properties:
+The group of segments is sent as a JSON request payload that accepts the following properties:
 
 |Property|Type|Description|Example|
 |----------|---|-------------|---------|
