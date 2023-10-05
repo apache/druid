@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
+import org.apache.druid.indexing.common.actions.RetrieveLockedSegmentsAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -771,6 +772,26 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(YEAR_23, segmentV10, segmentV11, segmentV13);
   }
 
+  @Test
+  public void testInputSegmentsToBeReplaced()
+  {
+    appendTask.acquireAppendLockOn(YEAR_23);
+    final SegmentIdWithShardSpec pendingSegment0
+        = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.YEAR);
+    DataSegment segment0 = asSegment(pendingSegment0);
+    appendTask.commitAppendSegments(segment0);
+
+    replaceTask.acquireReplaceLockOn(YEAR_23);
+
+    // This segment must not be in the input set of the replacing task as it was committed after lock acquisition
+    final SegmentIdWithShardSpec pendingSegment1
+        = appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.YEAR);
+    DataSegment segment1 = asSegment(pendingSegment1);
+    appendTask.commitAppendSegments(segment1);
+
+    verifyInputSegments(YEAR_23, replaceTask, segment0);
+  }
+
   private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
   {
     final SegmentId id = pendingSegment.asSegmentId();
@@ -811,6 +832,24 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     }
     catch (IOException e) {
       throw new ISE(e, "Error while fetching used segments in interval[%s]", interval);
+    }
+  }
+
+  private void verifyInputSegments(Interval interval, Task task, DataSegment... expectedSegments)
+  {
+    try {
+      final TaskActionClient taskActionClient = taskActionClientFactory.create(task);
+      Collection<DataSegment> allUsedSegments = taskActionClient.submit(
+          new RetrieveLockedSegmentsAction(
+              WIKI,
+              interval,
+              Segments.ONLY_VISIBLE
+          )
+      );
+      Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Error while fetching locked segments in interval[%s]", interval);
     }
   }
 
