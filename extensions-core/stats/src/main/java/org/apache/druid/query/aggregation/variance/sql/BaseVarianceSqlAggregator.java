@@ -37,7 +37,6 @@ import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -74,20 +73,19 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
       String name,
       AggregateCall aggregateCall,
-      InputAccessor inpuAccessor,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
   {
-    final RexNode inputOperand = inpuAccessor.getField(aggregateCall.getArgList().get(0));
+    final RexNode inputOperand = inputAccessor.getField(aggregateCall.getArgList().get(0));
 
     final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         inputOperand
     );
     if (input == null) {

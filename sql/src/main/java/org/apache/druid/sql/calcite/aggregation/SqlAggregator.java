@@ -62,7 +62,6 @@ public interface SqlAggregator
   @Nullable
   default Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
       String name,
       AggregateCall aggregateCall,

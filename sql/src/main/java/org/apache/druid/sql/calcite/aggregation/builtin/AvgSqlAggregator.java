@@ -31,7 +31,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -56,7 +55,6 @@ public class AvgSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
       final String name,
       final AggregateCall aggregateCall,
@@ -69,7 +67,7 @@ public class AvgSqlAggregator implements SqlAggregator
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
         inputAccessor.getRexBuilder(),
         plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         aggregateCall,
         inputAccessor
     );
@@ -82,7 +80,7 @@ public class AvgSqlAggregator implements SqlAggregator
     final AggregatorFactory count = CountSqlAggregator.createCountAggregatorFactory(
         countName,
         plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         virtualColumnRegistry,
         inputAccessor.getRexBuilder(),
         aggregateCall,

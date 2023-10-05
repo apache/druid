@@ -34,7 +34,6 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggrega
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -65,7 +64,6 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
       String name,
       AggregateCall aggregateCall,
@@ -78,7 +76,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     // for string columns.
     final RexNode columnRexNode = inputAccessor.getField(aggregateCall.getArgList().get(0));
 
-    final DruidExpression columnArg = Expressions.toDruidExpression(plannerContext, rowSignature, columnRexNode);
+    final DruidExpression columnArg = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), columnRexNode);
     if (columnArg == null) {
       return null;
     }
@@ -115,9 +113,10 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (columnArg.isDirectColumnAccess()
-        && rowSignature.getColumnType(columnArg.getDirectColumn())
-                       .map(type -> type.is(ValueType.COMPLEX))
-                       .orElse(false)) {
+        && inputAccessor.getInputRowSignature()
+                        .getColumnType(columnArg.getDirectColumn())
+                        .map(type -> type.is(ValueType.COMPLEX))
+                        .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
           columnArg.getDirectColumn(),

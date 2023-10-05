@@ -34,7 +34,6 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -70,7 +69,6 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
       String name,
       AggregateCall aggregateCall,
@@ -86,7 +84,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
     // fetch sum column expression
     DruidExpression sumColumn = Expressions.toDruidExpression(
         plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         inputAccessor.getField(aggregateCall.getArgList().get(0))
     );
 

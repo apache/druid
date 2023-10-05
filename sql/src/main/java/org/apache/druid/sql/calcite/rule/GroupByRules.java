@@ -132,7 +132,6 @@ public class GroupByRules
 
     final Aggregation retVal = sqlAggregator.toDruidAggregation(
         plannerContext,
-        rowSignature,
         virtualColumnRegistry,
         name,
         call,

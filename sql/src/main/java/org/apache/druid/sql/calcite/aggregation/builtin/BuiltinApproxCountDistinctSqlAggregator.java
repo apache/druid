@@ -40,7 +40,6 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -71,7 +70,6 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
       final String name,
       final AggregateCall aggregateCall,
@@ -85,7 +83,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     final RexNode rexNode = inputAccessor.getField(
         Iterables.getOnlyElement(aggregateCall.getArgList()));
 
-    final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
+    final DruidExpression arg = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), rexNode);
     if (arg == null) {
       return null;
     }
@@ -94,7 +92,10 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
 
     if (arg.isDirectColumnAccess()
-        && rowSignature.getColumnType(arg.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
+        && inputAccessor.getInputRowSignature()
+            .getColumnType(arg.getDirectColumn())
+            .map(type -> type.is(ValueType.COMPLEX))
+            .orElse(false)) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
       final RelDataType dataType = rexNode.getType();

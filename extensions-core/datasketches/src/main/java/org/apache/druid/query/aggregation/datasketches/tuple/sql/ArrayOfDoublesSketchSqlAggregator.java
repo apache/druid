@@ -36,7 +36,6 @@ import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketc
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -68,7 +67,6 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
       String name,
       AggregateCall aggregateCall,
@@ -104,7 +102,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
 
       final DruidExpression columnArg = Expressions.toDruidExpression(
           plannerContext,
-          rowSignature,
+          inputAccessor.getInputRowSignature(),
           columnRexNode
       );
       if (columnArg == null) {
@@ -112,9 +110,10 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
       }
 
       if (columnArg.isDirectColumnAccess() &&
-          rowSignature.getColumnType(columnArg.getDirectColumn())
-                      .map(type -> type.is(ValueType.COMPLEX))
-                      .orElse(false)) {
+          inputAccessor.getInputRowSignature()
+              .getColumnType(columnArg.getDirectColumn())
+              .map(type -> type.is(ValueType.COMPLEX))
+              .orElse(false)) {
         fieldName = columnArg.getDirectColumn();
       } else {
         final RelDataType dataType = columnRexNode.getType();

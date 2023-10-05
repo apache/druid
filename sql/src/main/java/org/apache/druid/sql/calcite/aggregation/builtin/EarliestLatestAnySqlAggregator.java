@@ -51,7 +51,6 @@ import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -178,7 +177,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
       final String name,
       final AggregateCall aggregateCall,
@@ -189,7 +187,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   {
     final List<RexNode> rexNodes = inputAccessor.getFields(aggregateCall.getArgList());
 
-    final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
+    final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, inputAccessor.getInputRowSignature(), rexNodes);
 
     if (args == null) {
       return null;
@@ -209,7 +207,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
     final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
-    if (!rowSignature.contains(ColumnHolder.TIME_COLUMN_NAME) && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
+    if (!inputAccessor.getInputRowSignature().contains(ColumnHolder.TIME_COLUMN_NAME)
+        && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
       // This code is being run as part of the exploratory volcano planner, currently, the definition of these
       // aggregators does not tell Calcite that they depend on a __time column being in existence, instead we are
       // allowing the volcano planner to explore paths that put projections which eliminate the time column in between

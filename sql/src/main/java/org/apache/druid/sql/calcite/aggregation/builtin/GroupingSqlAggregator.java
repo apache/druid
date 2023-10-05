@@ -53,7 +53,6 @@ public class GroupingSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
       String name,
       AggregateCall aggregateCall,
@@ -66,7 +65,7 @@ public class GroupingSqlAggregator implements SqlAggregator
                                           .stream()
                                           .map(i -> getColumnName(
                                               plannerContext,
-                                              rowSignature,
+                                              inputAccessor.getInputRowSignature(),
                                               inputAccessor.getProject(),
                                               virtualColumnRegistry,
                                               inputAccessor.getRexBuilder().getTypeFactory(),

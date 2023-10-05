@@ -37,7 +37,6 @@ import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorF
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -64,7 +63,6 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
       final String name,
       final AggregateCall aggregateCall,
@@ -76,7 +74,7 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
     // This is expected to be a tdigest sketch
     final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         inputAccessor.getField(aggregateCall.getArgList().get(0))
     );
     if (input == null) {

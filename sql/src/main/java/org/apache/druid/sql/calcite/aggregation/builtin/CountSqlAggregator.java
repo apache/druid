@@ -97,7 +97,6 @@ public class CountSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
       final String name,
       final AggregateCall aggregateCall,
@@ -109,7 +108,7 @@ public class CountSqlAggregator implements SqlAggregator
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
         inputAccessor.getRexBuilder(),
         plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         aggregateCall,
         inputAccessor
     );
@@ -127,7 +126,6 @@ public class CountSqlAggregator implements SqlAggregator
       if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct()) {
         return approxCountDistinctAggregator.toDruidAggregation(
             plannerContext,
-            rowSignature,
             virtualColumnRegistry,
             name,
             aggregateCall,
@@ -144,7 +142,7 @@ public class CountSqlAggregator implements SqlAggregator
       AggregatorFactory theCount = createCountAggregatorFactory(
             name,
             plannerContext,
-            rowSignature,
+            inputAccessor.getInputRowSignature(),
             virtualColumnRegistry,
             inputAccessor.getRexBuilder(),
             aggregateCall,

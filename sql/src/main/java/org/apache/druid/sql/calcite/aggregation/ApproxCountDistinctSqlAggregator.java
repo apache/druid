@@ -28,7 +28,6 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -65,7 +64,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
       String name,
       AggregateCall aggregateCall,
@@ -76,7 +74,6 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
   {
     return delegate.toDruidAggregation(
         plannerContext,
-        rowSignature,
         virtualColumnRegistry,
         name,
         aggregateCall,
