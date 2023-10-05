@@ -51,8 +51,8 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.sql.calcite.NegativeTest.NegativeTestProcessor;
 import org.apache.druid.sql.calcite.NegativeTest.Modes;
+import org.apache.druid.sql.calcite.NegativeTest.NegativeTestProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -432,7 +432,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
                 Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
                 try {
                   newVal = parser.apply(val);
-                } catch (IllegalArgumentException iae) {
+                }
+                catch (IllegalArgumentException iae) {
                   LocalTime v = LocalTime.parse(val);
                   newVal = v.getMillisOfDay();
                 }
