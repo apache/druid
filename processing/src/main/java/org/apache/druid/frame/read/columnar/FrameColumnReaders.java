@@ -19,15 +19,10 @@
 
 package org.apache.druid.frame.read.columnar;
 
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
-/**
- * Creates {@link FrameColumnReader}  corresponding to a given column type and number.
- *
- * Returns a dummy {@link UnsupportedColumnTypeFrameColumnReader} if the column type is not supported or unknown.
- * Calling any method of the dummy reader will throw with relevant error message.
- */
 public class FrameColumnReaders
 {
   private FrameColumnReaders()
@@ -35,11 +30,7 @@ public class FrameColumnReaders
     // No instantiation.
   }
 
-  public static FrameColumnReader create(
-      final String columnName,
-      final int columnNumber,
-      final ColumnType columnType
-  )
+  public static FrameColumnReader create(final int columnNumber, final ColumnType columnType)
   {
     switch (columnType.getType()) {
       case LONG:
@@ -60,12 +51,11 @@ public class FrameColumnReaders
       case ARRAY:
         if (columnType.getElementType().getType() == ValueType.STRING) {
           return new StringFrameColumnReader(columnNumber, true);
-        } else {
-          return new UnsupportedColumnTypeFrameColumnReader(columnName, columnType);
         }
+        // Fall through to error for other array types
 
       default:
-        return new UnsupportedColumnTypeFrameColumnReader(columnName, columnType);
+        throw new UOE("Unsupported column type [%s]", columnType);
     }
   }
 }

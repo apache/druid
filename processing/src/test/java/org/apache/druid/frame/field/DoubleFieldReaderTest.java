@@ -59,7 +59,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = DoubleFieldWriter.forPrimitive(writeSelector);
+    fieldWriter = new DoubleFieldWriter(writeSelector);
   }
 
   @After
@@ -72,14 +72,14 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_defaultOrNull()
   {
     writeToMemory(NullHandling.defaultDoubleValue());
-    Assert.assertEquals(NullHandling.sqlCompatible(), DoubleFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
+    Assert.assertEquals(NullHandling.sqlCompatible(), new DoubleFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_aValue()
   {
     writeToMemory(5.1d);
-    Assert.assertFalse(DoubleFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new DoubleFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -88,7 +88,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultDoubleValue());
 
     final ColumnValueSelector<?> readSelector =
-        DoubleFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new DoubleFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 
@@ -103,7 +103,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1d);
 
     final ColumnValueSelector<?> readSelector =
-        DoubleFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new DoubleFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(5.1d, readSelector.getObject());
   }
@@ -114,7 +114,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultDoubleValue());
 
     final DimensionSelector readSelector =
-        DoubleFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new DoubleFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -148,7 +148,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1d);
 
     final DimensionSelector readSelector =
-        DoubleFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new DoubleFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -175,7 +175,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(20.5d);
 
     final DimensionSelector readSelector =
-        DoubleFieldReader.forPrimitive().makeDimensionSelector(
+        new DoubleFieldReader().makeDimensionSelector(
             memory,
             new ConstantFieldPointer(MEMORY_POSITION),
             new SubstringDimExtractionFn(1, null)

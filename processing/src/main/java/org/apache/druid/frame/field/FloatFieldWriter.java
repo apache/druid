@@ -25,26 +25,40 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 /**
  * Wraps a {@link BaseFloatColumnValueSelector} and writes field values.
  *
- * @see NumericFieldWriter for the details of the byte-format that it writes as
+ * See {@link FloatFieldReader} for format details.
  */
-public class FloatFieldWriter extends NumericFieldWriter
+public class FloatFieldWriter implements FieldWriter
 {
+  public static final int SIZE = Float.BYTES + Byte.BYTES;
+
+  // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
+  // nulls to come before non-nulls.
+  public static final byte NULL_BYTE = 0x00;
+  public static final byte NOT_NULL_BYTE = 0x01;
+
   private final BaseFloatColumnValueSelector selector;
 
-  public static FloatFieldWriter forPrimitive(final BaseFloatColumnValueSelector selector)
+  public FloatFieldWriter(final BaseFloatColumnValueSelector selector)
   {
-    return new FloatFieldWriter(selector, false);
-  }
-
-  public static FloatFieldWriter forArray(final BaseFloatColumnValueSelector selector)
-  {
-    return new FloatFieldWriter(selector, true);
-  }
-
-  private FloatFieldWriter(final BaseFloatColumnValueSelector selector, final boolean forArray)
-  {
-    super(selector, forArray);
     this.selector = selector;
+  }
+
+  @Override
+  public long writeTo(final WritableMemory memory, final long position, final long maxSize)
+  {
+    if (maxSize < SIZE) {
+      return -1;
+    }
+
+    if (selector.isNull()) {
+      memory.putByte(position, NULL_BYTE);
+      memory.putInt(position + Byte.BYTES, transform(0));
+    } else {
+      memory.putByte(position, NOT_NULL_BYTE);
+      memory.putInt(position + Byte.BYTES, transform(selector.getFloat()));
+    }
+
+    return SIZE;
   }
 
   @Override
@@ -53,26 +67,23 @@ public class FloatFieldWriter extends NumericFieldWriter
     // Nothing to close.
   }
 
-  @Override
-  public int getNumericSizeBytes()
+  /**
+   * Transforms a float into a form where it can be compared as unsigned bytes without decoding.
+   */
+  public static int transform(final float n)
   {
-    return Float.BYTES;
+    final int bits = Float.floatToIntBits(n);
+    final int mask = ((bits & Integer.MIN_VALUE) >> 8) | Integer.MIN_VALUE;
+    return Integer.reverseBytes(bits ^ mask);
   }
 
-  @Override
-  public void writeSelectorToMemory(WritableMemory memory, long position)
+  /**
+   * Inverse of {@link #transform}.
+   */
+  public static float detransform(final int bits)
   {
-    writeToMemory(memory, position, selector.getFloat());
-  }
-
-  @Override
-  public void writeNullToMemory(WritableMemory memory, long position)
-  {
-    writeToMemory(memory, position, 0);
-  }
-
-  private void writeToMemory(WritableMemory memory, long position, float value)
-  {
-    memory.putInt(position, TransformUtils.transformFromFloat(value));
+    final int reversedBits = Integer.reverseBytes(bits);
+    final int mask = (((reversedBits ^ Integer.MIN_VALUE) & Integer.MIN_VALUE) >> 8) | Integer.MIN_VALUE;
+    return Float.intBitsToFloat(reversedBits ^ mask);
   }
 }

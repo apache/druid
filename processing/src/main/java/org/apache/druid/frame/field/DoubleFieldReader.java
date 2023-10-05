@@ -21,60 +21,74 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ValueTypes;
+
+import javax.annotation.Nullable;
 
 /**
- * Reads the values produced by {@link DoubleFieldWriter}
+ * Reads values written by {@link DoubleFieldWriter}.
  *
- * @see DoubleFieldWriter
- * @see NumericFieldWriter for the details of the byte-format that it expects for reading
+ * Values are sortable as bytes without decoding.
+ *
+ * Format:
+ *
+ * - 1 byte: {@link DoubleFieldWriter#NULL_BYTE} or {@link DoubleFieldWriter#NOT_NULL_BYTE}
+ * - 8 bytes: encoded double, using {@link DoubleFieldWriter#transform}
  */
-public class DoubleFieldReader extends NumericFieldReader
+public class DoubleFieldReader implements FieldReader
 {
-
-  public static DoubleFieldReader forPrimitive()
+  DoubleFieldReader()
   {
-    return new DoubleFieldReader(false);
-  }
-
-  public static DoubleFieldReader forArray()
-  {
-    return new DoubleFieldReader(true);
-  }
-
-  private DoubleFieldReader(final boolean forArray)
-  {
-    super(forArray);
   }
 
   @Override
-  public ValueType getValueType()
+  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
   {
-    return ValueType.DOUBLE;
+    return new Selector(memory, fieldPointer);
   }
 
   @Override
-  public ColumnValueSelector<?> getColumnValueSelector(
-      final Memory memory,
-      final ReadableFieldPointer fieldPointer,
-      final byte nullIndicatorByte
+  public DimensionSelector makeDimensionSelector(
+      Memory memory,
+      ReadableFieldPointer fieldPointer,
+      @Nullable ExtractionFn extractionFn
   )
   {
-    return new DoubleFieldReader.DoubleFieldSelector(memory, fieldPointer, nullIndicatorByte);
+    return ValueTypes.makeNumericWrappingDimensionSelector(
+        ValueType.DOUBLE,
+        makeColumnValueSelector(memory, fieldPointer),
+        extractionFn
+    );
   }
 
-  private static class DoubleFieldSelector extends NumericFieldReader.Selector implements DoubleColumnSelector
+  @Override
+  public boolean isNull(Memory memory, long position)
   {
+    return memory.getByte(position) == DoubleFieldWriter.NULL_BYTE;
+  }
 
-    final Memory dataRegion;
-    final ReadableFieldPointer fieldPointer;
+  @Override
+  public boolean isComparable()
+  {
+    return true;
+  }
 
-    public DoubleFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+  /**
+   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
+   */
+  private static class Selector implements DoubleColumnSelector
+  {
+    private final Memory dataRegion;
+    private final ReadableFieldPointer fieldPointer;
+
+    private Selector(final Memory dataRegion, final ReadableFieldPointer fieldPointer)
     {
-      super(dataRegion, fieldPointer, nullIndicatorByte);
       this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
     }
@@ -84,19 +98,19 @@ public class DoubleFieldReader extends NumericFieldReader
     {
       assert NullHandling.replaceWithDefault() || !isNull();
       final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
-      return TransformUtils.detransformToDouble(bits);
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-
+      return DoubleFieldWriter.detransform(bits);
     }
 
     @Override
     public boolean isNull()
     {
-      return super._isNull();
+      return dataRegion.getByte(fieldPointer.position()) == DoubleFieldWriter.NULL_BYTE;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      // Do nothing.
     }
   }
 }

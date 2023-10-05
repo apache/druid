@@ -21,60 +21,71 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ValueTypes;
+
+import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link FloatFieldWriter}.
  *
- * @see FloatFieldWriter
- * @see NumericFieldWriter for the details of the byte-format that it expects for reading
+ * Values are sortable as bytes without decoding.
+ *
+ * Format:
+ *
+ * - 1 byte: {@link FloatFieldWriter#NULL_BYTE} or {@link FloatFieldWriter#NOT_NULL_BYTE}
+ * - 4 bytes: encoded float, using {@link FloatFieldWriter#transform}
  */
-public class FloatFieldReader extends NumericFieldReader
+public class FloatFieldReader implements FieldReader
 {
-
-  public static FloatFieldReader forPrimitive()
+  FloatFieldReader()
   {
-    return new FloatFieldReader(false);
-  }
-
-  public static FloatFieldReader forArray()
-  {
-    return new FloatFieldReader(true);
-  }
-
-  private FloatFieldReader(final boolean forArray)
-  {
-    super(forArray);
   }
 
   @Override
-  public ValueType getValueType()
+  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
   {
-    return ValueType.FLOAT;
+    return new Selector(memory, fieldPointer);
   }
 
   @Override
-  public ColumnValueSelector<?> getColumnValueSelector(
-      final Memory memory,
-      final ReadableFieldPointer fieldPointer,
-      final byte nullIndicatorByte
+  public DimensionSelector makeDimensionSelector(
+      Memory memory,
+      ReadableFieldPointer fieldPointer,
+      @Nullable ExtractionFn extractionFn
   )
   {
-    return new FloatFieldSelector(memory, fieldPointer, nullIndicatorByte);
+    return ValueTypes.makeNumericWrappingDimensionSelector(
+        ValueType.FLOAT,
+        makeColumnValueSelector(memory, fieldPointer),
+        extractionFn
+    );
   }
 
-  private static class FloatFieldSelector extends NumericFieldReader.Selector implements FloatColumnSelector
+  @Override
+  public boolean isNull(Memory memory, long position)
   {
+    return memory.getByte(position) == FloatFieldWriter.NULL_BYTE;
+  }
 
-    final Memory dataRegion;
-    final ReadableFieldPointer fieldPointer;
+  @Override
+  public boolean isComparable()
+  {
+    return true;
+  }
 
-    public FloatFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+  private static class Selector implements FloatColumnSelector
+  {
+    private final Memory dataRegion;
+    private final ReadableFieldPointer fieldPointer;
+
+    private Selector(final Memory dataRegion, final ReadableFieldPointer fieldPointer)
     {
-      super(dataRegion, fieldPointer, nullIndicatorByte);
       this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
     }
@@ -84,19 +95,19 @@ public class FloatFieldReader extends NumericFieldReader
     {
       assert NullHandling.replaceWithDefault() || !isNull();
       final int bits = dataRegion.getInt(fieldPointer.position() + Byte.BYTES);
-      return TransformUtils.detransformToFloat(bits);
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-
+      return FloatFieldWriter.detransform(bits);
     }
 
     @Override
     public boolean isNull()
     {
-      return super._isNull();
+      return dataRegion.getByte(fieldPointer.position()) == FloatFieldWriter.NULL_BYTE;
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      // Do nothing.
     }
   }
 }

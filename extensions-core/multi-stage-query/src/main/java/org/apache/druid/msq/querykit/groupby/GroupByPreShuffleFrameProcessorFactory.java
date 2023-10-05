@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -31,9 +32,6 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.segment.SegmentReference;
-
-import java.util.function.Function;
 
 @JsonTypeName("groupByPreShuffle")
 public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcessorFactory
@@ -43,7 +41,6 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   @JsonCreator
   public GroupByPreShuffleFrameProcessorFactory(@JsonProperty("query") GroupByQuery query)
   {
-    super(query);
     this.query = Preconditions.checkNotNull(query, "query");
   }
 
@@ -54,9 +51,9 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   }
 
   @Override
-  protected FrameProcessor<Object> makeProcessor(
+  protected FrameProcessor<Long> makeProcessor(
       final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final Int2ObjectMap<ReadableInput> sideChannels,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final FrameContext frameContext
@@ -64,11 +61,12 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
   {
     return new GroupByPreShuffleFrameProcessor(
         query,
-        frameContext.groupingEngine(),
         baseInput,
-        segmentMapFn,
+        sideChannels,
+        frameContext.groupingEngine(),
         outputChannelHolder,
-        frameWriterFactoryHolder
+        frameWriterFactoryHolder,
+        frameContext.memoryParameters().getBroadcastJoinMemory()
     );
   }
 }

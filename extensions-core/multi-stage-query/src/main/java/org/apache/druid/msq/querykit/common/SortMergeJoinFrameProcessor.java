@@ -41,7 +41,6 @@ import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
@@ -102,7 +101,7 @@ import java.util.List;
  * 5) Once we process the final row on the *other* side, reset both marks with {@link Tracker#markCurrent()} and
  * continue the algorithm.
  */
-public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
+public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
 {
   private static final int LEFT = 0;
   private static final int RIGHT = 1;
@@ -167,7 +166,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Long> runIncrementally(IntSet readableInputs) throws IOException
   {
     // Fetch enough frames such that each tracker has one readable row (or is done).
     for (int i = 0; i < inputChannels.size(); i++) {
@@ -219,7 +218,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
 
     if (allTrackersAreAtEnd()) {
       flushCurrentFrame();
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(0L);
     } else {
       // Keep reading.
       return nextAwait();
@@ -382,7 +381,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
    *
    * If all channels have hit their limit, throws {@link MSQException} with {@link TooManyRowsWithSameKeyFault}.
    */
-  private ReturnOrAwait<Object> nextAwait()
+  private ReturnOrAwait<Long> nextAwait()
   {
     final IntSet awaitSet = new IntOpenHashSet();
     int trackerAtLimit = -1;

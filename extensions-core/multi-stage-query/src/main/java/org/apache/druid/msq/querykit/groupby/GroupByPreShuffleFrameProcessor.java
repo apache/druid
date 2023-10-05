@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit.groupby;
 
 import com.google.common.collect.Iterables;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -33,7 +34,6 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -49,12 +49,10 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
-import java.util.function.Function;
 
 /**
  * A {@link FrameProcessor} that reads one {@link Frame} at a time from a particular segment, writes them
@@ -69,22 +67,26 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
 
   private Yielder<ResultRow> resultYielder;
   private FrameWriter frameWriter;
+  private long rowsOutput;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
-      final GroupingEngine groupingEngine,
       final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final Int2ObjectMap<ReadableInput> sideChannels,
+      final GroupingEngine groupingEngine,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
+      final long memoryReservedForBroadcastJoin
   )
   {
     super(
+        query,
         baseInput,
-        segmentMapFn,
+        sideChannels,
         outputChannelHolder,
-        frameWriterFactoryHolder
+        frameWriterFactoryHolder,
+        memoryReservedForBroadcastJoin
     );
     this.query = query;
     this.groupingEngine = groupingEngine;
@@ -96,7 +98,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Long> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
@@ -114,14 +116,14 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     populateFrameWriterAndFlushIfNeeded();
 
     if (resultYielder == null || resultYielder.isDone()) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(rowsOutput);
     } else {
       return ReturnOrAwait.runAgain();
     }
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithInputChannel(
+  protected ReturnOrAwait<Long> runWithInputChannel(
       final ReadableFrameChannel inputChannel,
       final FrameReader inputFrameReader
   ) throws IOException
@@ -143,7 +145,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         resultYielder = Yielders.each(rowSequence);
       } else if (inputChannel.isFinished()) {
         flushFrameWriterIfNeeded();
-        return ReturnOrAwait.returnObject(Unit.instance());
+        return ReturnOrAwait.returnObject(rowsOutput);
       } else {
         return ReturnOrAwait.awaitAll(inputChannels().size());
       }
@@ -206,6 +208,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
       frameWriter.close();
       frameWriter = null;
+      rowsOutput += frame.numRows();
     }
   }
 

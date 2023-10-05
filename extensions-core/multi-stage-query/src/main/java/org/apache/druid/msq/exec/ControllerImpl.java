@@ -874,7 +874,7 @@ public class ControllerImpl implements Controller
           try {
             convertedResultObject = context.jsonMapper().convertValue(
                 resultObject,
-                queryKernel.getStageDefinition(stageId).getProcessorFactory().getResultTypeReference()
+                queryKernel.getStageDefinition(stageId).getProcessorFactory().getAccumulatedResultTypeReference()
             );
           }
           catch (IllegalArgumentException e) {

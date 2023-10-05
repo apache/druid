@@ -26,14 +26,14 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
-import org.apache.druid.java.util.common.Unit;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class QueryResultsFrameProcessor implements FrameProcessor<Object>
+public class QueryResultsFrameProcessor implements FrameProcessor<Long>
 {
+  long numRows = 0L;
   private final ReadableFrameChannel inChannel;
   private final WritableFrameChannel outChannel;
 
@@ -59,13 +59,13 @@ public class QueryResultsFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
   {
     if (readableInputs.isEmpty()) {
       return ReturnOrAwait.awaitAll(1);
     }
     if (inChannel.isFinished()) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(numRows);
     }
     writeFrame(inChannel.read());
     return ReturnOrAwait.awaitAll(1);
@@ -80,5 +80,6 @@ public class QueryResultsFrameProcessor implements FrameProcessor<Object>
   private void writeFrame(final Frame frame) throws IOException
   {
     outChannel.write(frame);
+    numRows += frame.numRows();
   }
 }

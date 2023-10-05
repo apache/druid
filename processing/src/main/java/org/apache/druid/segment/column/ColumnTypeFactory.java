@@ -57,8 +57,6 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
         switch (type.getElementType().getType()) {
           case LONG:
             return ColumnType.LONG_ARRAY;
-          case FLOAT:
-            return ColumnType.FLOAT_ARRAY;
           case DOUBLE:
             return ColumnType.DOUBLE_ARRAY;
           case STRING:

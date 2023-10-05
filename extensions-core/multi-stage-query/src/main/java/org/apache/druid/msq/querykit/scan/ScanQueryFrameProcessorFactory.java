@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
@@ -31,11 +32,9 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessorFactory;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.SegmentReference;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 @JsonTypeName("scan")
 public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactory
@@ -52,9 +51,10 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   private final AtomicLong runningCountForLimit;
 
   @JsonCreator
-  public ScanQueryFrameProcessorFactory(@JsonProperty("query") ScanQuery query)
+  public ScanQueryFrameProcessorFactory(
+      @JsonProperty("query") ScanQuery query
+  )
   {
-    super(query);
     this.query = Preconditions.checkNotNull(query, "query");
     this.runningCountForLimit =
         query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
@@ -67,9 +67,9 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   }
 
   @Override
-  protected FrameProcessor<Object> makeProcessor(
+  protected FrameProcessor<Long> makeProcessor(
       ReadableInput baseInput,
-      Function<SegmentReference, SegmentReference> segmentMapFn,
+      Int2ObjectMap<ReadableInput> sideChannels,
       ResourceHolder<WritableFrameChannel> outputChannelHolder,
       ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       FrameContext frameContext
@@ -77,12 +77,13 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   {
     return new ScanQueryFrameProcessor(
         query,
-        runningCountForLimit,
-        frameContext.jsonMapper(),
         baseInput,
-        segmentMapFn,
+        sideChannels,
         outputChannelHolder,
-        frameWriterFactoryHolder
+        frameWriterFactoryHolder,
+        runningCountForLimit,
+        frameContext.memoryParameters().getBroadcastJoinMemory(),
+        frameContext.jsonMapper()
     );
   }
 }

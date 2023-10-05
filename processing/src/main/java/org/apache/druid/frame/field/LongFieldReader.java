@@ -21,61 +21,75 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ValueTypes;
+
+import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link LongFieldWriter}.
  *
- * @see LongFieldWriter
- * @see NumericFieldWriter for the details of the byte-format that it expects for reading
+ * Values are sortable as bytes without decoding.
+ *
+ * Format:
+ *
+ * - 1 byte: {@link LongFieldWriter#NULL_BYTE} or {@link LongFieldWriter#NOT_NULL_BYTE}
+ * - 8 bytes: encoded long: big-endian order, with sign flipped
  */
-public class LongFieldReader extends NumericFieldReader
+public class LongFieldReader implements FieldReader
 {
-
-  public static LongFieldReader forPrimitive()
+  LongFieldReader()
   {
-    return new LongFieldReader(false);
-  }
-
-  public static LongFieldReader forArray()
-  {
-    return new LongFieldReader(true);
-  }
-
-  private LongFieldReader(final boolean forArray)
-  {
-    super(forArray);
   }
 
   @Override
-  public ValueType getValueType()
+  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
   {
-    return ValueType.LONG;
+    return new Selector(memory, fieldPointer);
   }
 
   @Override
-  public ColumnValueSelector<?> getColumnValueSelector(
-      final Memory memory,
-      final ReadableFieldPointer fieldPointer,
-      final byte nullIndicatorByte
+  public DimensionSelector makeDimensionSelector(
+      Memory memory,
+      ReadableFieldPointer fieldPointer,
+      @Nullable ExtractionFn extractionFn
   )
   {
-    return new LongFieldSelector(memory, fieldPointer, nullIndicatorByte);
+    return ValueTypes.makeNumericWrappingDimensionSelector(
+        ValueType.LONG,
+        makeColumnValueSelector(memory, fieldPointer),
+        extractionFn
+    );
   }
 
-  private static class LongFieldSelector extends NumericFieldReader.Selector implements LongColumnSelector
+  @Override
+  public boolean isNull(Memory memory, long position)
   {
+    return memory.getByte(position) == LongFieldWriter.NULL_BYTE;
+  }
 
-    final Memory dataRegion;
-    final ReadableFieldPointer fieldPointer;
+  @Override
+  public boolean isComparable()
+  {
+    return true;
+  }
 
-    public LongFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
+  /**
+   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
+   */
+  private static class Selector implements LongColumnSelector
+  {
+    private final Memory memory;
+    private final ReadableFieldPointer fieldPointer;
+
+    private Selector(final Memory memory, final ReadableFieldPointer fieldPointer)
     {
-      super(dataRegion, fieldPointer, nullIndicatorByte);
-      this.dataRegion = dataRegion;
+      this.memory = memory;
       this.fieldPointer = fieldPointer;
     }
 
@@ -83,20 +97,20 @@ public class LongFieldReader extends NumericFieldReader
     public long getLong()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
-      return TransformUtils.detransformToLong(bits);
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-
+      final long bits = memory.getLong(fieldPointer.position() + Byte.BYTES);
+      return LongFieldWriter.detransform(bits);
     }
 
     @Override
     public boolean isNull()
     {
-      return super._isNull();
+      return memory.getByte(fieldPointer.position()) == LongFieldWriter.NULL_BYTE;
+    }
+
+    @Override
+    public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
+    {
+      // Do nothing.
     }
   }
 }

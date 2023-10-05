@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit.scan;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
@@ -38,7 +39,6 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.input.ReadableInput;
@@ -61,7 +61,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
 {
@@ -126,10 +125,8 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
 
     final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
         query,
-        null,
-        new DefaultObjectMapper(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
-        Function.identity(),
+        Int2ObjectMaps.emptyMap(),
         new ResourceHolder<WritableFrameChannel>()
         {
           @Override
@@ -149,10 +146,13 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
             }
           }
         },
-        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {}),
+        null,
+        0L,
+        new DefaultObjectMapper()
     );
 
-    ListenableFuture<Object> retVal = exec.runFully(processor, null);
+    ListenableFuture<Long> retVal = exec.runFully(processor, null);
 
     final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
         outputChannel.readable(),
@@ -164,6 +164,6 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
         rowsFromProcessor
     );
 
-    Assert.assertEquals(Unit.instance(), retVal.get());
+    Assert.assertEquals(adapter.getNumRows(), (long) retVal.get());
   }
 }

@@ -32,7 +32,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -60,7 +59,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
+public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
 {
   private final GroupByQuery query;
   private final ReadableFrameChannel inputChannel;
@@ -122,7 +121,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
   {
     if (frameCursor == null || frameCursor.isDone()) {
       // Keep reading through the input channel.
@@ -134,7 +133,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
         }
 
         writeCurrentFrameIfNeeded();
-        return ReturnOrAwait.returnObject(Unit.instance());
+        return ReturnOrAwait.returnObject(0L);
       } else {
         final Frame frame = inputChannel.read();
         frameCursor = FrameProcessors.makeCursor(frame, frameReader);

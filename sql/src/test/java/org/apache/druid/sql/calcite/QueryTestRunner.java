@@ -321,15 +321,10 @@ public class QueryTestRunner
   public static class VerifyResults implements QueryVerifyStep
   {
     protected final BaseExecuteQuery execStep;
-    protected final boolean verifyRowSignature;
 
-    public VerifyResults(
-        BaseExecuteQuery execStep,
-        boolean verifyRowSignature
-    )
+    public VerifyResults(BaseExecuteQuery execStep)
     {
       this.execStep = execStep;
-      this.verifyRowSignature = verifyRowSignature;
     }
 
     @Override
@@ -351,9 +346,7 @@ public class QueryTestRunner
       }
 
       QueryTestBuilder builder = execStep.builder();
-      if (verifyRowSignature) {
-        builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
-      }
+      builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
       builder.expectedResultsVerifier.verify(builder.sql, results);
     }
   }
@@ -674,9 +667,7 @@ public class QueryTestRunner
         verifySteps.add(new VerifyNativeQueries(finalExecStep));
       }
       if (builder.expectedResultsVerifier != null) {
-        // Don't verify the row signature when MSQ is running, since the broker receives the task id, and the signature
-        // would be {TASK:STRING} instead of the expected results signature
-        verifySteps.add(new VerifyResults(finalExecStep, !config.isRunningMSQ()));
+        verifySteps.add(new VerifyResults(finalExecStep));
       }
 
       if (!builder.customVerifications.isEmpty()) {

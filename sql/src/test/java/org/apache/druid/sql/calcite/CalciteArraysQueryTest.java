@@ -87,6 +87,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantArrayExpressionFromTable()
   {
+    notMsqCompatible();
     testQuery(
         "SELECT ARRAY[1,2] as arr, dim1 FROM foo LIMIT 1",
         ImmutableList.of(
@@ -168,8 +169,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectNonConstantArrayExpressionFromTableForMultival()
   {
-    // Produces nested string array, that MSQ can't infer from the selector
-    msqIncompatible();
+    notMsqCompatible();
     final String sql = "SELECT ARRAY[CONCAT(dim3, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5";
     final Query<?> scanQuery = newScanQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE1)
@@ -209,6 +209,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Yes these outputs are strange sometimes, arrays are in a partial state of existence so end up a bit
     // stringy for now this is because virtual column selectors are coercing values back to stringish so that
     // multi-valued string dimensions can be grouped on.
+    notMsqCompatible();
     List<Object[]> expectedResults;
     if (useDefault) {
       expectedResults = ImmutableList.of(
@@ -388,6 +389,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // which will still always be stringified to ultimately adhere to the varchar type
     // as array support increases in the engine this will likely change since using explict array functions should
     // probably kick it into an array
+    notMsqCompatible();
     List<Object[]> expectedResults;
     if (useDefault) {
       expectedResults = ImmutableList.of(
@@ -1019,6 +1021,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsLongArray()
   {
+    notMsqCompatible();
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
     cannotVectorize();
     testQuery(
@@ -1070,6 +1073,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
+    notMsqCompatible();
     testQuery(
         "SELECT ARRAY[d1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
@@ -1117,6 +1121,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayGroupAsFloatArray()
   {
+    notMsqCompatible();
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
     testQuery(
@@ -1607,6 +1612,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggNumeric()
   {
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_AGG(l1), ARRAY_AGG(DISTINCT l1), ARRAY_AGG(d1), ARRAY_AGG(DISTINCT d1), ARRAY_AGG(f1), ARRAY_AGG(DISTINCT f1) FROM numfoo",
@@ -1743,6 +1749,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggQuantile()
   {
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_QUANTILE(ARRAY_AGG(l1), 0.9) FROM numfoo",
@@ -1786,9 +1793,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggArrays()
   {
-    // Produces nested array - ARRAY<ARRAY<LONG>>, which frame writers don't support. A way to get this query
-    // to run would be to use nested columns.
-    msqIncompatible();
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_AGG(ARRAY[l1, l2]), ARRAY_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
@@ -1885,6 +1890,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayConcatAggArrays()
   {
+    notMsqCompatible();
     cannotVectorize();
     testQuery(
         "SELECT ARRAY_CONCAT_AGG(ARRAY[l1, l2]), ARRAY_CONCAT_AGG(DISTINCT ARRAY[l1, l2]) FROM numfoo",
@@ -2033,6 +2039,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testArrayAggMaxBytes()
   {
     cannotVectorize();
+    notMsqCompatible();
     testQuery(
         "SELECT ARRAY_AGG(l1, 128), ARRAY_AGG(DISTINCT l1, 128) FROM numfoo",
         ImmutableList.of(
@@ -2232,6 +2239,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
+    notMsqCompatible();
     requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
@@ -2371,6 +2379,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {
+    notMsqCompatible();
     requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
@@ -2888,6 +2897,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
   {
+    notMsqCompatible();
     cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
@@ -2986,6 +2996,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {
+    notMsqCompatible();
     cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
                  + "      ( SELECT * FROM \n"
