@@ -1104,7 +1104,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     Assert.assertEquals(expectedResults.size(), results.size());
   }
 
-  public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)
+  public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer) throws Exception
   {
     testBuilder()
         .sql(sql)

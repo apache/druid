@@ -106,7 +106,7 @@ public class QueryTestRunner
    */
   public interface QueryVerifyStep
   {
-    void verify();
+    void verify() throws Exception;
   }
 
   /**
@@ -684,8 +684,9 @@ public class QueryTestRunner
 
   /**
    * All testQuery roads lead to this method.
+   * @throws Exception
    */
-  public void run()
+  public void run() throws Exception
   {
     for (QueryRunStep runStep : runSteps) {
       runStep.run();
