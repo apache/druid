@@ -41,13 +41,10 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Class that periodically checks with the broker if all the segments generated are loaded by querying the sys table
@@ -84,14 +81,14 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
                                            + "COUNT(*) FILTER (WHERE is_available = 0 AND is_published = 1 AND replication_factor != 0) AS pendingSegments,\n"
                                            + "COUNT(*) FILTER (WHERE replication_factor = -1) AS unknownSegments\n"
                                            + "FROM sys.segments\n"
-                                           + "WHERE datasource = '%s' AND is_overshadowed = 0 AND version = '%s'";
+                                           + "WHERE datasource = '%s' AND is_overshadowed = 0 AND version in (%s)";
 
   private final BrokerClient brokerClient;
   private final ObjectMapper objectMapper;
   // Map of version vs latest load status.
-  private final Map<String, VersionLoadStatus> versionToLoadStatusMap;
+  private final AtomicReference<VersionLoadStatus> versionLoadStatusReference;
   private final String datasource;
-  private final Set<String> versionsToAwait;
+  private final String versionsInClauseString;
   private final int totalSegmentsGenerated;
   private final boolean doWait;
   // since live reports fetch the value in another thread, we need to use AtomicReference
@@ -112,8 +109,11 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
     this.brokerClient = brokerClient;
     this.objectMapper = objectMapper;
     this.datasource = datasource;
-    this.versionsToAwait = new TreeSet<>(versionsToAwait);
-    this.versionToLoadStatusMap = new HashMap<>();
+    this.versionsInClauseString = String.join(
+        ",",
+        versionsToAwait.stream().map(s -> StringUtils.format("'%s'", s)).collect(Collectors.toSet())
+    );
+    this.versionLoadStatusReference = new AtomicReference<>(new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated));
     this.totalSegmentsGenerated = totalSegmentsGenerated;
     this.status = new AtomicReference<>(new SegmentLoadWaiterStatus(
         State.INIT,
@@ -145,8 +145,9 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
     final AtomicReference<Boolean> hasAnySegmentBeenLoaded = new AtomicReference<>(false);
     try {
       FutureUtils.getUnchecked(executorService.submit(() -> {
+        long lastLogMillis = -TimeUnit.MINUTES.toMillis(1);
         try {
-          while (!versionsToAwait.isEmpty()) {
+          while (!(hasAnySegmentBeenLoaded.get() && versionLoadStatusReference.get().isLoadingComplete())) {
             // Check the timeout and exit if exceeded.
             long runningMillis = new Interval(startTime, DateTimes.nowUtc()).toDurationMillis();
             if (runningMillis > TIMEOUT_DURATION_MILLIS) {
@@ -159,29 +160,21 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
               return;
             }
 
-            Iterator<String> iterator = versionsToAwait.iterator();
-            log.info(
-                "Fetching segment load status for datasource[%s] from broker for segment versions[%s]",
-                datasource,
-                versionsToAwait
-            );
-
-            // Query the broker for all pending versions
-            while (iterator.hasNext()) {
-              String version = iterator.next();
-
-              // Fetch the load status for this version from the broker
-              VersionLoadStatus loadStatus = fetchLoadStatusForVersion(version);
-              versionToLoadStatusMap.put(version, loadStatus);
-              hasAnySegmentBeenLoaded.set(hasAnySegmentBeenLoaded.get() || loadStatus.getUsedSegments() > 0);
-
-              // If loading is done for this stage, remove it from future loops.
-              if (hasAnySegmentBeenLoaded.get() && loadStatus.isLoadingComplete()) {
-                iterator.remove();
-              }
+            if (runningMillis - lastLogMillis >= TimeUnit.MINUTES.toMillis(1)) {
+              lastLogMillis = runningMillis;
+              log.info(
+                  "Fetching segment load status for datasource[%s] from broker for segment versions[%s]",
+                  datasource,
+                  versionsInClauseString
+              );
             }
 
-            if (!versionsToAwait.isEmpty()) {
+            // Fetch the load status from the broker
+            VersionLoadStatus loadStatus = fetchLoadStatusFromBroker();
+            versionLoadStatusReference.set(loadStatus);
+            hasAnySegmentBeenLoaded.set(hasAnySegmentBeenLoaded.get() || loadStatus.getUsedSegments() > 0);
+
+            if (!(hasAnySegmentBeenLoaded.get() && versionLoadStatusReference.get().isLoadingComplete())) {
               // Update the status.
               updateStatus(State.WAITING, startTime);
               // Sleep for a bit before checking again.
@@ -216,50 +209,45 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
   }
 
   /**
-   * Updates the {@link #status} with the latest details based on {@link #versionToLoadStatusMap}
+   * Updates the {@link #status} with the latest details based on {@link #versionLoadStatusReference}
    */
   private void updateStatus(State state, DateTime startTime)
   {
-    int pendingSegmentCount = 0, usedSegmentsCount = 0, precachedSegmentCount = 0, onDemandSegmentCount = 0, unknownSegmentCount = 0;
-    for (Map.Entry<String, VersionLoadStatus> entry : versionToLoadStatusMap.entrySet()) {
-      usedSegmentsCount += entry.getValue().getUsedSegments();
-      precachedSegmentCount += entry.getValue().getPrecachedSegments();
-      onDemandSegmentCount += entry.getValue().getOnDemandSegments();
-      unknownSegmentCount += entry.getValue().getUnknownSegments();
-      pendingSegmentCount += entry.getValue().getPendingSegments();
-    }
-
     long runningMillis = new Interval(startTime, DateTimes.nowUtc()).toDurationMillis();
+    VersionLoadStatus versionLoadStatus = versionLoadStatusReference.get();
     status.set(
         new SegmentLoadWaiterStatus(
             state,
             startTime,
             runningMillis,
             totalSegmentsGenerated,
-            usedSegmentsCount,
-            precachedSegmentCount,
-            onDemandSegmentCount,
-            pendingSegmentCount,
-            unknownSegmentCount
+            versionLoadStatus.getUsedSegments(),
+            versionLoadStatus.getPrecachedSegments(),
+            versionLoadStatus.getOnDemandSegments(),
+            versionLoadStatus.getPendingSegments(),
+            versionLoadStatus.getUnknownSegments()
         )
     );
   }
 
   /**
-   * Uses {@link #brokerClient} to fetch latest load status for a given version. Converts the response into a
+   * Uses {@link #brokerClient} to fetch latest load status for a given set of versions. Converts the response into a
    * {@link VersionLoadStatus} and returns it.
    */
-  private VersionLoadStatus fetchLoadStatusForVersion(String version) throws Exception
+  private VersionLoadStatus fetchLoadStatusFromBroker() throws Exception
   {
     Request request = brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/");
-    SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, version),
+    SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, versionsInClauseString),
                                      ResultFormat.OBJECTLINES,
                                      false, false, false, null, null
     );
     request.setContent(MediaType.APPLICATION_JSON, objectMapper.writeValueAsBytes(sqlQuery));
     String response = brokerClient.sendQuery(request);
 
-    if (response.trim().isEmpty()) {
+    if (response == null) {
+      // Unable to query broker
+      return new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated);
+    } else if (response.trim().isEmpty()) {
       // If no segments are returned for a version, all segments have been dropped by a drop rule.
       return new VersionLoadStatus(0, 0, 0, 0, 0);
     } else {
