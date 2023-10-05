@@ -1432,17 +1432,14 @@ public class DruidQuery
     if (windowing == null) {
       return null;
     }
-
-    final DataSource myDataSource;
     if (dataSource instanceof TableDataSource) {
-      // In this case, we first plan a scan query to pull the results up for us before applying the window
-      myDataSource = new QueryDataSource(toScanQuery());
-    } else {
-      myDataSource = dataSource;
+      // We need a scan query to pull the results up for us before applying the window
+      // Returning null here to ensure that the planner generates that alternative
+      return null;
     }
 
     return new WindowOperatorQuery(
-        myDataSource,
+        dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),

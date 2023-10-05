@@ -1170,7 +1170,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     skipVectorize = true;
   }
 
-  protected void notMsqCompatible()
+  protected void msqIncompatible()
   {
     msqCompatible = false;
   }

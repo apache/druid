@@ -36,7 +36,7 @@ import org.junit.Before;
 /**
  * Runs {@link CalciteArraysQueryTest} but with MSQ engine
  */
-public class CalciteArraysSelectQueryMSQTest extends CalciteArraysQueryTest
+public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
 {
   private TestGroupByBuffers groupByBuffers;
 
