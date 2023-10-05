@@ -121,6 +121,15 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     NullHandling.initializeForTests();
   }
 
+  @Rule
+  public TestRule disableWhenNonSqlCompat = DisableUnless.SQL_COMPATIBLE;
+
+  @Rule
+  public NegativeTestProcessor ignoreProcessor = new NegativeTestProcessor();
+
+  @Rule
+  public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
+
   @Test
   public void ensureAllDeclared() throws Exception
   {
@@ -168,12 +177,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
      */
     String value();
   }
-
-  @Rule
-  public NegativeTestProcessor ignoreProcessor = new NegativeTestProcessor();
-
-  @Rule
-  public DrillTestCaseLoaderRule drillTestCaseRule = new DrillTestCaseLoaderRule();
 
   class DrillTestCaseLoaderRule implements TestRule
   {
