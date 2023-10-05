@@ -20,15 +20,11 @@
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -54,9 +50,7 @@ public class GroupingSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
       final InputAccessor inputAccessor,
@@ -68,10 +62,8 @@ public class GroupingSqlAggregator implements SqlAggregator
                                           .stream()
                                           .map(i -> getColumnName(
                                               plannerContext,
-                                              rowSignature,
-                                              inputAccessor.getProject(),
+                                              inputAccessor,
                                               virtualColumnRegistry,
-                                              rexBuilder.getTypeFactory(),
                                               i
                                           ))
                                           .filter(Objects::nonNull)
@@ -100,18 +92,16 @@ public class GroupingSqlAggregator implements SqlAggregator
   @Nullable
   private String getColumnName(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
-      Project project,
+      InputAccessor inputAccessor,
       VirtualColumnRegistry virtualColumnRegistry,
-      RelDataTypeFactory typeFactory,
       int fieldNumber
   )
   {
-    RexNode node = Expressions.fromFieldAccess(typeFactory, rowSignature, project, fieldNumber);
+    RexNode node = inputAccessor.getField(fieldNumber);
     if (null == node) {
       return null;
     }
-    DruidExpression expression = Expressions.toDruidExpression(plannerContext, rowSignature, node);
+    DruidExpression expression = Expressions.toDruidExpression(plannerContext, inputAccessor.getSourceRowSignature(), node);
     if (null == expression) {
       return null;
     }

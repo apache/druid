@@ -97,9 +97,7 @@ public class CountSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
       final InputAccessor inputAccessor,
@@ -128,9 +126,7 @@ public class CountSqlAggregator implements SqlAggregator
       if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct()) {
         return approxCountDistinctAggregator.toDruidAggregation(
             plannerContext,
-            rowSignature,
             virtualColumnRegistry,
-            rexBuilder,
             name,
             aggregateCall,
             inputAccessor,

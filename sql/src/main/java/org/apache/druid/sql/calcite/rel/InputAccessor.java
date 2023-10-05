@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
 import java.util.List;
@@ -82,12 +83,6 @@ public class InputAccessor
 
   }
 
-  @Deprecated
-  public Project getProject()
-  {
-    return project;
-  }
-
   public List<RexNode> getFields(List<Integer> argList)
   {
     return argList
@@ -96,4 +91,24 @@ public class InputAccessor
         .collect(Collectors.toList());
   }
 
+  public RowSignature getSourceRowSignature()
+  {
+    return sourceRowSignature;
+  }
+
+  public Project getProject()
+  {
+    return project;
+  }
+
+  public RexBuilder getRexBuilder()
+  {
+    return rexBuilder;
+  }
+
+  public DruidExpression toDruidExpression(RexNode rexNode)
+  {
+    return null;
+
+  }
 }
