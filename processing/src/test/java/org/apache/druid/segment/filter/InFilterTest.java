@@ -545,7 +545,8 @@ public class InFilterTest extends BaseFilterTest
                       "longPredicateSupplier",
                       "floatPredicateSupplier",
                       "doublePredicateSupplier",
-                      "stringPredicateSupplier"
+                      "stringPredicateSupplier",
+                      "hasNull"
                   )
                   .verify();
   }

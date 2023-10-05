@@ -892,7 +892,12 @@ public class BoundFilterTest extends BaseFilterTest
   {
     EqualsVerifier.forClass(BoundFilter.BoundDimFilterDruidPredicateFactory.class)
                   .usingGetClass()
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withIgnoredFields(
+                      "longPredicateSupplier",
+                      "floatPredicateSupplier",
+                      "doublePredicateSupplier",
+                      "isNullUnknown"
+                  )
                   .verify();
   }
 }

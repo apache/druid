@@ -297,6 +297,7 @@ public class ExpressionFilter implements Filter
    */
   private DruidPredicateFactory getPredicateFactory()
   {
+    final boolean isNullUnknown = expr.get().eval(InputBindings.nilBindings()).value() == null;
     return new DruidPredicateFactory()
     {
       @Override
@@ -344,6 +345,12 @@ public class ExpressionFilter implements Filter
       public boolean equals(Object obj)
       {
         return super.equals(obj);
+      }
+
+      @Override
+      public boolean isNullInputUnknown()
+      {
+        return isNullUnknown;
       }
     };
   }

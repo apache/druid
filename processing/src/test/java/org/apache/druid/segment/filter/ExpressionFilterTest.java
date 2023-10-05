@@ -298,6 +298,21 @@ public class ExpressionFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testNullNotUnknown()
+  {
+    assertFilterMatchesSkipVectorize(
+        edf("isfalse(dim5)"),
+        ImmutableList.of("0", "1", "3", "4", "5", "6", "7", "8")
+    );
+    assertFilterMatchesSkipVectorize(
+        edf("!isfalse(dim5)"), ImmutableList.of("2", "9")
+    );
+    assertFilterMatchesSkipVectorize(
+        NotDimFilter.of(edf("isfalse(dim5)")), ImmutableList.of("2", "9")
+    );
+  }
+
+  @Test
   public void testMissingColumn()
   {
     if (NullHandling.replaceWithDefault()) {
