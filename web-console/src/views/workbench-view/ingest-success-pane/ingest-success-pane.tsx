@@ -44,7 +44,8 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
 
   const warnings = execution.stages?.getWarningCount() || 0;
 
-  const duration = execution.duration;
+  const { duration, segmentStatus } = execution;
+
   return (
     <div className="ingest-success-pane">
       <p>
@@ -67,6 +68,8 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
           Show details
         </span>
       </p>
+
+      {segmentStatus && <p>{execution.getSegmentStatusDescription()}</p>}
       {onQueryTab && (
         <p>
           Open new tab with:{' '}

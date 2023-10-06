@@ -78,6 +78,7 @@ export const ExecutionProgressBarPane = React.memo(function ExecutionProgressBar
         intent={stages ? Intent.PRIMARY : undefined}
         value={stages && execution.isWaitingForQuery() ? stages.overallProgress() : undefined}
       />
+      {execution?.segmentStatus && <Label>{execution.getSegmentStatusDescription()}</Label>}
       {stages && idx >= 0 && (
         <>
           <Label>{`Current stage (${idx + 1} of ${stages.stageCount()})`}</Label>

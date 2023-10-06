@@ -182,6 +182,7 @@ export interface ExecutionValue {
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
   _payload?: MsqTaskPayloadResponse;
+  segmentStatus?: string;
 }
 
 export class Execution {
@@ -292,6 +293,11 @@ export class Execution {
     const startTime = new Date(deepGet(taskReport, 'multiStageQuery.payload.status.startTime'));
     const durationMs = deepGet(taskReport, 'multiStageQuery.payload.status.durationMs');
 
+    const segmentLoaderStatus = deepGet(
+      taskReport,
+      'multiStageQuery.payload.status.segmentLoadWaiterStatus',
+    );
+
     let result: QueryResult | undefined;
     const resultsPayload: {
       signature: { name: string; type: string }[];
@@ -313,6 +319,7 @@ export class Execution {
       engine: 'sql-msq-task',
       id,
       status: Execution.normalizeTaskStatus(status),
+      segmentStatus: segmentLoaderStatus?.state,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
       duration: typeof durationMs === 'number' ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
@@ -369,6 +376,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
+  public readonly segmentStatus?: string;
 
   public readonly _payload?: { payload: any; task: string };
 
@@ -390,6 +398,7 @@ export class Execution {
     this.error = value.error;
     this.warnings = nonEmptyArray(value.warnings) ? value.warnings : undefined;
     this.capacityInfo = value.capacityInfo;
+    this.segmentStatus = value.segmentStatus;
 
     this._payload = value._payload;
   }
@@ -412,6 +421,7 @@ export class Execution {
       error: this.error,
       warnings: this.warnings,
       capacityInfo: this.capacityInfo,
+      segmentStatus: this.segmentStatus,
 
       _payload: this._payload,
     };
@@ -524,6 +534,24 @@ export class Execution {
   public isWaitingForQuery(): boolean {
     const { status } = this;
     return status !== 'SUCCESS' && status !== 'FAILED';
+  }
+
+  public getSegmentStatusDescription() {
+    const { segmentStatus } = this;
+
+    switch (segmentStatus) {
+      case 'INIT':
+        return 'Waiting for segments loading to start...';
+
+      case 'WAITING':
+        return 'Waiting for segments loading to complete...';
+
+      case 'SUCCESS':
+        return 'Segments loaded successfully';
+
+      default:
+        return '';
+    }
   }
 
   public isFullyComplete(): boolean {
