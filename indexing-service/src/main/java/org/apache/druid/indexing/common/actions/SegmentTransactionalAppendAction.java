@@ -69,9 +69,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     };
   }
 
-  /**
-   * Performs some sanity checks and publishes the given segments.
-   */
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {

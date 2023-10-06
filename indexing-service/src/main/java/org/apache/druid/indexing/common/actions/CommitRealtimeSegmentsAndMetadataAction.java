@@ -23,14 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -107,28 +113,35 @@ public class CommitRealtimeSegmentsAndMetadataAction implements TaskAction<Segme
     };
   }
 
-  /**
-   * Performs some sanity checks and publishes the given segments.
-   */
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
-    final SegmentPublishResult publishResult;
+    // Verify that all the locks are of expected type
+    final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
+    for (TaskLock lock : locks) {
+      if (lock.getType() != TaskLockType.APPEND) {
+        throw InvalidInput.exception(
+            "Cannot use action[%s] for task[%s] as it is holding a lock of type[%s] instead of [APPEND].",
+            "CommitRealtimeSegmentsAndMetadata", task.getId(), lock.getType()
+        );
+      }
+    }
 
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+    final String datasource = task.getDataSource();
+    final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
+        = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
 
+    final SegmentPublishResult publishResult;
     try {
       publishResult = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  // TODO: this might need to call a new method which does the following in the same transaction
-                  // - commit append segments
-                  // - upgrade append segments to replace versions
-                  // - commit metadata
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegmentsAndMetadata(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
                       segments,
+                      segmentToReplaceLock,
                       startMetadata,
                       endMetadata
                   )

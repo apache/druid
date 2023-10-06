@@ -438,33 +438,28 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
   )
   {
-    verifySegmentsToCommit(appendSegments);
-
-    final String dataSource = appendSegments.iterator().next().getDataSource();
-    final Set<DataSegment> upgradedSegments = connector.retryTransaction(
-        (handle, transactionStatus)
-            -> getSegmentsToUpgradeOnAppend(handle, dataSource, appendSegments),
-        0,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    return commitAppendSegmentsAndMetadataInTransaction(
+        appendSegments,
+        appendSegmentToReplaceLock,
+        null,
+        null
     );
+  }
 
-    // Create entries for all required versions of the append segments
-    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
-    allSegmentsToInsert.addAll(upgradedSegments);
-
-    try {
-      return connector.retryTransaction(
-          (handle, transactionStatus) -> {
-            insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
-            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert));
-          },
-          3,
-          getSqlMetadataMaxRetry()
-      );
-    }
-    catch (CallbackFailedException e) {
-      return SegmentPublishResult.fail(e.getMessage());
-    }
+  @Override
+  public SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  )
+  {
+    return commitAppendSegmentsAndMetadataInTransaction(
+        appendSegments,
+        appendSegmentToReplaceLock,
+        startMetadata,
+        endMetadata
+    );
   }
 
   @Override
@@ -968,6 +963,70 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     {
       this.found = found;
       this.segmentIdentifier = segmentIdentifier;
+    }
+  }
+
+  private SegmentPublishResult commitAppendSegmentsAndMetadataInTransaction(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata
+  )
+  {
+    verifySegmentsToCommit(appendSegments);
+    if ((startMetadata == null && endMetadata != null)
+        || (startMetadata != null && endMetadata == null)) {
+      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
+    }
+
+    final String dataSource = appendSegments.iterator().next().getDataSource();
+    final Set<DataSegment> upgradedSegments = connector.retryTransaction(
+        (handle, transactionStatus)
+            -> getSegmentsToUpgradeOnAppend(handle, dataSource, appendSegments),
+        0,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+
+    // Create entries for all required versions of the append segments
+    final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
+    allSegmentsToInsert.addAll(upgradedSegments);
+
+    final AtomicBoolean metadataNotUpdated = new AtomicBoolean(false);
+    try {
+      return connector.retryTransaction(
+          (handle, transactionStatus) -> {
+            metadataNotUpdated.set(false);
+
+            if (startMetadata != null) {
+              final DataStoreMetadataUpdateResult metadataUpdateResult
+                  = updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
+
+              if (metadataUpdateResult.isFailed()) {
+                transactionStatus.setRollbackOnly();
+                metadataNotUpdated.set(true);
+
+                if (metadataUpdateResult.canRetry()) {
+                  throw new RetryTransactionException(metadataUpdateResult.getErrorMsg());
+                } else {
+                  throw new RuntimeException(metadataUpdateResult.getErrorMsg());
+                }
+              }
+            }
+
+            insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
+            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert));
+          },
+          3,
+          getSqlMetadataMaxRetry()
+      );
+    }
+    catch (CallbackFailedException e) {
+      if (metadataNotUpdated.get()) {
+        // Return failed result if metadata was definitely not updated
+        return SegmentPublishResult.fail(e.getMessage());
+      } else {
+        throw e;
+      }
     }
   }
 

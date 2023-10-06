@@ -846,7 +846,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   }
 
   @Nullable
-  private DataSegment findSegmentWith(String version, Map<String, Object> loadSpec, Set<DataSegment> segments) {
+  private DataSegment findSegmentWith(String version, Map<String, Object> loadSpec, Set<DataSegment> segments)
+  {
     for (DataSegment segment : segments) {
       if (version.equals(segment.getVersion())
           && Objects.equals(segment.getLoadSpec(), loadSpec)) {

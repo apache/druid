@@ -301,6 +301,21 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Commits segments created by an APPEND task. This method also handles segment
+   * upgrade scenarios that may result from concurrent append and replace. Also
+   * commits start and end {@link DataSourceMetadata}.
+   *
+   * @see #commitAppendSegments
+   * @see #commitSegmentsAndMetadata
+   */
+  SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  );
+
+  /**
    * Commits segments created by a REPLACE task. This method also handles the
    * segment upgrade scenarios that may result from concurrent append and replace.
    * <ul>
