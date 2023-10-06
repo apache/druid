@@ -34,7 +34,6 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -57,6 +56,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -168,8 +168,8 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
   @Before
   public void setup() throws IOException
   {
-    FileUtils.forceMkdir(new File(LOCAL_TMP_PATH));
-    FileUtils.forceMkdir(new File(BASE_PERSIST_DIR));
+    FileUtils.mkdirp(new File(LOCAL_TMP_PATH));
+    FileUtils.mkdirp(new File(BASE_PERSIST_DIR));
 
     reportsFile = new File(LOCAL_TMP_PATH + "/task-reports.json");
     recordSupplier = new TestRecordSupplier();
@@ -195,9 +195,9 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
       runningTasks.clear();
     }
 
-    FileUtils.forceDelete(reportsFile);
-    FileUtils.forceDelete(new File(BASE_PERSIST_DIR));
-    FileUtils.forceDelete(new File(LOCAL_TMP_PATH));
+    reportsFile.delete();
+    FileUtils.deleteDirectory(new File(BASE_PERSIST_DIR));
+    FileUtils.deleteDirectory(new File(LOCAL_TMP_PATH));
 
     destroyToolboxFactory();
   }
