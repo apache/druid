@@ -68,15 +68,22 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class EarliestLatestAnySqlAggregator implements SqlAggregator
 {
-  public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(AggregatorType.EARLIEST);
-  public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(AggregatorType.LATEST);
-  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE);
+  public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(
+      AggregatorType.EARLIEST,
+      EarliestLatestBySqlAggregator.EARLIEST_BY.calciteFunction()
+  );
+  public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(
+      AggregatorType.LATEST,
+      EarliestLatestBySqlAggregator.LATEST_BY.calciteFunction()
+  );
+  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE, null);
 
   enum AggregatorType
   {
@@ -169,10 +176,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   private final AggregatorType aggregatorType;
   private final SqlAggFunction function;
 
-  private EarliestLatestAnySqlAggregator(final AggregatorType aggregatorType)
+  private EarliestLatestAnySqlAggregator(final AggregatorType aggregatorType, final SqlAggFunction replacementAggFunc)
   {
     this.aggregatorType = aggregatorType;
-    this.function = new EarliestLatestSqlAggFunction(aggregatorType);
+    this.function = new EarliestLatestSqlAggFunction(aggregatorType, replacementAggFunc);
   }
 
   @Override
@@ -322,8 +329,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   {
     private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
         new EarliestLatestReturnTypeInference(0);
+    private final SqlAggFunction replacementAggFunc;
 
-    EarliestLatestSqlAggFunction(AggregatorType aggregatorType)
+    EarliestLatestSqlAggFunction(AggregatorType aggregatorType, SqlAggFunction replacementAggFunc)
     {
       super(
           aggregatorType.name(),
@@ -344,6 +352,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           false,
           Optionality.FORBIDDEN
       );
+      this.replacementAggFunc = replacementAggFunc;
     }
 
     @Override
@@ -352,40 +361,33 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         SqlCall call
     )
     {
-      // Rewrite EARLIEST to EARLIEST_BY and LATEST to LATEST_BY to make
+      // Rewrite EARLIEST/LATEST to EARLIEST_BY/LATEST_BY to make
       // reference to __time column explicit so that Calcite tracks it
+
+      if (replacementAggFunc == null) {
+        return call;
+      }
 
       List<SqlNode> operands = call.getOperandList();
 
       SqlParserPos pos = call.getParserPosition();
 
-      SqlAggFunction aggFunction;
-
-      switch (getName()) {
-        case "EARLIEST":
-          aggFunction = EarliestLatestBySqlAggregator.EARLIEST_BY.calciteFunction();
-          break;
-        case "LATEST":
-          aggFunction = EarliestLatestBySqlAggregator.LATEST_BY.calciteFunction();
-          break;
-        default:
-          return call;
+      if (operands.isEmpty() || operands.size() > 2) {
+        throw InvalidSqlInput.exception("Function [%s] expects 1 or 2 arguments but found [%s]",
+                                        getName(),
+                                        operands.size()
+        );
       }
 
-      switch (operands.size()) {
-        case 1:
-          return aggFunction.createCall(pos, operands.get(0), new SqlIdentifier(
-              "__time", pos));
-        case 2:
-          return aggFunction.createCall(pos, operands.get(0), new SqlIdentifier(
-              "__time", pos), operands.get(1));
-        default:
-          throw InvalidSqlInput.exception(
-              "Function [%s] expects 1 or 2 arguments but found [%s]",
-              getName(),
-              operands.size()
-          );
+      List<SqlNode> newOperands = new ArrayList<>();
+      newOperands.add(operands.get(0));
+      newOperands.add(new SqlIdentifier("__time", pos));
+
+      if (operands.size() == 2) {
+        newOperands.add(operands.get(1));
       }
+
+      return replacementAggFunc.createCall(pos, newOperands);
     }
   }
 }

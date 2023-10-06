@@ -1502,13 +1502,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
-              .expectMessageIs(
-                  "Query could not be planned. A possible reason is "
-                  + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
-                  + "but the table queried doesn't contain a __time column.  "
-                  + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"
-              )
+          new DruidExceptionMatcher(
+              DruidException.Persona.USER,
+              DruidException.Category.INVALID_INPUT,
+              "invalidInput"
+          ).expectMessageContains("Column '__time' not found in any table")
       );
     }
   }
