@@ -45,7 +45,7 @@ public interface ExtractionNamespace
   // For larger clusters, when they all startup at the same time and have lookups in the db,
   // it overwhelms the database, this allows implementations to introduce a jitter, which
   // should spread out the load.
-  default long getJitter()
+  default long getJitterMills()
   {
     return 0;
   }

@@ -168,7 +168,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
-  public long getJitter()
+  public long getJitterMills()
   {
     if (jitterSeconds == 0) {
       return jitterSeconds;

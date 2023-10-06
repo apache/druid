@@ -180,9 +180,9 @@ public final class CacheScheduler
       final long updateMs = namespace.getPollMs();
       Runnable command = this::updateCache;
       if (updateMs > 0) {
-        return cacheManager.scheduledExecutorService().scheduleAtFixedRate(command, namespace.getJitter(), updateMs, TimeUnit.MILLISECONDS);
+        return cacheManager.scheduledExecutorService().scheduleAtFixedRate(command, namespace.getJitterMills(), updateMs, TimeUnit.MILLISECONDS);
       } else {
-        return cacheManager.scheduledExecutorService().schedule(command, namespace.getJitter(), TimeUnit.MILLISECONDS);
+        return cacheManager.scheduledExecutorService().schedule(command, namespace.getJitterMills(), TimeUnit.MILLISECONDS);
       }
     }
 

@@ -63,9 +63,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static junit.framework.TestCase.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 /**
  *
  */
@@ -419,9 +416,9 @@ public class JdbcExtractionNamespaceTest
         120,
         new JdbcAccessSecurityConfig()
     );
-    long jitter = extractionNamespace.getJitter();
+    long jitter = extractionNamespace.getJitterMills();
     // jitter will be a random value between 0 and 120 seconds.
-    assertTrue(jitter >= 0 && jitter <= 120000);
+    Assert.assertTrue(jitter >= 0 && jitter <= 120000);
   }
 
   @Test
@@ -439,9 +436,9 @@ public class JdbcExtractionNamespaceTest
         null,
         new JdbcAccessSecurityConfig()
     );
-    long jitter = extractionNamespace.getJitter();
+    long jitter = extractionNamespace.getJitterMills();
     // jitter will be a random value between 0 and 120 seconds.
-    assertEquals(0, extractionNamespace.getJitter());
+    Assert.assertEquals(0, extractionNamespace.getJitterMills());
   }
 
   @Test(timeout = 60_000L)
@@ -540,7 +537,7 @@ public class JdbcExtractionNamespaceTest
       log.debug("Waiting for updateLock");
       updateLock.lockInterruptibly();
       try {
-        assertTrue("Failed waiting for update", System.currentTimeMillis() - startTime < timeout);
+        Assert.assertTrue("Failed waiting for update", System.currentTimeMillis() - startTime < timeout);
         post = updates.get();
       }
       finally {
