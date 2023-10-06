@@ -40,7 +40,7 @@ For information on the supported properties, see [Coordinator dynamic configurat
 
 ### Get dynamic configuration
 
-Retrieves the current Coordinator dynamic configuration. Returns a JSON object with the dynamic configuration properties and values.
+Retrieves the current Coordinator dynamic configuration. Returns a JSON object with the dynamic configuration properties.
 
 #### URL
 
@@ -128,10 +128,10 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 * `X-Druid-Author`
   * Type: String
-  * A string representing the author making the configuration change.
+  * Author of the configuration change.
 * `X-Druid-Comment`
   * Type: String
-  * A string describing the update.
+  * Description for the update.
 
 #### Responses
 
@@ -233,8 +233,8 @@ Retrieves the history of changes to Coordinator dynamic configuration over an in
 The endpoint supports a set of optional query parameters to filter results.
 
 * `interval`
-  * Type: String (ISO-8601)
-  * Limit the results to the specified time interval. Delimited with `/`. For example, `2023-07-13/2023-07-19`. You can specify the default value of `interval` by setting `druid.audit.manager.auditHistoryMillis` in Coordinator `runtime.properties`. If not specified, `interval` defaults to one week.
+  * Type: String
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. You can specify the default value of `interval` by setting `druid.audit.manager.auditHistoryMillis` in Coordinator `runtime.properties`. If not specified, `interval` defaults to one week.
 
 * `count`
   * Type: Integer
@@ -310,7 +310,7 @@ For information on the supported properties, see [Overlord dynamic configuration
 ### Get dynamic configuration
 
 Retrieves the current Overlord dynamic configuration.
-Returns a JSON object with the dynamic configuration properties and values.
+Returns a JSON object with the dynamic configuration properties.
 Returns an empty response body if there is no current Overlord dynamic configuration.
 
 #### URL
@@ -388,10 +388,10 @@ The endpoint supports a set of optional header parameters to populate the `autho
 
 * `X-Druid-Author`
   * Type: String
-  * A string representing the author making the configuration change.
+  * Author of the configuration change.
 * `X-Druid-Comment`
   * Type: String
-  * A string describing the update.
+  * Description for the update.
 
 #### Responses
 
@@ -474,8 +474,8 @@ Retrieves the history of changes to Overlord dynamic configuration over an inter
 The endpoint supports a set of optional query parameters to filter results.
 
 * `interval`
-  * Type: String (ISO-8601)
-  * Limit the results to the specified time interval. Delimited with `/`. For example, `2023-07-13/2023-07-19`. You can specify the default value of `interval` by setting `druid.audit.manager.auditHistoryMillis` in Overlord `runtime.properties`. If not specified, `interval` defaults to one week.
+  * Type: String
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. You can specify the default value of `interval` by setting `druid.audit.manager.auditHistoryMillis` in Overlord `runtime.properties`. If not specified, `interval` defaults to one week.
 
 * `count`
   * Type: Integer
@@ -616,7 +616,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get scaling events
 
-Returns Overlord scaling events if auto-scaling runners are in use.
+Returns Overlord scaling events if autoscaling runners are in use.
 Returns an empty response body if there are no Overlord scaling events.
 
 #### URL
