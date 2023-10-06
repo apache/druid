@@ -77,6 +77,11 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
+          # fallback cache entries to restore from. 'depsonly' keys are safe to
+          # restore since they don't contain any artifacts created by mvn install
+          restore-keys: |
+            maven-${{ runner.os }}-depsonly-${{ hashFiles('**/pom.xml') }}
+            maven-${{ runner.os }}-depsonly-
 
       - name: Cache targets
         id: target

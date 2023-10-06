@@ -134,12 +134,12 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
+      # restore maven dependencies only. 'depsonly' keys are safe to restore
+      # since they don't contain any artifacts created by mvn install
       - uses: actions/cache/restore@v3
         with:
           key: maven-${{ runner.os }}-depsonly-${{ hashFiles('**/pom.xml') }}
           path: ~/.m2/repository
-          # fallback cache entries to restore from. 'depsonly' keys are safe to
-          # restore since they don't contain any artifacts created by mvn install
           restore-keys: |
             maven-${{ runner.os }}-depsonly-
 
