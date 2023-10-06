@@ -34,8 +34,11 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Setup java
-        run: export JAVA_HOME=$JAVA_HOME_8_X64
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'zulu'
 
       - name: Cache Maven m2 repository
         id: maven
