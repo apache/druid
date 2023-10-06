@@ -695,7 +695,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Like "testFilterAndGroupByLookupUsingJoinOperator", but with the table and lookup reversed.
 
     // MSQ refuses to do RIGHT join with broadcast.
-    notMsqCompatible();
+    msqIncompatible();
 
     // Cannot vectorize JOIN operator.
     cannotVectorize();
@@ -784,7 +784,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testJoinUnionTablesOnLookup(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+    msqIncompatible();
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
@@ -1918,7 +1918,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Regression test for https://github.com/apache/druid/issues/9646.
 
     // Empty-dataset aggregation queries in MSQ return an empty row, rather than a single row as SQL requires.
-    notMsqCompatible();
+    msqIncompatible();
 
     // Cannot vectorize JOIN operator.
     cannotVectorize();
@@ -1974,7 +1974,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testJoinTableLookupTableMismatchedTypesWithoutComma(Map<String, Object> queryContext)
   {
     // Empty-dataset aggregation queries in MSQ return an empty row, rather than a single row as SQL requires.
-    notMsqCompatible();
+    msqIncompatible();
 
     // Cannot vectorize JOIN operator.
     cannotVectorize();
@@ -2396,7 +2396,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testSelectOnLookupUsingRightJoinOperator(Map<String, Object> queryContext)
   {
     // MSQ refuses to do RIGHT join with broadcast.
-    notMsqCompatible();
+    msqIncompatible();
 
     testQuery(
         "SELECT dim1, lookyloo.*\n"
@@ -2438,7 +2438,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testSelectOnLookupUsingFullJoinOperator(Map<String, Object> queryContext)
   {
     // MSQ refuses to do FULL join with broadcast.
-    notMsqCompatible();
+    msqIncompatible();
 
     testQuery(
         "SELECT dim1, m1, cnt, lookyloo.*\n"
@@ -3751,7 +3751,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     if (sortBasedJoin) {
       // Cannot handle the [l1.k = 'abc'] condition.
-      notMsqCompatible();
+      msqIncompatible();
     }
 
     // Cannot vectorize due to 'concat' expression.
@@ -4172,7 +4172,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testJoinOnMultiValuedColumnShouldThrowException(Map<String, Object> queryContext)
   {
     // MSQ throws a slightly different error than QueryException.
-    notMsqCompatible();
+    msqIncompatible();
 
     final String query = "SELECT dim3, l.v from druid.foo f inner join lookup.lookyloo l on f.dim3 = l.k\n";
 
@@ -4189,7 +4189,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testUnionAllTwoQueriesLeftQueryIsJoin(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+    msqIncompatible();
 
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
@@ -4233,7 +4233,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testUnionAllTwoQueriesRightQueryIsJoin(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+    msqIncompatible();
 
     // Fully removing the join allows this query to vectorize.
     if (!isRewriteJoinToFilter(queryContext)) {
@@ -4276,7 +4276,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testUnionAllTwoQueriesBothQueriesAreJoin()
   {
     // MSQ does not support UNION ALL.
-    notMsqCompatible();
+    msqIncompatible();
     cannotVectorize();
 
     testQuery(
@@ -4982,7 +4982,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // IndexedTableDimensionSelector. In native, this doesn't happen, because we don't have as much type information,
     // and we end up using IndexedTableColumnValueSelector instead. This is really a problem with
     // IndexedTableColumnSelectorFactory: it assumes strings are not multi-valued, even though they might be.
-    notMsqCompatible();
+    msqIncompatible();
 
     testQuery(
         "SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN druid.numfoo as foo2 "
@@ -5038,7 +5038,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // IndexedTableDimensionSelector. In native, this doesn't happen, because we don't have as much type information,
     // and we end up using IndexedTableColumnValueSelector instead. This is really a problem with
     // IndexedTableColumnSelectorFactory: it assumes strings are not multi-valued, even though they might be.
-    notMsqCompatible();
+    msqIncompatible();
 
     testQuery(
         "SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN "
