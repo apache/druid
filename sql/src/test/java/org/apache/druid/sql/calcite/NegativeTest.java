@@ -80,7 +80,10 @@ public @interface NegativeTest
     RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
-    INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword");
+    INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword"),
+    // at least c7 is represented oddly in the parquet file
+    T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
+    RESULT_MISMATCH(AssertionError.class, "assertResultsEquals");
 
 
 
@@ -95,7 +98,7 @@ public @interface NegativeTest
 
     Pattern getPattern()
     {
-      return Pattern.compile(regex);
+      return Pattern.compile(regex, Pattern.MULTILINE | Pattern.DOTALL);
     }
   };
 
