@@ -52,7 +52,7 @@ jobs:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
 
-      - name: maven cache dependencies
+      - name: cache maven dependencies
         run: ${MVN} dependency:resolve dependency:resolve-plugins
 
       # Create a cache entry for dependencies only. This cache entry must
