@@ -107,6 +107,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
@@ -131,7 +132,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
 
   private static ServiceEmitter emitter;
 
-  private static SeekableStreamIndexTaskRunner taskRunner;
+  private static TestSeekableStreamIndexTaskRunner taskRunner;
 
   public SeekableStreamIndexTaskRunnerTest(LockGranularity lockGranularity)
   {
@@ -238,7 +239,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
             null
     );
 
-    SeekableStreamIndexTask task = new TestSeekableStreamIndexTask(
+    TestSeekableStreamIndexTask task = new TestSeekableStreamIndexTask(
             "id1",
             null,
             getDataSchema(),
@@ -306,7 +307,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     );
 
 
-    SeekableStreamIndexTask task = new TestSeekableStreamIndexTask(
+    TestSeekableStreamIndexTask task = new TestSeekableStreamIndexTask(
             "id1",
             null,
             getDataSchema(),
@@ -704,7 +705,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     @Override
     protected @NotNull List<OrderedPartitionableRecord<String, String, ByteEntity>> getRecords(RecordSupplier<String, String, ByteEntity> recordSupplier, TaskToolbox toolbox)
     {
-      return Collections.singletonList(new OrderedPartitionableRecord(STREAM, "0", "11", Collections.singletonList(new ByteEntity(MESSAGE.getBytes(StandardCharsets.UTF_8)))));
+      return Collections.singletonList(new OrderedPartitionableRecord<>(STREAM, "0", "11", Collections.singletonList(new ByteEntity(MESSAGE.getBytes(StandardCharsets.UTF_8)))));
     }
 
     @Override
@@ -752,8 +753,28 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     }
 
     @Override
-    public int compareTo(OrderedSequenceNumber<String> o) {
+    public int compareTo(OrderedSequenceNumber<String> o)
+    {
       return this.get().compareTo(o.get());
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TestSequenceNumber that = (TestSequenceNumber) o;
+      return Objects.equals(this.get(), that.get());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(this.get());
     }
   }
 
