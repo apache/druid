@@ -161,7 +161,51 @@ public class ParametrizedUriEmitterTest
     );
     Assert.assertEquals(expected, results);
   }
+  @Test
+  public void testEmitterWithParametrizedUriExtractor() throws Exception
+  {
+    Emitter emitter = parametrizedEmmiter("http://example.com/{key1}/{key2}");
+    final List<UnitEvent> events = Arrays.asList(
+        new UnitEvent("test", 1, ImmutableMap.of("key1", "val1", "key2", "val2")),
+        new UnitEvent("test", 2, ImmutableMap.of("key1", "val1", "key2", "val2"))
+    );
 
+    httpClient.setGoHandler(
+        new GoHandler()
+        {
+          @Override
+          protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
+          {
+            Assert.assertEquals("http://example.com/val1/val2", request.getUrl());
+            String event1Json = sortedJsonStrings(JSON_MAPPER.writeValueAsString(events.get(0)));
+            String event2Json = sortedJsonStrings(JSON_MAPPER.writeValueAsString(events.get(1)));
+            String expectedJsonContent = "[" + event1Json + "," + event2Json + "]";
+            byte[] requestBytes = request.getByteBufferData().slice().array();
+            String actualJsonContent = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(requestBytes)).toString();
+            List<Map<String, Object>> jsonArray = new ObjectMapper().readValue(actualJsonContent, List.class);
+            List<Map<String, Object>> sortedJsonArray = new ArrayList<>();
+            for (Map<String, Object> map : jsonArray) {
+              Map<String, Object> sortedMap = new TreeMap<>(map);
+              sortedJsonArray.add(sortedMap);
+            }
+            ObjectWriter writer = new ObjectMapper().writerWithDefaultPrettyPrinter();
+            String sorted = writer.writeValueAsString(sortedJsonArray);
+            String expectedJsonNoSpaces = removeWhitespace(expectedJsonContent);
+            String actualJsonNoSpaces = removeWhitespace(sorted);
+            System.out.print(sorted);
+            Assert.assertEquals(sorted, expectedJsonNoSpaces, actualJsonNoSpaces);
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
+          }
+        }.times(1)
+    );
+
+    for (UnitEvent event : events) {
+      emitter.emit(event);
+    }
+    emitter.flush();
+    Thread.sleep(1000);
+    Assert.assertTrue(httpClient.succeeded());
+  }
   private String removeWhitespace(String input) 
   {
     StringBuilder result = new StringBuilder();
