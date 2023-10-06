@@ -52,7 +52,6 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.NegativeTest.Modes;
 import org.apache.druid.sql.calcite.NegativeTest.NegativeTestProcessor;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -432,7 +431,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
               } else {
                 Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
                 try {
-                  newVal = parser.apply(val);
+                  DateTime v = parser.apply(val);
+                  newVal = v.getMillis();
                 }
                 catch (IllegalArgumentException iae) {
                   LocalTime v = LocalTime.parse(val);
@@ -468,8 +468,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           .queryContext(ImmutableMap.of(
               PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
               "windowsAllTheWayDown", true,
-              QueryContexts.ENABLE_DEBUG, true,
-              PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+              QueryContexts.ENABLE_DEBUG, true)
+              )
           .sql(testCase.getQueryString())
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
           .run();
