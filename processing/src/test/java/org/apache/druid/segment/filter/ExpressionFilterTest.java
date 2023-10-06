@@ -302,13 +302,15 @@ public class ExpressionFilterTest extends BaseFilterTest
   {
     assertFilterMatchesSkipVectorize(
         edf("isfalse(dim5)"),
-        ImmutableList.of("0", "1", "3", "4", "5", "6", "7", "8")
+        NullHandling.sqlCompatible() ? ImmutableList.of("0", "1", "3", "4", "5", "6", "7", "8") : ImmutableList.of("0", "1", "3", "5", "6", "7", "8")
     );
     assertFilterMatchesSkipVectorize(
-        edf("!isfalse(dim5)"), ImmutableList.of("2", "9")
+        edf("!isfalse(dim5)"),
+        NullHandling.sqlCompatible() ? ImmutableList.of("2", "9") : ImmutableList.of("2", "4", "9")
     );
     assertFilterMatchesSkipVectorize(
-        NotDimFilter.of(edf("isfalse(dim5)")), ImmutableList.of("2", "9")
+        NotDimFilter.of(edf("isfalse(dim5)")),
+        NullHandling.sqlCompatible() ? ImmutableList.of("2", "9") : ImmutableList.of("2", "4", "9")
     );
 
     assertFilterMatchesSkipVectorize(
