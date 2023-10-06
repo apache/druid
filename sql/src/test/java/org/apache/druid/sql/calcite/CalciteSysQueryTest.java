@@ -20,15 +20,15 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.sql.calcite.NegativeTest.Modes;
-import org.apache.druid.sql.calcite.NegativeTest.NegativeTestProcessor;
+import org.apache.druid.sql.calcite.FixMe.Modes;
+import org.apache.druid.sql.calcite.FixMe.FixMeProcessor;
 import org.junit.Rule;
 import org.junit.Test;
 
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
   @Rule(order = 0)
-  public NegativeTestProcessor NegativeTestProcessor = new NegativeTestProcessor();
+  public FixMeProcessor NegativeTestProcessor = new FixMeProcessor();
 
   @Test
   public void testTasksSum()
@@ -46,7 +46,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NegativeTest(Modes.EXPRESSION_NOT_GROUPED)
+  @FixMe(Modes.EXPRESSION_NOT_GROUPED)
   @Test
   public void testTasksSumOver()
   {

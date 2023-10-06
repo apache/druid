@@ -47,9 +47,9 @@ import static org.junit.Assert.assertThrows;
  * it may interfere with other rules:
  * <code>
  *   @Rule(order = 0)
- *   public NegativeTestProcessor decoupledIgnoreProcessor = new NegativeTestProcessor();
+ *   public TestRule fixmeRule = new FixMeProcessor();
  *
- *   @NegativeTest
+ *   @FixMe(NOT_ENOUGH_RULES)
  *   @Test
  *   public void testA() {
  *   }
@@ -58,7 +58,7 @@ import static org.junit.Assert.assertThrows;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface NegativeTest
+public @interface FixMe
 {
   Modes value() default Modes.NOT_ENOUGH_RULES;
 
@@ -85,8 +85,6 @@ public @interface NegativeTest
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "assertResultsEquals");
 
-
-
     public Class<? extends Throwable> throwableClass;
     public String regex;
 
@@ -103,17 +101,17 @@ public @interface NegativeTest
   };
 
   /**
-   * Processes {@link NegativeTest} annotations.
+   * Processes {@link FixMe} annotations.
    *
    * Ensures that test cases disabled with that annotation can still not pass.
    * If the error is as expected; the testcase is marked as "ignored".
    */
-  class NegativeTestProcessor implements TestRule
+  class FixMeProcessor implements TestRule
   {
     @Override
     public Statement apply(Statement base, Description description)
     {
-      NegativeTest annotation = description.getAnnotation(NegativeTest.class);
+      FixMe annotation = description.getAnnotation(FixMe.class);
 
       if (annotation == null) {
         return base;
