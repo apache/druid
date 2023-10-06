@@ -234,7 +234,7 @@ The endpoint supports a set of optional query parameters to filter results.
 
 * `interval`
   * Type: String
-  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. You can specify the default value of `interval` by setting `druid.audit.manager.auditHistoryMillis` in Coordinator `runtime.properties`. If not specified, `interval` defaults to one week.
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. The default interval is one week. You can change this period by setting `druid.audit.manager.auditHistoryMillis` in the `runtime.properties` file for the Coordinator.
 
 * `count`
   * Type: Integer
@@ -475,7 +475,7 @@ The endpoint supports a set of optional query parameters to filter results.
 
 * `interval`
   * Type: String
-  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. You can specify the default value of `interval` by setting `druid.audit.manager.auditHistoryMillis` in Overlord `runtime.properties`. If not specified, `interval` defaults to one week.
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. The default interval is one week. You can change this period by setting `druid.audit.manager.auditHistoryMillis` in the `runtime.properties` file for the Overlord.
 
 * `count`
   * Type: Integer
