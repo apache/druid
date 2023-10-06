@@ -148,7 +148,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       if (allCases.remove(ann.value() + ".q")) {
         continue;
       }
-      fail("found testcase referencing invalid file: " + method.getName());
+      fail(String.format("Testcase [%s] references invalid file [%s].", method.getName(), ann.value()));
     }
 
     for (String string : allCases) {
@@ -162,7 +162,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           string,
           string.replace('/', '_'));
     }
-    assertEquals("found some non-declared tests; please add the above!", 0, allCases.size());
+    assertEquals("Found some non-declared testcases; please add the new testcases printed above!", 0, allCases.size());
   }
 
   @Retention(RetentionPolicy.RUNTIME)
