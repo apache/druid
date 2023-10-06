@@ -564,7 +564,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
                 getMaxTotalRows(),
                 getIntermediatePersistPeriod(),
                 dir,
-                getMaxPendingPersists(),
+                0,
                 getIndexSpec(),
                 getIndexSpecForIntermediatePersists(),
                 isReportParseExceptions(),
@@ -588,7 +588,6 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
                 ", maxBytesInMemory=" + getMaxBytesInMemory() +
                 ", skipBytesInMemoryOverheadCheck=" + isSkipBytesInMemoryOverheadCheck() +
                 ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
-                ", maxPendingPersists=" + getMaxPendingPersists() +
                 ", indexSpec=" + getIndexSpec() +
                 ", indexSpecForIntermediatePersists=" + getIndexSpecForIntermediatePersists() +
                 ", reportParseExceptions=" + isReportParseExceptions() +
