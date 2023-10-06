@@ -48,7 +48,7 @@ class DisableUnless
     @Override
     public Statement apply(Statement base, Description description)
     {
-      assumeTrue("Testcase disabled; because condition not net: " + message, predicate.get());
+      assumeTrue("Testcase disabled; because condition not met: " + message, predicate.get());
       return base;
     }
   }

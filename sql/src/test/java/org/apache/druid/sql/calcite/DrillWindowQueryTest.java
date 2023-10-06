@@ -162,7 +162,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           string,
           string.replace('/', '_'));
     }
-    assertEquals("Found some non-declared testcases; please add the new testcases printed above!", 0, allCases.size());
+    assertEquals("Found some non-declared testcases; please add the new testcases printed to the console!", 0, allCases.size());
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -209,7 +209,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         }
       }
       catch (Exception e) {
-        throw new RuntimeException("Encountered exception while loading testcase", e);
+        throw new RuntimeException(
+            String.format("Encountered exception while loading testcase [%s]", filename),
+            e);
       }
     }
 
@@ -366,14 +368,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         if (!isOrdered(sql)) {
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
-        } else {
-          assertResultsEquals(sql, expectedResults, results);
         }
+        assertResultsEquals(sql, expectedResults, results);
       }
       catch (AssertionError e) {
-        displayResults(expectedResults);
         System.out.println("query: " + sql);
-        displayResults(results);
+        displayResults("Expected", expectedResults);
+        displayResults("Actual", results);
         throw e;
       }
     }
@@ -5049,13 +5050,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @DrillTest("nestedAggs/basic_9")
-  @Test
-  public void test_nestedAggs_basic_9()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/winFnQry_58")
   @Test
   public void test_aggregates_winFnQry_58()
@@ -7757,4 +7751,12 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   {
     windowQueryTest();
   }
+
+  @DrillTest("nestedAggs/basic_9")
+  @Test
+  public void test_nestedAggs_basic_9()
+  {
+    windowQueryTest();
+  }
+
 }
