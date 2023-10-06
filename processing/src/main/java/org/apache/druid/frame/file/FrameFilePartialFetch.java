@@ -74,6 +74,9 @@ public class FrameFilePartialFetch
     return exceptionCaught != null;
   }
 
+  /**
+   * Number of bytes read so far by this request.
+   */
   public long getBytesRead()
   {
     return bytesRead;
@@ -110,6 +113,9 @@ public class FrameFilePartialFetch
     }
   }
 
+  /**
+   * Increment the value returned by {@link #getBytesRead()}. Called whenever a chunk of data is read from the response.
+   */
   void addBytesRead(final long n)
   {
     bytesRead += n;

@@ -134,11 +134,9 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
     final long readByThisRequest = clientResponseObj.getBytesRead(); // Prior to the current chunk
     final long toSkip = readByThisHandler - readByThisRequest;
 
-    clientResponseObj.addBytesRead(chunkSize);
-
     if (toSkip < 0) {
       throw DruidException.defensive("Expected toSkip[%d] to be nonnegative", toSkip);
-    } else if (toSkip < chunkSize) {
+    } else if (toSkip < chunkSize) { // When toSkip >= chunkSize, we skip the entire chunk and do not toucn the channel
       chunk = new byte[chunkSize - (int) toSkip];
       content.getBytes(content.readerIndex() + (int) toSkip, chunk);
 
@@ -154,6 +152,8 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
       }
     }
 
+    // Call addBytesRead even if we skipped some or all of the chunk, because that lets us know when to stop skipping.
+    clientResponseObj.addBytesRead(chunkSize);
     return ClientResponse.unfinished(clientResponseObj);
   }
 }
