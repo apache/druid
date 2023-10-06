@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
@@ -41,6 +40,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -59,6 +59,7 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.StorageAdapter;
@@ -73,6 +74,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * A {@link FrameProcessor} that reads one {@link Frame} at a time from a particular segment, writes them
@@ -86,7 +88,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
 
-  private long rowsOutput = 0;
   private Cursor cursor;
   private Segment segment;
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
@@ -95,22 +96,19 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
   public ScanQueryFrameProcessor(
       final ScanQuery query,
-      final ReadableInput baseInput,
-      final Int2ObjectMap<ReadableInput> sideChannels,
-      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       @Nullable final AtomicLong runningCountForLimit,
-      final long memoryReservedForBroadcastJoin,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final ReadableInput baseInput,
+      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
   {
     super(
-        query,
         baseInput,
-        sideChannels,
+        segmentMapFn,
         outputChannelHolder,
-        frameWriterFactoryHolder,
-        memoryReservedForBroadcastJoin
+        frameWriterFactoryHolder
     );
     this.query = query;
     this.runningCountForLimit = runningCountForLimit;
@@ -130,7 +128,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
@@ -140,7 +138,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
     if (runningCountForLimit != null
         && runningCountForLimit.get() > query.getScanRowsOffset() + query.getScanRowsLimit()) {
-      return ReturnOrAwait.returnObject(rowsOutput);
+      return ReturnOrAwait.returnObject(Unit.instance());
     }
 
     return super.runIncrementally(readableInputs);
@@ -155,7 +153,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Long> runWithSegment(final SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
@@ -170,7 +168,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       if (cursorYielder.isDone()) {
         // No cursors!
         cursorYielder.close();
-        return ReturnOrAwait.returnObject(rowsOutput);
+        return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         final long rowsFlushed = setNextCursor(cursorYielder.get(), segmentHolder.get());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
@@ -185,14 +183,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
 
     if (cursor.isDone() && (frameWriter == null || frameWriter.getNumRows() == 0)) {
-      return ReturnOrAwait.returnObject(rowsOutput);
+      return ReturnOrAwait.returnObject(Unit.instance());
     } else {
       return ReturnOrAwait.runAgain();
     }
   }
 
   @Override
-  protected ReturnOrAwait<Long> runWithInputChannel(
+  protected ReturnOrAwait<Unit> runWithInputChannel(
       final ReadableFrameChannel inputChannel,
       final FrameReader inputFrameReader
   ) throws IOException
@@ -217,7 +215,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         }
       } else if (inputChannel.isFinished()) {
         flushFrameWriter();
-        return ReturnOrAwait.returnObject(rowsOutput);
+        return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.awaitAll(inputChannels().size());
       }
@@ -296,7 +294,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
       frameWriter.close();
       frameWriter = null;
-      rowsOutput += frame.numRows();
       return frame.numRows();
     } else {
       if (frameWriter != null) {

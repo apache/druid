@@ -250,7 +250,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         long tt = chronology.years().add(origin, y);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
-          t = chronology.years().add(tt, -years);
+          t = chronology.years().add(origin, y - years);
         } else {
           t = tt;
         }
@@ -268,7 +268,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         long tt = chronology.months().add(origin, m);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
-          t = chronology.months().add(tt, -months);
+          t = chronology.months().add(origin, m - months);
         } else {
           t = tt;
         }
@@ -287,7 +287,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         long tt = chronology.weeks().add(origin, w);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
-          t = chronology.weeks().add(tt, -weeks);
+          t = chronology.weeks().add(origin, w - weeks);
         } else {
           t = tt;
         }
@@ -308,7 +308,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         long tt = chronology.days().add(origin, d);
         // always round down to the previous period (for timestamps prior to origin)
         if (t < tt) {
-          t = chronology.days().add(tt, -days);
+          t = chronology.days().add(origin, d - days);
         } else {
           t = tt;
         }

@@ -88,9 +88,9 @@ public class Windowing
   private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
       .put("LAG", (agg) ->
-          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1)))
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1)))
       .put("LEAD", (agg) ->
-          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1)))
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1, 1)))
       .put("FIRST_VALUE", (agg) ->
           new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
       .put("LAST_VALUE", (agg) ->
