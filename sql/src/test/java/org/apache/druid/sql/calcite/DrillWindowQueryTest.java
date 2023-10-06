@@ -526,26 +526,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   // testcases_start
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_10")
-  @Test
-  public void test_aggregates_aggOWnFn_10()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/aggOWnFn_11")
   @Test
   public void test_aggregates_aggOWnFn_11()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_12")
-  @Test
-  public void test_aggregates_aggOWnFn_12()
   {
     windowQueryTest();
   }
@@ -557,49 +540,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_14")
-  @Test
-  public void test_aggregates_aggOWnFn_14()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_15")
-  @Test
-  public void test_aggregates_aggOWnFn_15()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/aggOWnFn_16")
   @Test
   public void test_aggregates_aggOWnFn_16()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_17")
-  @Test
-  public void test_aggregates_aggOWnFn_17()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_18")
-  @Test
-  public void test_aggregates_aggOWnFn_18()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_19")
-  @Test
-  public void test_aggregates_aggOWnFn_19()
   {
     windowQueryTest();
   }
@@ -621,22 +564,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("aggregates/aggOWnFn_21")
   @Test
   public void test_aggregates_aggOWnFn_21()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_22")
-  @Test
-  public void test_aggregates_aggOWnFn_22()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_23")
-  @Test
-  public void test_aggregates_aggOWnFn_23()
   {
     windowQueryTest();
   }
@@ -711,22 +638,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_39")
-  @Test
-  public void test_aggregates_aggOWnFn_39()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_40")
-  @Test
-  public void test_aggregates_aggOWnFn_40()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/aggOWnFn_41")
   @Test
   public void test_aggregates_aggOWnFn_41()
@@ -786,14 +697,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("aggregates/aggOWnFn_49")
   @Test
   public void test_aggregates_aggOWnFn_49()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/aggOWnFn_50")
-  @Test
-  public void test_aggregates_aggOWnFn_50()
   {
     windowQueryTest();
   }
@@ -896,14 +799,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/winFnQry_1")
-  @Test
-  public void test_aggregates_winFnQry_1()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/winFnQry_22")
   @Test
   public void test_aggregates_winFnQry_22()
@@ -921,30 +816,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("aggregates/winFnQry_29")
   @Test
   public void test_aggregates_winFnQry_29()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/winFnQry_2")
-  @Test
-  public void test_aggregates_winFnQry_2()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/winFnQry_3")
-  @Test
-  public void test_aggregates_winFnQry_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/winFnQry_4")
-  @Test
-  public void test_aggregates_winFnQry_4()
   {
     windowQueryTest();
   }
@@ -980,14 +851,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("aggregates/winFnQry_60")
   @Test
   public void test_aggregates_winFnQry_60()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/winFnQry_8")
-  @Test
-  public void test_aggregates_winFnQry_8()
   {
     windowQueryTest();
   }
@@ -1041,89 +904,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_17")
-  @Test
-  public void test_aggregates_wo_OrdrBy_17()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_18")
-  @Test
-  public void test_aggregates_wo_OrdrBy_18()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_19")
-  @Test
-  public void test_aggregates_wo_OrdrBy_19()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/wo_OrdrBy_1")
   @Test
   public void test_aggregates_wo_OrdrBy_1()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_20")
-  @Test
-  public void test_aggregates_wo_OrdrBy_20()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_21")
-  @Test
-  public void test_aggregates_wo_OrdrBy_21()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_22")
-  @Test
-  public void test_aggregates_wo_OrdrBy_22()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_23")
-  @Test
-  public void test_aggregates_wo_OrdrBy_23()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_24")
-  @Test
-  public void test_aggregates_wo_OrdrBy_24()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_25")
-  @Test
-  public void test_aggregates_wo_OrdrBy_25()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/wo_OrdrBy_26")
-  @Test
-  public void test_aggregates_wo_OrdrBy_26()
   {
     windowQueryTest();
   }
@@ -1184,49 +967,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_10")
-  @Test
-  public void test_aggregates_woPrtnBy_10()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/woPrtnBy_11")
   @Test
   public void test_aggregates_woPrtnBy_11()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_12")
-  @Test
-  public void test_aggregates_woPrtnBy_12()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_13")
-  @Test
-  public void test_aggregates_woPrtnBy_13()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_14")
-  @Test
-  public void test_aggregates_woPrtnBy_14()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_15")
-  @Test
-  public void test_aggregates_woPrtnBy_15()
   {
     windowQueryTest();
   }
@@ -1238,25 +981,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_18")
-  @Test
-  public void test_aggregates_woPrtnBy_18()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("aggregates/woPrtnBy_1")
   @Test
   public void test_aggregates_woPrtnBy_1()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_20")
-  @Test
-  public void test_aggregates_woPrtnBy_20()
   {
     windowQueryTest();
   }
@@ -1285,14 +1012,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("aggregates/woPrtnBy_24")
   @Test
   public void test_aggregates_woPrtnBy_24()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/woPrtnBy_25")
-  @Test
-  public void test_aggregates_woPrtnBy_25()
   {
     windowQueryTest();
   }
@@ -1598,14 +1317,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("first_val/firstValFn_17")
-  @Test
-  public void test_first_val_firstValFn_17()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("first_val/firstValFn_1")
   @Test
   public void test_first_val_firstValFn_1()
@@ -1616,14 +1327,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("first_val/firstValFn_20")
   @Test
   public void test_first_val_firstValFn_20()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("first_val/firstValFn_23")
-  @Test
-  public void test_first_val_firstValFn_23()
   {
     windowQueryTest();
   }
@@ -1712,57 +1415,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_1")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_bgint_1()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_2")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_bgint_2()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_3")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_bgint_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_4")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_bgint_4()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_5")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_5()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_6")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_bgint_6()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_7")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_bgint_7()
   {
     windowQueryTest();
   }
@@ -1788,49 +1443,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_chr_3")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_chr_3()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/defaultFrame/RBUPACR_chr_4")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_chr_4()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_chr_5")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_chr_5()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_1")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dbl_1()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_2")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dbl_2()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_3")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dbl_3()
   {
     windowQueryTest();
   }
@@ -1849,57 +1464,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_6")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dbl_6()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_7")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dbl_7()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dt_1")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dt_1()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dt_2")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dt_2()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/defaultFrame/RBUPACR_dt_3")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dt_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_dt_4")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_dt_4()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_int10")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_int10()
   {
     windowQueryTest();
   }
@@ -1914,22 +1481,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("frameclause/defaultFrame/RBUPACR_int12")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int12()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_int13")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_int13()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_int14")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_int14()
   {
     windowQueryTest();
   }
@@ -1976,65 +1527,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.NOT_ENOUGH_RULES)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_int7")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_int7()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_int8")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_int8()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_int9")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_int9()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_vchr_3")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_vchr_3()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/defaultFrame/RBUPACR_vchr_4")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_vchr_4()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/defaultFrame/RBUPACR_vchr_5")
-  @Test
-  public void test_frameclause_defaultFrame_RBUPACR_vchr_5()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/multipl_wnwds/avg_mulwds")
-  @Test
-  public void test_frameclause_multipl_wnwds_avg_mulwds()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/multipl_wnwds/count_mulwds")
-  @Test
-  public void test_frameclause_multipl_wnwds_count_mulwds()
   {
     windowQueryTest();
   }
@@ -2074,22 +1569,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_bgint_6")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_bgint_6()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_bgint_7")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_bgint_7()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/RBCRACR/RBCRACR_bln_1")
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bln_1()
@@ -2107,22 +1586,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("frameclause/RBCRACR/RBCRACR_bln_3")
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_bln_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_char_3")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_char_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_char_4")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_char_4()
   {
     windowQueryTest();
   }
@@ -2162,49 +1625,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_dbl_7")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_dbl_7()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_1")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_dt_1()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_2")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_dt_2()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/RBCRACR/RBCRACR_dt_3")
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_dt_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_4")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_dt_4()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_5")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_dt_5()
   {
     windowQueryTest();
   }
@@ -2226,22 +1649,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("frameclause/RBCRACR/RBCRACR_int_12")
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_12()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_int_13")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_int_13()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_int_14")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_int_14()
   {
     windowQueryTest();
   }
@@ -2281,14 +1688,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_int_6")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_int_6()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/RBCRACR/RBCRACR_int_8")
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_8()
@@ -2303,65 +1702,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_vchar_3")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_vchar_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_vchar_4")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_vchar_4()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBCRACR/RBCRACR_vchar_5")
-  @Test
-  public void test_frameclause_RBCRACR_RBCRACR_vchar_5()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_1")
-  @Test
-  public void test_frameclause_RBUPACR_RBUPACR_bgint_1()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_2")
-  @Test
-  public void test_frameclause_RBUPACR_RBUPACR_bgint_2()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_4")
-  @Test
-  public void test_frameclause_RBUPACR_RBUPACR_bgint_4()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_5")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_5()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_6")
-  @Test
-  public void test_frameclause_RBUPACR_RBUPACR_bgint_6()
   {
     windowQueryTest();
   }
@@ -2478,14 +1821,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPACR/RBUPACR_vchr_5")
-  @Test
-  public void test_frameclause_RBUPACR_RBUPACR_vchr_5()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_bgint_1")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_1()
@@ -2507,25 +1842,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_bgint_4")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_bgint_4()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_bgint_5")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_5()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_bgint_6")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_bgint_6()
   {
     windowQueryTest();
   }
@@ -2554,14 +1873,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_bln_3")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bln_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_char_3")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_char_3()
   {
     windowQueryTest();
   }
@@ -2615,41 +1926,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dbl_6")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_dbl_6()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dbl_7")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_dbl_7()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dt_2")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_dt_2()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_dt_3")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dt_3()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dt_5")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_dt_5()
   {
     windowQueryTest();
   }
@@ -2741,14 +2020,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_int_9")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_9()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/RBUPAUF/RBUPAUF_vchar_3")
-  @Test
-  public void test_frameclause_RBUPAUF_RBUPAUF_vchar_3()
   {
     windowQueryTest();
   }
@@ -2998,81 +2269,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_53")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_53()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_54")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_54()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_55")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_55()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("frameclause/subQueries/frmInSubQry_56")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_56()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_57")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_57()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_58")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_58()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_59")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_59()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_60")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_60()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_62")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_62()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("frameclause/subQueries/frmInSubQry_64")
-  @Test
-  public void test_frameclause_subQueries_frmInSubQry_64()
   {
     windowQueryTest();
   }
@@ -3350,14 +2549,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("lag_func/lag_Fn_6")
-  @Test
-  public void test_lag_func_lag_Fn_6()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("lag_func/lag_Fn_70")
   @Test
   public void test_lag_func_lag_Fn_70()
@@ -3526,54 +2717,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_10")
-  @Test
-  public void test_last_val_lastValFn_10()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_13")
-  @Test
-  public void test_last_val_lastValFn_13()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_14")
-  @Test
-  public void test_last_val_lastValFn_14()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_15")
-  @Test
-  public void test_last_val_lastValFn_15()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_17")
-  @Test
-  public void test_last_val_lastValFn_17()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_20")
-  @Test
-  public void test_last_val_lastValFn_20()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("last_val/lastValFn_26")
   @Test
   public void test_last_val_lastValFn_26()
@@ -3605,22 +2748,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("last_val/lastValFn_31")
   @Test
   public void test_last_val_lastValFn_31()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_32")
-  @Test
-  public void test_last_val_lastValFn_32()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("last_val/lastValFn_36")
-  @Test
-  public void test_last_val_lastValFn_36()
   {
     windowQueryTest();
   }
@@ -4094,14 +3221,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("nestedAggs/cte_win_05")
-  @Test
-  public void test_nestedAggs_cte_win_05()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("nestedAggs/emtyOvrCls_10")
   @Test
   public void test_nestedAggs_emtyOvrCls_10()
@@ -4119,14 +3238,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("nestedAggs/emtyOvrCls_12")
   @Test
   public void test_nestedAggs_emtyOvrCls_12()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("nestedAggs/emtyOvrCls_13")
-  @Test
-  public void test_nestedAggs_emtyOvrCls_13()
   {
     windowQueryTest();
   }
@@ -4169,22 +3280,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("nestedAggs/emtyOvrCls_6")
   @Test
   public void test_nestedAggs_emtyOvrCls_6()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.NOT_ENOUGH_RULES)
-  @DrillTest("nestedAggs/emtyOvrCls_7")
-  @Test
-  public void test_nestedAggs_emtyOvrCls_7()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("nestedAggs/emtyOvrCls_8")
-  @Test
-  public void test_nestedAggs_emtyOvrCls_8()
   {
     windowQueryTest();
   }
@@ -4395,14 +3490,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("nestedAggs/nstdagg23")
   @Test
   public void test_nestedAggs_nstdagg23()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("nestedAggs/nstdagg24")
-  @Test
-  public void test_nestedAggs_nstdagg24()
   {
     windowQueryTest();
   }
@@ -4680,14 +3767,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("ntile_func/ntileFn_15")
-  @Test
-  public void test_ntile_func_ntileFn_15()
-  {
-    windowQueryTest();
-  }
-
   @DrillTest("ntile_func/ntileFn_16")
   @Test
   public void test_ntile_func_ntileFn_16()
@@ -4761,14 +3840,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("ntile_func/ntileFn_26")
   @Test
   public void test_ntile_func_ntileFn_26()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("ntile_func/ntileFn_27")
-  @Test
-  public void test_ntile_func_ntileFn_27()
   {
     windowQueryTest();
   }
@@ -4888,14 +3959,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("ntile_func/ntileFn_44")
   @Test
   public void test_ntile_func_ntileFn_44()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("ntile_func/ntileFn_45")
-  @Test
-  public void test_ntile_func_ntileFn_45()
   {
     windowQueryTest();
   }
@@ -5447,6 +4510,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.NOT_ENOUGH_RULES)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_int7")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_int7()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.NOT_ENOUGH_RULES)
   @DrillTest("lag_func/lag_Fn_9")
   @Test
   public void test_lag_func_lag_Fn_9()
@@ -5490,6 +4561,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("last_val/lastValFn_39")
   @Test
   public void test_last_val_lastValFn_39()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.NOT_ENOUGH_RULES)
+  @DrillTest("nestedAggs/emtyOvrCls_7")
+  @Test
+  public void test_nestedAggs_emtyOvrCls_7()
   {
     windowQueryTest();
   }
@@ -7087,6 +6166,102 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_10")
+  @Test
+  public void test_aggregates_aggOWnFn_10()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_12")
+  @Test
+  public void test_aggregates_aggOWnFn_12()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_14")
+  @Test
+  public void test_aggregates_aggOWnFn_14()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_15")
+  @Test
+  public void test_aggregates_aggOWnFn_15()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_17")
+  @Test
+  public void test_aggregates_aggOWnFn_17()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_18")
+  @Test
+  public void test_aggregates_aggOWnFn_18()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_19")
+  @Test
+  public void test_aggregates_aggOWnFn_19()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_22")
+  @Test
+  public void test_aggregates_aggOWnFn_22()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_23")
+  @Test
+  public void test_aggregates_aggOWnFn_23()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_39")
+  @Test
+  public void test_aggregates_aggOWnFn_39()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_40")
+  @Test
+  public void test_aggregates_aggOWnFn_40()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/aggOWnFn_50")
+  @Test
+  public void test_aggregates_aggOWnFn_50()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/winFnQry_10")
   @Test
   public void test_aggregates_winFnQry_10()
@@ -7111,6 +6286,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/winFnQry_1")
+  @Test
+  public void test_aggregates_winFnQry_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/winFnQry_26")
   @Test
   public void test_aggregates_winFnQry_26()
@@ -7127,9 +6310,25 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/winFnQry_2")
+  @Test
+  public void test_aggregates_winFnQry_2()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/winFnQry_31")
   @Test
   public void test_aggregates_winFnQry_31()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/winFnQry_3")
+  @Test
+  public void test_aggregates_winFnQry_3()
   {
     windowQueryTest();
   }
@@ -7162,6 +6361,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("aggregates/winFnQry_49")
   @Test
   public void test_aggregates_winFnQry_49()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/winFnQry_4")
+  @Test
+  public void test_aggregates_winFnQry_4()
   {
     windowQueryTest();
   }
@@ -7215,6 +6422,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/winFnQry_5")
+  @Test
+  public void test_aggregates_winFnQry_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/winFnQry_84")
   @Test
   public void test_aggregates_winFnQry_84()
@@ -7231,6 +6446,134 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/winFnQry_8")
+  @Test
+  public void test_aggregates_winFnQry_8()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_17")
+  @Test
+  public void test_aggregates_wo_OrdrBy_17()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_18")
+  @Test
+  public void test_aggregates_wo_OrdrBy_18()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_19")
+  @Test
+  public void test_aggregates_wo_OrdrBy_19()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_20")
+  @Test
+  public void test_aggregates_wo_OrdrBy_20()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_21")
+  @Test
+  public void test_aggregates_wo_OrdrBy_21()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_22")
+  @Test
+  public void test_aggregates_wo_OrdrBy_22()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_23")
+  @Test
+  public void test_aggregates_wo_OrdrBy_23()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_24")
+  @Test
+  public void test_aggregates_wo_OrdrBy_24()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_25")
+  @Test
+  public void test_aggregates_wo_OrdrBy_25()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/wo_OrdrBy_26")
+  @Test
+  public void test_aggregates_wo_OrdrBy_26()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_10")
+  @Test
+  public void test_aggregates_woPrtnBy_10()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_12")
+  @Test
+  public void test_aggregates_woPrtnBy_12()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_13")
+  @Test
+  public void test_aggregates_woPrtnBy_13()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_14")
+  @Test
+  public void test_aggregates_woPrtnBy_14()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_15")
+  @Test
+  public void test_aggregates_woPrtnBy_15()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/woPrtnBy_17")
   @Test
   public void test_aggregates_woPrtnBy_17()
@@ -7239,9 +6582,33 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_18")
+  @Test
+  public void test_aggregates_woPrtnBy_18()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/woPrtnBy_19")
   @Test
   public void test_aggregates_woPrtnBy_19()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_20")
+  @Test
+  public void test_aggregates_woPrtnBy_20()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("aggregates/woPrtnBy_25")
+  @Test
+  public void test_aggregates_woPrtnBy_25()
   {
     windowQueryTest();
   }
@@ -7303,9 +6670,225 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("first_val/firstValFn_17")
+  @Test
+  public void test_first_val_firstValFn_17()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("first_val/firstValFn_23")
+  @Test
+  public void test_first_val_firstValFn_23()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_1")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_bgint_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_2")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_bgint_2()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_3")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_bgint_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_4")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_bgint_4()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_6")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_bgint_6()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_7")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_bgint_7()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_chr_3")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_chr_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_chr_5")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_chr_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_1")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dbl_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_2")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dbl_2()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_3")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dbl_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_6")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dbl_6()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_7")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dbl_7()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dt_1")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dt_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dt_2")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dt_2()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_dt_4")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_dt_4()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/defaultFrame/RBUPACR_dt_5")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dt_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_int10")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_int10()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_int13")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_int13()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_int14")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_int14()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_int8")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_int8()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_int9")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_int9()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_vchr_3")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_vchr_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/defaultFrame/RBUPACR_vchr_5")
+  @Test
+  public void test_frameclause_defaultFrame_RBUPACR_vchr_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/multipl_wnwds/avg_mulwds")
+  @Test
+  public void test_frameclause_multipl_wnwds_avg_mulwds()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/multipl_wnwds/count_mulwds")
+  @Test
+  public void test_frameclause_multipl_wnwds_count_mulwds()
   {
     windowQueryTest();
   }
@@ -7351,6 +6934,38 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_bgint_6")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_bgint_6()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_bgint_7")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_bgint_7()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_char_3")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_char_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_char_4")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_char_4()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBCRACR/RBCRACR_char_5")
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_char_5()
@@ -7367,6 +6982,70 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_dbl_7")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_dbl_7()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_1")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_dt_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_2")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_dt_2()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_4")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_dt_4()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_dt_5")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_dt_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_int_13")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_int_13()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_int_14")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_int_14()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_int_6")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_int_6()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBCRACR/RBCRACR_int_7")
   @Test
   public void test_frameclause_RBCRACR_RBCRACR_int_7()
@@ -7375,9 +7054,65 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_vchar_3")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_vchar_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_vchar_4")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_vchar_4()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBCRACR/RBCRACR_vchar_5")
+  @Test
+  public void test_frameclause_RBCRACR_RBCRACR_vchar_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_1")
+  @Test
+  public void test_frameclause_RBUPACR_RBUPACR_bgint_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_2")
+  @Test
+  public void test_frameclause_RBUPACR_RBUPACR_bgint_2()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_3")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_4")
+  @Test
+  public void test_frameclause_RBUPACR_RBUPACR_bgint_4()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_6")
+  @Test
+  public void test_frameclause_RBUPACR_RBUPACR_bgint_6()
   {
     windowQueryTest();
   }
@@ -7479,9 +7214,65 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPACR/RBUPACR_vchr_5")
+  @Test
+  public void test_frameclause_RBUPACR_RBUPACR_vchr_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_bgint_4")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_bgint_4()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_bgint_6")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_bgint_6()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_char_3")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_char_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dbl_6")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_dbl_6()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dbl_7")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_dbl_7()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_dt_1")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dt_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dt_2")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_dt_2()
   {
     windowQueryTest();
   }
@@ -7495,9 +7286,81 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_dt_5")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_dt_5()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_int_13")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_13()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/RBUPAUF/RBUPAUF_vchar_3")
+  @Test
+  public void test_frameclause_RBUPAUF_RBUPAUF_vchar_3()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_53")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_53()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_54")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_54()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_55")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_55()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_57")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_57()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_58")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_58()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_59")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_59()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_60")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_60()
   {
     windowQueryTest();
   }
@@ -7511,6 +7374,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_62")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_62()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/subQueries/frmInSubQry_63")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_63()
@@ -7519,9 +7390,33 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("frameclause/subQueries/frmInSubQry_64")
+  @Test
+  public void test_frameclause_subQueries_frmInSubQry_64()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("lag_func/lag_Fn_101")
   @Test
   public void test_lag_func_lag_Fn_101()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("lag_func/lag_Fn_6")
+  @Test
+  public void test_lag_func_lag_Fn_6()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_10")
+  @Test
+  public void test_last_val_lastValFn_10()
   {
     windowQueryTest();
   }
@@ -7543,6 +7438,30 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_13")
+  @Test
+  public void test_last_val_lastValFn_13()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_14")
+  @Test
+  public void test_last_val_lastValFn_14()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_15")
+  @Test
+  public void test_last_val_lastValFn_15()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("last_val/lastValFn_16")
   @Test
   public void test_last_val_lastValFn_16()
@@ -7551,9 +7470,25 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_17")
+  @Test
+  public void test_last_val_lastValFn_17()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("last_val/lastValFn_1")
   @Test
   public void test_last_val_lastValFn_1()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_20")
+  @Test
+  public void test_last_val_lastValFn_20()
   {
     windowQueryTest();
   }
@@ -7570,6 +7505,22 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("last_val/lastValFn_2")
   @Test
   public void test_last_val_lastValFn_2()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_32")
+  @Test
+  public void test_last_val_lastValFn_32()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("last_val/lastValFn_36")
+  @Test
+  public void test_last_val_lastValFn_36()
   {
     windowQueryTest();
   }
@@ -7735,6 +7686,38 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("nestedAggs/cte_win_05")
+  @Test
+  public void test_nestedAggs_cte_win_05()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("nestedAggs/emtyOvrCls_13")
+  @Test
+  public void test_nestedAggs_emtyOvrCls_13()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("nestedAggs/emtyOvrCls_8")
+  @Test
+  public void test_nestedAggs_emtyOvrCls_8()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("nestedAggs/nstdagg24")
+  @Test
+  public void test_nestedAggs_nstdagg24()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("nestedAggs/woutPrtnBy_1")
   @Test
   public void test_nestedAggs_woutPrtnBy_1()
@@ -7775,9 +7758,33 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   }
 
   @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("ntile_func/ntileFn_15")
+  @Test
+  public void test_ntile_func_ntileFn_15()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_17")
   @Test
   public void test_ntile_func_ntileFn_17()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("ntile_func/ntileFn_27")
+  @Test
+  public void test_ntile_func_ntileFn_27()
+  {
+    windowQueryTest();
+  }
+
+  @NegativeTest(Modes.RESULT_MISMATCH)
+  @DrillTest("ntile_func/ntileFn_45")
+  @Test
+  public void test_ntile_func_ntileFn_45()
   {
     windowQueryTest();
   }
@@ -7978,14 +7985,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("nestedAggs/multiWin_8")
   @Test
   public void test_nestedAggs_multiWin_8()
-  {
-    windowQueryTest();
-  }
-
-  @NegativeTest(Modes.RESULT_MISMATCH)
-  @DrillTest("aggregates/winFnQry_5")
-  @Test
-  public void test_aggregates_winFnQry_5()
   {
     windowQueryTest();
   }
