@@ -330,10 +330,10 @@ public class UnnestStorageAdapter implements StorageAdapter
               filterSplitter
           );
           // If rewite on entire query filter is successful then add entire filter to preFilter else skip and only add to post filter.
-          if (filterSplitter.getPreFilterCount() == filterSplitter.getOriginalFilterCount()) {
+          if (!preFilterList.isEmpty()) {
             if (queryFilter instanceof AndFilter) {
               filterSplitter.addPreFilter(new AndFilter(preFilterList));
-            } else if (queryFilter instanceof OrFilter) {
+            } else if (queryFilter instanceof OrFilter && filterSplitter.getPreFilterCount() == filterSplitter.getOriginalFilterCount()) {
               filterSplitter.addPreFilter(new OrFilter(preFilterList));
             }
           }
@@ -486,14 +486,15 @@ public class UnnestStorageAdapter implements StorageAdapter
             preFilterList.add(new AndFilter(andChildFilters));
           }
         } else if (filter instanceof OrFilter) {
-          // in case of Or Fiters, we set isTopLevelAndFilter to false that prevents pushing down any child filters to base
           List<Filter> orChildFilters = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) filter,
               inputColumn,
               inputColumnCapabilites,
               filterSplitter
           );
-          preFilterList.add(new OrFilter(orChildFilters));
+          if (orChildFilters.size() == ((OrFilter) filter).getFilters().size()) {
+            preFilterList.add(new OrFilter(orChildFilters));
+          }
         } else if (filter instanceof NotFilter) {
           // nothing to do here...
           continue;
