@@ -2,13 +2,15 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-    m1,
-    COUNT(m1) OVER () cc
-  FROM druid.foo
+    m1,dim4,
+    COUNT(m1) OVER(partition by dim4 order by m1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) cc
+  FROM numfoo
+  where m1<6.0
+  
 
 expectedOperators:
-  - type: "naivePartition"
-    partitionColumns: []
+  - type: "naiveSort"
+    partitionColumns: ["m2"]
   - type: "window"
     processor:
       type: "framedAgg"

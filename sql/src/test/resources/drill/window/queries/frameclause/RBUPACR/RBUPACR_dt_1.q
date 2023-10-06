@@ -1,1 +1,5 @@
-SELECT MIN(c7) OVER(PARTITION BY c8 ORDER BY c1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM "t_alltype.parquet"
+SELECT
+c7
+  ,'asd'
+  
+FROM "t_alltype.parquet"
