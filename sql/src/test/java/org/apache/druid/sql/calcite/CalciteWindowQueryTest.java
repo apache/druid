@@ -153,7 +153,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
             for (int i = 0; i < input.expectedOperators.size(); ++i) {
               final OperatorFactory expectedOperator = input.expectedOperators.get(i);
               final OperatorFactory actualOperator = query.getOperators().get(i);
-              if (false && !expectedOperator.validateEquivalent(actualOperator)) {
+              if (!expectedOperator.validateEquivalent(actualOperator)) {
                 // This assertion always fails because the validate equivalent failed, but we do it anyway
                 // so that we get values in the output of the failed test to make it easier to
                 // debug what happened.  Note, we use the Jackson representation when showing the diff.  There is

@@ -85,7 +85,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -328,33 +327,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         // "c6":1456290852307,
         new LongDimensionSchema("c6"),
         // "c7":421426627200000,
-        new LongDimensionSchema1("c7", -(422991244800000L  -1257634800000L)),
+        new LongDimensionSchema("c7"),
         // "c8":true,
         new StringDimensionSchema("c8"),
         // "c9":0.626179100469
         new DoubleDimensionSchema("c9"));
 
     return retVal;
-  }
-  static class LongDimensionSchema1 extends LongDimensionSchema {
-
-    private long offset;
-
-    public LongDimensionSchema1(String name, long offset)
-    {
-      super(name);
-      this.offset = offset;
-    }
-
-    public void adjust(Map<Object, Object> input)
-    {
-      Object v = input.get(getName());
-      if(v instanceof Long) {
-        long newVal = (long)v+offset;
-        input.put(getName(), newVal);
-      }
-    }
-
   }
 
   public class TextualResultsVerifier implements ResultsVerifier
@@ -389,11 +368,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         }
-        if(true) {
-          assertResultsEquals(sql, expectedResults, results);
-        } else {
-          assertResultsEquals1(sql, expectedResults, results);
-        }
+        assertResultsEquals(sql, expectedResults, results);
       }
       catch (AssertionError e) {
         System.out.println("query: " + sql);
@@ -402,41 +377,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         throw e;
       }
     }
-
-    public void assertResultsEquals1(String sql, List<Object[]> expectedResults, List<Object[]> results)
-    {
-
-
-      int minSize = Math.min(results.size(), expectedResults.size());
-      for (int row = 0; row < minSize; row++) {
-        Object[] expectedRow = expectedResults.get(row);
-        Object[] resultRow = results.get(row);
-        assertEquals("column count mismtach in row #" +(row),expectedRow.length,resultRow.length);
-
-        for (int i = 0; i < expectedRow.length; i++) {
-
-          if(resultRow[i] instanceof Long && expectedRow[i] instanceof Long) {
-            long l=(long) resultRow[i];
-            long e=(long) expectedRow[i];
-            if(l==e) {
-              continue;
-            }
-            if(l > 420007260800000L) {
-              Optional<ColumnType> t = currentRowSignature.getColumnType(i);
-
-              l += 420167260800000L - 422991244800000L;
-
-              if (l == e) {
-                continue;
-              }
-            }
-          }
-          assertEquals("cell mistmatch at " + row+ ","+i, expectedRow[i],resultRow[i]);
-        }
-      }
-      Assert.assertEquals("Resultset numrows mistmatch: "+sql, expectedResults.size(), results.size());
-    }
-
 
     private boolean isOrdered(String sql)
     {
@@ -492,8 +432,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
                 Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
                 try {
                   DateTime v = parser.apply(val);
-                  long lv = v.getMillis();
-                  newVal=lv;
+                  newVal = v.getMillis();
                 }
                 catch (IllegalArgumentException iae) {
                   LocalTime v = LocalTime.parse(val);
@@ -567,7 +506,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
                     MAPPER.readerFor(Map.class)
                         .readValues(
                             ClassLoader.getSystemResource("drill/window/datasources/" + dataSource + ".json")),
-                    (Function<Map, InputRow>) input -> {procesInput(dims,input);return new MapBasedInputRow(0, dimensionNames, input);});
+                    (Function<Map, InputRow>) input -> new MapBasedInputRow(0, dimensionNames, input));
               }
               catch (IOException e) {
                 throw new RE(e, "problem reading file");
@@ -584,16 +523,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
             .size(0)
             .build(),
         queryableIndex);
-  }
-
-  private void procesInput(DimensionSchema[] dims, Map input)
-  {
-    for (DimensionSchema ds : dims) {
-      if(ds instanceof LongDimensionSchema1) {
-        LongDimensionSchema1 ll = (LongDimensionSchema1) ds;
-        ll.adjust(input);
-      }
-    }
   }
 
   @NegativeTest(Modes.NULLS_FIRST_LAST)
@@ -917,7 +846,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.NOT_ENOUGH_RULES)
   @DrillTest("frameclause/defaultFrame/RBUPACR_int7")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int7()
@@ -2420,7 +2348,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NegativeTest(Modes.NOT_ENOUGH_RULES)
   @DrillTest("nestedAggs/emtyOvrCls_7")
   @Test
   public void test_nestedAggs_emtyOvrCls_7()

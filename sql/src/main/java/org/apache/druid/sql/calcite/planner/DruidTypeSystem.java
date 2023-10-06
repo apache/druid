@@ -125,12 +125,12 @@ public class DruidTypeSystem implements RelDataTypeSystem
   )
   {
     // Widen all averages to 64-bits regardless of the size of the inputs.
-    return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, argumentType.isNullable());
-//
-//    if (SqlTypeName.INT_TYPES.contains(argumentType.getSqlTypeName())) {
-//      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, argumentType.isNullable());
-//    } else {
-//    }
+
+    if (SqlTypeName.INT_TYPES.contains(argumentType.getSqlTypeName())) {
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, argumentType.isNullable());
+    } else {
+      return Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, argumentType.isNullable());
+    }
   }
 
   @Override
