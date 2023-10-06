@@ -161,6 +161,7 @@ public class ParametrizedUriEmitterTest
     );
     Assert.assertEquals(expected, results);
   }
+
   @Test
   public void testEmitterWithParametrizedUriExtractor() throws Exception
   {
@@ -225,7 +226,6 @@ public class ParametrizedUriEmitterTest
     ObjectWriter writer = objectMapper.writerWithDefaultPrettyPrinter();
     return writer.writeValueAsString(sortedMap);
   }
-
   @Test
   public void failEmitMalformedEvent() throws Exception
   {
