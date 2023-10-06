@@ -1065,10 +1065,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * In case {@link NullHandling#replaceWithDefault()} an expected results of <code>null</code> accepts
    * both <code>null</code> and the default value for that column as actual result.
    */
-  public void assertResultsValid(String message, List<Object[]> expected, QueryResults queryResults)
+  public void assertResultsValid(List<Object[]> expected, QueryResults queryResults)
   {
     List<Object[]> results = queryResults.results;
-    int numRows = Math.min(results.size(), expected.size());
+    Assert.assertEquals("Result count mismatch", expected.size(), results.size());
+    int numRows = results.size();
     for (int row = 0; row < numRows; row++) {
       Object[] expectedRow = expected.get(row);
       Object[] resultRow = results.get(row);
