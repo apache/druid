@@ -322,7 +322,6 @@ public class UnnestStorageAdapter implements StorageAdapter
         // outside filter contains unnested column
         // requires check for OR and And filters, disqualify rewrite for non-unnest filters
         if (queryFilter instanceof BooleanFilter) {
-          boolean isTopLevelAndFilter = queryFilter instanceof AndFilter;
           List<Filter> preFilterList = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) queryFilter,
               inputColumn,
