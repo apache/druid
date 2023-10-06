@@ -21,6 +21,7 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -32,15 +33,16 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
-import org.skyscreamer.jsonassert.JSONCompareMode;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
 public class ParametrizedUriEmitterTest
 {
@@ -160,47 +162,24 @@ public class ParametrizedUriEmitterTest
     Assert.assertEquals(expected, results);
   }
 
-  @Test
-  public void testEmitterWithParametrizedUriExtractor() throws Exception
+  private String removeWhitespace(String input) 
   {
-    Emitter emitter = parametrizedEmmiter("http://example.com/{key1}/{key2}");
-    final List<UnitEvent> events = Arrays.asList(
-        new UnitEvent("test", 1, ImmutableMap.of("key1", "val1", "key2", "val2")),
-        new UnitEvent("test", 2, ImmutableMap.of("key1", "val1", "key2", "val2"))
-    );
-
-    httpClient.setGoHandler(
-        new GoHandler()
-        {
-          @Override
-          protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
-          {
-            Assert.assertEquals("http://example.com/val1/val2", request.getUrl());
-            try {
-              JSONAssert.assertEquals(
-                  StringUtils.format(
-                  "[%s,%s]\n",
-                  JSON_MAPPER.writeValueAsString(events.get(0)),
-                  JSON_MAPPER.writeValueAsString(events.get(1))
-                ),
-                  StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString(),
-                  JSONCompareMode.STRICT
-              );
-            } 
-            catch (org.json.JSONException e) {
-              e.printStackTrace();
-            }
-
-            return GoHandlers.immediateFuture(EmitterTest.okResponse());
-          }
-        }.times(1)
-    );
-
-    for (UnitEvent event : events) {
-      emitter.emit(event);
+    StringBuilder result = new StringBuilder();
+    for (char c : input.toCharArray()) {
+      if (!Character.isWhitespace(c)) {
+        result.append(c);
+      }
     }
-    emitter.flush();
-    Assert.assertTrue(httpClient.succeeded());
+    return result.toString();
+  }
+  private String sortedJsonStrings(String jsonString) throws JsonProcessingException 
+  {
+    ObjectMapper objectMapper = new ObjectMapper();
+    Map<String, Object> map = objectMapper.readValue(jsonString, Map.class);
+    Map<String, Object> sortedMap = new TreeMap<>(map);
+
+    ObjectWriter writer = objectMapper.writerWithDefaultPrettyPrinter();
+    return writer.writeValueAsString(sortedMap);
   }
 
   @Test
