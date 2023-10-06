@@ -55,9 +55,12 @@ jobs:
       - name: maven cache dependencies
         run: ${MVN} dependency:resolve dependency:resolve-plugins
 
+      # Create a cache entry for dependencies only. This cache entry must
+      # never include any artifacts written to the local repo by mvn install.
       - uses: actions/cache/save@v3
         with:
-          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-depsonly-${{ hashFiles('**/pom.xml') }}
 
       - name: packaging check
         run: |
@@ -130,6 +133,15 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '8'
+
+      - uses: actions/cache/restore@v3
+        with:
+          key: maven-${{ runner.os }}-depsonly-${{ hashFiles('**/pom.xml') }}
+          path: ~/.m2/repository
+          # fallback cache entries to restore from. 'depsonly' keys are safe to
+          # restore since they don't contain any artifacts created by mvn install
+          restore-keys: |
+            maven-${{ runner.os }}-depsonly-
 
       - name: maven install
         run: |
