@@ -34,6 +34,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -56,7 +57,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -123,7 +123,9 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
 
   private static final String MESSAGE = "{\"id\": 1, \"age\": 10, \"timestamp\":\"2023-09-01T00:00:00.000\"}";
 
-  private static final String BASE_PERSIST_DIR = "./tmp";
+  private static final String LOCAL_TMP_PATH = "./tmp";
+
+  private static final String BASE_PERSIST_DIR = LOCAL_TMP_PATH + "/persist";
 
   private static RecordSupplier<String, String, ByteEntity> recordSupplier;
 
@@ -166,7 +168,10 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
   @Before
   public void setup() throws IOException
   {
-    reportsFile = File.createTempFile("IndexTaskTestReports-" + System.currentTimeMillis(), "json");
+    FileUtils.forceMkdir(new File(LOCAL_TMP_PATH));
+    FileUtils.forceMkdir(new File(BASE_PERSIST_DIR));
+
+    reportsFile = new File(LOCAL_TMP_PATH + "/task-reports.json");
     recordSupplier = new TestRecordSupplier();
 
     TestUtils testUtils = new TestUtils();
@@ -190,8 +195,10 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
       runningTasks.clear();
     }
 
-    reportsFile.delete();
-    FileUtils.deleteDirectory(new File(BASE_PERSIST_DIR));
+    FileUtils.forceDelete(reportsFile);
+    FileUtils.forceDelete(new File(BASE_PERSIST_DIR));
+    FileUtils.forceDelete(new File(LOCAL_TMP_PATH));
+
     destroyToolboxFactory();
   }
 
@@ -688,8 +695,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     @Override
     protected SeekableStreamEndSequenceNumbers<String, String> deserializePartitionsFromMetadata(ObjectMapper mapper, Object object)
     {
-      return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
-                SeekableStreamEndSequenceNumbers.class,
+      return mapper.convertValue(object, mapper.getTypeFactory().constructParametricType(
                 SeekableStreamEndSequenceNumbers.class,
                 String.class,
                 String.class
@@ -747,8 +753,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     }
 
     @Override
-    public int compareTo(@NotNull OrderedSequenceNumber<String> o)
-    {
+    public int compareTo(OrderedSequenceNumber<String> o) {
       return this.get().compareTo(o.get());
     }
   }
