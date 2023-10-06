@@ -525,6 +525,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         queryableIndex);
   }
 
+  // testcases_start
+
   @NegativeTest(Modes.NULLS_FIRST_LAST)
   @DrillTest("aggregates/winFnQry_77")
   @Test
@@ -4457,7 +4459,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   public void test_frameclause_defaultFrame_RBUPACR_bgint_5()
   {
     windowQueryTest();
-
   }
 
   @NegativeTest(Modes.NULLS_FIRST_LAST)
