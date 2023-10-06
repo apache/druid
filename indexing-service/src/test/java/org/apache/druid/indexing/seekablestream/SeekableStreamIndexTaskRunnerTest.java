@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -863,9 +862,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
                                 new NamedType(TestSeekableStreamIndexTaskIOConfig.class, SCHEME),
                                 new NamedType(TestSeekableStreamIndexTaskTuningConfig.class, SCHEME),
                                 new NamedType(TestSeekableStreamSupervisorTuningConfig.class, SCHEME)
-                            ),
-                new JodaModule(),
-                new SimpleModule(getClass().getSimpleName()).registerSubtypes(String.class)
+                        )
       );
     }
 
