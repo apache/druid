@@ -51,7 +51,13 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
-          cache: 'maven'
+
+      - name: maven cache dependencies
+        run: ${MVN} dependency:resolve dependency:resolve-plugins
+
+      - uses: actions/cache/save@v3
+        with:
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
 
       - name: packaging check
         run: |
