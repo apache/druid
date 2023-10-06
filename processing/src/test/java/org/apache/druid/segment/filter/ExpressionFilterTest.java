@@ -310,6 +310,17 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(
         NotDimFilter.of(edf("isfalse(dim5)")), ImmutableList.of("2", "9")
     );
+
+    assertFilterMatchesSkipVectorize(
+        edf("isfalse(notexist)"),
+        ImmutableList.of()
+    );
+    assertFilterMatchesSkipVectorize(
+        edf("!isfalse(notexist)"), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+    );
+    assertFilterMatchesSkipVectorize(
+        NotDimFilter.of(edf("isfalse(notexist)")), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
+    );
   }
 
   @Test

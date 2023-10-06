@@ -272,7 +272,11 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
         final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-        return predicate.apply(null) ? ValueMatchers.allTrue() : ValueMatchers.allUnknown();
+        if (predicate.apply(null)) {
+          return ValueMatchers.allTrue();
+        }
+
+        return predicateFactory.isNullInputUnknown() ? ValueMatchers.allUnknown() : ValueMatchers.allFalse();
       }
 
       @Override

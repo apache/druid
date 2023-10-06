@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -41,7 +42,7 @@ public class ConstantMultiValueDimensionSelector implements HistoricalDimensionS
   public ConstantMultiValueDimensionSelector(List<String> values)
   {
     if (CollectionUtils.isNullOrEmpty(values)) {
-      throw new IllegalArgumentException("Use DimensionSelector.constant(null)");
+      throw DruidException.defensive("Use DimensionSelector.constant(null)");
     }
 
     this.values = values;
