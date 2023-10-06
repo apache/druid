@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  *
@@ -173,8 +173,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     if (jitterSeconds == 0) {
       return jitterSeconds;
     }
-    Random r = new Random();
-    return 1000L * r.nextInt(jitterSeconds + 1);
+    return 1000L * ThreadLocalRandom.current().nextInt(jitterSeconds + 1);
   }
 
   @Override
