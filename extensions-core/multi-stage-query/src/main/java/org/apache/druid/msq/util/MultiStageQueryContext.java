@@ -97,6 +97,8 @@ public class MultiStageQueryContext
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
+  public static final String CTX_SEGMENT_LOAD_WAIT = "waitTillSegmentsLoad";
+  public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
@@ -145,6 +147,14 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FAULT_TOLERANCE,
         DEFAULT_FAULT_TOLERANCE
+    );
+  }
+
+  public static boolean shouldWaitForSegmentLoad(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_SEGMENT_LOAD_WAIT,
+        DEFAULT_SEGMENT_LOAD_WAIT
     );
   }
 

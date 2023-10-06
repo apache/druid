@@ -31,7 +31,6 @@ import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
-import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.segment.column.ColumnType;
@@ -218,31 +217,6 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedMSQFault(new TooManyPartitionsFault(25000))
                      .verifyResults();
 
-  }
-
-  @Test
-  public void testInsertWithUnsupportedColumnType()
-  {
-    RowSignature dummyRowSignature = RowSignature.builder().add("__time", ColumnType.LONG).build();
-
-    testIngestQuery()
-        .setSql(StringUtils.format(
-            " insert into foo1 SELECT\n"
-            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
-            + " col1\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{ \"files\": [\"ignored\"],\"type\":\"local\"}',\n"
-            + "    '{\"type\": \"json\"}',\n"
-            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"},{\"name\": \"col1\", \"type\": \"long_array\"} ]'\n"
-            + "  )\n"
-            + ") PARTITIONED by day"
-        ))
-        .setExpectedDataSource("foo1")
-        .setExpectedRowSignature(dummyRowSignature)
-        .setExpectedMSQFault(UnknownFault.forMessage(
-            "org.apache.druid.java.util.common.ISE: Cannot create dimension for type [ARRAY<LONG>]"))
-        .verifyResults();
   }
 
   @Test

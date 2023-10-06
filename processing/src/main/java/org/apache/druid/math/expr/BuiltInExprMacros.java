@@ -32,7 +32,13 @@ public class BuiltInExprMacros
   public static class ComplexDecodeBase64ExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "complex_decode_base64";
+    public static final String ALIAS = "decode_base64_complex";
 
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
     @Override
     public String name()
     {
@@ -52,7 +58,7 @@ public class BuiltInExprMacros
 
       public ComplexDecodeBase64Expression(List<Expr> args)
       {
-        super(NAME, args);
+        super(name(), args);
         validationHelperCheckArgumentCount(args, 2);
         final Expr arg0 = args.get(0);
 
@@ -148,7 +154,6 @@ public class BuiltInExprMacros
 
   public static class StringDecodeBase64UTFExprMacro implements ExprMacroTable.ExprMacro
   {
-
     public static final String NAME = "decode_base64_utf8";
 
     @Override
@@ -158,6 +163,11 @@ public class BuiltInExprMacros
       return new StringDecodeBase64UTFExpression(args.get(0));
     }
 
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
     @Override
     public String name()
     {
@@ -168,7 +178,7 @@ public class BuiltInExprMacros
     {
       public StringDecodeBase64UTFExpression(Expr arg)
       {
-        super(NAME, arg);
+        super(name(), arg);
       }
 
       @Override
@@ -214,4 +224,5 @@ public class BuiltInExprMacros
       }
     }
   }
+
 }
