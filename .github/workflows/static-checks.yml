@@ -156,6 +156,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
+          # cache is safe use here since we don't call mvn install
           cache: 'maven'
 
       - name: setup node
