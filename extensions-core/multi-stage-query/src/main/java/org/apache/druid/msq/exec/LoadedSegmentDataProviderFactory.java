@@ -21,9 +21,12 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
+
+import java.util.concurrent.ScheduledExecutorService;
 
 public class LoadedSegmentDataProviderFactory
 {
@@ -31,6 +34,7 @@ public class LoadedSegmentDataProviderFactory
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
   private final QueryToolChestWarehouse warehouse;
+  private final ScheduledExecutorService queryCancellationExecutor;
 
   public LoadedSegmentDataProviderFactory(
       CoordinatorClient coordinatorClient,
@@ -43,6 +47,7 @@ public class LoadedSegmentDataProviderFactory
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
     this.warehouse = warehouse;
+    this.queryCancellationExecutor = ScheduledExecutors.fixed(10, "query-cancellation-executor");
   }
 
   public LoadedSegmentDataProvider createLoadedSegmentDataProvider(
@@ -56,7 +61,8 @@ public class LoadedSegmentDataProviderFactory
         serviceClientFactory,
         coordinatorClient,
         objectMapper,
-        warehouse
+        warehouse,
+        queryCancellationExecutor
     );
   }
 }

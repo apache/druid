@@ -58,6 +58,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 /**
@@ -74,6 +75,7 @@ public class LoadedSegmentDataProvider
   private final CoordinatorClient coordinatorClient;
   private final ObjectMapper objectMapper;
   private final QueryToolChestWarehouse warehouse;
+  private final ScheduledExecutorService queryCancellationExecutor;
 
   public LoadedSegmentDataProvider(
       String dataSource,
@@ -81,7 +83,8 @@ public class LoadedSegmentDataProvider
       ServiceClientFactory serviceClientFactory,
       CoordinatorClient coordinatorClient,
       ObjectMapper objectMapper,
-      QueryToolChestWarehouse warehouse
+      QueryToolChestWarehouse warehouse,
+      ScheduledExecutorService queryCancellationExecutor
   )
   {
     this.dataSource = dataSource;
@@ -90,12 +93,13 @@ public class LoadedSegmentDataProvider
     this.coordinatorClient = coordinatorClient;
     this.objectMapper = objectMapper;
     this.warehouse = warehouse;
+    this.queryCancellationExecutor = queryCancellationExecutor;
   }
 
   @VisibleForTesting
   DataServerClient makeDataServerClient(FixedSetServiceLocator serviceLocator)
   {
-    return new DataServerClient(serviceClientFactory, serviceLocator, objectMapper);
+    return new DataServerClient(serviceClientFactory, serviceLocator, objectMapper, queryCancellationExecutor);
   }
 
   /**

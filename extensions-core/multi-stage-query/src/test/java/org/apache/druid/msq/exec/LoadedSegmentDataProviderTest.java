@@ -29,6 +29,7 @@ import org.apache.druid.discovery.DruidServiceTestUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
@@ -124,7 +125,8 @@ public class LoadedSegmentDataProviderTest
             mock(ServiceClientFactory.class),
             coordinatorClient,
             DruidServiceTestUtils.newJsonMapper(),
-            queryToolChestWarehouse
+            queryToolChestWarehouse,
+            Execs.scheduledSingleThreaded("query-cancellation-executor")
         )
     );
     doReturn(dataServerClient).when(target).makeDataServerClient(any());

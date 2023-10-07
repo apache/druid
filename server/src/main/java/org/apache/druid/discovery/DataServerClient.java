@@ -58,12 +58,14 @@ public class DataServerClient
   private static final Logger log = new Logger(DataServerClient.class);
   private final ServiceClient serviceClient;
   private final ObjectMapper objectMapper;
+  private final FixedSetServiceLocator fixedSetServiceLocator;
   private final ScheduledExecutorService queryCancellationExecutor;
 
   public DataServerClient(
       ServiceClientFactory serviceClientFactory,
       FixedSetServiceLocator fixedSetServiceLocator,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      ScheduledExecutorService queryCancellationExecutor
   )
   {
     this.serviceClient = serviceClientFactory.makeClient(
@@ -71,8 +73,9 @@ public class DataServerClient
         fixedSetServiceLocator,
         StandardRetryPolicy.noRetries()
     );
+    this.fixedSetServiceLocator = fixedSetServiceLocator;
     this.objectMapper = objectMapper;
-    this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
+    this.queryCancellationExecutor = queryCancellationExecutor;
   }
 
   public <T> Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType, Closer closer)
@@ -126,7 +129,7 @@ public class DataServerClient
                 resultStreamFuture,
                 BASE_PATH,
                 query,
-                "", // TODO: this
+                fixedSetServiceLocator.getServiceLocations().toString(), // For logging
                 objectMapper
             );
           }

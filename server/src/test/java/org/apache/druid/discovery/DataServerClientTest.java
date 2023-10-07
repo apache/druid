@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
@@ -80,7 +81,8 @@ public class DataServerClientTest
     target = new DataServerClient(
         serviceClientFactory,
         mock(FixedSetServiceLocator.class),
-        jsonMapper
+        jsonMapper,
+        Execs.scheduledSingleThreaded("query-cancellation-executor")
     );
   }
 

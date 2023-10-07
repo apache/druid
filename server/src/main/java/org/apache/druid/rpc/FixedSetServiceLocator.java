@@ -53,6 +53,11 @@ public class FixedSetServiceLocator implements ServiceLocator
     }
   }
 
+  public ServiceLocations getServiceLocations()
+  {
+    return serviceLocations;
+  }
+
   @Override
   public ListenableFuture<ServiceLocations> locate()
   {
