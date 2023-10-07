@@ -90,7 +90,7 @@ public class DataSegmentWithLocation extends DataSegment
     this.servers = servers;
   }
 
-  @JsonProperty
+  @JsonProperty("servers")
   public Set<DruidServerMetadata> getServers()
   {
     return servers;

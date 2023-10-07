@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
-import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.Iterator;
 import java.util.Objects;
 
@@ -57,18 +57,20 @@ public class ServiceLocation
 
   public static ServiceLocation fromDruidServerMetadata(final DruidServerMetadata druidServerMetadata)
   {
-    final String host = getHostFromString(druidServerMetadata.getHost());
+    final String host = getHostFromString(
+        Preconditions.checkNotNull(
+            druidServerMetadata.getHost(),
+            "Host was null for druid server metadata[%s]",
+            druidServerMetadata
+        )
+    );
     int plaintextPort = getPortFromString(druidServerMetadata.getHostAndPort());
     int tlsPort = getPortFromString(druidServerMetadata.getHostAndTlsPort());
     return new ServiceLocation(host, plaintextPort, tlsPort, "");
   }
 
-  @Nullable
-  private static String getHostFromString(String s)
+  private static String getHostFromString(@NotNull String s)
   {
-    if (s == null) {
-      return null;
-    }
     Iterator<String> iterator = SPLITTER.split(s).iterator();
     ImmutableList<String> strings = ImmutableList.copyOf(iterator);
     return strings.get(0);

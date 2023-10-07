@@ -1178,23 +1178,27 @@ public class ControllerImpl implements Controller
     return (dataSource, intervals) -> {
       final Iterable<ImmutableSegmentLoadInfo> realtimeAndHistoricalSegments;
 
-      // Fetch the realtime segments first, so that we don't miss any segment if they get handed off between the two
-      // calls. Segments loaded on historicals are also returned here, we deduplicate it below.
+      // Fetch the realtime segments and segments loaded on the historical. Do this first so that we don't miss any
+      // segment if they get handed off between the two calls. Segments loaded on historicals are deduplicated below,
+      // since we are only interested in realtime segments for now.
       if (includeRealtime) {
         realtimeAndHistoricalSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
       } else {
         realtimeAndHistoricalSegments = ImmutableList.of();
       }
 
-      // Fetch all published used segments from the metadata store.
+      // Fetch all published, used segments (all non-realtime segments) from the metadata store.
       final Collection<DataSegment> publishedUsedSegments =
           FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
 
       int realtimeCount = 0;
 
-      // Deduplicate segments, giving preference to metadata store segments. We do this so that if any segments have been
-      // handed off in between the two metadata calls above, we directly fetch it from deep storage.
+      // Deduplicate segments, giving preference to published used segments.
+      // We do this so that if any segments have been handed off in between the two metadata calls above,
+      // we directly fetch it from deep storage.
       Set<DataSegment> unifiedSegmentView = new HashSet<>(publishedUsedSegments);
+
+      // Iterate over the realtime segments and segments loaded on the historical
       for (ImmutableSegmentLoadInfo segmentLoadInfo : realtimeAndHistoricalSegments) {
         ImmutableSet<DruidServerMetadata> servers = segmentLoadInfo.getServers();
         // Filter out only realtime servers. We don't want to query historicals for now, but we can in the future.
@@ -1212,6 +1216,8 @@ public class ControllerImpl implements Controller
               realtimeServerMetadata
           );
           unifiedSegmentView.add(dataSegmentWithLocation);
+        } else {
+          // We don't have any segments of the required segment source, ignore the segment
         }
       }
 

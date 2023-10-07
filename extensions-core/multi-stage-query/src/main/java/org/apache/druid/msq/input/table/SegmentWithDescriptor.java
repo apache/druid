@@ -21,16 +21,14 @@ package org.apache.druid.msq.input.table;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -89,7 +87,8 @@ public class SegmentWithDescriptor
   ) throws IOException
   {
     if (loadedSegmentDataProvider == null) {
-      throw new RE("loadedSegmentDataProvider was null. Fetching segments from servers is not supported for segment[%s]", descriptor);
+      throw DruidException.defensive("loadedSegmentDataProvider was null. Fetching segments from servers is not "
+                                     + "supported for segment[%s]", descriptor);
     }
     return loadedSegmentDataProvider.fetchRowsFromDataServer(query, descriptor, mappingFunction, closer);
   }
@@ -97,14 +96,9 @@ public class SegmentWithDescriptor
   /**
    * The segment descriptor associated with this physical segment.
    */
-  public SegmentDescriptor getDescriptor()
+  public RichSegmentDescriptor getDescriptor()
   {
     return descriptor;
-  }
-
-  public boolean isLoadedOnServer()
-  {
-    return !CollectionUtils.isNullOrEmpty(descriptor.getServers());
   }
 
   @Override

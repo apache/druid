@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -44,6 +45,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -55,6 +57,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 /**
@@ -96,11 +99,20 @@ public class LoadedSegmentDataProvider
   }
 
   /**
-   * Queries a data server and returns a {@link Yielder} for the results, retrying if needed. If a dataserver indicates
-   * that the segment was not found, checks with the coordinator to see if the segment was handed off.
+   * Performs some necessary transforms to the query, so that the dataserver is able to understand it first.
+   * - Changing the datasource to a {@link TableDataSource}
+   * - Limiting the query to a single required segment with {@link Queries#withSpecificSegments(Query, List)}
+   * <br>
+   * Then queries a data server and returns a {@link Yielder} for the results, retrying if needed. If a dataserver
+   * indicates that the segment was not found, checks with the coordinator to see if the segment was handed off.
    * - If the segment was handed off, returns with a {@link DataServerQueryStatus#HANDOFF} status.
    * - If the segment was not handed off, retries with the known list of servers and throws an exception if the retry
    * count is exceeded.
+   * - If the servers could not be found, checks if the segment was handed-off. If it was, returns with a
+   * {@link DataServerQueryStatus#HANDOFF} status. Otherwise, throws an exception.
+   * <br>
+   * Also applies {@link QueryToolChest#makePreComputeManipulatorFn(Query, MetricManipulationFn)} and reports channel
+   * metrics on the returned results.
    *
    * @param <QueryType> result return type for the query from the data server
    * @param <RowType> type of the result rows after parsing from QueryType object
@@ -117,10 +129,10 @@ public class LoadedSegmentDataProvider
         ImmutableList.of(segmentDescriptor)
     );
 
-    Set<DruidServerMetadata> servers = segmentDescriptor.getServers();
-    DataServerClient dataServerClient = makeDataServerClient(FixedSetServiceLocator.forDruidServerMetadata(servers));
-    QueryToolChest<QueryType, Query<QueryType>> toolChest = warehouse.getToolChest(query);
-    Function<QueryType, QueryType> preComputeManipulatorFn =
+    final Set<DruidServerMetadata> servers = segmentDescriptor.getServers();
+    final DataServerClient dataServerClient = makeDataServerClient(FixedSetServiceLocator.forDruidServerMetadata(servers));
+    final QueryToolChest<QueryType, Query<QueryType>> toolChest = warehouse.getToolChest(query);
+    final Function<QueryType, QueryType> preComputeManipulatorFn =
         toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing());
 
     final JavaType queryResultType = toolChest.getBaseResultType();
@@ -131,6 +143,8 @@ public class LoadedSegmentDataProvider
 
     Pair<DataServerQueryStatus, Yielder<RowType>> statusSequencePair;
     try {
+      // We need to check for handoff to decide if we need to retry. Therefore, we handle it here instead of inside
+      // the client.
       statusSequencePair = RetryUtils.retry(
           () -> {
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType, closer)
@@ -171,21 +185,29 @@ public class LoadedSegmentDataProvider
     catch (QueryInterruptedException e) {
       if (e.getCause() instanceof RpcException) {
         // In the case that all the realtime servers for a segment are gone (for example, if they were scaled down),
-        // we would also be unable to fetch the segment. Check if the segment was handed off, just in case.
+        // we would also be unable to fetch the segment. Check if the segment was handed off, just in case, instead of
+        // failing the query.
         boolean wasHandedOff = checkSegmentHandoff(coordinatorClient, dataSource, segmentDescriptor);
         if (wasHandedOff) {
           log.debug("Segment[%s] was handed off.", segmentDescriptor);
           return Pair.of(DataServerQueryStatus.HANDOFF, null);
         }
       }
-      throw new IOE(e, "Exception while fetching rows for query from dataservers[%s]", servers);
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(e, "Exception while fetching rows for query from dataservers[%s]", servers);
     }
     catch (Exception e) {
       Throwables.propagateIfPossible(e, IOE.class);
-      throw new IOE(e, "Exception while fetching rows for query from dataservers[%s]", servers);
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(e, "Exception while fetching rows for query from dataservers[%s]", servers);
     }
   }
 
+  /**
+   * Retreives the list of missing segments from the response context.
+   */
   private static List<SegmentDescriptor> getMissingSegments(final ResponseContext responseContext)
   {
     List<SegmentDescriptor> missingSegments = responseContext.getMissingSegments();
@@ -195,6 +217,11 @@ public class LoadedSegmentDataProvider
     return missingSegments;
   }
 
+  /**
+   * Queries the coordinator to check if a segment has been handed off.
+   * <br>
+   * See {@link  org.apache.druid.server.http.DataSourcesResource#isHandOffComplete(String, String, int, String)}
+   */
   private static boolean checkSegmentHandoff(
       CoordinatorClient coordinatorClient,
       String dataSource,
@@ -203,16 +230,11 @@ public class LoadedSegmentDataProvider
   {
     Boolean wasHandedOff;
     try {
-      wasHandedOff = RetryUtils.retry(
-          () -> FutureUtils.get(coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor), true),
-          input -> true,
-          DEFAULT_NUM_TRIES
-      );
+      wasHandedOff = FutureUtils.get(coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor), true);
     }
-    catch (Exception e) {
-      throw new IOE(e, "Could not contact coordinator");
+    catch (InterruptedException | ExecutionException e) {
+      throw new IOE(e, "Could not contact coordinator for segment[%s]", segmentDescriptor);
     }
-
     return Boolean.TRUE.equals(wasHandedOff);
   }
 

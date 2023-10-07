@@ -83,7 +83,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
 
     if (baseInput.hasSegment()) {
       SegmentWithDescriptor segment = baseInput.getSegment();
-      if (segment.isLoadedOnServer()) {
+      if (segment.getDescriptor().isLoadedOnServer()) {
         retVal = runWithLoadedSegment(baseInput.getSegment());
       } else {
         retVal = runWithSegment(baseInput.getSegment());

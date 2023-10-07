@@ -24,12 +24,18 @@ import org.apache.druid.server.coordination.ServerType;
 
 import java.util.Set;
 
+/**
+ * Decides the types of data servers contacted by MSQ tasks to fetch results.
+ */
 public enum SegmentSource
 {
-
   NONE(ImmutableSet.of()),
   REALTIME(ImmutableSet.of(ServerType.REALTIME, ServerType.INDEXER_EXECUTOR));
 
+  /**
+   * The type of dataservers (if any) to include. This does not include segments queried from deep storage, which are
+   * always included in queries.
+   */
   private final Set<ServerType> usedServerTypes;
 
   SegmentSource(Set<ServerType> usedServerTypes)
@@ -42,6 +48,9 @@ public enum SegmentSource
     return usedServerTypes;
   }
 
+  /**
+   * Whether realtime servers should be included for the segmentSource.
+   */
   public static boolean shouldQueryRealtimeServers(SegmentSource segmentSource)
   {
     return REALTIME.equals(segmentSource);

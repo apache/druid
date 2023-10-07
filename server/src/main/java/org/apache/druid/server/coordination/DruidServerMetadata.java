@@ -40,6 +40,7 @@ public class DruidServerMetadata
   private final ServerType type;
   private final int priority;
 
+  // Either hostAndPort or hostAndTlsPort would be null depending on the type of connection.
   @JsonCreator
   public DruidServerMetadata(
       @JsonProperty("name") String name,

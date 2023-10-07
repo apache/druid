@@ -34,6 +34,10 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Response handler for the {@link DataServerClient}. Handles the input stream from the data server and handles updating
+ * the {@link ResponseContext} from the header. Does not apply backpressure or query timeout.
+ */
 public class DataServerResponseHandler implements HttpResponseHandler<AppendableByteArrayInputStream, InputStream>
 {
   private static final Logger log = new Logger(DataServerResponseHandler.class);

@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class DataServerClient
 {
+  private static final String BASE_PATH = "/druid/v2/";
   private static final Logger log = new Logger(DataServerClient.class);
   private final ServiceClient serviceClient;
   private final ObjectMapper objectMapper;
@@ -76,10 +77,9 @@ public class DataServerClient
 
   public <T> Sequence<T> run(Query<T> query, ResponseContext responseContext, JavaType queryResultType, Closer closer)
   {
-    final String basePath = "/druid/v2/";
-    final String cancelPath = basePath + query.getId();
+    final String cancelPath = BASE_PATH + query.getId();
 
-    RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, basePath);
+    RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, BASE_PATH);
     final boolean isSmile = objectMapper.getFactory() instanceof SmileFactory;
     if (isSmile) {
       requestBuilder = requestBuilder.smileContent(objectMapper, query);
@@ -124,9 +124,9 @@ public class DataServerClient
             return new JsonParserIterator<>(
                 queryResultType,
                 resultStreamFuture,
-                basePath,
+                BASE_PATH,
                 query,
-                "",
+                "", // TODO: this
                 objectMapper
             );
           }

@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -90,6 +91,14 @@ public class RichSegmentDescriptor extends SegmentDescriptor
     );
   }
 
+  /**
+   * Returns true if the location the segment is loaded is available, and false if it is not.
+   */
+  public boolean isLoadedOnServer()
+  {
+    return !CollectionUtils.isNullOrEmpty(getServers());
+  }
+
   @JsonProperty("servers")
   public Set<DruidServerMetadata> getServers()
   {
@@ -135,8 +144,11 @@ public class RichSegmentDescriptor extends SegmentDescriptor
   public String toString()
   {
     return "RichSegmentDescriptor{" +
-           "fullInterval=" + fullInterval +
-           ", servers=" + servers +
+           "fullInterval=" + (fullInterval == null ? getInterval() : fullInterval) +
+           ", servers=" + getServers() +
+           ", interval=" + getInterval() +
+           ", version='" + getVersion() + '\'' +
+           ", partitionNumber=" + getPartitionNumber() +
            '}';
   }
 }
