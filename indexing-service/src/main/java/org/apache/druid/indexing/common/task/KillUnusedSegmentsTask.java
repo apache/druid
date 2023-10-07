@@ -225,7 +225,14 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       // Fetch the load specs of all segments overlapping with the given interval
       final Set<Map<String, Object>> usedSegmentLoadSpecs = toolbox
           .getTaskActionClient()
-          .submit(new RetrieveUsedSegmentsAction(getDataSource(), getInterval(), null, Segments.INCLUDING_OVERSHADOWED))
+          .submit(new RetrieveUsedSegmentsAction(
+              getDataSource(),
+              null,
+              unusedSegments.stream()
+                            .map(DataSegment::getInterval)
+                            .collect(Collectors.toSet()),
+              Segments.INCLUDING_OVERSHADOWED)
+          )
           .stream()
           .map(DataSegment::getLoadSpec)
           .collect(Collectors.toSet());
