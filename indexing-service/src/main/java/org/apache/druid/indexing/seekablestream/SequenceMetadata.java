@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.CommitRealtimeSegmentsAndMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
@@ -418,11 +417,11 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         );
         final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
         action = taskLockType == TaskLockType.APPEND
-                 ? CommitRealtimeSegmentsAndMetadataAction.create(segmentsToPush, startMetadata, endMetadata)
+                 ? SegmentTransactionalAppendAction.forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata)
                  : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata);
       } else {
         action = taskLockType == TaskLockType.APPEND
-                 ? SegmentTransactionalAppendAction.create(segmentsToPush)
+                 ? SegmentTransactionalAppendAction.forSegments(segmentsToPush)
                  : SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null);
       }
 

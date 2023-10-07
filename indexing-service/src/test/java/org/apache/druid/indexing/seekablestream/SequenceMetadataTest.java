@@ -29,9 +29,8 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Rule;
+import org.junit.Assert;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -43,9 +42,6 @@ import java.util.Set;
 @RunWith(MockitoJUnitRunner.class)
 public class SequenceMetadataTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Mock
   private SeekableStreamIndexTaskRunner mockSeekableStreamIndexTaskRunner;
 
@@ -59,7 +55,7 @@ public class SequenceMetadataTest
   private TaskToolbox mockTaskToolbox;
 
   @Test
-  public void testPublishAnnotatedSegmentsThrowExceptionIfOverwriteSegmentsNotNullAndNotEmpty() throws Exception
+  public void testPublishAnnotatedSegmentsThrowExceptionIfOverwriteSegmentsNotNullAndNotEmpty()
   {
     DataSegment dataSegment = DataSegment.builder()
                                          .dataSource("foo")
@@ -79,14 +75,18 @@ public class SequenceMetadataTest
         ImmutableSet.of(),
         null
     );
-    TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
+    TransactionalSegmentPublisher transactionalSegmentPublisher
+        = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
 
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(
-        "Stream ingestion task unexpectedly attempted to overwrite segments: " + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment)
+    ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, ImmutableSet.of(), null)
     );
-
-    transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, ImmutableSet.of(), null);
+    Assert.assertEquals(
+        "Stream ingestion task unexpectedly attempted to overwrite segments: "
+        + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment),
+        exception.getMessage()
+    );
   }
 
   @Test
