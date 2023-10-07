@@ -39,10 +39,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ARRAY_INGEST_MODE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FAULT_TOLERANCE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS;
-import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_INGEST_STRING_ARRAYS_AS_MVDS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MAX_NUM_TASKS;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_MSQ_MODE;
 import static org.apache.druid.msq.util.MultiStageQueryContext.CTX_ROWS_IN_MEMORY;
@@ -216,16 +216,34 @@ public class MultiStageQueryContextTest
   }
 
   @Test
-  public void isIngestStringArraysAsMVDs_unset_returnsDefaultValue()
+  public void arrayIngestMode_unset_returnsDefaultValue()
   {
-    Assert.assertFalse(MultiStageQueryContext.isIngestStringArraysAsMVDs(QueryContext.empty()));
+    Assert.assertEquals(ArrayIngestMode.NONE, MultiStageQueryContext.getArrayIngestMode(QueryContext.empty()));
   }
 
   @Test
-  public void isIngestStringArraysAsMVDs_set_returnsCorrectValue()
+  public void arrayIngestMode_set_returnsCorrectValue()
   {
-    Map<String, Object> propertyMap = ImmutableMap.of(CTX_INGEST_STRING_ARRAYS_AS_MVDS, true);
-    Assert.assertTrue(MultiStageQueryContext.isIngestStringArraysAsMVDs(QueryContext.of(propertyMap)));
+    Assert.assertEquals(
+        ArrayIngestMode.NONE,
+        MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "none")))
+    );
+
+    Assert.assertEquals(
+        ArrayIngestMode.MVD,
+        MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "mvd")))
+    );
+
+    Assert.assertEquals(
+        ArrayIngestMode.ARRAY,
+        MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "array")))
+    );
+
+    Assert.assertThrows(
+        BadQueryContextException.class,
+        () ->
+            MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "dummy")))
+    );
   }
 
   @Test

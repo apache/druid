@@ -164,6 +164,7 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
+import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -1928,6 +1929,17 @@ public class ControllerImpl implements Controller
       final Query<?> query
   )
   {
+    // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
+    // deprecation and removal in future
+    if (MultiStageQueryContext.getArrayIngestMode(query.context()) == ArrayIngestMode.MVD) {
+      log.warn(
+          "'%s' is set to 'mvd' in the query's context. This ingests the string arrays as multi-value "
+          + "strings instead of arrays, and is preserved for legacy reasons when MVDs were the only way to ingest string "
+          + "arrays in Druid. It is incorrect behaviour and will likely be removed in the future releases of Druid",
+          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
+      );
+    }
+
     final List<DimensionSchema> dimensions = new ArrayList<>();
     final List<AggregatorFactory> aggregators = new ArrayList<>();
 
@@ -2006,7 +2018,7 @@ public class ControllerImpl implements Controller
                     outputColumnName,
                     type,
                     MultiStageQueryContext.useAutoColumnSchemas(query.context()),
-                    MultiStageQueryContext.isIngestStringArraysAsMVDs(query.context())
+                    MultiStageQueryContext.getArrayIngestMode(query.context())
                 )
             );
           } else if (!isRollupQuery) {
@@ -2056,7 +2068,7 @@ public class ControllerImpl implements Controller
               outputColumn,
               type,
               MultiStageQueryContext.useAutoColumnSchemas(context),
-              MultiStageQueryContext.isIngestStringArraysAsMVDs(context)
+              MultiStageQueryContext.getArrayIngestMode(context)
           )
       );
     }
