@@ -70,7 +70,7 @@ public class FrameRowsAndColumns implements RowsAndColumns
             .getColumnType(columnIndex)
             .orElseThrow(() -> new ISE("just got the id, why is columnType not there?"));
 
-        colCache.put(name, FrameColumnReaders.create(columnIndex, columnType).readRACColumn(frame));
+        colCache.put(name, FrameColumnReaders.create(name, columnIndex, columnType).readRACColumn(frame));
       }
     }
     return colCache.get(name);
