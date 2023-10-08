@@ -20,11 +20,10 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.inject.Injector;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 
@@ -37,22 +36,15 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
   public CalciteTestInjectorBuilder()
   {
     super(new StartupInjectorBuilder()
-        .withEmptyProperties()
-        .build());
+              .withEmptyProperties()
+              .build());
     add(
+        new ExpressionModule(),
         new SegmentWranglerModule(),
         new LookylooModule(),
         new SqlAggregationModule(),
         new CalciteTestOperatorModule()
     );
-  }
-
-  public CalciteTestInjectorBuilder withDefaultMacroTable()
-  {
-    addModule(binder ->
-        binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE)
-    );
-    return this;
   }
 
   @Override

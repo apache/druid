@@ -70,6 +70,11 @@ public class StringFieldReader implements FieldReader
 {
   private final boolean asArray;
 
+  public StringFieldReader()
+  {
+    this(false);
+  }
+
   /**
    * Create a string reader.
    *
@@ -77,7 +82,7 @@ public class StringFieldReader implements FieldReader
    *                selectors (potentially multi-value ones). If true, selectors from {@link #makeColumnValueSelector}
    *                behave like string array selectors.
    */
-  StringFieldReader(final boolean asArray)
+  protected StringFieldReader(final boolean asArray)
   {
     this.asArray = asArray;
   }

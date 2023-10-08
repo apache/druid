@@ -1,1 +1,1 @@
-SELECT col7 , col6, LAST_VALUE(col6) OVER(PARTITION BY col7 ORDER BY col6) LAST_VALUE_col6 FROM "allTypsUniq.parquet" WHERE col6 > "1947-05-12" AND col6 < "2007-10-01"
+SELECT col7 , col6, LAST_VALUE(col6) OVER(PARTITION BY col7 ORDER BY col6) LAST_VALUE_col6 FROM "allTypsUniq.parquet" WHERE col6 > '1947-05-12' AND col6 < '2007-10-01'

@@ -59,9 +59,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup jdk${{ inputs.jdk }}
-        run: echo "JAVA_HOME=$JAVA_HOME_${{ inputs.jdk }}_X64" >> $GITHUB_ENV
+      # skip the "cache: maven" step from setup-java. We explicitly use a
+      # different cache key since we cannot reuse it across commits.
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ inputs.jdk }}
 
+      # the build step produces SNAPSHOT artifacts into the local maven repository,
+      # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Restore Maven repository
         id: maven-restore
         uses: actions/cache/restore@v3
