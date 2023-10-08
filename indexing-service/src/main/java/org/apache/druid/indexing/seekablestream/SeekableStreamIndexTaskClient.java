@@ -155,6 +155,15 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    */
   ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(String id);
 
+  /**
+   * Update the task state to redirect queries for later versions to the root pending segment.
+   * The task also announces that it is serving the segments belonging to the subsequent versions.
+   * The update is processed only if the task is serving the original pending segment.
+   * @param id - task id
+   * @param rootPendingSegment - the pending segment that was originally allocated
+   * @param versionsOfPendingSegment - the ids belonging to the versions to which the root segment needs to be updated
+   * @return true if the update succeeds
+   */
   ListenableFuture<Boolean> updatePendingSegmentMapping(
       String id,
       SegmentIdWithShardSpec rootPendingSegment,

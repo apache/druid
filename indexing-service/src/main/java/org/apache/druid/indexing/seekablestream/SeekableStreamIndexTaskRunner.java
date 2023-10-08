@@ -1545,7 +1545,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   @POST
-  @Path("updatePendingSegmentMapping")
+  @Path("pendingSegmentMapping")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response updatePendingSegmentMapping(
@@ -1767,8 +1767,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       Set<SegmentIdWithShardSpec> versionsOfPendingSegment
   )
   {
-    ((StreamAppenderator) appenderator).updatePendingSegmentMapping(rootPendingSegment, versionsOfPendingSegment);
-    return Response.ok().build();
+    try {
+      ((StreamAppenderator) appenderator).updatePendingSegmentMapping(rootPendingSegment, versionsOfPendingSegment);
+      return Response.ok().build();
+    }
+    catch (IOException e) {
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   private void resetNextCheckpointTime()

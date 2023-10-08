@@ -205,7 +205,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   {
     final RequestBuilder requestBuilder = new RequestBuilder(
         HttpMethod.POST,
-        "updatePendingSegmentMapping"
+        "pendingSegmentMapping"
     ).jsonContent(jsonMapper, Pair.of(rootPendingSegment, versionsOfPendingSegment));
 
     return makeRequest(id, requestBuilder)

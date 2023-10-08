@@ -72,6 +72,7 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -86,6 +87,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -153,6 +155,8 @@ public class StreamAppenderator implements Appenderator
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
+  private final ConcurrentMap<SegmentId, Set<SegmentIdWithShardSpec>> rootPendingSegmentToNewerVersions;
+
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
   // use intermediate executor so that deadlock conditions can be prevented
@@ -216,6 +220,7 @@ public class StreamAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+    rootPendingSegmentToNewerVersions = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -998,7 +1003,7 @@ public class StreamAppenderator implements Appenderator
     log.debug("Shutting down immediately...");
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
       try {
-        segmentAnnouncer.unannounceSegment(entry.getValue().getSegment());
+        unannounceRootSegmentAndUpgradedVersions(entry.getValue());
       }
       catch (Exception e) {
         log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
@@ -1026,15 +1031,57 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
+  private void unannounceRootSegmentAndUpgradedVersions(Sink sink) throws IOException
+  {
+    final DataSegment rootSegment = sink.getSegment();
+    segmentAnnouncer.unannounceSegment(rootSegment);
+    for (SegmentIdWithShardSpec newId : rootPendingSegmentToNewerVersions.get(rootSegment.getId())) {
+      final DataSegment newSegment = new DataSegment(
+          newId.getDataSource(),
+          newId.getInterval(),
+          newId.getVersion(),
+          rootSegment.getLoadSpec(),
+          rootSegment.getDimensions(),
+          rootSegment.getMetrics(),
+          newId.getShardSpec(),
+          rootSegment.getBinaryVersion(),
+          rootSegment.getSize()
+      );
+      segmentAnnouncer.unannounceSegment(newSegment);
+    }
+    rootPendingSegmentToNewerVersions.remove(rootSegment.getId());
+  }
+
   public void updatePendingSegmentMapping(
       SegmentIdWithShardSpec rootPendingSegment,
       Set<SegmentIdWithShardSpec> versionsOfPendingSegment
-  )
+  ) throws IOException
   {
     if (!sinks.containsKey(rootPendingSegment) || droppingSinks.contains(rootPendingSegment)) {
       return;
     }
+
+    // Update query mapping with SinkQuerySegmentWalker
     ((SinkQuerySegmentWalker) texasRanger).updatePendingSegmentMapping(rootPendingSegment, versionsOfPendingSegment);
+
+    // Announce segments
+    rootPendingSegmentToNewerVersions.putIfAbsent(rootPendingSegment.asSegmentId(), new HashSet<>());
+    final DataSegment rootSegment = sinks.get(rootPendingSegment).getSegment();
+    for (SegmentIdWithShardSpec idWithShardSpec : versionsOfPendingSegment) {
+      final DataSegment newSegment = new DataSegment(
+          idWithShardSpec.getDataSource(),
+          idWithShardSpec.getInterval(),
+          idWithShardSpec.getVersion(),
+          rootSegment.getLoadSpec(),
+          rootSegment.getDimensions(),
+          rootSegment.getMetrics(),
+          idWithShardSpec.getShardSpec(),
+          rootSegment.getBinaryVersion(),
+          rootSegment.getSize()
+      );
+      segmentAnnouncer.announceSegment(newSegment);
+      rootPendingSegmentToNewerVersions.get(rootPendingSegment.asSegmentId()).add(idWithShardSpec);
+    }
   }
 
   private void lockBasePersistDirectory()
@@ -1338,7 +1385,7 @@ public class StreamAppenderator implements Appenderator
 
             // Unannounce the segment.
             try {
-              segmentAnnouncer.unannounceSegment(sink.getSegment());
+              unannounceRootSegmentAndUpgradedVersions(sink);
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
