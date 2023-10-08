@@ -222,17 +222,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
 
+      final Set<Interval> unusedSegmentIntervals = unusedSegments.stream()
+                                                                 .map(DataSegment::getInterval)
+                                                                 .collect(Collectors.toSet());
       // Fetch the load specs of all segments overlapping with the given interval
       final Set<Map<String, Object>> usedSegmentLoadSpecs = toolbox
           .getTaskActionClient()
-          .submit(new RetrieveUsedSegmentsAction(
-              getDataSource(),
-              null,
-              unusedSegments.stream()
-                            .map(DataSegment::getInterval)
-                            .collect(Collectors.toSet()),
-              Segments.INCLUDING_OVERSHADOWED)
-          )
+          .submit(new RetrieveUsedSegmentsAction(getDataSource(), null, unusedSegmentIntervals, Segments.INCLUDING_OVERSHADOWED))
           .stream()
           .map(DataSegment::getLoadSpec)
           .collect(Collectors.toSet());
