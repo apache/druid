@@ -21,9 +21,7 @@ package org.apache.druid.query.aggregation.variance.sql;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -40,15 +38,14 @@ import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -77,25 +74,19 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
   {
-    final RexNode inputOperand = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(0)
-    );
+    final RexNode inputOperand = inputAccessor.getField(aggregateCall.getArgList().get(0));
+
     final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
-        rowSignature,
+        inputAccessor.getInputRowSignature(),
         inputOperand
     );
     if (input == null) {
