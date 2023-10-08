@@ -29,7 +29,6 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -77,7 +76,7 @@ public class LoadedSegmentDataProviderFactory implements Closeable
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // Wait for all query cancellations to be complete.
     queryCancellationExecutor.shutdown();
