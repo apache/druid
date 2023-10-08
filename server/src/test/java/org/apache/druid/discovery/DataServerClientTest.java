@@ -33,10 +33,10 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
-import org.apache.druid.rpc.FixedSetServiceLocator;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocation;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
@@ -80,7 +80,7 @@ public class DataServerClientTest
 
     target = new DataServerClient(
         serviceClientFactory,
-        mock(FixedSetServiceLocator.class),
+        mock(ServiceLocation.class),
         jsonMapper,
         Execs.scheduledSingleThreaded("query-cancellation-executor")
     );

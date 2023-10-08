@@ -39,6 +39,7 @@ import org.apache.druid.rpc.FixedSetServiceLocator;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -58,22 +59,22 @@ public class DataServerClient
   private static final Logger log = new Logger(DataServerClient.class);
   private final ServiceClient serviceClient;
   private final ObjectMapper objectMapper;
-  private final FixedSetServiceLocator fixedSetServiceLocator;
+  private final ServiceLocation serviceLocation;
   private final ScheduledExecutorService queryCancellationExecutor;
 
   public DataServerClient(
       ServiceClientFactory serviceClientFactory,
-      FixedSetServiceLocator fixedSetServiceLocator,
+      ServiceLocation serviceLocation,
       ObjectMapper objectMapper,
       ScheduledExecutorService queryCancellationExecutor
   )
   {
     this.serviceClient = serviceClientFactory.makeClient(
         NodeRole.INDEXER.getJsonName(),
-        fixedSetServiceLocator,
+        FixedSetServiceLocator.forServiceLocation(serviceLocation),
         StandardRetryPolicy.noRetries()
     );
-    this.fixedSetServiceLocator = fixedSetServiceLocator;
+    this.serviceLocation = serviceLocation;
     this.objectMapper = objectMapper;
     this.queryCancellationExecutor = queryCancellationExecutor;
   }
@@ -129,7 +130,7 @@ public class DataServerClient
                 resultStreamFuture,
                 BASE_PATH,
                 query,
-                fixedSetServiceLocator.getServiceLocations().toString(), // For logging
+                serviceLocation.getHost(),
                 objectMapper
             );
           }

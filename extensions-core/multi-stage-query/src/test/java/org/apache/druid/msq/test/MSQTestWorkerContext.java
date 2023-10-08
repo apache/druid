@@ -182,4 +182,10 @@ public class MSQTestWorkerContext implements WorkerContext
   {
     return injector.getInstance(Bouncer.class);
   }
+
+  @Override
+  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  {
+    return injector.getInstance(LoadedSegmentDataProviderFactory.class);
+  }
 }

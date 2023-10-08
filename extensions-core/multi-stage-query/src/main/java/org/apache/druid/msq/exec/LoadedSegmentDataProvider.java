@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
@@ -52,6 +53,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.rpc.FixedSetServiceLocator;
 import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
 import java.io.IOException;
@@ -97,9 +99,9 @@ public class LoadedSegmentDataProvider
   }
 
   @VisibleForTesting
-  DataServerClient makeDataServerClient(FixedSetServiceLocator serviceLocator)
+  DataServerClient makeDataServerClient(ServiceLocation serviceLocation)
   {
-    return new DataServerClient(serviceClientFactory, serviceLocator, objectMapper, queryCancellationExecutor);
+    return new DataServerClient(serviceClientFactory, serviceLocation, objectMapper, queryCancellationExecutor);
   }
 
   /**
@@ -134,7 +136,7 @@ public class LoadedSegmentDataProvider
     );
 
     final Set<DruidServerMetadata> servers = segmentDescriptor.getServers();
-    final DataServerClient dataServerClient = makeDataServerClient(FixedSetServiceLocator.forDruidServerMetadata(servers));
+    final FixedSetServiceLocator fixedSetServiceLocator = FixedSetServiceLocator.forDruidServerMetadata(servers);
     final QueryToolChest<QueryType, Query<QueryType>> toolChest = warehouse.getToolChest(query);
     final Function<QueryType, QueryType> preComputeManipulatorFn =
         toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing());
@@ -151,6 +153,8 @@ public class LoadedSegmentDataProvider
       // the client.
       statusSequencePair = RetryUtils.retry(
           () -> {
+            ServiceLocation serviceLocation = Iterables.getOnlyElement(fixedSetServiceLocator.locate().get().getLocations());
+            DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType, closer)
                                                            .map(preComputeManipulatorFn);
             final List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);

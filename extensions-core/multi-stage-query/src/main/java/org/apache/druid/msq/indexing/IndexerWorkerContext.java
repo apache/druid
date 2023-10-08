@@ -268,6 +268,12 @@ public class IndexerWorkerContext implements WorkerContext
     return injector.getInstance(Bouncer.class);
   }
 
+  @Override
+  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  {
+    return loadedSegmentDataProviderFactory;
+  }
+
   private synchronized OverlordClient makeOverlordClient()
   {
     if (overlordClient == null) {

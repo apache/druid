@@ -21,15 +21,25 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public class LoadedSegmentDataProviderFactory
+/**
+ * Creates new instances of {@link LoadedSegmentDataProvider} and manages the cancellation threadpool.
+ */
+public class LoadedSegmentDataProviderFactory implements Closeable
 {
+  private static final Logger log = new Logger(LoadedSegmentDataProviderFactory.class);
+  private static final int DEFAULT_THREAD_COUNT = 4;
   private final CoordinatorClient coordinatorClient;
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
@@ -47,7 +57,7 @@ public class LoadedSegmentDataProviderFactory
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
     this.warehouse = warehouse;
-    this.queryCancellationExecutor = ScheduledExecutors.fixed(10, "query-cancellation-executor");
+    this.queryCancellationExecutor = ScheduledExecutors.fixed(DEFAULT_THREAD_COUNT, "query-cancellation-executor");
   }
 
   public LoadedSegmentDataProvider createLoadedSegmentDataProvider(
@@ -64,5 +74,21 @@ public class LoadedSegmentDataProviderFactory
         warehouse,
         queryCancellationExecutor
     );
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // Wait for all query cancellations to be complete.
+    queryCancellationExecutor.shutdown();
+    try {
+      if (!queryCancellationExecutor.awaitTermination(1, TimeUnit.MINUTES)) {
+        log.error("Unable to cancel all ongoing queries.");
+      }
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RE(e);
+    }
   }
 }

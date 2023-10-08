@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.jboss.netty.util.internal.ThreadLocalRandom;
 
+import javax.validation.constraints.NotNull;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,6 +41,11 @@ public class FixedSetServiceLocator implements ServiceLocator
     this.serviceLocations = serviceLocations;
   }
 
+  public static FixedSetServiceLocator forServiceLocation(@NotNull ServiceLocation serviceLocation)
+  {
+    return new FixedSetServiceLocator(ServiceLocations.forLocation(serviceLocation));
+  }
+
   public static FixedSetServiceLocator forDruidServerMetadata(Set<DruidServerMetadata> serverMetadataSet)
   {
     if (serverMetadataSet == null || serverMetadataSet.isEmpty()) {
@@ -51,11 +57,6 @@ public class FixedSetServiceLocator implements ServiceLocator
 
       return new FixedSetServiceLocator(ServiceLocations.forLocations(serviceLocationSet));
     }
-  }
-
-  public ServiceLocations getServiceLocations()
-  {
-    return serviceLocations;
   }
 
   @Override
