@@ -179,9 +179,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     private void maybeDumpActualResults(List<Object[]> results) throws Exception
     {
       if (DUMP_ACTUAL_RESULTS) {
+        StringBuilder sb = new StringBuilder();
         for (Object[] row : results) {
-          System.out.println("  - " + queryJackson.writeValueAsString(row));
+          sb.append("  - " + queryJackson.writeValueAsString(row) + "\n");
         }
+        log.info("Actual results:\n%s", sb.toString());
       }
     }
   }
