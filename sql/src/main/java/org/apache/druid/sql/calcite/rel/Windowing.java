@@ -172,10 +172,16 @@ public class Windowing
 
         ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
         if (maker == null) {
+            VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
+                sourceRowSignature,
+                plannerContext.getExpressionParser(),
+                plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+            );
+
           final Aggregation aggregation = GroupByRules.translateAggregateCall(
               plannerContext,
               sourceRowSignature,
-              null,
+              virtualColumnRegistry,
               rexBuilder,
               InputAccessor.buildFor(
                   rexBuilder,
