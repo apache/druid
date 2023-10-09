@@ -1062,10 +1062,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   /**
    * Validates the results with slight loosening in case {@link NullHandling} is not sql compatible.
    *
-   * In case {@link NullHandling#replaceWithDefault()} an expected results of <code>null</code> accepts
+   * In case {@link NullHandling#replaceWithDefault()} is true, if the expected result is <code>null</code> accepts
    * both <code>null</code> and the default value for that column as actual result.
    */
-  public void assertResultsValid(List<Object[]> expected, QueryResults queryResults)
+  public void assertResultsValidRegardlessNullhandling(List<Object[]> expected, QueryResults queryResults)
   {
     List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());

@@ -173,13 +173,15 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           }
         }
       }
-      assertResultsValid(input.expectedResults, results);
+      assertResultsValidRegardlessNullhandling(input.expectedResults, results);
     }
 
     private void maybeDumpActualResults(List<Object[]> results) throws Exception
     {
-      for (Object[] row : results) {
-        System.out.println("  - " + queryJackson.writeValueAsString(row));
+      if(DUMP_ACTUAL_RESULTS) {
+        for (Object[] row : results) {
+          System.out.println("  - " + queryJackson.writeValueAsString(row));
+        }
       }
     }
   }
