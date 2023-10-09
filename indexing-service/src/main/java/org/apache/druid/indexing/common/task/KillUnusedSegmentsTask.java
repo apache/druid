@@ -175,6 +175,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
     // Track stats for reporting
     int numSegmentsKilled = 0;
+    int numSegmentsKilledInDeepStorage = 0;
     int numBatchesProcessed = 0;
     final int numSegmentsMarkedAsUnused;
     if (markAsUnused) {
@@ -225,23 +226,33 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       final Set<Interval> unusedSegmentIntervals = unusedSegments.stream()
                                                                  .map(DataSegment::getInterval)
                                                                  .collect(Collectors.toSet());
-      // Fetch the load specs of all segments overlapping with the given interval
-      final Set<Map<String, Object>> usedSegmentLoadSpecs = toolbox
-          .getTaskActionClient()
-          .submit(new RetrieveUsedSegmentsAction(getDataSource(), null, unusedSegmentIntervals, Segments.INCLUDING_OVERSHADOWED))
-          .stream()
-          .map(DataSegment::getLoadSpec)
-          .collect(Collectors.toSet());
+      final Set<Map<String, Object>> usedSegmentLoadSpecs = new HashSet<>();
+      if (!unusedSegmentIntervals.isEmpty()) {
+        // Fetch the load specs of all segments overlapping with the given interval
+        usedSegmentLoadSpecs.addAll(toolbox.getTaskActionClient()
+                                           .submit(new RetrieveUsedSegmentsAction(
+                                               getDataSource(),
+                                               null,
+                                               unusedSegmentIntervals,
+                                               Segments.INCLUDING_OVERSHADOWED
+                                           ))
+                                           .stream()
+                                           .map(DataSegment::getLoadSpec)
+                                           .collect(Collectors.toSet())
+        );
+      }
 
       // Kill segments from the deep storage only if their load specs are not being used by any used segments
       final List<DataSegment> segmentsToBeKilled = unusedSegments
           .stream()
-          .filter(unusedSegment -> !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
+          .filter(unusedSegment -> !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec())
+                                   || unusedSegment.getLoadSpec() == null)
           .collect(Collectors.toList());
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
       numBatchesProcessed++;
       numSegmentsKilled += unusedSegments.size();
+      numSegmentsKilledInDeepStorage += segmentsToBeKilled.size();
 
       LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
@@ -255,8 +266,12 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         taskId, getDataSource(), getInterval(), numSegmentsKilled, numBatchesProcessed
     );
 
-    final KillTaskReport.Stats stats =
-        new KillTaskReport.Stats(numSegmentsKilled, numBatchesProcessed, numSegmentsMarkedAsUnused);
+    final KillTaskReport.Stats stats = new KillTaskReport.Stats(
+        numSegmentsKilled,
+        numSegmentsKilledInDeepStorage,
+        numBatchesProcessed,
+        numSegmentsMarkedAsUnused
+    );
     toolbox.getTaskReportFileWriter().write(
         taskId,
         TaskReport.buildTaskReports(new KillTaskReport(taskId, stats))
