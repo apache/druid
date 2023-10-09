@@ -83,12 +83,16 @@ public class DimensionSchemaUtils
       switch (type.getType()) {
         case STRING:
           return new StringDimensionSchema(column);
+
         case LONG:
           return new LongDimensionSchema(column);
+
         case FLOAT:
           return new FloatDimensionSchema(column);
+
         case DOUBLE:
           return new DoubleDimensionSchema(column);
+
         case ARRAY:
           ValueType elementType = type.getElementType().getType();
           if (elementType == ValueType.STRING) {
@@ -107,9 +111,8 @@ public class DimensionSchemaUtils
               // arrayIngestMode == ArrayIngestMode.ARRAY would be true
               return new AutoTypeColumnSchema(column);
             }
-          } else if (elementType == ValueType.LONG
-                     || elementType == ValueType.FLOAT
-                     || elementType == ValueType.DOUBLE) {
+          } else if (elementType.isNumeric()) {
+            // ValueType == LONG || ValueType == FLOAT || ValueType == DOUBLE
             if (arrayIngestMode == ArrayIngestMode.ARRAY) {
               return new AutoTypeColumnSchema(column);
             } else {
@@ -123,6 +126,7 @@ public class DimensionSchemaUtils
           } else {
             throw new ISE("Cannot create dimension for type [%s]", type.toString());
           }
+
         default:
           final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
           return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
