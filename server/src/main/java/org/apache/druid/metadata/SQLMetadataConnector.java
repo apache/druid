@@ -285,10 +285,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE INDEX idx_%1$s_datasource_sequence ON %1$s(dataSource, sequence_name)",
                 tableName
-            ),
-            StringUtils.format(
-                "CREATE INDEX idx_%1$s_datasource_sequence_prev_id ON %1$s(dataSource, sequence_prev_id)",
-                tableName
             )
         )
     );
