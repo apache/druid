@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
@@ -55,11 +54,11 @@ import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -153,7 +152,10 @@ public class LoadedSegmentDataProvider
       // the client.
       statusSequencePair = RetryUtils.retry(
           () -> {
-            ServiceLocation serviceLocation = Iterables.getOnlyElement(fixedSetServiceLocator.locate().get().getLocations());
+            ServiceLocation serviceLocation = CollectionUtils.getOnlyElement(
+                fixedSetServiceLocator.locate().get().getLocations(),
+                serviceLocations -> { throw DruidException.defensive("Should only have one location"); }
+            );
             DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType, closer)
                                                            .map(preComputeManipulatorFn);
@@ -240,7 +242,7 @@ public class LoadedSegmentDataProvider
     try {
       wasHandedOff = FutureUtils.get(coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor), true);
     }
-    catch (InterruptedException | ExecutionException e) {
+    catch (Exception e) {
       throw new IOE(e, "Could not contact coordinator for segment[%s]", segmentDescriptor);
     }
     return Boolean.TRUE.equals(wasHandedOff);

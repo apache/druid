@@ -194,6 +194,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
           rowSignature
       );
 
+      closer.register(cursorFromIterable.rhs);
       final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(ImmutableList.of(cursorFromIterable.lhs)));
 
       if (cursorYielder.isDone()) {

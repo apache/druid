@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.discovery.DruidServiceTestUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -40,6 +41,7 @@ import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
@@ -47,6 +49,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -63,8 +66,11 @@ import static org.apache.druid.query.Druids.newScanQueryBuilder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class LoadedSegmentDataProviderTest
@@ -176,6 +182,48 @@ public class LoadedSegmentDataProviderTest
     Assert.assertNull(dataServerQueryStatusYielderPair.rhs);
   }
 
+  @Test
+  public void testServerNotFoundWithoutHandoffShouldThrowException()
+  {
+    doThrow(
+        new QueryInterruptedException(new RpcException("Could not connect to server"))
+    ).when(dataServerClient).run(any(), any(), any(), any());
+
+    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, SEGMENT_1);
+
+    ScanQuery queryWithRetry = query.withOverriddenContext(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 3));
+
+    Assert.assertThrows(DruidException.class, () ->
+        target.fetchRowsFromDataServer(
+            queryWithRetry,
+            SEGMENT_1,
+            ScanQueryFrameProcessor::mappingFunction,
+            Closer.create()
+        )
+    );
+
+    verify(dataServerClient, times(3)).run(any(), any(), any(), any());
+  }
+
+  @Test
+  public void testServerNotFoundButHandoffShouldReturnWithStatus() throws IOException
+  {
+    doThrow(
+        new QueryInterruptedException(new RpcException("Could not connect to server"))
+    ).when(dataServerClient).run(any(), any(), any(), any());
+
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, SEGMENT_1);
+
+    Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> dataServerQueryStatusYielderPair = target.fetchRowsFromDataServer(
+        query,
+        SEGMENT_1,
+        ScanQueryFrameProcessor::mappingFunction,
+        Closer.create()
+    );
+
+    Assert.assertEquals(LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF, dataServerQueryStatusYielderPair.lhs);
+    Assert.assertNull(dataServerQueryStatusYielderPair.rhs);
+  }
 
   @Test
   public void testQueryFail()

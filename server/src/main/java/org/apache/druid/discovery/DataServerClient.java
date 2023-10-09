@@ -70,7 +70,7 @@ public class DataServerClient
   )
   {
     this.serviceClient = serviceClientFactory.makeClient(
-        NodeRole.INDEXER.getJsonName(),
+        serviceLocation.getHost(),
         FixedSetServiceLocator.forServiceLocation(serviceLocation),
         StandardRetryPolicy.noRetries()
     );

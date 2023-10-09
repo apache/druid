@@ -192,6 +192,9 @@ public class CalciteMSQTestsHelper
 
   private static LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
   {
+    // Currently, there is no metadata in this test for loaded segments. Therefore, this should not be called.
+    // In the future, if this needs to be supported, mocks for LoadedSegmentDataProvider should be added like
+    // org.apache.druid.msq.exec.MSQLoadedSegmentTests.
     LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
     LoadedSegmentDataProvider loadedSegmentDataProvider = Mockito.mock(LoadedSegmentDataProvider.class);
     try {

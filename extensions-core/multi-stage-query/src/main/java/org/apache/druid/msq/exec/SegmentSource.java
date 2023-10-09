@@ -29,7 +29,13 @@ import java.util.Set;
  */
 public enum SegmentSource
 {
+  /**
+   * Include only segments from deep storage.
+   */
   NONE(ImmutableSet.of()),
+  /**
+   * Include segments from realtime tasks as well as segments from deep storage.
+   */
   REALTIME(ImmutableSet.of(ServerType.REALTIME, ServerType.INDEXER_EXECUTOR));
 
   /**
