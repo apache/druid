@@ -636,7 +636,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws IOException
   {
     final Interval interval = pendingSegment.getInterval();
-    final Query<Map<String, byte[]>> query = handle
+    final Query<Map<String, Object>> query = handle
         .createQuery(
             StringUtils.format(
                 "SELECT payload "
