@@ -40,7 +40,12 @@ import static org.junit.Assert.assertThrows;
  * Can be used to mark tests which are not-yet supported for some reason.
  *
  * In case a testcase marked with this annotation fails - it means that the
- * testcase no longer fails with the annotated expectation.
+ * testcase no longer fails with the annotated expectation. This means that a code change affected this test either
+ *
+ * <ol>
+ * <li>it suddenly passes: yay, assuming it makes sense that it suddenly passes, remove the annotation and move on</li>
+ * <li>it suddenly fails with a different error: validate that the new error is expected and either fix to continue failing with the old error or update the expected error.</li>
+ * </ol>
  *
  * During usage; the annotation process have to be added to the testclass.
  * Ensure that it's loaded as the most outer-rule by using order=0 - otherwise
