@@ -436,7 +436,6 @@ public class JdbcExtractionNamespaceTest
         null,
         new JdbcAccessSecurityConfig()
     );
-    long jitter = extractionNamespace.getJitterMills();
     // jitter will be a random value between 0 and 120 seconds.
     Assert.assertEquals(0, extractionNamespace.getJitterMills());
   }
