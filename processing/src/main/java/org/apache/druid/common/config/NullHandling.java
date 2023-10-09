@@ -67,7 +67,13 @@ public class NullHandling
   @VisibleForTesting
   public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean ignoreNullForString)
   {
-    INSTANCE = new NullValueHandlingConfig(useDefForNull, null, ignoreNullForString);
+    initializeForTestsWithValues(useDefForNull, null, ignoreNullForString);
+  }
+
+  @VisibleForTesting
+  public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean useThreeValueLogic, Boolean ignoreNullForString)
+  {
+    INSTANCE = new NullValueHandlingConfig(useDefForNull, useThreeValueLogic, ignoreNullForString);
   }
 
   /**

@@ -255,6 +255,18 @@ public class EqualityFilterTests
             NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
             ImmutableList.of("0", "2", "4")
         );
+
+        try {
+          // make sure if 3vl is disabled with behave with 2vl
+          NullHandling.initializeForTestsWithValues(false, false, null);
+          assertFilterMatches(
+              NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+              ImmutableList.of("0", "2", "3", "4")
+          );
+        }
+        finally {
+          NullHandling.initializeForTests();
+        }
         assertFilterMatches(
             NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "noexist", null)),
             ImmutableList.of("0", "1", "2", "4", "5")
