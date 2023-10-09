@@ -33,7 +33,6 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -123,7 +122,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       // transaction as the commit of replace segments and failure to upgrade
       // pending segments should not affect success of replace commit.
       try {
-        List<SegmentIdWithShardSpec> upgradedPendingSegments =
+        Set<SegmentIdWithShardSpec> upgradedPendingSegments =
             toolbox.getIndexerMetadataStorageCoordinator().upgradePendingSegments(segments);
         log.info(
             "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
