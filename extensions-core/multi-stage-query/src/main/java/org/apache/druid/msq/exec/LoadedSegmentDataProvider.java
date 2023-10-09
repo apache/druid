@@ -154,7 +154,9 @@ public class LoadedSegmentDataProvider
           () -> {
             ServiceLocation serviceLocation = CollectionUtils.getOnlyElement(
                 fixedSetServiceLocator.locate().get().getLocations(),
-                serviceLocations -> { throw DruidException.defensive("Should only have one location"); }
+                serviceLocations -> {
+                  throw DruidException.defensive("Should only have one location");
+                }
             );
             DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
             Sequence<QueryType> sequence = dataServerClient.run(preparedQuery, responseContext, queryResultType, closer)

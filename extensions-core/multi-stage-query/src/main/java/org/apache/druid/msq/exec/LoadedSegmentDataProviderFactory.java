@@ -79,6 +79,7 @@ public class LoadedSegmentDataProviderFactory implements Closeable
   public void close()
   {
     // Wait for all query cancellations to be complete.
+    log.info("Waiting for any data server queries to be canceled.");
     queryCancellationExecutor.shutdown();
     try {
       if (!queryCancellationExecutor.awaitTermination(1, TimeUnit.MINUTES)) {
