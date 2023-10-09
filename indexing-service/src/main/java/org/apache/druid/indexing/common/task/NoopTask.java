@@ -41,6 +41,8 @@ import java.util.UUID;
  */
 public class NoopTask extends AbstractTask
 {
+  public static final String TYPE = "noop";
+
   private static final int DEFAULT_RUN_TIME = 2500;
 
   @JsonIgnore
@@ -70,7 +72,7 @@ public class NoopTask extends AbstractTask
   @Override
   public String getType()
   {
-    return "noop";
+    return TYPE;
   }
 
   @Nonnull

@@ -53,8 +53,10 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
 
   private static final String ID = "id";
   private static final String DATA_SOURCE = "dataSource";
-  @Mock KubernetesTaskRunner kubernetesTaskRunner;
-  @Mock HttpRemoteTaskRunner workerTaskRunner;
+  @Mock
+  KubernetesTaskRunner kubernetesTaskRunner;
+  @Mock
+  HttpRemoteTaskRunner workerTaskRunner;
 
   KubernetesAndWorkerTaskRunner runner;
 
@@ -67,7 +69,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, null)
+        new KubernetesAndWorkerTaskRunnerConfig(null, null, null)
     );
   }
 
@@ -77,7 +79,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, false)
+        new KubernetesAndWorkerTaskRunnerConfig(null, false, null)
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(kubernetesTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -93,10 +95,42 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, true)
+        new KubernetesAndWorkerTaskRunnerConfig(null, true, null)
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
+
+    replayAll();
+    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
+    verifyAll();
+  }
+
+  @Test
+  public void test_runOnWorkerWithOverrideForAnotherTaskType() throws ExecutionException, InterruptedException
+  {
+    KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
+        kubernetesTaskRunner,
+        workerTaskRunner,
+        new KubernetesAndWorkerTaskRunnerConfig(null, true, ImmutableMap.of("index_kafka", false))
+    );
+    TaskStatus taskStatus = TaskStatus.success(ID);
+    EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
+
+    replayAll();
+    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
+    verifyAll();
+  }
+
+  @Test
+  public void test_runOnWorkerWithOverrideToKubernetes() throws ExecutionException, InterruptedException
+  {
+    KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
+        kubernetesTaskRunner,
+        workerTaskRunner,
+        new KubernetesAndWorkerTaskRunnerConfig(null, true, ImmutableMap.of(NoopTask.TYPE, false))
+    );
+    TaskStatus taskStatus = TaskStatus.success(ID);
+    EasyMock.expect(kubernetesTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
 
     replayAll();
     Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());

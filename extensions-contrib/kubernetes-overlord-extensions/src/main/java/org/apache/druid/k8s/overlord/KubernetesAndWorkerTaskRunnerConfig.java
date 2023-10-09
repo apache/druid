@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.ObjectUtils;
@@ -27,6 +28,8 @@ import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
+import java.util.Map;
 
 public class KubernetesAndWorkerTaskRunnerConfig
 {
@@ -45,10 +48,15 @@ public class KubernetesAndWorkerTaskRunnerConfig
   @NotNull
   private final boolean sendAllTasksToWorkerTaskRunner;
 
+  @JsonProperty
+  @NotNull
+  private final Map<String, Boolean> taskTypeToWorkerTaskRunnerOverrides;
+
   @JsonCreator
   public KubernetesAndWorkerTaskRunnerConfig(
       @JsonProperty("workerTaskRunnerType") String workerTaskRunnerType,
-      @JsonProperty("sendAllTasksToWorkerTaskRunner") Boolean sendAllTasksToWorkerTaskRunner
+      @JsonProperty("sendAllTasksToWorkerTaskRunner") Boolean sendAllTasksToWorkerTaskRunner,
+      @JsonProperty("taskTypeToWorkerTaskRunnerOverrides") Map<String, Boolean> taskTypeToWorkerTaskRunnerOverrides
   )
   {
     this.workerTaskRunnerType = ObjectUtils.defaultIfNull(
@@ -66,16 +74,34 @@ public class KubernetesAndWorkerTaskRunnerConfig
         sendAllTasksToWorkerTaskRunner,
         false
     );
+    this.taskTypeToWorkerTaskRunnerOverrides = ObjectUtils.defaultIfNull(
+        taskTypeToWorkerTaskRunnerOverrides,
+        Collections.emptyMap()
+    );
   }
 
+  @JsonProperty
   public String getWorkerTaskRunnerType()
   {
     return workerTaskRunnerType;
   }
 
+  @JsonProperty
   public boolean isSendAllTasksToWorkerTaskRunner()
   {
     return sendAllTasksToWorkerTaskRunner;
+  }
+
+  @JsonProperty
+  public Map<String, Boolean> getTaskTypeToWorkerTaskRunnerOverrides()
+  {
+    return taskTypeToWorkerTaskRunnerOverrides;
+  }
+
+  @JsonIgnore
+  public boolean isSendTaskTypeToWorkerTaskRunner(String taskType)
+  {
+    return taskTypeToWorkerTaskRunnerOverrides.getOrDefault(taskType, sendAllTasksToWorkerTaskRunner);
   }
 
 }

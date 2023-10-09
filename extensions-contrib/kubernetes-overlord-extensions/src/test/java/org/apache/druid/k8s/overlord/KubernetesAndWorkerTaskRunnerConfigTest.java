@@ -47,9 +47,10 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
   @Test
   public void test_withDefaults()
   {
-    KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null);
+    KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null, null);
 
     Assert.assertEquals(HttpRemoteTaskRunnerFactory.TYPE_NAME, config.getWorkerTaskRunnerType());
     Assert.assertFalse(config.isSendAllTasksToWorkerTaskRunner());
+    Assert.assertTrue(config.getTaskTypeToWorkerTaskRunnerOverrides().isEmpty());
   }
 }

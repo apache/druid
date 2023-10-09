@@ -101,7 +101,7 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    if (kubernetesAndWorkerTaskRunnerConfig.isSendAllTasksToWorkerTaskRunner()) {
+    if (kubernetesAndWorkerTaskRunnerConfig.isSendTaskTypeToWorkerTaskRunner(task.getType())) {
       return workerTaskRunner.run(task);
     } else {
       return kubernetesTaskRunner.run(task);
