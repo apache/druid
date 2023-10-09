@@ -77,6 +77,7 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -124,6 +125,7 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -1059,16 +1061,40 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  enum ResultMatchMode {
+    EQUALS,
+    RELAX_NULLS;
+
+    void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell) {
+      if (this == RELAX_NULLS && expectedCell == null) {
+        if (resultCell == null) {
+          return;
+        }
+        expectedCell = NullHandling.defaultValueForType(type);
+      }
+      assertEquals(
+          String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, column),
+          expectedCell,
+          resultCell);
+    }
+  }
+
   /**
    * Validates the results with slight loosening in case {@link NullHandling} is not sql compatible.
    *
-   * In case {@link NullHandling#replaceWithDefault()} is true, if the expected result is <code>null</code> accepts
+   * In case {@link NullHandling#replaceWithDefault()} is true, if the expected result is <code>null</code> it accepts
    * both <code>null</code> and the default value for that column as actual result.
    */
-  public void assertResultsValidRegardlessNullhandling(List<Object[]> expected, QueryResults queryResults)
+  public void assertResultsValid(ResultMatchMode matchMode, List<Object[]> expected, QueryResults queryResults)
   {
     List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());
+
+    List<ValueType> types = new ArrayList<>();
+    for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
+      types.add(queryResults.signature.getColumnType(i).get().getType());
+    }
+
     int numRows = results.size();
     for (int row = 0; row < numRows; row++) {
       Object[] expectedRow = expected.get(row);
@@ -1079,16 +1105,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         Object resultCell = resultRow[i];
         Object expectedCell = expectedRow[i];
 
-        if (expectedCell == null) {
-          if (resultCell == null) {
-            continue;
-          }
-          expectedCell = NullHandling.defaultValueForType(queryResults.signature.getColumnType(i).get().getType());
-        }
-        assertEquals(
-            String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, i),
+        ResultMatchMode cellValidator = matchMode;
+        cellValidator.validate(
+            row,
+            i,
+            types.get(i),
             expectedCell,
-            resultCell);
+            resultCell
+            );
       }
     }
   }
@@ -1368,7 +1392,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       // do nothing
     }
 
-    void verify(String sql, List<Object[]> results);
+    void verify(String sql, QueryResults queryResults);
   }
 
   private ResultsVerifier defaultResultsVerifier(
@@ -1400,17 +1424,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
 
     @Override
-    public void verify(String sql, List<Object[]> results)
+    public void verify(String sql, QueryResults queryResults)
     {
       try {
-        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-        assertResultsEquals(sql, expectedResults, results);
+        assertResultsValid(ResultMatchMode.EQUALS, expectedResults, queryResults);
       }
       catch (AssertionError e) {
-        displayResults(results);
+        System.out.println("sql: "+sql);
+        displayResults(queryResults.results);
         throw e;
       }
     }
+
   }
 
   /**

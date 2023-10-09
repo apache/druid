@@ -354,7 +354,7 @@ public class QueryTestRunner
       if (verifyRowSignature) {
         builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
       }
-      builder.expectedResultsVerifier.verify(builder.sql, results);
+      builder.expectedResultsVerifier.verify(builder.sql, queryResults);
     }
   }
 

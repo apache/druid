@@ -173,7 +173,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           }
         }
       }
-      assertResultsValidRegardlessNullhandling(input.expectedResults, results);
+      assertResultsValid(ResultMatchMode.RELAX_NULLS, input.expectedResults, results);
     }
 
     private void maybeDumpActualResults(List<Object[]> results) throws Exception

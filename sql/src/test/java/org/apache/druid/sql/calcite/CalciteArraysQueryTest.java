@@ -1840,7 +1840,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                   .build()
         ),
-        (sql, results) -> {
+        (sql, queryResults) -> {
           // ordering is not stable in array_agg and array_concat_agg
           List<Object[]> expected = ImmutableList.of(
               useDefault ?
@@ -1877,7 +1877,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   )
               }
           );
-          assertResultsDeepEquals(sql, expected, results);
+          assertResultsDeepEquals(sql, expected, queryResults.results);
         }
     );
   }
