@@ -49,7 +49,7 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
     final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value);
 
     if (matchVal == null) {
-      return VectorValueMatcher.allFalseMatcher(selector);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
 
     return makeDoubleMatcher(matchVal);
@@ -61,7 +61,7 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
     if (castForComparison == null || castForComparison.isNumericNull()) {
-      return VectorValueMatcher.allFalseMatcher(selector);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
     return makeDoubleMatcher(castForComparison.asDouble());
   }

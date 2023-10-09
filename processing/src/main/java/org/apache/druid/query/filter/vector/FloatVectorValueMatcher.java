@@ -49,7 +49,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
 
     if (matchVal == null) {
-      return VectorValueMatcher.allFalseMatcher(selector);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
 
     final float matchValFloat = matchVal;
@@ -63,7 +63,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
     if (castForComparison == null || castForComparison.isNumericNull()) {
-      return VectorValueMatcher.allFalseMatcher(selector);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
     return makeFloatMatcher((float) castForComparison.asDouble());
   }

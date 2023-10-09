@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class NullValueHandlingConfig
 {
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
+  public static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogic";
 
   //added to preserve backward compatibility
   //and not count nulls during cardinality aggrgation over strings
@@ -34,13 +35,16 @@ public class NullValueHandlingConfig
   @JsonProperty("useDefaultValueForNull")
   private final boolean useDefaultValuesForNull;
 
+  @JsonProperty("useThreeValueLogic")
+  private final boolean useThreeValueLogic;
+
   @JsonProperty("ignoreNullsForStringCardinality")
   private final boolean ignoreNullsForStringCardinality;
-
 
   @JsonCreator
   public NullValueHandlingConfig(
       @JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull,
+      @JsonProperty("useThreeValueLogic") Boolean useThreeValueLogic,
       @JsonProperty("ignoreNullsForStringCardinality") Boolean ignoreNullsForStringCardinality
   )
   {
@@ -48,6 +52,11 @@ public class NullValueHandlingConfig
       this.useDefaultValuesForNull = Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "false"));
     } else {
       this.useDefaultValuesForNull = useDefaultValuesForNull;
+    }
+    if (useThreeValueLogic == null) {
+      this.useThreeValueLogic = Boolean.valueOf(System.getProperty(THREE_VALUE_LOGIC_CONFIG_STRING, "true"));
+    } else {
+      this.useThreeValueLogic = useThreeValueLogic;
     }
     if (ignoreNullsForStringCardinality == null) {
       this.ignoreNullsForStringCardinality = Boolean.valueOf(System.getProperty(
@@ -71,5 +80,10 @@ public class NullValueHandlingConfig
   public boolean isUseDefaultValuesForNull()
   {
     return useDefaultValuesForNull;
+  }
+
+  public boolean isUseThreeValueLogic()
+  {
+    return useThreeValueLogic;
   }
 }

@@ -83,7 +83,7 @@ public interface VectorValueMatcher extends VectorSizeInspector
    * {@link ReadableVectorMatch} as selections, to participate in Druid 2-state logic system to SQL 3-state logic
    * system conversion.
    */
-  static VectorValueMatcher makeAllFalseMatcher(SingleValueDimensionVectorSelector selector)
+  static VectorValueMatcher allFalseSingleValueDimensionMatcher(SingleValueDimensionVectorSelector selector)
   {
     final IdLookup idLookup = selector.idLookup();
     final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -155,7 +155,7 @@ public interface VectorValueMatcher extends VectorSizeInspector
    * any null elements to the {@link ReadableVectorMatch} as selections, to participate in Druid 2-state logic system
    * to SQL 3-state logic system conversion (as best as a multi-value dimension can).
    */
-  static VectorValueMatcher makeAllFalseMatcher(MultiValueDimensionVectorSelector selector)
+  static VectorValueMatcher allFalseMultiValueDimensionMatcher(MultiValueDimensionVectorSelector selector)
   {
     final IdLookup idLookup = selector.idLookup();
     final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -240,7 +240,7 @@ public interface VectorValueMatcher extends VectorSizeInspector
    * the rows indicated as null values of {@link VectorValueSelector#getNullVector()} to the {@link ReadableVectorMatch}
    * as selections, to participate in Druid 2-state logic system to SQL 3-state logic system conversion.
    */
-  static BaseVectorValueMatcher allFalseMatcher(VectorValueSelector selector)
+  static BaseVectorValueMatcher allFalseValueMatcher(VectorValueSelector selector)
   {
     return new BaseVectorValueMatcher(selector)
     {
@@ -263,7 +263,7 @@ public interface VectorValueMatcher extends VectorSizeInspector
    * all rows of {@link VectorObjectSelector#getObjectVector()} which are null to the {@link ReadableVectorMatch} as
    * selections, to participate in Druid 2-state logic system to SQL 3-state logic system conversion.
    */
-  static VectorValueMatcher allFalseMatcher(VectorObjectSelector selector)
+  static VectorValueMatcher allFalseObjectMatcher(VectorObjectSelector selector)
   {
     return new BaseVectorValueMatcher(selector)
     {

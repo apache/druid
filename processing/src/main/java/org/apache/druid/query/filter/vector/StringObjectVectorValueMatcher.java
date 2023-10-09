@@ -75,7 +75,7 @@ public class StringObjectVectorValueMatcher implements VectorValueMatcherFactory
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
     if (castForComparison == null || castForComparison.asString() == null) {
-      return VectorValueMatcher.allFalseMatcher(selector);
+      return VectorValueMatcher.allFalseObjectMatcher(selector);
     }
     return makeMatcher(castForComparison.asString());
   }

@@ -60,13 +60,13 @@ public class NullHandling
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new NullValueHandlingConfig(null, null);
+    INSTANCE = new NullValueHandlingConfig(null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean ignoreNullForString)
   {
-    INSTANCE = new NullValueHandlingConfig(useDefForNull, ignoreNullForString);
+    INSTANCE = new NullValueHandlingConfig(useDefForNull, null, ignoreNullForString);
   }
 
   /**
@@ -96,6 +96,11 @@ public class NullHandling
   public static boolean sqlCompatible()
   {
     return !replaceWithDefault();
+  }
+
+  public static boolean useThreeValueLogic()
+  {
+    return INSTANCE.isUseThreeValueLogic();
   }
 
   @Nullable

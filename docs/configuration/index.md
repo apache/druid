@@ -800,6 +800,7 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 |Property|Description|Default|
 |---|---|---|
 |`druid.generic.useDefaultValueForNull`|Set to `false` to store and query data in SQL compatible mode. When set to `true` (legacy mode), `null` values will be stored as `''` for string columns and `0` for numeric columns.|`false`|
+|`druid.generic.useThreeValueLogic`|Set to `true` to use SQL compatible three-value logic when processing Druid filters when `druid.generic.useDefaultValueForNull` is `false` and `druid.expressions.useStrictBooleans` is `true`. When set to `false` Druid uses 2 value logic for filter processing, even when `druid.generic.useDefaultValueForNull=false` and `druid.expressions.useStrictBooleans` is true.|`true`|
 |`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. |`false`|
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#handling-null-values) for more details.
 

@@ -56,7 +56,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
       if (id < 0) {
         // Value doesn't exist in this column.
-        return VectorValueMatcher.makeAllFalseMatcher(selector);
+        return VectorValueMatcher.allFalseMultiValueDimensionMatcher(selector);
       }
 
       // Check for "id".
@@ -108,7 +108,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
     if (castForComparison == null) {
-      return VectorValueMatcher.makeAllFalseMatcher(selector);
+      return VectorValueMatcher.allFalseMultiValueDimensionMatcher(selector);
     }
     return makeMatcher(castForComparison.asString());
   }

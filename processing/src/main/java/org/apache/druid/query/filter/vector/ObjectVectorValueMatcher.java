@@ -54,7 +54,7 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
     if (value == null) {
       return ConstantMatcherType.ALL_TRUE.asVectorMatcher(selector);
     }
-    return VectorValueMatcher.allFalseMatcher(selector);
+    return VectorValueMatcher.allFalseObjectMatcher(selector);
   }
 
   @Override
@@ -63,7 +63,7 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
     if (matchValue == null) {
       return ConstantMatcherType.ALL_TRUE.asVectorMatcher(selector);
     }
-    return VectorValueMatcher.allFalseMatcher(selector);
+    return VectorValueMatcher.allFalseObjectMatcher(selector);
   }
 
   @Override

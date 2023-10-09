@@ -59,6 +59,13 @@ import java.util.Set;
  */
 public class NotFilter implements Filter
 {
+  private static boolean useThreeValueLogic()
+  {
+    return NullHandling.sqlCompatible() &&
+           NullHandling.useThreeValueLogic() &&
+           ExpressionProcessing.useStrictBooleans();
+  }
+
   private final Filter baseFilter;
 
   public NotFilter(Filter baseFilter)
@@ -74,7 +81,7 @@ public class NotFilter implements Filter
     if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
       return new BitmapColumnIndex()
       {
-        private final boolean triState = NullHandling.sqlCompatible() && ExpressionProcessing.useStrictBooleans();
+        private final boolean useThreeValueLogic = useThreeValueLogic();
         @Override
         public ColumnIndexCapabilities getIndexCapabilities()
         {
@@ -91,7 +98,7 @@ public class NotFilter implements Filter
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           return bitmapResultFactory.complement(
-              baseIndex.computeBitmapResult(bitmapResultFactory, !includeUnknown && triState),
+              baseIndex.computeBitmapResult(bitmapResultFactory, !includeUnknown && useThreeValueLogic),
               selector.getNumRows()
           );
         }
@@ -107,11 +114,11 @@ public class NotFilter implements Filter
 
     return new ValueMatcher()
     {
-      private final boolean triState = NullHandling.sqlCompatible() && ExpressionProcessing.useStrictBooleans();
+      private final boolean useThreeValueLogic = useThreeValueLogic();
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        return !baseMatcher.matches(!includeUnknown && triState);
+        return !baseMatcher.matches(!includeUnknown && useThreeValueLogic);
       }
 
       @Override
@@ -130,12 +137,12 @@ public class NotFilter implements Filter
     return new BaseVectorValueMatcher(baseMatcher)
     {
       private final VectorMatch scratch = VectorMatch.wrap(new int[factory.getMaxVectorSize()]);
-      private final boolean triState = NullHandling.sqlCompatible() && ExpressionProcessing.useStrictBooleans();
+      private final boolean useThreeValueLogic = useThreeValueLogic();
 
       @Override
       public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
-        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, !includeUnknown && triState);
+        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, !includeUnknown && useThreeValueLogic);
 
         scratch.copyFrom(mask);
         scratch.removeAll(baseMatch);

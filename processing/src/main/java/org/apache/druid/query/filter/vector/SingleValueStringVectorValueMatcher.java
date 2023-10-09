@@ -66,7 +66,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
       if (id < 0) {
         // Value doesn't exist in this column.
-        return VectorValueMatcher.makeAllFalseMatcher(selector);
+        return VectorValueMatcher.allFalseSingleValueDimensionMatcher(selector);
       }
       final boolean hasNull = NullHandling.isNullOrEquivalent(selector.lookupName(0));
 
@@ -106,7 +106,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
     if (castForComparison == null || castForComparison.asString() == null) {
-      return VectorValueMatcher.makeAllFalseMatcher(selector);
+      return VectorValueMatcher.allFalseSingleValueDimensionMatcher(selector);
     }
     return makeMatcher(castForComparison.asString());
   }

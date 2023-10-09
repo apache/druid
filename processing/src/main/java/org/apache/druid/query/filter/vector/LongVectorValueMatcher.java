@@ -48,7 +48,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
     final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
 
     if (matchVal == null) {
-      return VectorValueMatcher.allFalseMatcher(selector);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
 
     final long matchValLong = matchVal;
@@ -62,7 +62,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
     if (castForComparison == null || castForComparison.isNumericNull()) {
-      return VectorValueMatcher.allFalseMatcher(selector);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
     return makeLongMatcher(castForComparison.asLong());
   }
