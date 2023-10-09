@@ -65,20 +65,17 @@ public class KillTaskReport implements TaskReport
   public static class Stats
   {
     private final int numSegmentsKilled;
-    private final int numSegmentsKilledInDeepStorage;
     private final int numBatchesProcessed;
     private final Integer numSegmentsMarkedAsUnused;
 
     @JsonCreator
     public Stats(
         @JsonProperty("numSegmentsKilled") int numSegmentsKilled,
-        @JsonProperty("numSegmentsKilledInDeepStorage") int numSegmentsKilledInDeepStorage,
         @JsonProperty("numBatchesProcessed") int numBatchesProcessed,
         @JsonProperty("numSegmentsMarkedAsUnused") @Nullable Integer numSegmentsMarkedAsUnused
     )
     {
       this.numSegmentsKilled = numSegmentsKilled;
-      this.numSegmentsKilledInDeepStorage = numSegmentsKilledInDeepStorage;
       this.numBatchesProcessed = numBatchesProcessed;
       this.numSegmentsMarkedAsUnused = numSegmentsMarkedAsUnused;
     }
@@ -87,12 +84,6 @@ public class KillTaskReport implements TaskReport
     public int getNumSegmentsKilled()
     {
       return numSegmentsKilled;
-    }
-
-    @JsonProperty
-    public int getNumSegmentsKilledInDeepStorage()
-    {
-      return numSegmentsKilledInDeepStorage;
     }
 
     @JsonProperty
@@ -119,7 +110,6 @@ public class KillTaskReport implements TaskReport
       }
       Stats that = (Stats) o;
       return numSegmentsKilled == that.numSegmentsKilled
-             && numSegmentsKilledInDeepStorage == that.numSegmentsKilledInDeepStorage
              && numBatchesProcessed == that.numBatchesProcessed
              && Objects.equals(this.numSegmentsMarkedAsUnused, that.numSegmentsMarkedAsUnused);
     }
@@ -135,7 +125,6 @@ public class KillTaskReport implements TaskReport
     {
       return "Stats{" +
              "numSegmentsKilled=" + numSegmentsKilled +
-             ", numSegmentsKilledInDeepStorage=" + numSegmentsKilledInDeepStorage +
              ", numBatchesProcessed=" + numBatchesProcessed +
              ", numSegmentsMarkedAsUnused=" + numSegmentsMarkedAsUnused +
              '}';

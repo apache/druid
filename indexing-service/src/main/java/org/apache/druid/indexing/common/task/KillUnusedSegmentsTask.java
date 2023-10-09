@@ -175,7 +175,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
     // Track stats for reporting
     int numSegmentsKilled = 0;
-    int numSegmentsKilledInDeepStorage = 0;
     int numBatchesProcessed = 0;
     final int numSegmentsMarkedAsUnused;
     if (markAsUnused) {
@@ -252,7 +251,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
       numBatchesProcessed++;
       numSegmentsKilled += unusedSegments.size();
-      numSegmentsKilledInDeepStorage += segmentsToBeKilled.size();
 
       LOG.info("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
 
@@ -268,7 +266,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
     final KillTaskReport.Stats stats = new KillTaskReport.Stats(
         numSegmentsKilled,
-        numSegmentsKilledInDeepStorage,
         numBatchesProcessed,
         numSegmentsMarkedAsUnused
     );
