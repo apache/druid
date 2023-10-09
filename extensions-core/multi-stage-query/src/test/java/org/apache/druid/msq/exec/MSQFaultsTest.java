@@ -349,9 +349,29 @@ public class MSQFaultsTest extends MSQTestBase
                 DruidException.Persona.ADMIN,
                 DruidException.Category.INVALID_INPUT,
                 "general"
-            ).expectMessageIs("Query planning failed for unknown reason, our best guess is this "
-                              + "[SQL requires union between two tables and column names queried for each table are different "
-                              + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1].]"))
+            ).expectMessageContains("SQL requires union between two tables and column names queried for each table are different "
+                              + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."))
+        .verifyPlanningErrors();
+  }
+
+  @Test
+  public void testTopLevelUnionAllWithJoins()
+  {
+    // This test fails becaues it is a top level UNION ALL which cannot be planned using MSQ. It will be supported once
+    // we support arbitrary types and column names for UNION ALL
+    testSelectQuery()
+        .setSql(
+            "(SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k) "
+            + "UNION ALL "
+            + "(SELECT SUM(cnt) FROM foo)"
+        )
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.ADMIN,
+                DruidException.Category.INVALID_INPUT,
+                "general"
+            ).expectMessageContains(
+                "SQL requires union between inputs that are not simple table scans and involve a filter or aliasing"))
         .verifyPlanningErrors();
   }
 }
