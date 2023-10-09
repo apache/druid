@@ -18,6 +18,13 @@
   ~ under the License.
   -->
 
+<!--Generate build output (/docs/latest) that you can deploy locally with something like http-server
+ to look at changes. 
+The actual output used for deploying a staging or prod build is done in
+`druid-website-src`, which is also where version 
+interpolation is done.
+  -->
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
@@ -32,13 +39,6 @@
   </parent>
 
   <properties>
-    <!-- src repo of druid website, the artifacts of this build will be placed here -->
-    <website.src>../../druid-website-src</website.src>
-    <!--
-    'version' of website to build, by default it is the Druid version we are building, but can be set explicitly
-    to stage documentation for an unreleased version
-    -->
-    <website.version>${project.parent.version}</website.version>
     <node.version>v16.17.0</node.version>
     <npm.version>8.15.0</npm.version>
   </properties>
@@ -89,37 +89,19 @@
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>build-docs</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <environmentVariables><PATH>${project.build.directory}/node:${env.PATH}</PATH></environmentVariables>
-              <executable>script/build-to-docs</executable>
-              <arguments>
-                <argument>${website.version}</argument>
-                <argument>${website.version}</argument>
-                <argument>${website.src}</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>build-latest-docs</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <environmentVariables><PATH>${project.build.directory}/node:${env.PATH}</PATH></environmentVariables>
-              <executable>script/build-to-docs</executable>
-              <arguments>
-                <argument>latest</argument>
-                <argument>${website.version}</argument>
-                <argument>${website.src}</argument>
-              </arguments>
-            </configuration>
-          </execution>
+                    <id>npm-run-build</id>
+                    <phase>compile</phase>
+                    <goals>
+                        <goal>exec</goal>
+                    </goals>
+                    <configuration>
+                        <executable>npm</executable>
+                        <arguments>
+                            <argument>run</argument>
+                            <argument>build</argument>
+                        </arguments>
+                    </configuration>
+                </execution>
         </executions>
       </plugin>
     </plugins>
