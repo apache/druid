@@ -227,14 +227,14 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
                                                                  .collect(Collectors.toSet());
       final Set<Map<String, Object>> usedSegmentLoadSpecs = new HashSet<>();
       if (!unusedSegmentIntervals.isEmpty()) {
-        // Fetch the load specs of all segments overlapping with the given interval
-        usedSegmentLoadSpecs.addAll(toolbox.getTaskActionClient()
-                                           .submit(new RetrieveUsedSegmentsAction(
-                                               getDataSource(),
-                                               null,
-                                               unusedSegmentIntervals,
-                                               Segments.INCLUDING_OVERSHADOWED
-                                           ))
+        RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = new RetrieveUsedSegmentsAction(
+            getDataSource(),
+            null,
+            unusedSegmentIntervals,
+            Segments.INCLUDING_OVERSHADOWED
+        );
+        // Fetch the load specs of all segments overlapping with the unused segment intervals
+        usedSegmentLoadSpecs.addAll(toolbox.getTaskActionClient().submit(retrieveUsedSegmentsAction)
                                            .stream()
                                            .map(DataSegment::getLoadSpec)
                                            .collect(Collectors.toSet())
@@ -264,11 +264,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
         taskId, getDataSource(), getInterval(), numSegmentsKilled, numBatchesProcessed
     );
 
-    final KillTaskReport.Stats stats = new KillTaskReport.Stats(
-        numSegmentsKilled,
-        numBatchesProcessed,
-        numSegmentsMarkedAsUnused
-    );
+    final KillTaskReport.Stats stats =
+        new KillTaskReport.Stats(numSegmentsKilled, numBatchesProcessed, numSegmentsMarkedAsUnused);
     toolbox.getTaskReportFileWriter().write(
         taskId,
         TaskReport.buildTaskReports(new KillTaskReport(taskId, stats))
