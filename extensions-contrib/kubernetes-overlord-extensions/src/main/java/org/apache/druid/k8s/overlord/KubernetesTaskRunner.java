@@ -176,7 +176,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @VisibleForTesting
   protected TaskStatus doTask(Task task, boolean run)
   {
-    TaskStatus taskStatus = TaskStatus.failure(task.getId(), "Task Execution not started");
+    TaskStatus taskStatus = TaskStatus.failure(task.getId(), "Task execution never started");
     try {
       KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
           task,
@@ -210,7 +210,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
-      taskStatus = TaskStatus.failure(task.getId(), "Execution while starting task execution");
+      taskStatus = TaskStatus.failure(task.getId(), "Could not start task execution");
       throw new RuntimeException(e);
     }
     finally {
@@ -250,12 +250,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     KubernetesWorkItem workItem = tasks.get(task.getId());
     if (workItem != null && !workItem.getResult().isDone()) {
-      log.info("Manually calling update status for [%s]", task.getId());
       workItem.setResult(status);
     }
 
-    // Notify all listeners by default
-    log.info("Notifying listeners [%s]", task.getId());
+    // Notify listeners even if the result is set to handle the shutdown case.
     TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 
@@ -407,7 +405,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     for (Pair<TaskRunnerListener, Executor> pair : listeners) {
       if (pair.lhs != null && pair.lhs.getListenerId().equals(listenerId)) {
         listeners.remove(pair);
-        log.info("Unregistered listener [%s]", listenerId);
+        log.debug("Unregistered listener [%s]", listenerId);
         return;
       }
     }
@@ -423,7 +421,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
-    log.info("Registered listener [%s]", listener.getListenerId());
+    log.debug("Registered listener [%s]", listener.getListenerId());
     listeners.add(listenerPair);
 
     for (Map.Entry<String, KubernetesWorkItem> entry : tasks.entrySet()) {

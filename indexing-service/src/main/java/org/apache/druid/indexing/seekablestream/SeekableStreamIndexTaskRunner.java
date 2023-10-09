@@ -358,7 +358,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     startTime = DateTimes.nowUtc();
     status = Status.STARTING;
-    log.info("Starting [%s] [%s]", task.getId(), status);
 
     setToolbox(toolbox);
 
@@ -385,7 +384,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     initializeSequences();
 
-    log.info("Found chat handler of class[%s] [%s]", toolbox.getChatHandlerProvider().getClass().getName(), task.getId());
+    log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
     toolbox.getChatHandlerProvider().register(task.getId(), this, false);
 
     runThread = Thread.currentThread();
