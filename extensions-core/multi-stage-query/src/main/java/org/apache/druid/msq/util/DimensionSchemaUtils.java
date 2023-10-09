@@ -90,38 +90,38 @@ public class DimensionSchemaUtils
         case DOUBLE:
           return new DoubleDimensionSchema(column);
         case ARRAY:
-          switch (type.getElementType().getType()) {
-            case STRING:
-              if (arrayIngestMode == ArrayIngestMode.NONE) {
-                throw InvalidInput.exception(
-                    "String arrays can not be ingested when '%s' is set to '%s'. Either set '%s' in query context "
-                    + "to 'array' to ingest the string array as an array, or set it to 'mvd' to ingest the string array "
-                    + "as MVD (which is legacy behaviour and not recommmended)",
-                    MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-                    StringUtils.toLowerCase(arrayIngestMode.name()),
-                    MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
-                );
-              } else if (arrayIngestMode == ArrayIngestMode.MVD) {
-                return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
-              } else {
-                // arrayIngestMode == ArrayIngestMode.ARRAY would be true
-                return new AutoTypeColumnSchema(column);
-              }
-            case LONG:
-            case FLOAT:
-            case DOUBLE:
-              if (arrayIngestMode == ArrayIngestMode.ARRAY) {
-                return new AutoTypeColumnSchema(column);
-              } else {
-                throw InvalidInput.exception(
-                    "Numeric arrays can only be ingested when '%s' is set to 'array' in the MSQ query's context. "
-                    + "Current value of the parameter [%s]",
-                    MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-                    StringUtils.toLowerCase(arrayIngestMode.name())
-                );
-              }
-            default:
-              throw new ISE("Cannot create dimension for type [%s]", type.toString());
+          ValueType elementType = type.getElementType().getType();
+          if (elementType == ValueType.STRING) {
+            if (arrayIngestMode == ArrayIngestMode.NONE) {
+              throw InvalidInput.exception(
+                  "String arrays can not be ingested when '%s' is set to '%s'. Either set '%s' in query context "
+                  + "to 'array' to ingest the string array as an array, or set it to 'mvd' to ingest the string array "
+                  + "as MVD (which is legacy behaviour and not recommmended)",
+                  MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
+                  StringUtils.toLowerCase(arrayIngestMode.name()),
+                  MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
+              );
+            } else if (arrayIngestMode == ArrayIngestMode.MVD) {
+              return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
+            } else {
+              // arrayIngestMode == ArrayIngestMode.ARRAY would be true
+              return new AutoTypeColumnSchema(column);
+            }
+          } else if (elementType == ValueType.LONG
+                     || elementType == ValueType.FLOAT
+                     || elementType == ValueType.DOUBLE) {
+            if (arrayIngestMode == ArrayIngestMode.ARRAY) {
+              return new AutoTypeColumnSchema(column);
+            } else {
+              throw InvalidInput.exception(
+                  "Numeric arrays can only be ingested when '%s' is set to 'array' in the MSQ query's context. "
+                  + "Current value of the parameter [%s]",
+                  MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
+                  StringUtils.toLowerCase(arrayIngestMode.name())
+              );
+            }
+          } else {
+            throw new ISE("Cannot create dimension for type [%s]", type.toString());
           }
         default:
           final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
