@@ -103,7 +103,8 @@ public class DimensionSchemaUtils
                 );
               } else if (arrayIngestMode == ArrayIngestMode.MVD) {
                 return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
-              } else if (arrayIngestMode == ArrayIngestMode.ARRAY) {
+              } else {
+                // arrayIngestMode == ArrayIngestMode.ARRAY would be true
                 return new AutoTypeColumnSchema(column);
               }
             case LONG:
