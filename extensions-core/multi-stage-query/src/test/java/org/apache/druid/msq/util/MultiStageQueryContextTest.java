@@ -218,7 +218,7 @@ public class MultiStageQueryContextTest
   @Test
   public void arrayIngestMode_unset_returnsDefaultValue()
   {
-    Assert.assertEquals(ArrayIngestMode.NONE, MultiStageQueryContext.getArrayIngestMode(QueryContext.empty()));
+    Assert.assertEquals(ArrayIngestMode.MVD, MultiStageQueryContext.getArrayIngestMode(QueryContext.empty()));
   }
 
   @Test

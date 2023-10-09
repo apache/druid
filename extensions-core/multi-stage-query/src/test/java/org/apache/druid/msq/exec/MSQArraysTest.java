@@ -91,11 +91,15 @@ public class MSQArraysTest extends MSQTestBase
    * string arrays
    */
   @Test
-  public void testInsertStringArrayWithDefaultContext()
+  public void testInsertStringArrayWithArrayIngestModeNone()
   {
+
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "none");
+
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
-                     .setQueryContext(context)
+                     .setQueryContext(adjustedContext)
                      .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
                          CoreMatchers.instanceOf(ISE.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
@@ -106,25 +110,22 @@ public class MSQArraysTest extends MSQTestBase
 
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to mvd and the only array type to be
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to mvd (default) and the only array type to be
    * ingested is string array
    */
   @Test
-  public void testInsertOnFoo1WithMultiValueToArrayGroupBy()
+  public void testInsertOnFoo1WithMultiValueToArrayGroupByWithDefaultContext()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim3", ColumnType.STRING)
                                             .build();
 
-    final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
-
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
-                     .setQueryContext(adjustedContext)
+                     .setQueryContext(context)
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(expectedMultiValueFooRowsToArray())
                      .verifyResults();
@@ -467,6 +468,8 @@ public class MSQArraysTest extends MSQTestBase
     testSelectOnArrays("array");
   }
 
+  // Tests the behaviour of the select with the given arrayIngestMode. The expectation should be the same, since the
+  // arrayIngestMode should only determine how the array gets ingested at the end.
   public void testSelectOnArrays(String arrayIngestMode) throws IOException
   {
     final List<Object[]> expectedRows = Arrays.asList(
