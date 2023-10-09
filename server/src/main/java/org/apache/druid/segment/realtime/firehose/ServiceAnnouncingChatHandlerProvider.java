@@ -66,7 +66,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
   @Override
   public void register(final String service, ChatHandler handler, boolean announce)
   {
-    log.debug("Registering Eventhandler[%s]", service);
+    log.info("Registering Eventhandler[%s]", service);
 
     if (handlers.putIfAbsent(service, handler) != null) {
       throw new ISE("handler already registered for service[%s]", service);
@@ -89,7 +89,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
   @Override
   public void unregister(final String service)
   {
-    log.debug("Unregistering chat handler[%s]", service);
+    log.info("Unregistering chat handler[%s]", service);
 
     final ChatHandler handler = handlers.get(service);
     if (handler == null) {

@@ -2113,6 +2113,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (int i = 0; i < results.size(); i++) {
       String taskId = futureTaskIds.get(i);
       if (results.get(i).isError() || results.get(i).valueOrThrow() == null) {
+        try {
+          log.error("Task [%s] failed to return status, killing task [%s]", taskId, results.get(i).valueOrThrow());
+        }
+        catch (Exception e) {
+          log.error("Task [%s] failed to return status, killing task [%s]", taskId, e);
+        }
         killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
       } else if (Boolean.valueOf(false).equals(results.get(i).valueOrThrow())) {
         // "return false" above means that we want to stop the task.
@@ -2150,6 +2156,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return FutureUtils.transformAsync(
         taskClient.getStatusAsync(taskId),
         status -> {
+          log.info("Got status for [%s]", taskId);
           if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
             return FutureUtils.transform(
                 taskClient.getEndOffsetsAsync(taskId),

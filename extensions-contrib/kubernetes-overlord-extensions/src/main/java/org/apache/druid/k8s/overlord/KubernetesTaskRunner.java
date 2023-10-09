@@ -146,16 +146,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public ListenableFuture<TaskStatus> run(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))))
-                  .getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> {
+        exec.submit(() -> runTask(task));
+        return new KubernetesWorkItem(task);
+      }).getResult();
     }
   }
 
   protected ListenableFuture<TaskStatus> joinAsync(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))))
-                  .getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> {
+        exec.submit(() -> joinTask(task));
+        return new KubernetesWorkItem(task);
+      }).getResult();
     }
   }
 
@@ -172,10 +176,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @VisibleForTesting
   protected TaskStatus doTask(Task task, boolean run)
   {
+    TaskStatus taskStatus = TaskStatus.failure(task.getId(), "Task Execution not started");
     try {
       KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
           task,
-          this::emitTaskStateMetrics
+          this::emitTaskStateMetrics,
+          listeners
       );
 
       synchronized (tasks) {
@@ -188,7 +194,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         workItem.setKubernetesPeonLifecycle(peonLifecycle);
       }
 
-      TaskStatus taskStatus;
       if (run) {
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
@@ -201,14 +206,15 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
             config.getTaskTimeout().toStandardDuration().getMillis()
         );
       }
-
-      updateStatus(task, taskStatus);
-
       return taskStatus;
     }
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
+      taskStatus = TaskStatus.failure(task.getId(), "Execution while starting task execution");
       throw new RuntimeException(e);
+    }
+    finally {
+      updateStatus(task, taskStatus);
     }
   }
 
@@ -242,13 +248,15 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public void updateStatus(Task task, TaskStatus status)
   {
-    TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
-  }
+    KubernetesWorkItem workItem = tasks.get(task.getId());
+    if (workItem != null && !workItem.getResult().isDone()) {
+      log.info("Manually calling update status for [%s]", task.getId());
+      workItem.setResult(status);
+    }
 
-  @Override
-  public void updateLocation(Task task, TaskLocation location)
-  {
-    TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), location);
+    // Notify all listeners by default
+    log.info("Notifying listeners [%s]", task.getId());
+    TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 
   @Override
@@ -399,7 +407,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     for (Pair<TaskRunnerListener, Executor> pair : listeners) {
       if (pair.lhs != null && pair.lhs.getListenerId().equals(listenerId)) {
         listeners.remove(pair);
-        log.debug("Unregistered listener [%s]", listenerId);
+        log.info("Unregistered listener [%s]", listenerId);
         return;
       }
     }
@@ -415,8 +423,18 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
-    log.debug("Registered listener [%s]", listener.getListenerId());
+    log.info("Registered listener [%s]", listener.getListenerId());
     listeners.add(listenerPair);
+
+    for (Map.Entry<String, KubernetesWorkItem> entry : tasks.entrySet()) {
+      if (entry.getValue().isRunning()) {
+        TaskRunnerUtils.notifyLocationChanged(
+            ImmutableList.of(listenerPair),
+            entry.getKey(),
+            entry.getValue().getLocation()
+        );
+      }
+    }
   }
 
   @Override

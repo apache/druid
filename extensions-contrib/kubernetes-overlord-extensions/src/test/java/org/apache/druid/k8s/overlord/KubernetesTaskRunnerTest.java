@@ -28,6 +28,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
@@ -116,11 +117,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
       {
         return tasks.computeIfAbsent(
             task.getId(),
-            k -> new KubernetesWorkItem(
-                task,
-                Futures.immediateFuture(TaskStatus.success(task.getId()))
-            )
-        ).getResult();
+            k -> new KubernetesWorkItem(task)).getResult();
       }
     };
 
@@ -249,7 +246,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_run_whenExceptionThrown_throwsRuntimeException() throws IOException
+  public void test_run_whenExceptionThrown_throwsRuntimeException() throws Exception
   {
     Job job = new JobBuilder()
         .withNewMetadata()
@@ -269,9 +266,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     replayAll();
 
     ListenableFuture<TaskStatus> future = runner.run(task);
-
-    Exception e = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertTrue(e.getCause() instanceof RuntimeException);
+    TaskStatus taskStatus = future.get();
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
 
     verifyAll();
   }
@@ -303,16 +299,15 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_join_whenExceptionThrown_throwsRuntimeException()
+  public void test_join_whenExceptionThrown_throwsRuntimeException() throws ExecutionException, InterruptedException
   {
     EasyMock.expect(kubernetesPeonLifecycle.join(EasyMock.anyLong())).andThrow(new IllegalStateException());
 
     replayAll();
 
     ListenableFuture<TaskStatus> future = runner.joinAsync(task);
-
-    Exception e = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertTrue(e.getCause() instanceof RuntimeException);
+    TaskStatus taskStatus = future.get();
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
 
     verifyAll();
   }
