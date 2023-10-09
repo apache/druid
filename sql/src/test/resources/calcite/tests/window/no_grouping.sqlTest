@@ -2,12 +2,9 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-  d1,d2,
-  l1,l2,
-  f1,f2,
-    dim2
-        ,    MIN(l2) OVER()
-  FROM druid.numfoo
+    m1,
+    COUNT(m1) OVER () cc
+  FROM druid.foo
 
 expectedOperators:
   - type: "naivePartition"
