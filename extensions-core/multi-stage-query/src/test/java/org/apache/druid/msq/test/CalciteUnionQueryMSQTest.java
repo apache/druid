@@ -95,7 +95,8 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
         queryJsonMapper,
         injector,
         new MSQTestTaskActionClient(queryJsonMapper),
-        workerMemoryParameters
+        workerMemoryParameters,
+        ImmutableList.of()
     );
     return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }
