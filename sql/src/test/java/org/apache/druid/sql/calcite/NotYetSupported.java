@@ -47,9 +47,9 @@ import static org.junit.Assert.assertThrows;
  * it may interfere with other rules:
  * <code>
  *   @Rule(order = 0)
- *   public TestRule fixmeRule = new FixMeProcessor();
+ *   public TestRule notYetSupportedRule = new NotYetSupportedProcessor();
  *
- *   @FixMe(NOT_ENOUGH_RULES)
+ *   @NotYetSupported(NOT_ENOUGH_RULES)
  *   @Test
  *   public void testA() {
  *   }
@@ -58,7 +58,7 @@ import static org.junit.Assert.assertThrows;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface FixMe
+public @interface NotYetSupported
 {
   Modes value() default Modes.NOT_ENOUGH_RULES;
 
@@ -101,17 +101,17 @@ public @interface FixMe
   };
 
   /**
-   * Processes {@link FixMe} annotations.
+   * Processes {@link NotYetSupported} annotations.
    *
    * Ensures that test cases disabled with that annotation can still not pass.
    * If the error is as expected; the testcase is marked as "ignored".
    */
-  class FixMeProcessor implements TestRule
+  class NotYetSupportedProcessor implements TestRule
   {
     @Override
     public Statement apply(Statement base, Description description)
     {
-      FixMe annotation = description.getAnnotation(FixMe.class);
+      NotYetSupported annotation = description.getAnnotation(NotYetSupported.class);
 
       if (annotation == null) {
         return base;
