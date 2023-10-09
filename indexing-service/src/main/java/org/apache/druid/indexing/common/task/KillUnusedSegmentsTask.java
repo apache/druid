@@ -245,8 +245,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       // Kill segments from the deep storage only if their load specs are not being used by any used segments
       final List<DataSegment> segmentsToBeKilled = unusedSegments
           .stream()
-          .filter(unusedSegment -> !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec())
-                                   || unusedSegment.getLoadSpec() == null)
+          .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
+                                   || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
           .collect(Collectors.toList());
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
