@@ -112,55 +112,21 @@ public class BasicHTTPAuthenticatorTest
   }
 
   @Test
-  public void testGoodPasswordWithValidator() throws IOException, ServletException
+  public void testGoodNonEmptyPasswordWithValidator() throws IOException, ServletException
   {
-    CredentialsValidator validator = EasyMock.createMock(CredentialsValidator.class);
-    BasicHTTPAuthenticator authenticatorWithValidator = new BasicHTTPAuthenticator(
-        CACHE_MANAGER_PROVIDER,
-        "basic",
-        "basic",
-        null,
-        null,
-        false,
-        null, null,
-        false,
-        validator
-    );
+    testGoodPasswordWithValidator("userA", "helloworld");
+  }
 
-    String header = StringUtils.utf8Base64("userA:helloworld");
-    header = StringUtils.format("Basic %s", header);
+  @Test
+  public void testGoodEmptyPasswordWithValidator() throws IOException, ServletException
+  {
+    testGoodPasswordWithValidator("userA", "");
+  }
 
-    EasyMock
-        .expect(
-            validator.validateCredentials(EasyMock.eq("basic"), EasyMock.eq("basic"), EasyMock.eq("userA"), EasyMock.aryEq("helloworld".toCharArray()))
-        )
-        .andReturn(
-            new AuthenticationResult("userA", "basic", "basic", null)
-        )
-        .times(1);
-    EasyMock.replay(validator);
-
-    HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(req.getHeader("Authorization")).andReturn(header);
-    req.setAttribute(
-        AuthConfig.DRUID_AUTHENTICATION_RESULT,
-        new AuthenticationResult("userA", "basic", "basic", null)
-    );
-    EasyMock.expectLastCall().times(1);
-    EasyMock.replay(req);
-
-    HttpServletResponse resp = EasyMock.createMock(HttpServletResponse.class);
-    EasyMock.replay(resp);
-
-    FilterChain filterChain = EasyMock.createMock(FilterChain.class);
-    filterChain.doFilter(req, resp);
-    EasyMock.expectLastCall().times(1);
-    EasyMock.replay(filterChain);
-
-    Filter authenticatorFilter = authenticatorWithValidator.getFilter();
-    authenticatorFilter.doFilter(req, resp, filterChain);
-
-    EasyMock.verify(req, resp, validator, filterChain);
+  @Test
+  public void testGoodColonInPasswordWithValidator() throws IOException, ServletException
+  {
+    testGoodPasswordWithValidator("userA", "hello:hello");
   }
 
   @Test
@@ -395,5 +361,56 @@ public class BasicHTTPAuthenticatorTest
     authenticatorFilter.doFilter(req, resp, filterChain);
 
     EasyMock.verify(req, resp, filterChain);
+  }
+
+  private void testGoodPasswordWithValidator(String username, String password) throws IOException, ServletException
+  {
+    CredentialsValidator validator = EasyMock.createMock(CredentialsValidator.class);
+    BasicHTTPAuthenticator authenticatorWithValidator = new BasicHTTPAuthenticator(
+            CACHE_MANAGER_PROVIDER,
+            "basic",
+            "basic",
+            null,
+            null,
+            false,
+            null, null,
+            false,
+            validator
+    );
+
+    String header = StringUtils.utf8Base64(username + ":" + password);
+    header = StringUtils.format("Basic %s", header);
+
+    EasyMock
+            .expect(
+                    validator.validateCredentials(EasyMock.eq("basic"), EasyMock.eq("basic"), EasyMock.eq(username), EasyMock.aryEq(password.toCharArray()))
+            )
+            .andReturn(
+                    new AuthenticationResult(username, "basic", "basic", null)
+            )
+            .times(1);
+    EasyMock.replay(validator);
+
+    HttpServletRequest req = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(req.getHeader("Authorization")).andReturn(header);
+    req.setAttribute(
+            AuthConfig.DRUID_AUTHENTICATION_RESULT,
+            new AuthenticationResult(username, "basic", "basic", null)
+    );
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(req);
+
+    HttpServletResponse resp = EasyMock.createMock(HttpServletResponse.class);
+    EasyMock.replay(resp);
+
+    FilterChain filterChain = EasyMock.createMock(FilterChain.class);
+    filterChain.doFilter(req, resp);
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(filterChain);
+
+    Filter authenticatorFilter = authenticatorWithValidator.getFilter();
+    authenticatorFilter.doFilter(req, resp, filterChain);
+
+    EasyMock.verify(req, resp, validator, filterChain);
   }
 }

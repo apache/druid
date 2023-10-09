@@ -74,6 +74,10 @@ import java.util.stream.Collectors;
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
  * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
  *
+ * <li><b>arrayIngestMode</b>: Tri-state query context that controls the behaviour and support of arrays that are
+ * ingested via MSQ. If set to 'none', arrays are not allowed to be ingested in MSQ. If set to 'array', array types
+ * can be ingested as expected. If set to 'mvd', numeric arrays can not be ingested, and string arrays will be
+ * ingested as MVDs (this is kept for legacy purpose).
  * </ol>
  **/
 public class MultiStageQueryContext
@@ -127,6 +131,11 @@ public class MultiStageQueryContext
   public static final String CTX_INDEX_SPEC = "indexSpec";
 
   public static final String CTX_USE_AUTO_SCHEMAS = "useAutoColumnSchemas";
+  public static final boolean DEFAULT_USE_AUTO_SCHEMAS = false;
+
+  public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
+  public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.MVD;
+
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -266,7 +275,12 @@ public class MultiStageQueryContext
 
   public static boolean useAutoColumnSchemas(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, false);
+    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, DEFAULT_USE_AUTO_SCHEMAS);
+  }
+
+  public static ArrayIngestMode getArrayIngestMode(final QueryContext queryContext)
+  {
+    return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
   }
 
   /**
