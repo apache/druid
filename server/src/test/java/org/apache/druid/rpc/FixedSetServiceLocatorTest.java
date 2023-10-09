@@ -19,57 +19,45 @@
 
 package org.apache.druid.rpc;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ServiceLocationTest
+import java.util.concurrent.ExecutionException;
+
+public class FixedSetServiceLocatorTest
 {
-  @Test
-  public void test_fromDruidServerMetadata_withPort()
-  {
-    DruidServerMetadata druidServerMetadata = new DruidServerMetadata(
-        "name",
-        "hostName:9092",
-        null,
-        1,
-        ServerType.INDEXER_EXECUTOR,
-        "tier1",
-        2
-    );
+  public static final DruidServerMetadata DATA_SERVER_1 = new DruidServerMetadata(
+      "TestDataServer",
+      "hostName:9092",
+      null,
+      2,
+      ServerType.REALTIME,
+      "tier1",
+      2
+  );
 
-    Assert.assertEquals(
-        new ServiceLocation("hostName", 9092, -1, ""),
-        ServiceLocation.fromDruidServerMetadata(druidServerMetadata)
-    );
+  @Test
+  public void testLocateNullShouldBeClosed() throws ExecutionException, InterruptedException
+  {
+    FixedSetServiceLocator serviceLocator
+        = FixedSetServiceLocator.forDruidServerMetadata(null);
+
+    Assert.assertTrue(serviceLocator.locate().get().isClosed());
   }
 
+
   @Test
-  public void test_fromDruidServerMetadata_withTlsPort()
+  public void testLocateSingleServer() throws ExecutionException, InterruptedException
   {
-    DruidServerMetadata druidServerMetadata = new DruidServerMetadata(
-        "name",
-        null,
-        "hostName:8100",
-        1,
-        ServerType.INDEXER_EXECUTOR,
-        "tier1",
-        2
-    );
+    FixedSetServiceLocator serviceLocator
+        = FixedSetServiceLocator.forDruidServerMetadata(ImmutableSet.of(DATA_SERVER_1));
 
     Assert.assertEquals(
-        new ServiceLocation("hostName", -1, 8100, ""),
-        ServiceLocation.fromDruidServerMetadata(druidServerMetadata)
+        ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1)),
+        serviceLocator.locate().get()
     );
-  }
-
-  @Test
-  public void test_equals()
-  {
-    EqualsVerifier.forClass(ServiceLocation.class)
-                  .usingGetClass()
-                  .verify();
   }
 }

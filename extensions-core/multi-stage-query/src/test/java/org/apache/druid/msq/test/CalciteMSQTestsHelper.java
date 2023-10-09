@@ -40,6 +40,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -78,6 +80,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -96,6 +99,10 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS_LOTS_OF_COLUMNS;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
@@ -165,6 +172,7 @@ public class CalciteMSQTestsHelper
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
                 .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
+          binder.bind(LoadedSegmentDataProviderFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
           GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
@@ -180,6 +188,24 @@ public class CalciteMSQTestsHelper
         new MSQExternalDataSourceModule(),
         new MSQIndexingModule()
     );
+  }
+
+  private static LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
+  {
+    // Currently, there is no metadata in this test for loaded segments. Therefore, this should not be called.
+    // In the future, if this needs to be supported, mocks for LoadedSegmentDataProvider should be added like
+    // org.apache.druid.msq.exec.MSQLoadedSegmentTests.
+    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
+    LoadedSegmentDataProvider loadedSegmentDataProvider = Mockito.mock(LoadedSegmentDataProvider.class);
+    try {
+      doThrow(new AssertionError("Test does not support loaded segment query"))
+          .when(loadedSegmentDataProvider).fetchRowsFromDataServer(any(), any(), any(), any());
+      doReturn(loadedSegmentDataProvider).when(mockFactory).createLoadedSegmentDataProvider(anyString(), any());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return mockFactory;
   }
 
   private static Supplier<ResourceHolder<Segment>> getSupplierForSegment(SegmentId segmentId)
