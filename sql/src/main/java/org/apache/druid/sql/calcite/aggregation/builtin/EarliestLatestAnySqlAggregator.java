@@ -25,6 +25,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -364,6 +365,21 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       // Rewrite EARLIEST/LATEST to EARLIEST_BY/LATEST_BY to make
       // reference to __time column explicit so that Calcite tracks it
 
+      try {
+        validator.validate(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      }
+      catch (CalciteContextException e) {
+
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                e,
+                                "Query could not be planned. A possible reason is [%s]",
+                                "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
+                                + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
+                                + "and specify the column explicitly."
+                            );
+      }
       if (replacementAggFunc == null) {
         return call;
       }
@@ -373,15 +389,16 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       SqlParserPos pos = call.getParserPosition();
 
       if (operands.isEmpty() || operands.size() > 2) {
-        throw InvalidSqlInput.exception("Function [%s] expects 1 or 2 arguments but found [%s]",
-                                        getName(),
-                                        operands.size()
+        throw InvalidSqlInput.exception(
+            "Function [%s] expects 1 or 2 arguments but found [%s]",
+            getName(),
+            operands.size()
         );
       }
 
       List<SqlNode> newOperands = new ArrayList<>();
       newOperands.add(operands.get(0));
-      newOperands.add(new SqlIdentifier("__time", pos));
+      newOperands.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
 
       if (operands.size() == 2) {
         newOperands.add(operands.get(1));
