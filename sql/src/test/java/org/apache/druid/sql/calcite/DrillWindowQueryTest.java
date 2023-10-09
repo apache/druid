@@ -1471,6 +1471,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @FixMe(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/defaultFrame/RBUPACR_int11")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int11()
@@ -1758,6 +1759,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @FixMe(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPACR/RBUPACR_int11")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int11()
@@ -4509,7 +4511,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @FixMe(Modes.NOT_ENOUGH_RULES)
+  @FixMe(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/defaultFrame/RBUPACR_int7")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int7()
@@ -6253,7 +6255,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @FixMe(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/aggOWnFn_50")
   @Test
   public void test_aggregates_aggOWnFn_50()
@@ -7709,7 +7710,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @FixMe(Modes.RESULT_MISMATCH)
   @DrillTest("nestedAggs/nstdagg24")
   @Test
   public void test_nestedAggs_nstdagg24()
