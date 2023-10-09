@@ -69,7 +69,8 @@ public class SqlStatementResourceHelperTest
         null,
         0,
         1,
-        2
+        2,
+        null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
         ImmutableMap.of(),
@@ -106,7 +107,8 @@ public class SqlStatementResourceHelperTest
         null,
         0,
         1,
-        2
+        2,
+        null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
         ImmutableMap.of(),
@@ -144,7 +146,8 @@ public class SqlStatementResourceHelperTest
         null,
         0,
         1,
-        2
+        2,
+        null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
         ImmutableMap.of(),
@@ -180,7 +183,8 @@ public class SqlStatementResourceHelperTest
         null,
         0,
         1,
-        2
+        2,
+        null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
         ImmutableMap.of(),
@@ -218,7 +222,8 @@ public class SqlStatementResourceHelperTest
         null,
         0,
         1,
-        2
+        2,
+        null
     ), MSQStagesReport.create(
         MSQTaskReportTest.QUERY_DEFINITION,
         ImmutableMap.of(),
