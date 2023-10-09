@@ -3,8 +3,10 @@ type: "operatorValidation"
 sql: |
   SELECT
     m1,
-    COUNT(m1) OVER () cc
-  FROM druid.foo
+    dim2,
+    l2,
+    MIN(l2) OVER(PARTITION BY m1 ORDER BY __time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+  FROM druid.numfoo
 
 expectedOperators:
   - type: "naivePartition"
