@@ -1035,6 +1035,9 @@ public class StreamAppenderator implements Appenderator
   {
     final DataSegment rootSegment = sink.getSegment();
     segmentAnnouncer.unannounceSegment(rootSegment);
+    if (!rootPendingSegmentToNewerVersions.containsKey(rootSegment.getId())) {
+      return;
+    }
     for (SegmentIdWithShardSpec newId : rootPendingSegmentToNewerVersions.get(rootSegment.getId())) {
       final DataSegment newSegment = new DataSegment(
           newId.getDataSource(),

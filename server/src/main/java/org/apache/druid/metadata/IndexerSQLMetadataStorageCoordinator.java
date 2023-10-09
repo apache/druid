@@ -1278,7 +1278,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // A pending segment having a higher partitionId must also be considered
     // to avoid clashes when inserting the pending segment created here.
     final Set<SegmentIdWithShardSpec> pendingSegments =
+<<<<<<< Updated upstream
         getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval);
+=======
+        new HashSet<>(getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet());
+>>>>>>> Stashed changes
 
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
     final Map<String, SegmentIdWithShardSpec> sequenceHashToSegment = new HashMap<>();
