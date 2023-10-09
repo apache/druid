@@ -20,6 +20,7 @@
 package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.timeline.DataSegment;
@@ -39,6 +40,11 @@ public interface CoordinatorClient
    * not returned if it is marked as unused.
    */
   ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused);
+
+  /**
+   * Fetches segments from the coordinator server view for the given dataSource and intervals.
+   */
+  Iterable<ImmutableSegmentLoadInfo> fetchServerViewSegments(String dataSource, List<Interval> intervals);
 
   /**
    * Fetches segment metadata for the given dataSource and intervals.

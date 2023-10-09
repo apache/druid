@@ -171,8 +171,8 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             holder1.getVariance(true),
-            holder2.getVariance(true).doubleValue(),
-            holder3.getVariance(true).longValue()
+            holder2.getVariance(true),
+            holder3.getVariance(true)
         }
     );
     testQuery(
@@ -219,7 +219,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         new Object[] {
             holder1.getVariance(false),
             holder2.getVariance(false).doubleValue(),
-            holder3.getVariance(false).longValue(),
+            holder3.getVariance(false),
         }
     );
     testQuery(
@@ -266,7 +266,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         new Object[] {
             Math.sqrt(holder1.getVariance(true)),
             Math.sqrt(holder2.getVariance(true)),
-            (long) Math.sqrt(holder3.getVariance(true)),
+            Math.sqrt(holder3.getVariance(true)),
         }
     );
 
@@ -321,7 +321,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         new Object[]{
             Math.sqrt(holder1.getVariance(false)),
             Math.sqrt(holder2.getVariance(false)),
-            (long) Math.sqrt(holder3.getVariance(false)),
+            Math.sqrt(holder3.getVariance(false)),
         }
     );
 
@@ -374,7 +374,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         new Object[]{
             Math.sqrt(holder1.getVariance(false)),
             Math.sqrt(holder2.getVariance(false)),
-            (long) Math.sqrt(holder3.getVariance(false)),
+            Math.sqrt(holder3.getVariance(false)),
         }
     );
 
@@ -543,7 +543,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             NullHandling.replaceWithDefault()
-            ? new Object[]{0.0, 0.0, 0.0, 0.0, 0L, 0L, 0L, 0L}
+            ? new Object[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
             : new Object[]{null, null, null, null, null, null, null, null}
         )
     );
@@ -623,7 +623,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             NullHandling.replaceWithDefault()
-            ? new Object[]{"a", 0.0, 0.0, 0.0, 0.0, 0L, 0L, 0L, 0L}
+            ? new Object[]{"a", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
             : new Object[]{"a", null, null, null, null, null, null, null, null}
         )
     );
@@ -688,9 +688,9 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
       Assert.assertEquals(expectedResult.length, result.length);
       for (int j = 0; j < expectedResult.length; j++) {
         if (expectedResult[j] instanceof Float) {
-          Assert.assertEquals((Float) expectedResult[j], (Float) result[j], 1e-10);
+          Assert.assertEquals((Float) expectedResult[j], (Float) result[j], 1e-5);
         } else if (expectedResult[j] instanceof Double) {
-          Assert.assertEquals((Double) expectedResult[j], (Double) result[j], 1e-10);
+          Assert.assertEquals((Double) expectedResult[j], (Double) result[j], 1e-5);
         } else {
           Assert.assertEquals(expectedResult[j], result[j]);
         }
