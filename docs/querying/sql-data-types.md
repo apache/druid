@@ -156,7 +156,7 @@ By default, Druid uses [SQL three-valued logic](https://en.wikipedia.org/wiki/Th
 and boolean expression evaluation. This behavior relies on three settings:
 
 *  [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compatible-null-handling) set to false (default), a runtime property which allows NULL values to exist in numeric columns and expressions, and string typed columns to distinguish between NULL and the empty string 
-*  [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations) set to true (default), a runtime property controls Druid's boolean logic mode for expressions, as well as coercing all expression booleans to be represented with a value of 1 for true and 0 for false
+*  [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations) set to true (default), a runtime property controls Druid's boolean logic mode for expressions, as well as coercing all expression boolean values to be represented with a 1 for true and 0 for false
 *  [`druid.generic.useThreeValueLogic`](../configuration/index.md#sql-compatible-null-handling) set to true (default), a runtime property which decouples three-value logic handling from `druid.generic.useDefaultValueForNull` and `druid.expressions.useStrictBooleans` for backwards compatibility with older versions of Druid that did not fully support SQL compatible null value logic handling
 
 If any of these settings is configured with a non-default value, Druid will use two-valued logic for non-expression based filters. Expression based filters are controlled independently with `druid.expressions.useStrictBooleans`, which if set to false Druid will use two-valued logic for expressions.
