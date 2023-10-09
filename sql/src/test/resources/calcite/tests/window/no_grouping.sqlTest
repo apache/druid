@@ -2,10 +2,11 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-    m1,
-    dim2,
-    l2,
-    MIN(l2) OVER(PARTITION BY m1 ORDER BY __time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+  d1,d2,
+  l1,l2,
+  f1,f2,
+    dim2
+        ,    MIN(l2) OVER()
   FROM druid.numfoo
 
 expectedOperators:
