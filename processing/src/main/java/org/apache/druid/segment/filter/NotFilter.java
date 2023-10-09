@@ -59,13 +59,6 @@ import java.util.Set;
  */
 public class NotFilter implements Filter
 {
-  private static boolean useThreeValueLogic()
-  {
-    return NullHandling.sqlCompatible() &&
-           NullHandling.useThreeValueLogic() &&
-           ExpressionProcessing.useStrictBooleans();
-  }
-
   private final Filter baseFilter;
 
   public NotFilter(Filter baseFilter)
@@ -81,7 +74,7 @@ public class NotFilter implements Filter
     if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
       return new BitmapColumnIndex()
       {
-        private final boolean useThreeValueLogic = useThreeValueLogic();
+        private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
         @Override
         public ColumnIndexCapabilities getIndexCapabilities()
         {
@@ -114,7 +107,7 @@ public class NotFilter implements Filter
 
     return new ValueMatcher()
     {
-      private final boolean useThreeValueLogic = useThreeValueLogic();
+      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
       @Override
       public boolean matches(boolean includeUnknown)
       {
@@ -137,7 +130,7 @@ public class NotFilter implements Filter
     return new BaseVectorValueMatcher(baseMatcher)
     {
       private final VectorMatch scratch = VectorMatch.wrap(new int[factory.getMaxVectorSize()]);
-      private final boolean useThreeValueLogic = useThreeValueLogic();
+      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
 
       @Override
       public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
