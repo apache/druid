@@ -1698,11 +1698,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // across all shard specs (published + pending).
       // A pending segment having a higher partitionId must also be considered
       // to avoid clashes when inserting the pending segment created here.
-      final Set<SegmentIdWithShardSpec> pendings = getPendingSegmentsForIntervalWithHandle(
-          handle,
-          dataSource,
-          interval
-      ).keySet();
+      final Set<SegmentIdWithShardSpec> pendings = new HashSet<>(
+          getPendingSegmentsForIntervalWithHandle( handle, dataSource, interval).keySet()
+      );
       if (committedMaxId != null) {
         pendings.add(committedMaxId);
       }
