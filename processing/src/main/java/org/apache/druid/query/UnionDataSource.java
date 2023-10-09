@@ -23,12 +23,12 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -75,14 +75,18 @@ public class UnionDataSource implements DataSource
   @Override
   public Set<String> getTableNames()
   {
-    return dataSources.stream()
-                      .map(input -> {
-                        if (!(input instanceof TableDataSource)) {
-                          throw DruidException.defensive("should be table");
-                        }
-                        return Iterables.getOnlyElement(input.getTableNames());
-                      })
-                      .collect(Collectors.toSet());
+    return dataSources
+        .stream()
+        .map(input -> {
+          if (!(input instanceof TableDataSource)) {
+            throw DruidException.defensive("should be table");
+          }
+          return CollectionUtils.getOnlyElement(
+              input.getTableNames(),
+              xs -> DruidException.defensive("Expected only single table name in TableDataSource")
+          );
+        })
+        .collect(Collectors.toSet());
   }
 
   /**

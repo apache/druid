@@ -174,5 +174,4 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
       );
     }
   }
-
 }

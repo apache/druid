@@ -111,15 +111,19 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
   }
 
   /**
-   * Doesn't pass through Druid however the planning error is different as it rewrites to a union datasource.
-   * This test is disabled because MSQ wants to support union datasources, and it makes little sense to add highly
-   * conditional planning error for the same. Planning errors are merely hints, and this is one of those times
-   * when the hint is incorrect till MSQ starts supporting the union datasource.
+   * Generates a different error hint than what is required by the native engine, since planner does try to plan "UNION"
+   * using group by, however fails due to the column name mismatch.
+   * MSQ does wnat to support any type of data source, with least restrictive column names and types, therefore it
+   * should eventually work.
    */
   @Test
   @Override
   public void testUnionIsUnplannable()
   {
+    assertQueryIsUnplannable(
+        "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
+        "SQL requires union between two tables and column names queried for each table are different Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."
+    );
 
   }
 
