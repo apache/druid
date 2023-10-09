@@ -50,7 +50,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
-import static org.apache.druid.sql.calcite.NotYetSupported.Modes.*;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -145,7 +144,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       if (allCases.remove(ann.value() + ".q")) {
         continue;
       }
-      fail(String.format("Testcase [%s] references invalid file [%s].", method.getName(), ann.value()));
+      fail(String.format(Locale.ENGLISH, "Testcase [%s] references invalid file [%s].", method.getName(), ann.value()));
     }
 
     for (String string : allCases) {
@@ -207,7 +206,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       }
       catch (Exception e) {
         throw new RuntimeException(
-            String.format("Encountered exception while loading testcase [%s]", filename),
+            String.format(Locale.ENGLISH, "Encountered exception while loading testcase [%s]", filename),
             e);
       }
     }
@@ -415,7 +414,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
               newVal = val;
               break;
             case LONG:
-            newVal = parseLongValue(val);
+              newVal = parseLongValue(val);
               break;
             case DOUBLE:
               newVal = Numbers.parseDoubleObject(val);
@@ -438,23 +437,27 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
     try {
       return Long.parseLong(val);
-    } catch (NumberFormatException e) {
+    }
+    catch (NumberFormatException e) {
     }
     try {
       double d = Double.parseDouble(val);
       return (long) d;
-    } catch (NumberFormatException e) {
+    }
+    catch (NumberFormatException e) {
     }
     try {
       LocalTime v = LocalTime.parse(val);
       return v.getMillisOfDay();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
     }
     Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
     try {
       DateTime v = parser.apply(val);
       return v.getMillis();
-    } catch (IllegalArgumentException iae) {
+    }
+    catch (IllegalArgumentException iae) {
     }
     throw new RuntimeException("Can't parse input!");
   }

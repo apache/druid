@@ -126,6 +126,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -1384,7 +1385,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static void displayResults(String name, List<Object[]> results)
   {
     PrintStream out = System.out;
-    out.printf("-- %s results --", name);
+    out.printf(Locale.ENGLISH, "-- %s results --", name);
     for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
       printArray(results.get(rowIndex), out);
       if (rowIndex < results.size() - 1) {
