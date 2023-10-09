@@ -26,14 +26,19 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.function.ToLongFunction;
 
 /**
  * Used by {@link RowBasedStorageAdapter} and {@link RowBasedCursor} to walk through rows. It allows multiple
  * {@link RowBasedCursor} to share the same underlying Iterable.
+ *
+ * The class creates a yielder from the sequence to iterate over the rows. However, it doesn't call the sequence's close
+ * after iterating over it. {@link #close()} should be called by the instantiators of the class to clear the resources
+ * held by the {@link #rowSequence} and the corresponding yielder created to iterate over it.
  */
-public class RowWalker<T>
+public class RowWalker<T> implements Closeable
 {
   private final Sequence<T> rowSequence;
   private final ToLongFunction<T> timestampFunction;
@@ -86,6 +91,7 @@ public class RowWalker<T>
     }
   }
 
+  @Override
   public void close()
   {
     if (rowYielder != null) {

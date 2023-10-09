@@ -458,6 +458,7 @@ public class CacheSchedulerTest
         "some filter",
         new Period(10_000),
         null,
+        0,
         new JdbcAccessSecurityConfig()
         {
           @Override
