@@ -301,6 +301,21 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Commits segments created by an APPEND task. This method also handles segment
+   * upgrade scenarios that may result from concurrent append and replace. Also
+   * commits start and end {@link DataSourceMetadata}.
+   *
+   * @see #commitAppendSegments
+   * @see #commitSegmentsAndMetadata
+   */
+  SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  );
+
+  /**
    * Commits segments created by a REPLACE task. This method also handles the
    * segment upgrade scenarios that may result from concurrent append and replace.
    * <ul>
@@ -318,6 +333,18 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> replaceSegments,
       Set<ReplaceTaskLock> locksHeldByReplaceTask
   );
+
+  /**
+   * Creates new versions for the pending segments that overlap with the given
+   * replace segments being committed.
+   *
+   * @param replaceSegments Segments being committed by a REPLACE task
+   * @return List of pending segments chosen for upgrade. The returned list does
+   * not contain the new versions of the pending segments.
+   */
+  Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments);
+
+  Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec segmentIdWithShardSpec);
 
   /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
