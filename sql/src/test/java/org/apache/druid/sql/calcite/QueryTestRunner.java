@@ -631,6 +631,7 @@ public class QueryTestRunner
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,
+          builder.expectedResultMatchMode,
           builder.expectedResultSignature
       );
     }

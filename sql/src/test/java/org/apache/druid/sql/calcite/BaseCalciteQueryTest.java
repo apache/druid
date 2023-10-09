@@ -1039,11 +1039,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     @Override
     public ResultsVerifier defaultResultsVerifier(
         List<Object[]> expectedResults,
+        ResultMatchMode expectedResultMatchMode,
         RowSignature expectedResultSignature
     )
     {
       return BaseCalciteQueryTest.this.defaultResultsVerifier(
           expectedResults,
+          expectedResultMatchMode,
           expectedResultSignature
       );
     }
@@ -1061,11 +1063,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  enum ResultMatchMode {
-    EQUALS,
-    RELAX_NULLS;
+  enum ResultMatchMode
+  {
+    EQUALS, RELAX_NULLS;
 
-    void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell) {
+    void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+    {
       if (this == RELAX_NULLS && expectedCell == null) {
         if (resultCell == null) {
           return;
@@ -1111,8 +1114,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             i,
             types.get(i),
             expectedCell,
-            resultCell
-            );
+            resultCell);
       }
     }
   }
@@ -1397,10 +1399,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   private ResultsVerifier defaultResultsVerifier(
       final List<Object[]> expectedResults,
+      ResultMatchMode expectedResultMatchMode,
       final RowSignature expectedSignature
   )
   {
-    return new DefaultResultsVerifier(expectedResults, expectedSignature);
+    return new DefaultResultsVerifier(expectedResults, expectedResultMatchMode, expectedSignature);
   }
 
   public class DefaultResultsVerifier implements ResultsVerifier
@@ -1408,11 +1411,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     protected final List<Object[]> expectedResults;
     @Nullable
     protected final RowSignature expectedResultRowSignature;
+    protected final ResultMatchMode expectedResultMatchMode;
+
+    public DefaultResultsVerifier(List<Object[]> expectedResults, ResultMatchMode expectedResultMatchMode, RowSignature expectedSignature)
+    {
+      this.expectedResults = expectedResults;
+      this.expectedResultMatchMode = expectedResultMatchMode;
+      this.expectedResultRowSignature = expectedSignature;
+    }
 
     public DefaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedSignature)
     {
-      this.expectedResults = expectedResults;
-      this.expectedResultRowSignature = expectedSignature;
+      this(expectedResults, ResultMatchMode.EQUALS, expectedSignature);
     }
 
     @Override
@@ -1427,10 +1437,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public void verify(String sql, QueryResults queryResults)
     {
       try {
-        assertResultsValid(ResultMatchMode.EQUALS, expectedResults, queryResults);
+        assertResultsValid(expectedResultMatchMode, expectedResults, queryResults);
       }
       catch (AssertionError e) {
-        System.out.println("sql: "+sql);
+        System.out.println("sql: " + sql);
         displayResults(queryResults.results);
         throw e;
       }
