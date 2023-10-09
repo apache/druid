@@ -339,7 +339,7 @@ public class QueryContextTest
     assertEquals("auto", context2.getMaxSubqueryMemoryBytes(null));
     
     final QueryContext context3 = new QueryContext(ImmutableMap.of());
-    assertEquals("unlimited", context3.getMaxSubqueryMemoryBytes("unlimited"));
+    assertEquals("disabled", context3.getMaxSubqueryMemoryBytes("disabled"));
   }
 
   @Test
