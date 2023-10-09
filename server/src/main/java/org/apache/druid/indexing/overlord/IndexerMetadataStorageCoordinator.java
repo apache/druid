@@ -335,6 +335,18 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Creates new versions for the pending segments that overlap with the given
+   * replace segments being committed.
+   *
+   * @param replaceSegments Segments being committed by a REPLACE task
+   * @return List of pending segments chosen for upgrade. The returned list does
+   * not contain the new versions of the pending segments.
+   */
+  Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments);
+
+  Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec segmentIdWithShardSpec);
+
+  /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
    */
   @Nullable DataSourceMetadata retrieveDataSourceMetadata(String dataSource);

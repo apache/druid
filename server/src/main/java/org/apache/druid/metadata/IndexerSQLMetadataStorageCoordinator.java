@@ -105,6 +105,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
   private static final int MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE = 100;
 
+  private static final String UPGRADED_PENDING_SEGMENT_PREFIX = "upgraded_to_replace_version_";
+
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
@@ -237,44 +239,45 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   /**
    * Fetches all the pending segments, whose interval overlaps with the given
-   * search interval from the metadata store.
+   * search interval from the metadata store. Returns a Map from the
+   * pending segment ID to the sequence name.
    */
-  private Set<SegmentIdWithShardSpec> getPendingSegmentsForIntervalWithHandle(
+  private Map<SegmentIdWithShardSpec, String> getPendingSegmentsForIntervalWithHandle(
       final Handle handle,
       final String dataSource,
       final Interval interval
   ) throws IOException
   {
-    final Set<SegmentIdWithShardSpec> identifiers = new HashSet<>();
-
-    final ResultIterator<byte[]> dbSegments =
+    final ResultIterator<PendingSegmentsRecord> dbSegments =
         handle.createQuery(
             StringUtils.format(
                 // This query might fail if the year has a different number of digits
                 // See https://github.com/apache/druid/pull/11582 for a similar issue
                 // Using long for these timestamps instead of varchar would give correct time comparisons
-                "SELECT payload FROM %1$s WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
+                "SELECT sequence_name, payload FROM %1$s"
+                + " WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
                 dbTables.getPendingSegmentsTable(), connector.getQuoteString()
             )
         )
               .bind("dataSource", dataSource)
               .bind("start", interval.getStart().toString())
               .bind("end", interval.getEnd().toString())
-              .map(ByteArrayMapper.FIRST)
+              .map((index, r, ctx) -> PendingSegmentsRecord.fromResultSet(r))
               .iterator();
 
+    final Map<SegmentIdWithShardSpec, String> pendingSegmentToSequenceName = new HashMap<>();
     while (dbSegments.hasNext()) {
-      final byte[] payload = dbSegments.next();
-      final SegmentIdWithShardSpec identifier = jsonMapper.readValue(payload, SegmentIdWithShardSpec.class);
+      PendingSegmentsRecord record = dbSegments.next();
+      final SegmentIdWithShardSpec identifier = jsonMapper.readValue(record.payload, SegmentIdWithShardSpec.class);
 
       if (interval.overlaps(identifier.getInterval())) {
-        identifiers.add(identifier);
+        pendingSegmentToSequenceName.put(identifier, record.sequenceName);
       }
     }
 
     dbSegments.close();
 
-    return identifiers;
+    return pendingSegmentToSequenceName;
   }
 
   private SegmentTimeline getTimelineForIntervalsWithHandle(
@@ -417,7 +420,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           (handle, transactionStatus) -> {
             final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
             segmentsToInsert.addAll(
-                getSegmentsToUpgradeOnReplace(handle, replaceSegments, locksHeldByReplaceTask)
+                createUpgradedVersionsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask)
             );
             return SegmentPublishResult.ok(
                 insertSegments(handle, segmentsToInsert)
@@ -596,6 +599,157 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  @Override
+  public Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments)
+  {
+    if (replaceSegments.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    // Any replace interval has exactly one version of segments
+    final Map<Interval, DataSegment> replaceIntervalToMaxId = new HashMap<>();
+    for (DataSegment segment : replaceSegments) {
+      DataSegment committedMaxId = replaceIntervalToMaxId.get(segment.getInterval());
+      if (committedMaxId == null
+          || committedMaxId.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
+        replaceIntervalToMaxId.put(segment.getInterval(), segment);
+      }
+    }
+
+    final String datasource = replaceSegments.iterator().next().getDataSource();
+    return connector.retryWithHandle(
+        handle -> upgradePendingSegments(handle, datasource, replaceIntervalToMaxId)
+    );
+  }
+
+  @Override
+  public Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec pendingSegment)
+  {
+    return connector.retryWithHandle(
+        handle -> findAllVersionsOfPendingSegment(handle, pendingSegment)
+    );
+  }
+
+  private Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(
+      Handle handle,
+      SegmentIdWithShardSpec pendingSegment
+  ) throws IOException
+  {
+    final Interval interval = pendingSegment.getInterval();
+    final Query<Map<String, byte[]>> query = handle
+        .createQuery(
+            StringUtils.format(
+                "SELECT payload "
+                + "FROM %s WHERE "
+                + "dataSource = :dataSource AND "
+                + "start = :start AND "
+                + "%2$send%2$s = :end AND "
+                + "sequence_prev_id = :sequence_prev_id",
+                dbTables.getPendingSegmentsTable(),
+                connector.getQuoteString()
+            )
+        )
+        .bind("dataSource", pendingSegment.getDataSource())
+        .bind("sequence_prev_id", pendingSegment.asSegmentId().toString())
+        .bind("start", interval.getStart().toString())
+        .bind("end", interval.getEnd().toString());
+
+    final ResultIterator<byte[]> dbSegments = query
+        .map(ByteArrayMapper.FIRST)
+        .iterator();
+
+    final Set<SegmentIdWithShardSpec> allVersions = new HashSet<>();
+    while (dbSegments.hasNext()) {
+      final byte[] payload = dbSegments.next();
+      final SegmentIdWithShardSpec segmentId =
+          jsonMapper.readValue(payload, SegmentIdWithShardSpec.class);
+      allVersions.add(segmentId);
+    }
+
+    return allVersions;
+  }
+
+  /**
+   * Finds pending segments contained in each replace interval and upgrades them
+   * to the replace version.
+   */
+  private Set<SegmentIdWithShardSpec> upgradePendingSegments(
+      Handle handle,
+      String datasource,
+      Map<Interval, DataSegment> replaceIntervalToMaxId
+  ) throws IOException
+  {
+    final Map<SegmentCreateRequest, SegmentIdWithShardSpec> newPendingSegmentVersions = new HashMap<>();
+
+    for (Map.Entry<Interval, DataSegment> entry : replaceIntervalToMaxId.entrySet()) {
+      final Interval replaceInterval = entry.getKey();
+      final DataSegment maxSegmentId = entry.getValue();
+      final String replaceVersion = maxSegmentId.getVersion();
+
+      final int numCorePartitions = maxSegmentId.getShardSpec().getNumCorePartitions();
+      int currentPartitionNumber = maxSegmentId.getShardSpec().getPartitionNum();
+
+      final Map<SegmentIdWithShardSpec, String> overlappingPendingSegments
+          = getPendingSegmentsForIntervalWithHandle(handle, datasource, replaceInterval);
+
+      for (Map.Entry<SegmentIdWithShardSpec, String> overlappingPendingSegment
+          : overlappingPendingSegments.entrySet()) {
+        final SegmentIdWithShardSpec pendingSegmentId = overlappingPendingSegment.getKey();
+        final String pendingSegmentSequence = overlappingPendingSegment.getValue();
+        if (shouldUpgradePendingSegment(pendingSegmentId, pendingSegmentSequence, replaceInterval, replaceVersion)) {
+          // There cannot be any duplicates because this version not been committed before
+          newPendingSegmentVersions.put(
+              new SegmentCreateRequest(
+                  UPGRADED_PENDING_SEGMENT_PREFIX + replaceVersion,
+                  pendingSegmentId.toString(),
+                  replaceVersion,
+                  NumberedPartialShardSpec.instance()
+              ),
+              new SegmentIdWithShardSpec(
+                  datasource,
+                  replaceInterval,
+                  replaceVersion,
+                  new NumberedShardSpec(++currentPartitionNumber, numCorePartitions)
+              )
+          );
+        }
+      }
+    }
+
+    // Do not skip lineage check so that the sequence_name_prev_id_sha1
+    // includes hash of both sequence_name and prev_segment_id
+    int numInsertedPendingSegments = insertPendingSegmentsIntoMetastore(
+        handle,
+        newPendingSegmentVersions,
+        datasource,
+        false
+    );
+    log.info(
+        "Inserted total [%d] new versions for [%d] pending segments.",
+        numInsertedPendingSegments, newPendingSegmentVersions.size()
+    );
+
+    return new HashSet<>(newPendingSegmentVersions.values());
+  }
+
+  private boolean shouldUpgradePendingSegment(
+      SegmentIdWithShardSpec pendingSegmentId,
+      String pendingSegmentSequenceName,
+      Interval replaceInterval,
+      String replaceVersion
+  )
+  {
+    if (pendingSegmentId.getVersion().compareTo(replaceVersion) >= 0) {
+      return false;
+    } else if (!replaceInterval.contains(pendingSegmentId.getInterval())) {
+      return false;
+    } else {
+      // Do not upgrade already upgraded pending segment
+      return pendingSegmentSequenceName == null
+             || !pendingSegmentSequenceName.startsWith(UPGRADED_PENDING_SEGMENT_PREFIX);
+    }
+  }
+
   @Nullable
   private SegmentIdWithShardSpec allocatePendingSegmentWithSegmentLineageCheck(
       final Handle handle,
@@ -716,7 +870,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         handle,
         createdSegments,
         dataSource,
-        interval,
         skipSegmentLineageCheck
     );
 
@@ -982,7 +1135,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String dataSource = appendSegments.iterator().next().getDataSource();
     final Set<DataSegment> upgradedSegments = connector.retryTransaction(
         (handle, transactionStatus)
-            -> getSegmentsToUpgradeOnAppend(handle, dataSource, appendSegments),
+            -> createUpgradedVersionsOfAppendSegments(handle, dataSource, appendSegments),
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
@@ -1030,11 +1183,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
-  private void insertPendingSegmentsIntoMetastore(
+  private int insertPendingSegmentsIntoMetastore(
       Handle handle,
       Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments,
       String dataSource,
-      Interval interval,
       boolean skipSegmentLineageCheck
   ) throws JsonProcessingException
   {
@@ -1055,6 +1207,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     for (Map.Entry<SegmentIdWithShardSpec, SegmentCreateRequest> entry : segmentIdToRequest.entrySet()) {
       final SegmentCreateRequest request = entry.getValue();
       final SegmentIdWithShardSpec segmentId = entry.getKey();
+      final Interval interval = segmentId.getInterval();
+
       insertBatch.add()
                  .bind("id", segmentId.toString())
                  .bind("dataSource", dataSource)
@@ -1069,7 +1223,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  )
                  .bind("payload", jsonMapper.writeValueAsBytes(segmentId));
     }
-    insertBatch.execute();
+    int[] updated = insertBatch.execute();
+    return Arrays.stream(updated).sum();
   }
 
   private void insertPendingSegmentIntoMetastore(
@@ -1105,7 +1260,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Allocates and returns any extra versions that need to be committed for the
+   * Creates and returns any extra versions that need to be committed for the
    * given append segments.
    * <p>
    * This is typically needed when a REPLACE task started and finished after
@@ -1113,7 +1268,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * there would be some used segments in the DB with versions higher than these
    * append segments.
    */
-  private Set<DataSegment> getSegmentsToUpgradeOnAppend(
+  private Set<DataSegment> createUpgradedVersionsOfAppendSegments(
       Handle handle,
       String dataSource,
       Set<DataSegment> segmentsToAppend
@@ -1138,17 +1293,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         Segments.INCLUDING_OVERSHADOWED
     );
 
-    final Map<String, Set<Interval>> committedVersionToIntervals = new HashMap<>();
-    final Map<Interval, Set<DataSegment>> committedIntervalToSegments = new HashMap<>();
+    final Map<String, Set<Interval>> overlappingVersionToIntervals = new HashMap<>();
+    final Map<Interval, Set<DataSegment>> overlappingIntervalToSegments = new HashMap<>();
     for (DataSegment segment : overlappingSegments) {
-      committedVersionToIntervals.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
+      overlappingVersionToIntervals.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
                                  .add(segment.getInterval());
-      committedIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
+      overlappingIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
                                  .add(segment);
     }
 
     final Set<DataSegment> upgradedSegments = new HashSet<>();
-    for (Map.Entry<String, Set<Interval>> entry : committedVersionToIntervals.entrySet()) {
+    for (Map.Entry<String, Set<Interval>> entry : overlappingVersionToIntervals.entrySet()) {
       final String upgradeVersion = entry.getKey();
       Map<Interval, Set<DataSegment>> segmentsToUpgrade = getSegmentsWithVersionLowerThan(
           upgradeVersion,
@@ -1156,12 +1311,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           appendVersionToSegments
       );
       for (Map.Entry<Interval, Set<DataSegment>> upgradeEntry : segmentsToUpgrade.entrySet()) {
-        Set<DataSegment> segmentsUpgradedToVersion = upgradeSegmentsToVersion(
+        Set<DataSegment> segmentsUpgradedToVersion = createUpgradedVersionOfSegments(
             handle,
             upgradeVersion,
             upgradeEntry.getKey(),
             upgradeEntry.getValue(),
-            committedIntervalToSegments
+            overlappingIntervalToSegments
         );
         log.info("Upgraded [%d] segments to version[%s].", segmentsUpgradedToVersion.size(), upgradeVersion);
         upgradedSegments.addAll(segmentsUpgradedToVersion);
@@ -1212,7 +1367,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Computes new Segment IDs for the {@code segmentsToUpgrade} being upgraded
    * to the given {@code upgradeVersion}.
    */
-  private Set<DataSegment> upgradeSegmentsToVersion(
+  private Set<DataSegment> createUpgradedVersionOfSegments(
       Handle handle,
       String upgradeVersion,
       Interval interval,
@@ -1237,7 +1392,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Get pending segments for the new version, if any
     final String dataSource = segmentsToUpgrade.iterator().next().getDataSource();
     final Set<SegmentIdWithShardSpec> pendingSegments
-        = getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval);
+        = getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet();
 
     // Determine new IDs for each append segment by taking into account both
     // committed and pending segments for this version
@@ -1337,7 +1492,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // A pending segment having a higher partitionId must also be considered
     // to avoid clashes when inserting the pending segment created here.
     final Set<SegmentIdWithShardSpec> pendingSegments =
-        getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval);
+        getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet();
 
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
     final Map<String, SegmentIdWithShardSpec> sequenceHashToSegment = new HashMap<>();
@@ -1547,7 +1702,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           handle,
           dataSource,
           interval
-      );
+      ).keySet();
       if (committedMaxId != null) {
         pendings.add(committedMaxId);
       }
@@ -1725,7 +1880,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return toInsertSegments;
   }
 
-  private Set<DataSegment> getSegmentsToUpgradeOnReplace(
+  /**
+   * Creates new versions of segments appended while a REPLACE task was in progress.
+   */
+  private Set<DataSegment> createUpgradedVersionsOfAppendSegmentsAfterReplace(
       final Handle handle,
       final Set<DataSegment> replaceSegments,
       final Set<ReplaceTaskLock> locksHeldByReplaceTask

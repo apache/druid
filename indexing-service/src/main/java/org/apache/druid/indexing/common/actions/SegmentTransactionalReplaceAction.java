@@ -27,10 +27,13 @@ import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,6 +43,8 @@ import java.util.stream.Collectors;
  */
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
+  private static final Logger log = new Logger(SegmentTransactionalReplaceAction.class);
+
   /**
    * Set of segments to be inserted into metadata storage
    */
@@ -86,9 +91,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     final Set<ReplaceTaskLock> replaceLocksForTask
         = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
-    final SegmentPublishResult retVal;
+    final SegmentPublishResult publishResult;
     try {
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+      publishResult = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
@@ -109,8 +114,30 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       throw new RuntimeException(e);
     }
 
-    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
-    return retVal;
+    IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
+
+    if (publishResult.isSuccess()) {
+      // If upgrade of pending segments fails, the segments will still get upgraded
+      // when the corresponding APPEND task commits the segments.
+      // Thus, the upgrade of pending segments should not be done in the same
+      // transaction as the commit of replace segments and failure to upgrade
+      // pending segments should not affect success of replace commit.
+      try {
+        List<SegmentIdWithShardSpec> upgradedPendingSegments =
+            toolbox.getIndexerMetadataStorageCoordinator().upgradePendingSegments(segments);
+        log.info(
+            "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
+            upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
+        );
+
+        // These upgraded pending segments should be forwarded to the SupervisorManager
+      }
+      catch (Exception e) {
+        log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
+      }
+    }
+
+    return publishResult;
   }
 
   @Override

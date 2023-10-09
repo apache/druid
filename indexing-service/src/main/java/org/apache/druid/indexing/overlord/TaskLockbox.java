@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -941,7 +942,7 @@ public class TaskLockbox
 
       // Replace locks are always held by the supervisor task
       if (posse.taskIds.size() > 1) {
-        throw new ISE(
+        throw DruidException.defensive(
             "Replace lock[%s] for datasource[%s] is held by multiple tasks[%s]",
             lock, datasource, posse.taskIds
         );

@@ -113,7 +113,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval, @Nullable Integer limit)
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit
+  )
   {
     synchronized (unusedSegments) {
       Stream<DataSegment> resultStream = unusedSegments.stream();
@@ -231,6 +235,18 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         maxVersion,
         partialShardSpec.complete(objectMapper, 0, 0)
     );
+  }
+
+  @Override
+  public Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments)
+  {
+    return Collections.emptySet();
+  }
+
+  @Override
+  public Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec segmentIdWithShardSpec)
+  {
+    return Collections.emptySet();
   }
 
   @Override
