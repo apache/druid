@@ -1412,9 +1412,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public void verifyResults()
     {
-      Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
-      Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
-      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec cannot be null ");
+      if (expectedMSQFault == null) {
+        Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
+        Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
+        Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec cannot be null ");
+      }
       Pair<MSQSpec, Pair<List<MSQResultsReport.ColumnAndType>, List<Object[]>>> specAndResults = runQueryWithResult();
 
       if (specAndResults == null) { // A fault was expected and the assertion has been done in the runQueryWithResult

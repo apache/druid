@@ -51,6 +51,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -1929,8 +1930,8 @@ public class MSQSelectTest extends MSQTestBase
                                        new ColumnMappings(ImmutableList.of(
                                            new ColumnMapping("d0", "cnt"),
                                            new ColumnMapping("a0", "cnt1")
-                                       )
                                        ))
+                                   )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
                                                 ? DurableStorageMSQDestination.INSTANCE
@@ -2319,6 +2320,64 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{"b"},
                 new Object[]{""}
             ))
+        .verifyResults();
+  }
+
+  @Test
+  public void testUnionAllUsingUnionDataSource()
+  {
+
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .build();
+
+    final List<Object[]> results = ImmutableList.of(
+        new Object[]{946684800000L, ""},
+        new Object[]{946684800000L, ""},
+        new Object[]{946771200000L, "10.1"},
+        new Object[]{946771200000L, "10.1"},
+        new Object[]{946857600000L, "2"},
+        new Object[]{946857600000L, "2"},
+        new Object[]{978307200000L, "1"},
+        new Object[]{978307200000L, "1"},
+        new Object[]{978393600000L, "def"},
+        new Object[]{978393600000L, "def"},
+        new Object[]{978480000000L, "abc"},
+        new Object[]{978480000000L, "abc"}
+    );
+    // This plans the query using DruidUnionDataSourceRule since the DruidUnionDataSourceRule#isCompatible
+    // returns true (column names, types match, and it is a union on the table data sources).
+    // It gets planned correctly, however MSQ engine cannot plan the query correctly
+    testSelectQuery()
+        .setSql("SELECT __time, dim1 FROM foo\n"
+                + "UNION ALL\n"
+                + "SELECT __time, dim1 FROM foo\n")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(new UnionDataSource(
+                                  ImmutableList.of(new TableDataSource("foo"), new TableDataSource("foo"))
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  rowSignature
+                              ))
+                              .columns(ImmutableList.of("__time", "dim1"))
+                              .build())
+                   .columnMappings(ColumnMappings.identity(rowSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(results)
         .verifyResults();
   }
 
