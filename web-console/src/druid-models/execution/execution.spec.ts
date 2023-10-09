@@ -268,6 +268,7 @@ describe('Execution', () => {
             "maxNumTasks": 2,
           },
           "result": undefined,
+          "segmentStatus": undefined,
           "sqlQuery": "REPLACE INTO \\"kttm_simple\\" OVERWRITE ALL
         SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
@@ -643,6 +644,7 @@ describe('Execution', () => {
             "sqlQuery": undefined,
             "sqlQueryId": undefined,
           },
+          "segmentStatus": undefined,
           "sqlQuery": undefined,
           "stages": undefined,
           "startTime": 2023-07-05T21:33:19.147Z,
@@ -679,6 +681,7 @@ describe('Execution', () => {
           "nativeQuery": undefined,
           "queryContext": undefined,
           "result": undefined,
+          "segmentStatus": undefined,
           "sqlQuery": undefined,
           "stages": undefined,
           "startTime": 2023-07-05T21:40:39.986Z,
