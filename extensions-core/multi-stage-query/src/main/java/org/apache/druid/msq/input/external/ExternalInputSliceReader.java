@@ -119,10 +119,9 @@ public class ExternalInputSliceReader implements InputSliceReader
         new DimensionsSpec(
             signature.getColumnNames().stream().map(
                 column ->
-                    DimensionSchemaUtils.createDimensionSchema(
+                    DimensionSchemaUtils.createDimensionSchemaForExtern(
                         column,
-                        signature.getColumnType(column).orElse(null),
-                        false
+                        signature.getColumnType(column).orElse(null)
                     )
             ).collect(Collectors.toList())
         ),
