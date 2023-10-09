@@ -476,8 +476,14 @@ public class JoinDataSource implements DataSource
                            .orElse(null)
                 )
             );
-
             final Function<SegmentReference, SegmentReference> baseMapFn;
+            // A join data source is not concrete
+            // And isConcrete() of an unnest datasource delegates to its base
+            // Hence, in the case of a Join -> Unnest -> Join
+            // if we just use isConcrete on the left
+            // the segment map function for the unnest would never get called
+            // This calls us to delegate to the segmentMapFunction of the left
+            // only when it is not a JoinDataSource
             if (left instanceof JoinDataSource) {
               baseMapFn = Function.identity();
             } else {
@@ -486,7 +492,6 @@ public class JoinDataSource implements DataSource
                   cpuTimeAccumulator
               );
             }
-
             return baseSegment ->
                 new HashJoinSegment(
                     baseMapFn.apply(baseSegment),
@@ -515,6 +520,15 @@ public class JoinDataSource implements DataSource
     // Join of Unnest of Join of Unnest of Filter
     // so these checks are needed to be ORed
     // to get the base
+    // This method is called to get the analysis for the join data source
+    // Since the analysis of an UnnestDS or FilteredDS always delegates to its base
+    // To obtain the base data source underneath a Join
+    // we also iterate through the base of the  FilterDS and UnnestDS in its path
+    // the base of which can be a concrete data source
+    // This also means that an addition of a new datasource
+    // Will need an instanceof check here
+    // A future work should look into if the flattenJoin
+    // can be refactored to omit these instanceof checks
     while (current instanceof JoinDataSource || current instanceof UnnestDataSource || current instanceof FilteredDataSource) {
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;

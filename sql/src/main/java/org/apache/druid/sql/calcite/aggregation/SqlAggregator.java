@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -47,6 +48,44 @@ public interface SqlAggregator
    * they will be applied to your aggregator in a later step.
    *
    * @param plannerContext        SQL planner context
+   * @param virtualColumnRegistry re-usable virtual column references
+   * @param name                  desired output name of the aggregation
+   * @param aggregateCall         aggregate call object
+   * @param inputAccessor         gives access to input fields and schema
+   * @param existingAggregations  existing aggregations for this query; useful for re-using aggregations. May be safely
+   *                              ignored if you do not want to re-use existing aggregations.
+   * @param finalizeAggregations  true if this query should include explicit finalization for all of its
+   *                              aggregators, where required. This is set for subqueries where Druid's native query
+   *                              layer does not do this automatically.
+   * @return aggregation, or null if the call cannot be translated
+   */
+  @Nullable
+  default Aggregation toDruidAggregation(
+      PlannerContext plannerContext,
+      VirtualColumnRegistry virtualColumnRegistry,
+      String name,
+      AggregateCall aggregateCall,
+      InputAccessor inputAccessor,
+      List<Aggregation> existingAggregations,
+      boolean finalizeAggregations
+  )
+  {
+    return toDruidAggregation(plannerContext,
+        inputAccessor.getInputRowSignature(),
+        virtualColumnRegistry,
+        inputAccessor.getRexBuilder(),
+        name,
+        aggregateCall,
+        inputAccessor.getProject(),
+        existingAggregations,
+        finalizeAggregations);
+  }
+
+  /**
+   * Returns a Druid Aggregation corresponding to a SQL {@link AggregateCall}. This method should ignore filters;
+   * they will be applied to your aggregator in a later step.
+   *
+   * @param plannerContext        SQL planner context
    * @param rowSignature          input row signature
    * @param virtualColumnRegistry re-usable virtual column references
    * @param rexBuilder            a rexBuilder, in case you need one
@@ -62,7 +101,7 @@ public interface SqlAggregator
    * @return aggregation, or null if the call cannot be translated
    */
   @Nullable
-  Aggregation toDruidAggregation(
+  default Aggregation toDruidAggregation(
       PlannerContext plannerContext,
       RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
@@ -72,5 +111,8 @@ public interface SqlAggregator
       Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
-  );
+  )
+  {
+    throw new RuntimeException("unimplemented fallback method!");
+  }
 }

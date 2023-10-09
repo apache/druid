@@ -66,8 +66,8 @@ public class DruidRels
    */
   public static boolean isScanOrProject(final DruidRel<?> druidRel, final boolean canBeJoinOrUnion)
   {
-    if (druidRel instanceof DruidQueryRel || (canBeJoinOrUnion && (druidRel instanceof DruidJoinQueryRel
-                                                            || druidRel instanceof DruidCorrelateUnnestRel || druidRel instanceof DruidUnionDataSourceRel))) {
+    if (druidRel instanceof DruidQueryRel || (canBeJoinOrUnion && (druidRel instanceof DruidJoinQueryRel || druidRel instanceof DruidCorrelateUnnestRel
+                                                                   || druidRel instanceof DruidUnionDataSourceRel))) {
       final PartialDruidQuery partialQuery = druidRel.getPartialDruidQuery();
       final PartialDruidQuery.Stage stage = partialQuery.stage();
       return (stage == PartialDruidQuery.Stage.SCAN || stage == PartialDruidQuery.Stage.SELECT_PROJECT)
