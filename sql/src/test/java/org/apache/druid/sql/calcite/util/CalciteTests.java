@@ -39,7 +39,14 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -82,9 +89,11 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -367,6 +376,38 @@ public class CalciteTests
         catch (URISyntaxException e) {
           throw new RuntimeException(e);
         }
+      }
+
+      @Override
+      public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+          @Nullable String state,
+          @Nullable String dataSource,
+          @Nullable Integer maxCompletedTasks
+      )
+      {
+        List<TaskStatusPlus> tasks = new ArrayList<TaskStatusPlus>();
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 10L));
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 1L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 20L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 2L));
+        return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(tasks.iterator()));
+      }
+
+      private TaskStatusPlus createTaskStatus(String id, String datasource, Long duration)
+      {
+        return new TaskStatusPlus(
+            id,
+            "testGroupId",
+            "testType",
+            DateTimes.nowUtc(),
+            DateTimes.nowUtc(),
+            TaskState.RUNNING,
+            RunnerTaskState.RUNNING,
+            duration,
+            TaskLocation.create("testHost", 1010, -1),
+            datasource,
+            null
+        );
       }
     };
 

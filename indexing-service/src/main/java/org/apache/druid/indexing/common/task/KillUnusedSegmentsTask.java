@@ -222,18 +222,30 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
 
-      // Fetch the load specs of all segments overlapping with the given interval
-      final Set<Map<String, Object>> usedSegmentLoadSpecs = toolbox
-          .getTaskActionClient()
-          .submit(new RetrieveUsedSegmentsAction(getDataSource(), getInterval(), null, Segments.INCLUDING_OVERSHADOWED))
-          .stream()
-          .map(DataSegment::getLoadSpec)
-          .collect(Collectors.toSet());
+      final Set<Interval> unusedSegmentIntervals = unusedSegments.stream()
+                                                                 .map(DataSegment::getInterval)
+                                                                 .collect(Collectors.toSet());
+      final Set<Map<String, Object>> usedSegmentLoadSpecs = new HashSet<>();
+      if (!unusedSegmentIntervals.isEmpty()) {
+        RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = new RetrieveUsedSegmentsAction(
+            getDataSource(),
+            null,
+            unusedSegmentIntervals,
+            Segments.INCLUDING_OVERSHADOWED
+        );
+        // Fetch the load specs of all segments overlapping with the unused segment intervals
+        usedSegmentLoadSpecs.addAll(toolbox.getTaskActionClient().submit(retrieveUsedSegmentsAction)
+                                           .stream()
+                                           .map(DataSegment::getLoadSpec)
+                                           .collect(Collectors.toSet())
+        );
+      }
 
       // Kill segments from the deep storage only if their load specs are not being used by any used segments
       final List<DataSegment> segmentsToBeKilled = unusedSegments
           .stream()
-          .filter(unusedSegment -> !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
+          .filter(unusedSegment -> unusedSegment.getLoadSpec() == null
+                                   || !usedSegmentLoadSpecs.contains(unusedSegment.getLoadSpec()))
           .collect(Collectors.toList());
 
       toolbox.getDataSegmentKiller().kill(segmentsToBeKilled);
