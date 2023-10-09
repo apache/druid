@@ -21,6 +21,7 @@ package org.apache.druid.frame.file;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
@@ -49,11 +50,20 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
   public static final String HEADER_LAST_FETCH_NAME = "X-Druid-Frame-Last-Fetch";
   public static final String HEADER_LAST_FETCH_VALUE = "yes";
 
+  /**
+   * Channel to write to.
+   */
   private final ReadableByteChunksFrameChannel channel;
+
+  /**
+   * Starting offset for this handler.
+   */
+  private final long startOffset;
 
   public FrameFileHttpResponseHandler(final ReadableByteChunksFrameChannel channel)
   {
     this.channel = Preconditions.checkNotNull(channel, "channel");
+    this.startOffset = channel.getBytesAdded();
   }
 
   @Override
@@ -114,22 +124,36 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
       return ClientResponse.finished(clientResponseObj);
     }
 
-    final byte[] chunk = new byte[content.readableBytes()];
-    content.getBytes(content.readerIndex(), chunk);
+    final byte[] chunk;
+    final int chunkSize = content.readableBytes();
 
-    try {
-      final ListenableFuture<?> backpressureFuture = channel.addChunk(chunk);
+    // Potentially skip some of this chunk, if the relevant bytes have already been read by the handler. This can
+    // happen if a request reads some data, then fails with a retryable I/O error, and then is retried. The retry
+    // will re-read some data that has already been added to the channel, so we need to skip it.
+    final long readByThisHandler = channel.getBytesAdded() - startOffset;
+    final long readByThisRequest = clientResponseObj.getBytesRead(); // Prior to the current chunk
+    final long toSkip = readByThisHandler - readByThisRequest;
 
-      if (backpressureFuture != null) {
-        clientResponseObj.setBackpressureFuture(backpressureFuture);
+    if (toSkip < 0) {
+      throw DruidException.defensive("Expected toSkip[%d] to be nonnegative", toSkip);
+    } else if (toSkip < chunkSize) { // When toSkip >= chunkSize, we skip the entire chunk and do not toucn the channel
+      chunk = new byte[chunkSize - (int) toSkip];
+      content.getBytes(content.readerIndex() + (int) toSkip, chunk);
+
+      try {
+        final ListenableFuture<?> backpressureFuture = channel.addChunk(chunk);
+
+        if (backpressureFuture != null) {
+          clientResponseObj.setBackpressureFuture(backpressureFuture);
+        }
       }
-
-      clientResponseObj.addBytesRead(chunk.length);
-    }
-    catch (Exception e) {
-      clientResponseObj.exceptionCaught(e);
+      catch (Exception e) {
+        clientResponseObj.exceptionCaught(e);
+      }
     }
 
+    // Call addBytesRead even if we skipped some or all of the chunk, because that lets us know when to stop skipping.
+    clientResponseObj.addBytesRead(chunkSize);
     return ClientResponse.unfinished(clientResponseObj);
   }
 }

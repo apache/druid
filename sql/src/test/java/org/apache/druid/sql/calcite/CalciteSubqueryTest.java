@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
@@ -558,14 +559,14 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
-                                new LongSumAggregatorFactory("_a2:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a2:sum", "a0"),
                                 new CountAggregatorFactory("_a2:count"),
                                 new LongMaxAggregatorFactory("_a3", "d0"),
                                 new CountAggregatorFactory("_a4")
                             ) : aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
-                                new LongSumAggregatorFactory("_a2:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a2:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a2:count"),
                                     notNull("a0")
@@ -590,7 +591,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(new Object[]{1L, 1L, 1L, 978480000L, 6L})
+        ImmutableList.of(new Object[]{1L, 1L, 1.0, 978480000L, 6L})
     );
   }
 

@@ -27,6 +27,7 @@ import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
@@ -89,6 +90,9 @@ public class MultiStageQueryContext
 
   public static final String CTX_FINALIZE_AGGREGATIONS = "finalizeAggregations";
   private static final boolean DEFAULT_FINALIZE_AGGREGATIONS = true;
+
+  public static final String CTX_INCLUDE_SEGMENT_SOURCE = "includeSegmentSource";
+  public static final SegmentSource DEFAULT_INCLUDE_SEGMENT_SOURCE = SegmentSource.NONE;
 
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
@@ -188,6 +192,15 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FINALIZE_AGGREGATIONS,
         DEFAULT_FINALIZE_AGGREGATIONS
+    );
+  }
+
+  public static SegmentSource getSegmentSources(final QueryContext queryContext)
+  {
+    return queryContext.getEnum(
+        CTX_INCLUDE_SEGMENT_SOURCE,
+        SegmentSource.class,
+        DEFAULT_INCLUDE_SEGMENT_SOURCE
     );
   }
 

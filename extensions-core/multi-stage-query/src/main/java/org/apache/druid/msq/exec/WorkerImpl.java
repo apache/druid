@@ -295,6 +295,7 @@ public class WorkerImpl implements Worker
   {
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
+    closer.register(context.loadedSegmentDataProviderFactory());
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
 
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
@@ -1103,7 +1104,7 @@ public class WorkerImpl implements Worker
                       .put(
                           SegmentsInputSlice.class,
                           new SegmentsInputSliceReader(
-                              frameContext.dataSegmentProvider(),
+                              frameContext,
                               MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
                           )
                       )

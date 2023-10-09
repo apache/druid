@@ -82,7 +82,12 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
     final ReturnOrAwait<Unit> retVal;
 
     if (baseInput.hasSegment()) {
-      retVal = runWithSegment(baseInput.getSegment());
+      SegmentWithDescriptor segment = baseInput.getSegment();
+      if (segment.getDescriptor().isLoadedOnServer()) {
+        retVal = runWithLoadedSegment(baseInput.getSegment());
+      } else {
+        retVal = runWithSegment(baseInput.getSegment());
+      }
     } else {
       retVal = runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
     }
@@ -105,6 +110,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   }
 
   protected abstract ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException;
+  protected abstract ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException;
 
   protected abstract ReturnOrAwait<Unit> runWithInputChannel(
       ReadableFrameChannel inputChannel,

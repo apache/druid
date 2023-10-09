@@ -146,25 +146,29 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT1.getInterval(),
                         Intervals.of("2000-06-01/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000-06-01/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
@@ -206,7 +210,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             ),
@@ -237,7 +242,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             ),
@@ -248,7 +254,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000-06-01/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
@@ -270,13 +277,15 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         SEGMENT2.getInterval(),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
@@ -298,7 +307,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             ),
@@ -309,7 +319,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         SEGMENT2.getInterval(),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
@@ -331,7 +342,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         SEGMENT1.getInterval(),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             ),
@@ -342,7 +354,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         SEGMENT2.getInterval(),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             ),
@@ -385,13 +398,15 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
@@ -418,13 +433,15 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     ),
                     new RichSegmentDescriptor(
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
@@ -451,7 +468,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             ),
@@ -462,7 +480,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
@@ -489,7 +508,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT1.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum()
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             ),
@@ -500,7 +520,8 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
                         SEGMENT2.getInterval(),
                         Intervals.of("2000/P1M"),
                         SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum()
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
                     )
                 )
             )
