@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.io.ByteStreams;
-import com.google.common.primitives.Doubles;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
@@ -86,8 +85,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
@@ -400,8 +397,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   private static List<Object[]> parseResults(RowSignature rs, List<String[]> results)
   {
-    Predicate<String> longPattern = Pattern.compile("^-?[0-9]+$").asPredicate();
-    Predicate<String> doublePattern = Pattern.compile("^-?[0-9]+\\.[0-9]+$").asPredicate();
     List<Object[]> ret = new ArrayList<>();
     for (String[] row : results) {
       Object[] newRow = new Object[row.length];
@@ -419,26 +414,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
               newVal = val;
               break;
             case LONG:
-              if ("".equals(val)) {
-                newVal = null;
-              } else if (longPattern.test(val)) {
-                newVal = Numbers.parseLong(val);
-              } else if ("0E-20".equals(val)) {
-                newVal = 0L;
-              } else if (doublePattern.test(val)) {
-                double d = Doubles.tryParse(val);
-                newVal = (long) d;
-              } else {
-                Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
-                try {
-                  DateTime v = parser.apply(val);
-                  newVal = v.getMillis();
-                }
-                catch (IllegalArgumentException iae) {
-                  LocalTime v = LocalTime.parse(val);
-                  newVal = v.getMillisOfDay();
-                }
-              }
+            newVal = parseLongValue(val);
               break;
             case DOUBLE:
               newVal = Numbers.parseDoubleObject(val);
@@ -452,6 +428,34 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       ret.add(newRow);
     }
     return ret;
+  }
+
+  private static Object parseLongValue(final String val)
+  {
+    if ("".equals(val)) {
+      return null;
+    }
+    try {
+      return Long.parseLong(val);
+    } catch (NumberFormatException e) {
+    }
+    try {
+      double d = Double.parseDouble(val);
+      return (long) d;
+    } catch (NumberFormatException e) {
+    }
+    try {
+      LocalTime v = LocalTime.parse(val);
+      return v.getMillisOfDay();
+    } catch (Exception e) {
+    }
+    Function<String, DateTime> parser = TimestampParser.createTimestampParser("auto");
+    try {
+      DateTime v = parser.apply(val);
+      return v.getMillis();
+    } catch (IllegalArgumentException iae) {
+    }
+    throw new RuntimeException("Can't parse input!");
   }
 
   public void windowQueryTest()
