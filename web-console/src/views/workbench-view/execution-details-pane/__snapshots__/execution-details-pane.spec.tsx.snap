@@ -22,6 +22,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
         "id": "native",
         "label": "Native query",
       },
+      false,
       undefined,
       undefined,
       Object {
@@ -1321,6 +1322,7 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
         "id": "native",
         "label": "Native query",
       },
+      false,
       undefined,
       undefined,
       Object {
