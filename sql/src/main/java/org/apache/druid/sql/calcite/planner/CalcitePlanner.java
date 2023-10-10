@@ -34,6 +34,7 @@ import org.apache.calcite.plan.RelOptTable.ViewExpander;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
+import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
@@ -59,6 +60,7 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.io.Reader;
@@ -240,6 +242,20 @@ public class CalcitePlanner implements Planner, ViewExpander
       validatedSqlNode = validator.validate(sqlNode);
     }
     catch (RuntimeException e) {
+      if (((BaseDruidSqlValidator) validator).getEarliestLatestByConverted() && e.getCause()
+                                                                                 .getMessage()
+                                                                                 .contains("__time")) {
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                e,
+                                "Query could not be planned. A possible reason is [%s]",
+                                "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
+                                + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
+                                + "and specify the column explicitly."
+                            );
+
+      }
       throw new ValidationException(e);
     }
     state = CalcitePlanner.State.STATE_4_VALIDATED;

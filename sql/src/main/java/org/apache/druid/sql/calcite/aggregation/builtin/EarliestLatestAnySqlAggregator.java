@@ -19,13 +19,13 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
+import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -365,21 +365,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       // Rewrite EARLIEST/LATEST to EARLIEST_BY/LATEST_BY to make
       // reference to __time column explicit so that Calcite tracks it
 
-      try {
-        validator.validate(new SqlIdentifier("__time", SqlParserPos.ZERO));
-      }
-      catch (CalciteContextException e) {
-
-        throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                e,
-                                "Query could not be planned. A possible reason is [%s]",
-                                "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
-                                + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
-                                + "and specify the column explicitly."
-                            );
-      }
       if (replacementAggFunc == null) {
         return call;
       }
@@ -403,6 +388,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
       if (operands.size() == 2) {
         newOperands.add(operands.get(1));
       }
+
+      ((BaseDruidSqlValidator) validator).setEarliestLatestByConverted();
 
       return replacementAggFunc.createCall(pos, newOperands);
     }

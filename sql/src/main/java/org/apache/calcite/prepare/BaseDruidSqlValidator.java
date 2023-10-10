@@ -31,6 +31,8 @@ import org.apache.calcite.sql.SqlOperatorTable;
  */
 public class BaseDruidSqlValidator extends CalciteSqlValidator
 {
+  private Boolean earliestLatestByConverted;
+
   public BaseDruidSqlValidator(
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
@@ -39,5 +41,16 @@ public class BaseDruidSqlValidator extends CalciteSqlValidator
   )
   {
     super(opTab, catalogReader, typeFactory, validatorConfig);
+    earliestLatestByConverted = false;
+  }
+
+  public void setEarliestLatestByConverted()
+  {
+    this.earliestLatestByConverted = true;
+  }
+
+  public Boolean getEarliestLatestByConverted()
+  {
+    return earliestLatestByConverted;
   }
 }
