@@ -44,7 +44,8 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
 
   const warnings = execution.stages?.getWarningCount() || 0;
 
-  const { duration, segmentStatus } = execution;
+  const { duration } = execution;
+  const segmentStatusDescription = execution.getSegmentStatusDescription();
 
   return (
     <div className="ingest-success-pane">
@@ -64,12 +65,12 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
       </p>
       <p>
         {duration ? `Insert query took ${formatDuration(duration)}. ` : `Insert query completed. `}
+        {segmentStatusDescription ? segmentStatusDescription.label + ' ' : ''}
         <span className="action" onClick={() => onDetails(execution.id)}>
           Show details
         </span>
       </p>
 
-      {segmentStatus && <p>{execution.getSegmentStatusDescription()}</p>}
       {onQueryTab && (
         <p>
           Open new tab with:{' '}

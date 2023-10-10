@@ -267,6 +267,11 @@ export async function updateExecutionWithDatasourceLoadedIfNeeded(
     return execution;
   }
 
+  // This means we don't have to perform the SQL query to check if the segments are loaded
+  if (execution.queryContext?.waitTillSegmentsLoad === true) {
+    return execution.markDestinationDatasourceLoaded();
+  }
+
   const endTime = execution.getEndTime();
   if (
     !endTime || // If endTime is not set (this is not expected to happen) then just bow out

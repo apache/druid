@@ -164,6 +164,18 @@ function formatPendingMessage(
   }
 }
 
+interface SegmentStatus {
+  duration: number;
+  onDemandSegments: number;
+  pendingSegments: number;
+  precachedSegments: number;
+  startTime: Date;
+  state: 'INIT' | 'WAITING' | 'SUCCESS';
+  totalSegments: number;
+  unknownSegments: number;
+  usedSegments: number;
+}
+
 export interface ExecutionValue {
   engine: DruidEngine;
   id: string;
@@ -182,7 +194,7 @@ export interface ExecutionValue {
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
   _payload?: MsqTaskPayloadResponse;
-  segmentStatus?: string;
+  segmentStatus?: SegmentStatus;
 }
 
 export class Execution {
@@ -319,7 +331,7 @@ export class Execution {
       engine: 'sql-msq-task',
       id,
       status: Execution.normalizeTaskStatus(status),
-      segmentStatus: segmentLoaderStatus?.state,
+      segmentStatus: segmentLoaderStatus,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
       duration: typeof durationMs === 'number' ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
@@ -376,7 +388,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
-  public readonly segmentStatus?: string;
+  public readonly segmentStatus?: SegmentStatus;
 
   public readonly _payload?: { payload: any; task: string };
 
@@ -539,19 +551,29 @@ export class Execution {
   public getSegmentStatusDescription() {
     const { segmentStatus } = this;
 
-    switch (segmentStatus) {
+    let label = '';
+
+    switch (segmentStatus?.state) {
       case 'INIT':
-        return 'Waiting for segments loading to start...';
+        label = 'Waiting for segments loading to start...';
+        break;
 
       case 'WAITING':
-        return 'Waiting for segments loading to complete...';
+        label = 'Waiting for segments loading to complete...';
+        break;
 
       case 'SUCCESS':
-        return 'Segments loaded successfully';
+        label = 'Segments loaded successfully in ' + segmentStatus.duration + 'ms.';
+        break;
 
       default:
-        return '';
+        break;
     }
+
+    return {
+      label,
+      ...segmentStatus,
+    };
   }
 
   public isFullyComplete(): boolean {
