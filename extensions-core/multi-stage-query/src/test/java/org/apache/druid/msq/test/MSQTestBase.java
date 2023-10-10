@@ -36,6 +36,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
@@ -83,6 +84,8 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -295,6 +298,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected AuthorizerMapper authorizerMapper;
   private IndexIO indexIO;
 
+  // Contains the metadata of loaded segments
+  protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
+  // Mocks the return of data from data servers
+  protected LoadedSegmentDataProvider loadedSegmentDataProvider = mock(LoadedSegmentDataProvider.class);
+
   private MSQTestSegmentManager segmentManager;
   private SegmentCacheManager segmentCacheManager;
   @Rule
@@ -418,7 +426,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(QueryProcessingPool.class)
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
-                .toInstance((dataSegment, channelCounters, isReindex) -> getSupplierForSegment(dataSegment));
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
+          binder.bind(LoadedSegmentDataProviderFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
@@ -499,7 +508,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         objectMapper,
         injector,
         testTaskActionClient,
-        workerMemoryParameters
+        workerMemoryParameters,
+        loadedSegmentsMetadata
     );
     CatalogResolver catalogResolver = createMockCatalogResolver();
     final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
@@ -570,6 +580,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
     long[] array = new long[length];
     Arrays.fill(array, value);
     return array;
+  }
+
+  private LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
+  {
+    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
+    doReturn(loadedSegmentDataProvider)
+        .when(mockFactory)
+        .createLoadedSegmentDataProvider(anyString(), any());
+    return mockFactory;
   }
 
   @Nonnull
@@ -1408,9 +1427,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public void verifyResults()
     {
-      Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
-      Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
-      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec cannot be null ");
+      if (expectedMSQFault == null) {
+        Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
+        Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
+        Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec cannot be null ");
+      }
       Pair<MSQSpec, Pair<List<MSQResultsReport.ColumnAndType>, List<Object[]>>> specAndResults = runQueryWithResult();
 
       if (specAndResults == null) { // A fault was expected and the assertion has been done in the runQueryWithResult
