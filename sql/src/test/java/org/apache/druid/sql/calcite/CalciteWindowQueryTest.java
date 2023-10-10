@@ -140,6 +140,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
             }
 
             Assert.assertEquals(1, results.recordedQueries.size());
+            maybeDumpActualResults(jacksonToString, results.results);
             // 2 tests are failing at this moment on this check
             // They are wikipediaFramedAggregations.sqlTest and wikipediaAggregationsMultipleOrdering.sqlTest
             // Calcite 1.35 plans them as an external scan over a windowOperator
@@ -175,7 +176,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
               Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
             }
 
-            maybeDumpActualResults(jacksonToString, results.results);
             for (Object[] result : input.expectedResults) {
               for (int i = 0; i < result.length; i++) {
                 // Jackson deserializes numbers as the minimum size required to store the value.  This means that
