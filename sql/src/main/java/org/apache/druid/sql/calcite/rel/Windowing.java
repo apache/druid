@@ -176,7 +176,7 @@ public class Windowing
               sourceRowSignature,
               plannerContext.getExpressionParser(),
               plannerContext.getPlannerConfig().isForceExpressionVirtualColumns());
-
+          virtualColumnRegistry = null;
           final Aggregation aggregation = GroupByRules.translateAggregateCall(
               plannerContext,
               sourceRowSignature,
