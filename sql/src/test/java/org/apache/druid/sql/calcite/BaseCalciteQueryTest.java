@@ -132,6 +132,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -1095,7 +1096,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     List<ValueType> types = new ArrayList<>();
     for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
-      types.add(queryResults.signature.getColumnType(i).get().getType());
+      Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
+      if (columnType.isPresent()) {
+        types.add(columnType.get().getType());
+      } else {
+        types.add(null);
+      }
     }
 
     int numRows = results.size();
