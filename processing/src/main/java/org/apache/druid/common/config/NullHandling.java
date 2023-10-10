@@ -108,7 +108,7 @@ public class NullHandling
   public static boolean useThreeValueLogic()
   {
     return NullHandling.sqlCompatible() &&
-           INSTANCE.isUseThreeValueLogic() &&
+           INSTANCE.isUseThreeValueLogicForNativeFilters() &&
            ExpressionProcessing.useStrictBooleans();
   }
 

@@ -28,7 +28,7 @@ public class NullValueHandlingConfig
 {
   private static final Logger LOG = new Logger(NullValueHandlingConfig.class);
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
-  public static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogic";
+  public static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogicForNativeFilters";
 
   //added to preserve backward compatibility
   //and not count nulls during cardinality aggrgation over strings
@@ -38,8 +38,8 @@ public class NullValueHandlingConfig
   @JsonProperty("useDefaultValueForNull")
   private final boolean useDefaultValuesForNull;
 
-  @JsonProperty("useThreeValueLogic")
-  private final boolean useThreeValueLogic;
+  @JsonProperty("useThreeValueLogicForNativeFilters")
+  private final boolean useThreeValueLogicForNativeFilters;
 
   @JsonProperty("ignoreNullsForStringCardinality")
   private final boolean ignoreNullsForStringCardinality;
@@ -47,7 +47,7 @@ public class NullValueHandlingConfig
   @JsonCreator
   public NullValueHandlingConfig(
       @JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull,
-      @JsonProperty("useThreeValueLogic") Boolean useThreeValueLogic,
+      @JsonProperty("useThreeValueLogicForNativeFilters") Boolean useThreeValueLogicForNativeFilters,
       @JsonProperty("ignoreNullsForStringCardinality") Boolean ignoreNullsForStringCardinality
   )
   {
@@ -56,10 +56,12 @@ public class NullValueHandlingConfig
     } else {
       this.useDefaultValuesForNull = useDefaultValuesForNull;
     }
-    if (useThreeValueLogic == null) {
-      this.useThreeValueLogic = Boolean.valueOf(System.getProperty(THREE_VALUE_LOGIC_CONFIG_STRING, "true"));
+    if (useThreeValueLogicForNativeFilters == null) {
+      this.useThreeValueLogicForNativeFilters = Boolean.valueOf(
+          System.getProperty(THREE_VALUE_LOGIC_CONFIG_STRING, "true")
+      );
     } else {
-      this.useThreeValueLogic = useThreeValueLogic;
+      this.useThreeValueLogicForNativeFilters = useThreeValueLogicForNativeFilters;
     }
     if (ignoreNullsForStringCardinality == null) {
       this.ignoreNullsForStringCardinality = Boolean.valueOf(System.getProperty(
@@ -85,7 +87,7 @@ public class NullValueHandlingConfig
           StringUtils.format(docsBaseFormat, version, "null-values")
       );
     }
-    if (!this.useThreeValueLogic) {
+    if (!this.useThreeValueLogicForNativeFilters) {
       LOG.warn(
           "druid.generic.useThreeValueLogic set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
           StringUtils.format(docsBaseFormat, version, "boolean-logic")
@@ -103,8 +105,8 @@ public class NullValueHandlingConfig
     return useDefaultValuesForNull;
   }
 
-  public boolean isUseThreeValueLogic()
+  public boolean isUseThreeValueLogicForNativeFilters()
   {
-    return useThreeValueLogic;
+    return useThreeValueLogicForNativeFilters;
   }
 }
