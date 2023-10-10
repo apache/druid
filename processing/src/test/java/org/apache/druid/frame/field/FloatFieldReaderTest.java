@@ -60,7 +60,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new FloatFieldWriter(writeSelector);
+    fieldWriter = FloatFieldWriter.forPrimitive(writeSelector);
   }
 
   @After
@@ -73,14 +73,14 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_defaultOrNull()
   {
     writeToMemory(NullHandling.defaultFloatValue());
-    Assert.assertEquals(NullHandling.sqlCompatible(), new FloatFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertEquals(NullHandling.sqlCompatible(), FloatFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_aValue()
   {
     writeToMemory(5.1f);
-    Assert.assertFalse(new FloatFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(FloatFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -89,7 +89,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultFloatValue());
 
     final ColumnValueSelector<?> readSelector =
-        new FloatFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 
@@ -104,7 +104,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1f);
 
     final ColumnValueSelector<?> readSelector =
-        new FloatFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(5.1f, readSelector.getObject());
   }
@@ -115,7 +115,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultFloatValue());
 
     final DimensionSelector readSelector =
-        new FloatFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        FloatFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -149,7 +149,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1f);
 
     final DimensionSelector readSelector =
-        new FloatFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        FloatFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -176,7 +176,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(20.5f);
 
     final DimensionSelector readSelector =
-        new FloatFieldReader().makeDimensionSelector(
+        FloatFieldReader.forPrimitive().makeDimensionSelector(
             memory,
             new ConstantFieldPointer(MEMORY_POSITION),
             new SubstringDimExtractionFn(1, null)

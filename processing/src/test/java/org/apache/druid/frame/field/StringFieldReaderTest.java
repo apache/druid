@@ -82,24 +82,24 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_nullValue()
   {
     writeToMemory(Collections.singletonList(null));
-    Assert.assertTrue(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
-    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertTrue(new StringFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_twoNullValues()
   {
     writeToMemory(Arrays.asList(null, null));
-    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
-    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_nullRow()
   {
     writeToMemory(null);
-    Assert.assertTrue(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
-    Assert.assertTrue(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertTrue(new StringFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertTrue(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -108,33 +108,33 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.singletonList(""));
     Assert.assertEquals(
         NullHandling.replaceWithDefault(),
-        new StringFieldReader(false).isNull(memory, MEMORY_POSITION)
+        new StringFieldReader().isNull(memory, MEMORY_POSITION)
     );
-    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_aValue()
   {
     writeToMemory(Collections.singletonList("foo"));
-    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
-    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_multiString()
   {
     writeToMemory(ImmutableList.of("foo", "bar"));
-    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
-    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_multiStringIncludingNulls()
   {
     writeToMemory(Arrays.asList(null, "bar"));
-    Assert.assertFalse(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
-    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -143,9 +143,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.singletonList("foo"));
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals("foo", readSelector.getObject());
     Assert.assertArrayEquals(new Object[]{"foo"}, (Object[]) readSelectorAsArray.getObject());
@@ -157,9 +157,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(ImmutableList.of("foo", "bar"));
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertEquals(ImmutableList.of("foo", "bar"), readSelector.getObject());
     Assert.assertArrayEquals(new Object[]{"foo", "bar"}, (Object[]) readSelectorAsArray.getObject());
@@ -171,9 +171,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.singletonList(null));
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertNull(readSelector.getObject());
     Assert.assertArrayEquals(new Object[]{null}, (Object[]) readSelectorAsArray.getObject());
@@ -185,9 +185,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.emptyList());
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader(false).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertNull(readSelector.getObject());
     Assert.assertArrayEquals(ObjectArrays.EMPTY_ARRAY, (Object[]) readSelectorAsArray.getObject());
@@ -200,7 +200,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
 
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        () -> new StringFieldReader(true).makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null)
+        () -> new StringArrayFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null)
     );
 
     MatcherAssert.assertThat(
@@ -215,7 +215,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(ImmutableList.of("foo", "bar"));
 
     final DimensionSelector readSelector =
-        new StringFieldReader(false).makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new StringFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -245,7 +245,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(ImmutableList.of("foo", "bar"));
 
     final DimensionSelector readSelector =
-        new StringFieldReader(false).makeDimensionSelector(
+        new StringFieldReader().makeDimensionSelector(
             memory,
             new ConstantFieldPointer(MEMORY_POSITION),
             new SubstringDimExtractionFn(1, null)

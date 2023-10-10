@@ -27,12 +27,14 @@ import com.google.inject.Key;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.TaskDataSegmentProvider;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -43,6 +45,7 @@ import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
@@ -68,6 +71,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final Injector injector;
   private final IndexIO indexIO;
   private final TaskDataSegmentProvider dataSegmentProvider;
+  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
   private final ServiceClientFactory clientFactory;
 
   @GuardedBy("this")
@@ -81,6 +85,7 @@ public class IndexerWorkerContext implements WorkerContext
       final Injector injector,
       final IndexIO indexIO,
       final TaskDataSegmentProvider dataSegmentProvider,
+      final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory,
       final ServiceClientFactory clientFactory
   )
   {
@@ -88,6 +93,7 @@ public class IndexerWorkerContext implements WorkerContext
     this.injector = injector;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
+    this.loadedSegmentDataProviderFactory = loadedSegmentDataProviderFactory;
     this.clientFactory = clientFactory;
   }
 
@@ -99,12 +105,24 @@ public class IndexerWorkerContext implements WorkerContext
                 .manufacturate(new File(toolbox.getIndexingTmpDir(), "segment-fetch"));
     final ServiceClientFactory serviceClientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
+    final ObjectMapper smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
+    final QueryToolChestWarehouse warehouse = injector.getInstance(QueryToolChestWarehouse.class);
 
     return new IndexerWorkerContext(
         toolbox,
         injector,
         indexIO,
-        new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager, indexIO),
+        new TaskDataSegmentProvider(
+            toolbox.getCoordinatorClient(),
+            segmentCacheManager,
+            indexIO
+        ),
+        new LoadedSegmentDataProviderFactory(
+            toolbox.getCoordinatorClient(),
+            serviceClientFactory,
+            smileMapper,
+            warehouse
+        ),
         serviceClientFactory
     );
   }
@@ -227,6 +245,7 @@ public class IndexerWorkerContext implements WorkerContext
         this,
         indexIO,
         dataSegmentProvider,
+        loadedSegmentDataProviderFactory,
         WorkerMemoryParameters.createProductionInstanceForWorker(injector, queryDef, stageNumber)
     );
   }
@@ -247,6 +266,12 @@ public class IndexerWorkerContext implements WorkerContext
   public Bouncer processorBouncer()
   {
     return injector.getInstance(Bouncer.class);
+  }
+
+  @Override
+  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  {
+    return loadedSegmentDataProviderFactory;
   }
 
   private synchronized OverlordClient makeOverlordClient()

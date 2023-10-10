@@ -49,6 +49,7 @@ public class IndexerWorkerContextTest
         injectorMock,
         null,
         null,
+        null,
         null
     );
   }

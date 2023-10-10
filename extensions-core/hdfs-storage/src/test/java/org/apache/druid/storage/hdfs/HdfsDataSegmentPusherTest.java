@@ -170,6 +170,46 @@ public class HdfsDataSegmentPusherTest
     );
   }
 
+  @Test
+  public void testPushToPath() throws Exception
+  {
+    Configuration conf = new Configuration(true);
+
+    // Create a mock segment on disk
+    File segmentDir = tempFolder.newFolder();
+    File tmp = new File(segmentDir, "version.bin");
+
+    final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
+    Files.write(data, tmp);
+    final long size = data.length;
+
+    HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+
+    config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+
+    DataSegment segmentToPush = new DataSegment(
+        "foo",
+        Intervals.of("2015/2016"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        0,
+        size
+    );
+
+    final String storageDirSuffix = "shuffle-data/index_parallel_session_analysis_test_bkdhhedd_2023-09-08T03:18:21.121Z/2023-08-29T16:00:00.000Z/2023-08-29T17:00:00.000Z";
+    DataSegment segment = pusher.pushToPath(segmentDir, segmentToPush, storageDirSuffix);
+    
+    Assert.assertTrue(
+        segment.getLoadSpec().get("path").toString(),
+        segment.getLoadSpec().get("path").toString().endsWith(storageDirSuffix.replace(':', '_') + "/0_index.zip")
+    );
+  }
+
   private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments) throws Exception
   {
     Configuration conf = new Configuration(true);

@@ -171,7 +171,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
   @Before
   public void setup() throws IOException
   {
-    final String fileNameBase = "test";
+    final String fileNameBase = "test/column";
     final String arrayFileNameBase = "array";
     fileMapper = smooshify(fileNameBase, tempFolder.newFolder(), data);
     baseBuffer = fileMapper.mapFile(fileNameBase);
