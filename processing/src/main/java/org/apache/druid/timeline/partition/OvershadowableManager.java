@@ -39,6 +39,7 @@ import it.unimi.dsi.fastutil.shorts.ShortSortedSet;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.Overshadowable;
 
 import javax.annotation.Nullable;
@@ -86,7 +87,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
   }
 
   private final Map<Integer, PartitionChunk<T>> knownPartitionChunks; // served segments
-
+  private static final Logger log = new Logger(OvershadowableManager.class);
   // (start partitionId, end partitionId) -> minorVersion -> atomicUpdateGroup
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> standbyGroups;
   /**
@@ -399,13 +400,13 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * A RootPartitionRange is smaller than a partitionId if {@link RootPartitionRange#startPartitionId} < partitionId.
    */
   private Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> entryIteratorSmallerThan(
-      short partitionId,
+      int partitionId,
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {
-    final RootPartitionRange lowFench = new RootPartitionRange((short) 0, (short) 0);
+    final RootPartitionRange lowFence = new RootPartitionRange(0, 0);
     final RootPartitionRange highFence = new RootPartitionRange(partitionId, partitionId);
-    return stateMap.subMap(lowFench, false, highFence, false).descendingMap().entrySet().iterator();
+    return stateMap.subMap(lowFence, false, highFence, false).descendingMap().entrySet().iterator();
   }
 
   /**
@@ -414,13 +415,13 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * and {@link RootPartitionRange#endPartitionId} > partitionId.
    */
   private Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> entryIteratorGreaterThan(
-      short partitionId,
+      int partitionId,
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {
-    final RootPartitionRange lowFench = new RootPartitionRange(partitionId, partitionId);
-    final RootPartitionRange highFence = new RootPartitionRange(Short.MAX_VALUE, Short.MAX_VALUE);
-    return stateMap.subMap(lowFench, false, highFence, false).entrySet().iterator();
+    final RootPartitionRange lowFence = new RootPartitionRange(partitionId, partitionId);
+    final RootPartitionRange highFence = new RootPartitionRange(Integer.MAX_VALUE, Integer.MAX_VALUE);
+    return stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
   }
 
   /**
@@ -1033,13 +1034,16 @@ class OvershadowableManager<T extends Overshadowable<T>>
   @VisibleForTesting
   static class RootPartitionRange implements Comparable<RootPartitionRange>
   {
-    private final short startPartitionId;
-    private final short endPartitionId;
+    private final int startPartitionId;
+    private final int endPartitionId;
 
     @VisibleForTesting
     static RootPartitionRange of(int startPartitionId, int endPartitionId)
     {
-      return new RootPartitionRange((short) startPartitionId, (short) endPartitionId);
+      if(startPartitionId>Short.MAX_VALUE){
+        log.error("PartitionId [%s] exceeding range of Short.MAX_VALUE, please compact your segements or reduce number of segments in time period!",startPartitionId);
+      }
+      return new RootPartitionRange(startPartitionId, endPartitionId);
     }
 
     private static <T extends Overshadowable<T>> RootPartitionRange of(PartitionChunk<T> chunk)
@@ -1052,7 +1056,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
       return of(aug.getStartRootPartitionId(), aug.getEndRootPartitionId());
     }
 
-    private RootPartitionRange(short startPartitionId, short endPartitionId)
+    private RootPartitionRange(int startPartitionId, int endPartitionId)
     {
       this.startPartitionId = startPartitionId;
       this.endPartitionId = endPartitionId;
@@ -1060,25 +1064,25 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
     public boolean contains(RootPartitionRange that)
     {
-      return Short.toUnsignedInt(startPartitionId) <= Short.toUnsignedInt(that.startPartitionId)
-             && Short.toUnsignedInt(this.endPartitionId) >= Short.toUnsignedInt(that.endPartitionId);
+      return startPartitionId <= that.startPartitionId
+             && this.endPartitionId >= that.endPartitionId;
     }
 
     public boolean overlaps(RootPartitionRange that)
     {
-      return Short.toUnsignedInt(startPartitionId) <= Short.toUnsignedInt(that.startPartitionId)
-             && Short.toUnsignedInt(endPartitionId) > Short.toUnsignedInt(that.startPartitionId)
-             || Short.toUnsignedInt(startPartitionId) >= Short.toUnsignedInt(that.startPartitionId)
-                && Short.toUnsignedInt(startPartitionId) < Short.toUnsignedInt(that.endPartitionId);
+      return startPartitionId <= that.startPartitionId
+             && endPartitionId > that.startPartitionId
+             || startPartitionId >= that.startPartitionId
+                && startPartitionId < that.endPartitionId;
     }
 
     @Override
     public int compareTo(RootPartitionRange o)
     {
       if (startPartitionId != o.startPartitionId) {
-        return Integer.compare(Short.toUnsignedInt(startPartitionId), Short.toUnsignedInt(o.startPartitionId));
+        return Integer.compare(startPartitionId, o.startPartitionId);
       } else {
-        return Integer.compare(Short.toUnsignedInt(endPartitionId), Short.toUnsignedInt(o.endPartitionId));
+        return Integer.compare(endPartitionId, o.endPartitionId);
       }
     }
 
