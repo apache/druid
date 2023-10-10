@@ -161,12 +161,6 @@ The following is the general syntax for UNNEST:
 SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression) AS table_alias_name(column_alias_name)
 ```
 
-In addition, you must supply the following context parameter:
-
-```json
-"enableUnnest": "true"
-```
-
 For more information about the syntax, see [UNNEST](../querying/sql.md#unnest).
 
 ### Unnest a single source expression in a datasource
@@ -640,7 +634,6 @@ The following Scan query unnests the column `dim3` into `d3` and a virtual colum
   ],
   "legacy": false,
   "context": {
-    "enableUnnest": "true",
     "queryId": "2618b9ce-6c0d-414e-b88d-16fb59b9c481",
     "sqlOuterLimit": 1001,
     "sqlQueryId": "2618b9ce-6c0d-414e-b88d-16fb59b9c481",
