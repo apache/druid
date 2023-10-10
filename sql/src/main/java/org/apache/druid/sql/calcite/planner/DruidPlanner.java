@@ -148,6 +148,7 @@ public class DruidPlanner implements Closeable
     catch (SqlParseException e1) {
       throw translateException(e1);
     }
+    hook.captureSqlNode(root);
     handler = createHandler(root);
     handler.validate();
     plannerContext.setResourceActions(handler.resourceActions());

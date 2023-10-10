@@ -377,7 +377,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
     private boolean isOrdered(String sql)
     {
+//      SqlNode query;
       // FIXME: SqlToRelConverter.isOrdered(null) would be better
+//      SqlToRelConverter.isOrdered(query);
       sql = sql.toLowerCase(Locale.ENGLISH).replace('\n', ' ');
       sql = sql.substring(sql.lastIndexOf(')'));
       return sql.contains("order");

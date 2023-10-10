@@ -43,6 +43,7 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.QueryTestBuilder.QueryTestConfig;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
+import org.apache.druid.sql.calcite.planner.PlannerHook;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -86,14 +87,14 @@ public class QueryTestRunner
    */
   public abstract static class QueryRunStep
   {
-    private final QueryTestBuilder builder;
+    protected final QueryTestBuilder builder;
 
     public QueryRunStep(final QueryTestBuilder builder)
     {
       this.builder = builder;
     }
 
-    public QueryTestBuilder builder()
+    public final QueryTestBuilder builder()
     {
       return builder;
     }
@@ -122,7 +123,7 @@ public class QueryTestRunner
     public final List<Query<?>> recordedQueries;
     public final Set<ResourceAction> resourceActions;
     public final RuntimeException exception;
-    public final PlannerCaptureHook capture;
+    public final PlannerHook capture;
 
     public QueryResults(
         final Map<String, Object> queryContext,
@@ -130,7 +131,7 @@ public class QueryTestRunner
         final RelDataType sqlSignature,
         final List<Object[]> results,
         final List<Query<?>> recordedQueries,
-        final PlannerCaptureHook capture
+        final PlannerHook capture
     )
     {
       this.queryContext = queryContext;
@@ -207,12 +208,10 @@ public class QueryTestRunner
   public abstract static class BaseExecuteQuery extends QueryRunStep
   {
     protected final List<QueryResults> results = new ArrayList<>();
-    protected final boolean doCapture;
 
     public BaseExecuteQuery(QueryTestBuilder builder)
     {
       super(builder);
-      doCapture = builder.expectedLogicalPlan != null;
     }
 
     public List<QueryResults> results()
@@ -278,7 +277,7 @@ public class QueryTestRunner
     )
     {
       try {
-        final PlannerCaptureHook capture = doCapture ? new PlannerCaptureHook() : null;
+        final PlannerCaptureHook capture = getCaptureHook();
         final DirectStatement stmt = sqlStatementFactory.directStatement(query);
         stmt.setHook(capture);
         final Sequence<Object[]> results = stmt.execute().getResults();
@@ -298,6 +297,14 @@ public class QueryTestRunner
             e
         );
       }
+    }
+
+    private PlannerCaptureHook getCaptureHook()
+    {
+      if (builder.expectedLogicalPlan != null) {
+        return new PlannerCaptureHook();
+      }
+      return null;
     }
 
     public static Pair<RowSignature, List<Object[]>> getResults(
@@ -528,7 +535,7 @@ public class QueryTestRunner
     private void verifyLogicalPlan(QueryResults queryResults)
     {
       String expectedPlan = execStep.builder().expectedLogicalPlan;
-      String actualPlan = visualizePlan(queryResults.capture);
+      String actualPlan = visualizePlan((PlannerCaptureHook) queryResults.capture);
       Assert.assertEquals(expectedPlan, actualPlan);
     }
 
