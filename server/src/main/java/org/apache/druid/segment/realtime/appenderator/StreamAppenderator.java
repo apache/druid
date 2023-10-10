@@ -1057,7 +1057,7 @@ public class StreamAppenderator implements Appenderator
 
   public void updatePendingSegmentMapping(
       SegmentIdWithShardSpec rootPendingSegment,
-      Set<SegmentIdWithShardSpec> versionsOfPendingSegment
+      List<SegmentIdWithShardSpec> versionsOfPendingSegment
   ) throws IOException
   {
     if (!sinks.containsKey(rootPendingSegment) || droppingSinks.contains(rootPendingSegment)) {

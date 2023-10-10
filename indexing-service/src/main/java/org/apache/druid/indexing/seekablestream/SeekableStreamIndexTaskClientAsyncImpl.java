@@ -37,7 +37,6 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -203,10 +202,16 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
       Set<SegmentIdWithShardSpec> versionsOfPendingSegment
   )
   {
+    if (versionsOfPendingSegment.isEmpty()) {
+      return Futures.immediateFuture(true);
+    }
+    final List<SegmentIdWithShardSpec> allVersionsOfPendingSegment = new ArrayList<>();
+    allVersionsOfPendingSegment.add(rootPendingSegment);
+    allVersionsOfPendingSegment.addAll(versionsOfPendingSegment);
     final RequestBuilder requestBuilder = new RequestBuilder(
         HttpMethod.POST,
-        "pendingSegmentMapping"
-    ).jsonContent(jsonMapper, Pair.of(rootPendingSegment, versionsOfPendingSegment));
+        "/pendingSegmentMapping"
+    ).jsonContent(jsonMapper, allVersionsOfPendingSegment);
 
     return makeRequest(id, requestBuilder)
         .handler(IgnoreHttpResponseHandler.INSTANCE)

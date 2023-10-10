@@ -1101,7 +1101,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         taskClient.updatePendingSegmentMapping(
             taskId,
             rootPendingSegment,
-            indexerMetadataStorageCoordinator.getAllVersionsOfPendingSegment(rootPendingSegment)
+            indexerMetadataStorageCoordinator.findAllVersionsOfPendingSegment(rootPendingSegment)
         );
       }
     }
@@ -1111,7 +1111,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskClient.updatePendingSegmentMapping(
               taskId,
               rootPendingSegment,
-              indexerMetadataStorageCoordinator.getAllVersionsOfPendingSegment(rootPendingSegment)
+              indexerMetadataStorageCoordinator.findAllVersionsOfPendingSegment(rootPendingSegment)
           );
         }
       }

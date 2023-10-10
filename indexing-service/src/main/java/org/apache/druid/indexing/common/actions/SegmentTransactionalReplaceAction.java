@@ -136,6 +136,12 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
             upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
         );
 
+        for (String supervisorId : activeSupervisorIds) {
+          for (SegmentIdWithShardSpec pendingSegment : upgradedPendingSegments) {
+            toolbox.getSupervisorManager().updatePendingSegmentMapping(supervisorId, pendingSegment);
+          }
+        }
+
         // These upgraded pending segments should be forwarded to the SupervisorManager
       }
       catch (Exception e) {

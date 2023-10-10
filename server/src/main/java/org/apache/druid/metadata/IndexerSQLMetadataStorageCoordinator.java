@@ -2554,12 +2554,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  @Override
-  public Set<SegmentIdWithShardSpec> getAllVersionsOfPendingSegment(SegmentIdWithShardSpec rootPendingSegment)
-  {
-    return Collections.emptySet();
-  }
-
   private static class PendingSegmentsRecord
   {
     private final String sequenceName;

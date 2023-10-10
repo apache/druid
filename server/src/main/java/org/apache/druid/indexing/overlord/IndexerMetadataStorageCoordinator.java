@@ -432,7 +432,4 @@ public interface IndexerMetadataStorageCoordinator
    * @return DataSegment used segment corresponding to given id
    */
   DataSegment retrieveSegmentForId(String id, boolean includeUnused);
-
-  Set<SegmentIdWithShardSpec> getAllVersionsOfPendingSegment(SegmentIdWithShardSpec rootPendingSegment);
-
 }

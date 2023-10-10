@@ -1558,13 +1558,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   public Response updatePendingSegmentMapping(
-      Pair<SegmentIdWithShardSpec, Set<SegmentIdWithShardSpec>> rootPendingSegmentToVersionMapping,
+      List<SegmentIdWithShardSpec> allVersionsOfPendingSegment,
       // this field is only for internal purposes, shouldn't be usually set by users
       @Context final HttpServletRequest req
   )
   {
     authorizationCheck(req, Action.WRITE);
-    return updatePendingSegmentMapping(rootPendingSegmentToVersionMapping.lhs, rootPendingSegmentToVersionMapping.rhs);
+    return updatePendingSegmentMapping(allVersionsOfPendingSegment);
   }
 
   public Map<String, Object> doGetRowStats()
@@ -1772,13 +1772,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return Response.ok(sequenceNumbers).build();
   }
 
-  private Response updatePendingSegmentMapping(
-      SegmentIdWithShardSpec rootPendingSegment,
-      Set<SegmentIdWithShardSpec> versionsOfPendingSegment
-  )
+  private Response updatePendingSegmentMapping(List<SegmentIdWithShardSpec> allVersionsOfPendingSegment)
   {
     try {
-      ((StreamAppenderator) appenderator).updatePendingSegmentMapping(rootPendingSegment, versionsOfPendingSegment);
+      ((StreamAppenderator) appenderator).updatePendingSegmentMapping(
+          allVersionsOfPendingSegment.get(0),
+          allVersionsOfPendingSegment.subList(1, allVersionsOfPendingSegment.size())
+      );
       return Response.ok().build();
     }
     catch (IOException e) {
