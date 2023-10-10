@@ -1064,23 +1064,60 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  enum ResultMatchMode
+  public enum ResultMatchMode
   {
-    EQUALS, RELAX_NULLS;
-
-    void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
-    {
-      if (this == RELAX_NULLS && expectedCell == null) {
-        if (resultCell == null) {
-          return;
-        }
-        expectedCell = NullHandling.defaultValueForType(type);
+    EQUALS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        assertEquals(
+            mismatchMessage(row, column),
+            expectedCell,
+            resultCell);
       }
-      assertEquals(
-          String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, column),
-          expectedCell,
-          resultCell);
+    },
+    RELAX_NULLS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS.validate(row, column, type, expectedCell, resultCell);
+      }
+    },
+    EQUALS_EPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell instanceof Float) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Float) expectedCell,
+              (Float) resultCell,
+              1e-5);
+        } else if (expectedCell instanceof Double) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Double) expectedCell,
+              (Double) resultCell,
+              1e-5);
+        } else {
+          EQUALS.validate(row, column, type, expectedCell, resultCell);
+        }
+      }
+    };
+
+    abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);
+
+    private static String mismatchMessage(int row, int column)
+    {
+      return String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, column);
     }
+
   }
 
   /**
@@ -1094,13 +1131,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());
 
-    List<ValueType> types = new ArrayList<>();
-    for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
-      Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
-      if (columnType.isPresent()) {
-        types.add(columnType.get().getType());
-      } else {
-        types.add(null);
+    final List<ValueType> types = new ArrayList<>();
+
+    boolean isMSQ = isMSQRowType(queryResults.signature);
+
+    if (!isMSQ) {
+      for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
+        Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
+        if (columnType.isPresent()) {
+          types.add(columnType.get().getType());
+        } else {
+          types.add(null);
+        }
       }
     }
 
@@ -1118,11 +1160,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         cellValidator.validate(
             row,
             i,
-            types.get(i),
+            isMSQ ? null : types.get(i),
             expectedCell,
             resultCell);
       }
     }
+  }
+
+  private boolean isMSQRowType(RowSignature signature)
+  {
+    List<String> colNames = signature.getColumnNames();
+    return colNames.size() == 1 && "TASK".equals(colNames.get(0));
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
