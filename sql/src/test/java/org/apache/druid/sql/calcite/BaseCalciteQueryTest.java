@@ -126,6 +126,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -1056,7 +1057,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
-    for (int i = 0; i < results.size(); i++) {
+    int minSize = Math.min(results.size(), expectedResults.size());
+    for (int i = 0; i < minSize; i++) {
       Assert.assertArrayEquals(
           StringUtils.format("result #%d: %s", i + 1, sql),
           expectedResults.get(i),
@@ -1368,7 +1370,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         assertResultsEquals(sql, expectedResults, results);
       }
       catch (AssertionError e) {
-        displayResults(results);
+        displayResults("Actual", results);
         throw e;
       }
     }
@@ -1380,10 +1382,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * expected results: let the test fail with empty results. The actual results
    * are printed to the console. Copy them into the test.
    */
-  public static void displayResults(List<Object[]> results)
+  public static void displayResults(String name, List<Object[]> results)
   {
     PrintStream out = System.out;
-    out.println("-- Actual results --");
+    out.printf(Locale.ENGLISH, "-- %s results --", name);
     for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
       printArray(results.get(rowIndex), out);
       if (rowIndex < results.size() - 1) {
