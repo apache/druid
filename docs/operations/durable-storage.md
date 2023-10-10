@@ -46,7 +46,7 @@ druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
 # druid.msq.intermediate.storage.bucket=YOUR_BUCKET
 
 # Include these configs if you're using Azure Blob Storage
-# # druid.msq.intermediate.storage.type=azure
+# druid.msq.intermediate.storage.type=azure
 # druid.sq.intermediate.storage.container=YOUR_CONTAINER
 
 druid.msq.intermediate.storage.prefix=YOUR_PREFIX

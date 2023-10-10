@@ -380,7 +380,7 @@ To use Azure for durable storage, you also need to configure the following prope
 |`druid.msq.intermediate.storage.container` | n/a | Required. The Azure container where the files are uploaded to and downloaded from.  |
 |`druid.msq.intermediate.storage.prefix` | n/a | Required. Path prepended to all the paths uploaded to the container to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well. |
 
-#### Storage cleaner configurations
+### Storage cleaner configurations
 
 Durable storage creates files on the remote storage, and these files get cleaned up once a job no longer requires those files. However, due to failures causing abrupt exits of tasks, these files might not get cleaned up.
 You can configure the Overlord to periodically clean up these intermediate files after a task completes and the files are no longer need. The files that get cleaned up are determined by the storage prefix you configure. Any files that match the path for the storage prefix may get cleaned up, not just intermediate files that are no longer needed.
