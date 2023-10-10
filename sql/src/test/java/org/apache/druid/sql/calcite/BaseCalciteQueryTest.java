@@ -1064,23 +1064,60 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  enum ResultMatchMode
+  public enum ResultMatchMode
   {
-    EQUALS, RELAX_NULLS;
-
-    void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
-    {
-      if (this == RELAX_NULLS && expectedCell == null) {
-        if (resultCell == null) {
-          return;
-        }
-        expectedCell = NullHandling.defaultValueForType(type);
+    EQUALS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        assertEquals(
+            mismatchMessage(row, column),
+            expectedCell,
+            resultCell);
       }
-      assertEquals(
-          String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, column),
-          expectedCell,
-          resultCell);
+    },
+    RELAX_NULLS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS.validate(row, column, type, expectedCell, resultCell);
+      }
+    },
+    EQUALS_EPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell instanceof Float) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Float) expectedCell,
+              (Float) resultCell,
+              1e-5);
+        } else if (expectedCell instanceof Double) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Double) expectedCell,
+              (Double) resultCell,
+              1e-5);
+        } else {
+          EQUALS.validate(row, column, type, expectedCell, resultCell);
+        }
+      }
+    };
+
+    abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);
+
+    private static String mismatchMessage(int row, int column)
+    {
+      return String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, column);
     }
+
   }
 
   /**
