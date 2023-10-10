@@ -367,6 +367,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
         if (!isOrdered(queryResults)) {
+          // in case the resultset is not ordered; order via the same comparator before comparision
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         }
@@ -383,8 +384,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     private boolean isOrdered(QueryResults queryResults)
     {
       SqlNode sqlNode = ((PlannerCaptureHook) queryResults.capture).getSqlNode();
-      return true;
-//      return SqlToRelConverter.isOrdered(sqlNode);
+      return SqlToRelConverter.isOrdered(sqlNode);
     }
   }
 
