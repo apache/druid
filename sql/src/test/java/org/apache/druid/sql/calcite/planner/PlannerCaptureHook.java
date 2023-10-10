@@ -28,6 +28,8 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 
 public class PlannerCaptureHook implements PlannerHook
 {
+  public static final String NEED_CAPTURE_HOOK = "need_capture_hook";
+
   private RelRoot relRoot;
   private SqlInsert insertNode;
   private SqlNode sqlNode;
