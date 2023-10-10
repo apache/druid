@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
-import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
@@ -65,6 +64,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidSqlValidator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
@@ -330,6 +330,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   {
     private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
         new EarliestLatestReturnTypeInference(0);
+
     private final SqlAggFunction replacementAggFunc;
 
     EarliestLatestSqlAggFunction(AggregatorType aggregatorType, SqlAggFunction replacementAggFunc)
@@ -389,7 +390,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         newOperands.add(operands.get(1));
       }
 
-      ((BaseDruidSqlValidator) validator).setEarliestLatestByConverted();
+      ((DruidSqlValidator) validator).setEarliestLatestByConverted();
 
       return replacementAggFunc.createCall(pos, newOperands);
     }

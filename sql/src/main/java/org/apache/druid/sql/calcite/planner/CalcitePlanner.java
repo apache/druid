@@ -34,7 +34,6 @@ import org.apache.calcite.plan.RelOptTable.ViewExpander;
 import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
-import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
@@ -242,9 +241,16 @@ public class CalcitePlanner implements Planner, ViewExpander
       validatedSqlNode = validator.validate(sqlNode);
     }
     catch (RuntimeException e) {
-      if (((BaseDruidSqlValidator) validator).getEarliestLatestByConverted() && e.getCause()
-                                                                                 .getMessage()
-                                                                                 .contains("__time")) {
+      if (((DruidSqlValidator) validator).getEarliestLatestByConverted() && e.getCause()
+                                                                          .getMessage()
+                                                                          .contains("__time")){
+
+        // Since __time column may have been introduced by query rewrite from EARLIEST/LATEST to EARLIEST_BY/LATEST_BY,
+        // raise a custom exception informing the user of the implicit dependency. Pre-existence of __time col separately
+        // in query and being the cause of validation failure is possible, but the validation order between the
+        // new %_BY operator and existing __time col. is unclear, and may lead to confusing "col __time not found in
+        // any table (row x, col y)" error pointing to the rewritten operator.
+
         throw DruidException.forPersona(DruidException.Persona.ADMIN)
                             .ofCategory(DruidException.Category.INVALID_INPUT)
                             .build(
