@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -34,6 +35,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,6 +70,24 @@ public class SupervisorManager
   public Set<String> getSupervisorIds()
   {
     return supervisors.keySet();
+  }
+
+  public Set<String> getSeekableStreamSupervisorIdsForDatasource(String datasource)
+  {
+    final Set<String> retVal = new HashSet<>();
+    for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
+      final String supervisorId = entry.getKey();
+      final Supervisor supervisor = entry.getValue().lhs;
+      final SupervisorSpec supervisorSpec = entry.getValue().rhs;
+      if (!(supervisor instanceof SeekableStreamSupervisor)) {
+        continue;
+      }
+      if (supervisorSpec.isSuspended() || !supervisorSpec.getDataSources().contains(datasource)) {
+        continue;
+      }
+      retVal.add(supervisorId);
+    }
+    return retVal;
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)

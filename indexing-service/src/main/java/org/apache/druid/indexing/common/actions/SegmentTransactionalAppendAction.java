@@ -120,7 +120,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       if (lock.getType() != TaskLockType.APPEND) {
         throw InvalidInput.exception(
             "Cannot use action[%s] for task[%s] as it is holding a lock of type[%s] instead of [APPEND].",
-            "CommitRealtimeSegmentsAndMetadata", task.getId(), lock.getType()
+            "SegmentTransactionalAppendAction", task.getId(), lock.getType()
         );
       }
     }

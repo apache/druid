@@ -33,6 +33,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -115,7 +116,13 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
     IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
 
-    if (publishResult.isSuccess()) {
+    final Set<String> activeSupervisorIds = new HashSet<>();
+    if (toolbox.getSupervisorManager() != null) {
+      activeSupervisorIds.addAll(
+          toolbox.getSupervisorManager().getSeekableStreamSupervisorIdsForDatasource(task.getDataSource())
+      );
+    }
+    if (publishResult.isSuccess() && !activeSupervisorIds.isEmpty()) {
       // If upgrade of pending segments fails, the segments will still get upgraded
       // when the corresponding APPEND task commits the segments.
       // Thus, the upgrade of pending segments should not be done in the same

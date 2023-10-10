@@ -1392,7 +1392,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Get pending segments for the new version, if any
     final String dataSource = segmentsToUpgrade.iterator().next().getDataSource();
     final Set<SegmentIdWithShardSpec> pendingSegments
-        = getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet();
+        = new HashSet<>(getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet());
 
     // Determine new IDs for each append segment by taking into account both
     // committed and pending segments for this version
@@ -1542,23 +1542,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final PartialShardSpec partialShardSpec = request.getPartialShardSpec();
     final String existingVersion = request.getVersion();
+    final Set<SegmentIdWithShardSpec> mutablePendingSegments = new HashSet<>(pendingSegments);
 
     // Include the committedMaxId while computing the overallMaxId
     if (committedMaxId != null) {
-      pendingSegments.add(committedMaxId);
+      mutablePendingSegments.add(committedMaxId);
     }
 
     // If there is an existing chunk, find the max id with the same version as the existing chunk.
     // There may still be a pending segment with a higher version (but no corresponding used segments)
     // which may generate a clash with an existing segment once the new id is generated
     final SegmentIdWithShardSpec overallMaxId =
-        pendingSegments.stream()
-                       .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
-                       .filter(id -> versionOfExistingChunk == null
-                                     || id.getVersion().equals(versionOfExistingChunk))
-                       .max(Comparator.comparing(SegmentIdWithShardSpec::getVersion)
-                                      .thenComparing(id -> id.getShardSpec().getPartitionNum()))
-                       .orElse(null);
+        mutablePendingSegments.stream()
+                              .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
+                              .filter(id -> versionOfExistingChunk == null
+                                            || id.getVersion().equals(versionOfExistingChunk))
+                              .max(Comparator.comparing(SegmentIdWithShardSpec::getVersion)
+                                             .thenComparing(id -> id.getShardSpec().getPartitionNum()))
+                              .orElse(null);
 
     // Determine the version of the new segment
     final String newSegmentVersion;
@@ -1699,7 +1700,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // A pending segment having a higher partitionId must also be considered
       // to avoid clashes when inserting the pending segment created here.
       final Set<SegmentIdWithShardSpec> pendings = new HashSet<>(
-          getPendingSegmentsForIntervalWithHandle( handle, dataSource, interval).keySet()
+          getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet()
       );
       if (committedMaxId != null) {
         pendings.add(committedMaxId);
