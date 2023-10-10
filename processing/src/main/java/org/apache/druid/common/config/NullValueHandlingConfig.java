@@ -21,9 +21,11 @@ package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.logger.Logger;
 
 public class NullValueHandlingConfig
 {
+  private static final Logger LOG = new Logger(NullValueHandlingConfig.class);
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
   public static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogic";
 
@@ -69,6 +71,13 @@ public class NullValueHandlingConfig
       } else {
         this.ignoreNullsForStringCardinality = false;
       }
+    }
+
+    if (useDefaultValuesForNull) {
+      LOG.warn("druid.generic.useDefaultValueForNull set to 'true', we recommend using 'false' if using SQL to query Druid for the most SQL compliant behavior");
+    }
+    if (!useThreeValueLogic) {
+      LOG.warn("druid.generic.useThreeValueLogic set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior");
     }
   }
 
