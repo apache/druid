@@ -1094,13 +1094,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());
 
-    List<ValueType> types = new ArrayList<>();
-    for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
-      Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
-      if (columnType.isPresent()) {
-        types.add(columnType.get().getType());
-      } else {
-        types.add(null);
+    final List<ValueType> types = new ArrayList<>();
+
+    boolean isMSQ = isMSQRowType(queryResults.signature);
+
+    if (!isMSQ) {
+      for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
+        Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
+        if (columnType.isPresent()) {
+          types.add(columnType.get().getType());
+        } else {
+          types.add(null);
+        }
       }
     }
 
@@ -1118,11 +1123,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         cellValidator.validate(
             row,
             i,
-            types.get(i),
+            isMSQ ? null : types.get(i),
             expectedCell,
             resultCell);
       }
     }
+  }
+
+  private boolean isMSQRowType(RowSignature signature)
+  {
+    List<String> colNames = signature.getColumnNames();
+    return colNames.size() == 1 && "TASK".equals(colNames.get(0));
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
