@@ -401,11 +401,6 @@ future versions:
 
 ### `unnest`
 
-:::info
- The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
- to change in future releases. It is not recommended to use this feature in production at this time.
-:::
-
 Use the `unnest` datasource to unnest a column with multiple values in an array.
 For example, you have a source column that looks like this:
 

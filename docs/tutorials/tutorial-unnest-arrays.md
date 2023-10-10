@@ -30,11 +30,6 @@ import TabItem from '@theme/TabItem';
  If you're looking for information about how to unnest `COMPLEX<json>` columns, see [Nested columns](../querying/nested-columns.md).
 :::
 
-:::info
- The unnest datasource and UNNEST SQL function are [experimental](../development/experimental.md). Their API and behavior are subject
- to change in future releases. It is not recommended to use this feature in production at this time.
-:::
-
 This tutorial demonstrates how to use the unnest datasource to unnest a column that has data stored in arrays. For example, if you have a column named `dim3` with values like `[a,b]` or `[c,d,f]`, the unnest datasource can output the data to a new column with individual rows that contain single values like `a` and `b`. When doing this, be mindful of the following:
 
 - Unnesting data can dramatically increase the total number of rows.
@@ -164,12 +159,6 @@ The following is the general syntax for UNNEST:
 
 ```sql
 SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression) AS table_alias_name(column_alias_name)
-```
-
-In addition, you must supply the following context parameter:
-
-```json
-"enableUnnest": "true"
 ```
 
 For more information about the syntax, see [UNNEST](../querying/sql.md#unnest).
@@ -645,7 +634,6 @@ The following Scan query unnests the column `dim3` into `d3` and a virtual colum
   ],
   "legacy": false,
   "context": {
-    "enableUnnest": "true",
     "queryId": "2618b9ce-6c0d-414e-b88d-16fb59b9c481",
     "sqlOuterLimit": 1001,
     "sqlQueryId": "2618b9ce-6c0d-414e-b88d-16fb59b9c481",
