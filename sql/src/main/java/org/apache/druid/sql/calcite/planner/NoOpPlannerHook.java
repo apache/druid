@@ -58,5 +58,4 @@ public class NoOpPlannerHook implements PlannerHook
   public void captureInsert(SqlInsert insert)
   {
   }
-
 }
