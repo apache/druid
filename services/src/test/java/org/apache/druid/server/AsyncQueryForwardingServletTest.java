@@ -65,6 +65,8 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.router.QueryHostFinder;
 import org.apache.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import org.apache.druid.server.security.AllowAllAuthorizer;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -408,6 +410,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         new Properties(),
         new ServerConfig()
     );
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));
     IOException testException = new IOException(errorMessage);
     servlet.handleQueryParseException(request, response, mockMapper, testException, false);
     ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
@@ -454,6 +457,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           }
         }
     );
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));
     IOException testException = new IOException(errorMessage);
     servlet.handleQueryParseException(request, response, mockMapper, testException, false);
     ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
@@ -501,6 +505,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           }
         }
     );
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(new AuthenticationResult("userA", "basic", "basic", null));
     IOException testException = new IOException(errorMessage);
     servlet.handleQueryParseException(request, response, mockMapper, testException, false);
     ArgumentCaptor<Exception> captor = ArgumentCaptor.forClass(Exception.class);
@@ -587,6 +592,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.expectLastCall();
     requestMock.setAttribute("org.apache.druid.proxy.to.host.scheme", "http");
     EasyMock.expectLastCall();
+    EasyMock.expect(requestMock.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(new AuthenticationResult("userA", "basic", "basic", null));
     EasyMock.replay(requestMock);
 
     final AtomicLong didService = new AtomicLong();
