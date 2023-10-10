@@ -21,8 +21,6 @@ package org.apache.druid.query.aggregation.histogram.sql;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -38,13 +36,12 @@ import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -65,25 +62,18 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
   {
     final DruidExpression input = Aggregations.toDruidExpressionForNumericAggregator(
         plannerContext,
-        rowSignature,
-        Expressions.fromFieldAccess(
-            rexBuilder.getTypeFactory(),
-            rowSignature,
-            project,
-            aggregateCall.getArgList().get(0)
-        )
+        inputAccessor.getInputRowSignature(),
+        inputAccessor.getField(aggregateCall.getArgList().get(0))
     );
     if (input == null) {
       return null;
@@ -91,12 +81,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
 
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
-    final RexNode probabilityArg = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(1)
-    );
+    final RexNode probabilityArg = inputAccessor.getField(aggregateCall.getArgList().get(1));
 
     if (!probabilityArg.isA(SqlKind.LITERAL)) {
       // Probability must be a literal in order to plan.
@@ -107,12 +92,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
 
     final int numBuckets;
     if (aggregateCall.getArgList().size() >= 3) {
-      final RexNode numBucketsArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(2)
-      );
+      final RexNode numBucketsArg = inputAccessor.getField(aggregateCall.getArgList().get(2));
 
       if (!numBucketsArg.isA(SqlKind.LITERAL)) {
         // Resolution must be a literal in order to plan.
@@ -126,12 +106,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
 
     final double lowerLimit;
     if (aggregateCall.getArgList().size() >= 4) {
-      final RexNode lowerLimitArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(3)
-      );
+      final RexNode lowerLimitArg = inputAccessor.getField(aggregateCall.getArgList().get(3));
 
       if (!lowerLimitArg.isA(SqlKind.LITERAL)) {
         // Resolution must be a literal in order to plan.
@@ -145,12 +120,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
 
     final double upperLimit;
     if (aggregateCall.getArgList().size() >= 5) {
-      final RexNode upperLimitArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(4)
-      );
+      final RexNode upperLimitArg = inputAccessor.getField(aggregateCall.getArgList().get(4));
 
       if (!upperLimitArg.isA(SqlKind.LITERAL)) {
         // Resolution must be a literal in order to plan.
@@ -164,12 +134,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
 
     final FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode;
     if (aggregateCall.getArgList().size() >= 6) {
-      final RexNode outlierHandlingModeArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(5)
-      );
+      final RexNode outlierHandlingModeArg = inputAccessor.getField(aggregateCall.getArgList().get(5));
 
       if (!outlierHandlingModeArg.isA(SqlKind.LITERAL)) {
         // Resolution must be a literal in order to plan.

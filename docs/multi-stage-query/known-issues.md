@@ -39,9 +39,7 @@ an [UnknownError](./reference.md#error_UnknownError) with a message including "N
 
 ## `SELECT` Statement
 
-- `SELECT` from a Druid datasource does not include unpublished real-time data.
-
-- `GROUPING SETS` and `UNION ALL` are not implemented. Queries using these features return a
+- `GROUPING SETS` are not implemented. Queries using these features return a
   [QueryNotSupported](reference.md#error_QueryNotSupported) error.
 
 - For some `COUNT DISTINCT` queries, you'll encounter a [QueryNotSupported](reference.md#error_QueryNotSupported) error
