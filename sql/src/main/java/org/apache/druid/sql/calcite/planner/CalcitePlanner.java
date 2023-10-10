@@ -59,7 +59,6 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
-import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.io.Reader;
@@ -241,27 +240,6 @@ public class CalcitePlanner implements Planner, ViewExpander
       validatedSqlNode = validator.validate(sqlNode);
     }
     catch (RuntimeException e) {
-      if (((DruidSqlValidator) validator).getEarliestLatestByConverted() && e.getCause()
-                                                                          .getMessage()
-                                                                          .contains("__time")){
-
-        // Since __time column may have been introduced by query rewrite from EARLIEST/LATEST to EARLIEST_BY/LATEST_BY,
-        // raise a custom exception informing the user of the implicit dependency. Pre-existence of __time col separately
-        // in query and being the cause of validation failure is possible, but the validation order between the
-        // new %_BY operator and existing __time col. is unclear, and may lead to confusing "col __time not found in
-        // any table (row x, col y)" error pointing to the rewritten operator.
-
-        throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                e,
-                                "Query could not be planned. A possible reason is [%s]",
-                                "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
-                                + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
-                                + "and specify the column explicitly."
-                            );
-
-      }
       throw new ValidationException(e);
     }
     state = CalcitePlanner.State.STATE_4_VALIDATED;

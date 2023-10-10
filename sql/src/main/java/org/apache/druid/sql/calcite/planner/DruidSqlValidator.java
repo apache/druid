@@ -28,11 +28,8 @@ import org.apache.calcite.sql.SqlOperatorTable;
  * Druid extended SQL validator. (At present, it doesn't actually
  * have any extensions yet, but it will soon.)
  */
-public class DruidSqlValidator extends BaseDruidSqlValidator
+class DruidSqlValidator extends BaseDruidSqlValidator
 {
-
-  private Boolean earliestLatestByConverted;
-
   protected DruidSqlValidator(
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
@@ -41,16 +38,5 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   )
   {
     super(opTab, catalogReader, typeFactory, validatorConfig);
-    earliestLatestByConverted = false;
-  }
-
-  public Boolean getEarliestLatestByConverted()
-  {
-    return earliestLatestByConverted;
-  }
-
-  public void setEarliestLatestByConverted()
-  {
-    this.earliestLatestByConverted = true;
   }
 }

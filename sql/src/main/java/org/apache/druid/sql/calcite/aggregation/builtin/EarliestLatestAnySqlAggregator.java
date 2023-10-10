@@ -25,6 +25,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -39,6 +40,7 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -64,7 +66,6 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.DruidSqlValidator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
@@ -326,6 +327,40 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     }
   }
 
+  private static class TimeColIdentifer extends SqlIdentifier
+  {
+
+    public TimeColIdentifer()
+    {
+      super("__time", SqlParserPos.ZERO);
+    }
+
+    @Override
+    public <R> R accept(org.apache.calcite.sql.util.SqlVisitor<R> visitor)
+    {
+
+      try {
+        return super.accept(visitor);
+      }
+      catch (CalciteContextException e) {
+        if (e.getCause() instanceof SqlValidatorException) {
+          throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build(
+                                  e,
+                                  "Query could not be planned. A possible reason is [%s]",
+                                  "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
+                                  + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
+                                  + "and specify the column explicitly."
+                              );
+
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+
   private static class EarliestLatestSqlAggFunction extends SqlAggFunction
   {
     private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
@@ -384,13 +419,11 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
       List<SqlNode> newOperands = new ArrayList<>();
       newOperands.add(operands.get(0));
-      newOperands.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      newOperands.add(new TimeColIdentifer());
 
       if (operands.size() == 2) {
         newOperands.add(operands.get(1));
       }
-
-      ((DruidSqlValidator) validator).setEarliestLatestByConverted();
 
       return replacementAggFunc.createCall(pos, newOperands);
     }
