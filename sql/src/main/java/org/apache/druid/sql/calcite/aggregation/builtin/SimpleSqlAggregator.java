@@ -20,8 +20,6 @@
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.Iterables;
-import com.google.errorprone.annotations.FormatMethod;
-import com.google.errorprone.annotations.FormatString;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -48,14 +46,8 @@ import java.util.List;
  */
 public abstract class SimpleSqlAggregator implements SqlAggregator
 {
-  @FormatMethod
-  public static void asd(@FormatString String fmt, Object... asd)
-  {
-  }
-
   public static DruidException badTypeException(String columnName, String agg, ColumnType type)
   {
-    asd(columnName);
     return InvalidSqlInput.exception("Aggregation [%s] does not support type [%s], column [%s]", agg, type, columnName);
   }
 
@@ -63,7 +55,7 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      @Nullable final VirtualColumnRegistry virtualColumnRegistry,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final String name,
       final AggregateCall aggregateCall,
       final InputAccessor inputAccessor,
