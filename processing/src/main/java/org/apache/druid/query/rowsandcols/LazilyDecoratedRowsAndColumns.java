@@ -115,7 +115,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     if (viewableColumns != null && !viewableColumns.contains(name)) {
       return null;
     }
-
     maybeMaterialize();
     return base.findColumn(name);
   }
@@ -158,7 +157,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
   private void maybeMaterialize()
   {
-    if (!(interval == null && filter == null && limit == -1 && ordering == null)) {
+    if (needsMaterialization()) {
       final Pair<byte[], RowSignature> thePair = materialize();
       if (thePair == null) {
         reset(new EmptyRowsAndColumns());
@@ -166,6 +165,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         reset(new FrameRowsAndColumns(Frame.wrap(thePair.lhs), thePair.rhs));
       }
     }
+  }
+
+  private boolean needsMaterialization()
+  {
+    return interval != null || filter != null || limit != -1 || ordering != null || virtualColumns != null;
   }
 
   private Pair<byte[], RowSignature> materialize()
