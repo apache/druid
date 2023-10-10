@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -66,8 +67,16 @@ public class ExpressionProcessingConfig
         homogenizeNullMultiValueStringArrays,
         HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS
     );
-    if (!useStrictBooleans) {
-      LOG.warn("druid.expressions.useStrictBooleans set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior");
+    String version = ExpressionProcessingConfig.class.getPackage().getImplementationVersion();
+    if (version == null || version.contains("SNAPSHOT")) {
+      version = "latest";
+    }
+    final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
+    if (!this.useStrictBooleans) {
+      LOG.warn(
+          "druid.expressions.useStrictBooleans set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
+          StringUtils.format(docsBaseFormat, version, "boolean-logic")
+      );
     }
   }
 
