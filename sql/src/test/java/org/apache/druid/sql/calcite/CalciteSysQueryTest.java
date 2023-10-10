@@ -20,15 +20,15 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.sql.calcite.DecoupledIgnore.DecoupledIgnoreProcessor;
-import org.apache.druid.sql.calcite.DecoupledIgnore.Modes;
+import org.apache.druid.sql.calcite.NotYetSupported.Modes;
+import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.junit.Rule;
 import org.junit.Test;
 
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
   @Rule(order = 0)
-  public DecoupledIgnoreProcessor decoupledIgnoreProcessor = new DecoupledIgnoreProcessor();
+  public NotYetSupportedProcessor NegativeTestProcessor = new NotYetSupportedProcessor();
 
   @Test
   public void testTasksSum()
@@ -46,7 +46,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @DecoupledIgnore(mode = Modes.EXPRESSION_NOT_GROUPED)
+  @NotYetSupported(Modes.EXPRESSION_NOT_GROUPED)
   @Test
   public void testTasksSumOver()
   {
