@@ -2,11 +2,10 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-  	dim1,
+  	'_'||dim1,
     MIN(cast(0 as double)) OVER (),
     MIN(cast((cnt||cnt) as bigint)) OVER ()
   FROM foo
-  WHERE length(dim1) > 0
 
 expectedOperators:
   - { type: "naivePartition", partitionColumns: [ ] }
@@ -19,8 +18,9 @@ expectedOperators:
         - { type: "longMin", name: "w1", fieldName: "v1" }
 
 expectedResults:
-  - ["10.1",null,11]
-  - ["2",null,11]
-  - ["1",null,11]
-  - ["def",null,11]
-  - ["abc",null,11]
+  - ["_",null,11]
+  - ["_10.1",null,11]
+  - ["_2",null,11]
+  - ["_1",null,11]
+  - ["_def",null,11]
+  - ["_abc",null,11]
