@@ -2292,8 +2292,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             )
         )
         .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
-                new Object[]{NullHandling.defaultDoubleValue(), 12L},
+                new Object[]{null, 12L},
                 new Object[]{5.5, 2L}
             )
         )

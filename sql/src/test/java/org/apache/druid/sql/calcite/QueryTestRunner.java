@@ -361,7 +361,7 @@ public class QueryTestRunner
       if (verifyRowSignature) {
         builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
       }
-      builder.expectedResultsVerifier.verify(builder.sql, results);
+      builder.expectedResultsVerifier.verify(builder.sql, queryResults);
     }
   }
 
@@ -638,6 +638,7 @@ public class QueryTestRunner
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,
+          builder.expectedResultMatchMode,
           builder.expectedResultSignature
       );
     }
