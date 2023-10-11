@@ -22,17 +22,20 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -115,30 +118,12 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
     IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
 
-    final String activeSupervisorId;
-    if (toolbox.getSupervisorManager() != null) {
-      activeSupervisorId = toolbox.getSupervisorManager()
-                                  .getSeekableStreamSupervisorIdForDatasource(task.getDataSource());
-    } else {
-      activeSupervisorId = null;
-    }
-    if (publishResult.isSuccess() && activeSupervisorId != null) {
-      // If upgrade of pending segments fails, the segments will still get upgraded
-      // when the corresponding APPEND task commits the segments.
-      // Thus, the upgrade of pending segments should not be done in the same
-      // transaction as the commit of replace segments and failure to upgrade
-      // pending segments should not affect success of replace commit.
+    // Upgrade any overlapping pending segments
+    // Do not perform upgrade in the same transaction as replace commit so that
+    // failure to upgrade pending segments does not affect success of the commit
+    if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
       try {
-        Set<SegmentIdWithShardSpec> upgradedPendingSegments =
-            toolbox.getIndexerMetadataStorageCoordinator().upgradePendingSegments(segments);
-        log.info(
-            "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
-            upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
-        );
-
-        for (SegmentIdWithShardSpec pendingSegment : upgradedPendingSegments) {
-          toolbox.getSupervisorManager().updatePendingSegmentMapping(activeSupervisorId, pendingSegment);
-        }
+        tryUpgradeOverlappingPendingSegments(task, toolbox);
       }
       catch (Exception e) {
         log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
@@ -146,6 +131,30 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     }
 
     return publishResult;
+  }
+
+  /**
+   * Tries to upgrade any pending segments that overlap with the committed segments.
+   */
+  private void tryUpgradeOverlappingPendingSegments(Task task, TaskActionToolbox toolbox)
+  {
+    final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
+    final Optional<String> activeSupervisorId = supervisorManager.getActiveSupervisorIdForDatasource(task.getDataSource());
+    if (!activeSupervisorId.isPresent()) {
+      return;
+    }
+
+    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
+        toolbox.getIndexerMetadataStorageCoordinator().upgradePendingSegments(segments);
+    log.info(
+        "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
+        upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
+    );
+
+    upgradedPendingSegments.forEach(
+        (oldId, newId) -> toolbox.getSupervisorManager()
+                                 .updatePendingSegmentMapping(activeSupervisorId.get(), oldId, newId)
+    );
   }
 
   @Override

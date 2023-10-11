@@ -1093,15 +1093,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
-  @Override
-  public void updatePendingSegmentMapping(SegmentIdWithShardSpec rootPendingSegment)
+  public void updatePendingSegmentMapping(
+      SegmentIdWithShardSpec rootPendingSegment,
+      SegmentIdWithShardSpec upgradedPendingSegment
+  )
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (String taskId : taskGroup.taskIds()) {
         taskClient.updatePendingSegmentMappingAsync(
             taskId,
             rootPendingSegment,
-            indexerMetadataStorageCoordinator.findAllVersionsOfPendingSegment(rootPendingSegment)
+            Collections.singleton(upgradedPendingSegment)
         );
       }
     }
@@ -1111,7 +1113,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           taskClient.updatePendingSegmentMappingAsync(
               taskId,
               rootPendingSegment,
-              indexerMetadataStorageCoordinator.findAllVersionsOfPendingSegment(rootPendingSegment)
+              Collections.singleton(upgradedPendingSegment)
           );
         }
       }

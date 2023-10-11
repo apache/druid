@@ -238,15 +238,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments)
+  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments)
   {
-    return Collections.emptySet();
-  }
-
-  @Override
-  public Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec segmentIdWithShardSpec)
-  {
-    return Collections.emptySet();
+    return Collections.emptyMap();
   }
 
   @Override

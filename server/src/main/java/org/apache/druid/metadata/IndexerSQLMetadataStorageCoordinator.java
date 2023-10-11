@@ -600,10 +600,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments)
+  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(
+      Set<DataSegment> replaceSegments
+  )
   {
     if (replaceSegments.isEmpty()) {
-      return Collections.emptySet();
+      return Collections.emptyMap();
     }
 
     // Any replace interval has exactly one version of segments
@@ -622,47 +624,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  @Override
-  public Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec pendingSegment)
-  {
-    return connector.retryWithHandle(
-        handle -> findAllVersionsOfPendingSegment(handle, pendingSegment)
-    );
-  }
-
-  private Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(
-      Handle handle,
-      SegmentIdWithShardSpec pendingSegment
-  ) throws IOException
-  {
-    final Query<Map<String, Object>> query = handle
-        .createQuery(
-            StringUtils.format(
-                "SELECT payload "
-                + "FROM %s WHERE "
-                + "dataSource = :dataSource AND "
-                + "sequence_prev_id = :sequence_prev_id",
-                dbTables.getPendingSegmentsTable()
-            )
-        )
-        .bind("dataSource", pendingSegment.getDataSource())
-        .bind("sequence_prev_id", pendingSegment.asSegmentId().toString());
-
-    final ResultIterator<byte[]> dbSegments = query
-        .map(ByteArrayMapper.FIRST)
-        .iterator();
-
-    final Set<SegmentIdWithShardSpec> allVersions = new HashSet<>();
-    while (dbSegments.hasNext()) {
-      final byte[] payload = dbSegments.next();
-      final SegmentIdWithShardSpec segmentId =
-          jsonMapper.readValue(payload, SegmentIdWithShardSpec.class);
-      allVersions.add(segmentId);
-    }
-
-    return allVersions;
-  }
-
   /**
    * Creates and inserts new IDs for the pending segments contained in each replace
    * interval. The newly created pending segment IDs
@@ -673,16 +634,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * those versions.</li>
    * </ul>
    *
-   * @return Set of pending segments for which new IDs have been created.
+   * @return Map from original pending segment to the new upgraded ID.
    */
-  private Set<SegmentIdWithShardSpec> upgradePendingSegments(
+  private Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(
       Handle handle,
       String datasource,
       Map<Interval, DataSegment> replaceIntervalToMaxId
   ) throws IOException
   {
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> newPendingSegmentVersions = new HashMap<>();
-    final Set<SegmentIdWithShardSpec> upgradedPendingSegments = new HashSet<>();
+    final Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> pendingSegmentToNewId = new HashMap<>();
 
     for (Map.Entry<Interval, DataSegment> entry : replaceIntervalToMaxId.entrySet()) {
       final Interval replaceInterval = entry.getKey();
@@ -700,10 +661,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         final SegmentIdWithShardSpec pendingSegmentId = overlappingPendingSegment.getKey();
         final String pendingSegmentSequence = overlappingPendingSegment.getValue();
         if (shouldUpgradePendingSegment(pendingSegmentId, pendingSegmentSequence, replaceInterval, replaceVersion)) {
-          upgradedPendingSegments.add(pendingSegmentId);
           // Ensure unique sequence_name_prev_id_sha1 by setting
           // sequence_prev_id -> pendingSegmentId
           // sequence_name -> prefix + replaceVersion
+          SegmentIdWithShardSpec newId = new SegmentIdWithShardSpec(
+              datasource,
+              replaceInterval,
+              replaceVersion,
+              new NumberedShardSpec(++currentPartitionNumber, numCorePartitions)
+          );
           newPendingSegmentVersions.put(
               new SegmentCreateRequest(
                   UPGRADED_PENDING_SEGMENT_PREFIX + replaceVersion,
@@ -711,13 +677,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   replaceVersion,
                   NumberedPartialShardSpec.instance()
               ),
-              new SegmentIdWithShardSpec(
-                  datasource,
-                  replaceInterval,
-                  replaceVersion,
-                  new NumberedShardSpec(++currentPartitionNumber, numCorePartitions)
-              )
+              newId
           );
+          pendingSegmentToNewId.put(pendingSegmentId, newId);
         }
       }
     }
@@ -735,7 +697,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         numInsertedPendingSegments, newPendingSegmentVersions.size()
     );
 
-    return upgradedPendingSegments;
+    return pendingSegmentToNewId;
   }
 
   private boolean shouldUpgradePendingSegment(

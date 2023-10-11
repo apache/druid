@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -87,8 +86,6 @@ public interface Supervisor
    * @param checkpointMetadata metadata for the sequence to currently checkpoint
    */
   void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata);
-
-  void updatePendingSegmentMapping(SegmentIdWithShardSpec rootPendingSegment);
 
   /**
    * Computes maxLag, totalLag and avgLag

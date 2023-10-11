@@ -345,23 +345,9 @@ public interface IndexerMetadataStorageCoordinator
    * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @return List of pending segments for which new IDs have been created.
-   * The returned list does not contain the new IDs themselves.
+   * @return Map from originally allocated pending segment to its new upgraded ID.
    */
-  Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments);
-
-  /**
-   * Finds all versions of a pending segment allocated to an appending task.
-   *
-   * @param segmentIdWithShardSpec Pending segment that was originally allocated
-   *                               to an appending task. Allocated segments take
-   *                               the highest version that exists at the time of
-   *                               allocation.
-   * @return All versions of the given pending segment in the metadata store.
-   * Different versions of the same pending segment may have different shard
-   * specs and intervals, but they refer to the same data.
-   */
-  Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec segmentIdWithShardSpec);
+  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments);
 
   /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.

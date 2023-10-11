@@ -26,7 +26,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
@@ -185,11 +184,6 @@ public class NoopSupervisorSpec implements SupervisorSpec
       public int getActiveTaskGroupsCount()
       {
         return -1;
-      }
-
-      @Override
-      public void updatePendingSegmentMapping(SegmentIdWithShardSpec rootPendingSegment)
-      {
       }
     };
   }

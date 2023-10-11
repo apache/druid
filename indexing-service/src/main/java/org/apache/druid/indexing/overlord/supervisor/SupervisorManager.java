@@ -71,21 +71,20 @@ public class SupervisorManager
     return supervisors.keySet();
   }
 
-  public String getSeekableStreamSupervisorIdForDatasource(String datasource)
+  public Optional<String> getActiveSupervisorIdForDatasource(String datasource)
   {
     for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
       final String supervisorId = entry.getKey();
       final Supervisor supervisor = entry.getValue().lhs;
       final SupervisorSpec supervisorSpec = entry.getValue().rhs;
-      if (!(supervisor instanceof SeekableStreamSupervisor)) {
-        continue;
+      if (supervisor instanceof SeekableStreamSupervisor
+          && !supervisorSpec.isSuspended()
+          && supervisorSpec.getDataSources().contains(datasource)) {
+        return Optional.of(supervisorId);
       }
-      if (supervisorSpec.isSuspended() || !supervisorSpec.getDataSources().contains(datasource)) {
-        continue;
-      }
-      return supervisorId;
     }
-    return null;
+
+    return Optional.absent();
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -266,17 +265,24 @@ public class SupervisorManager
     return false;
   }
 
-  public boolean updatePendingSegmentMapping(String supervisorId, SegmentIdWithShardSpec rootPendingSegment)
+  public boolean updatePendingSegmentMapping(
+      String supervisorId,
+      SegmentIdWithShardSpec rootPendingSegment,
+      SegmentIdWithShardSpec upgradedPendingSegment
+  )
   {
     try {
       Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
       Preconditions.checkNotNull(rootPendingSegment, "rootPendingSegment cannot be null");
 
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
-
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
+      if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
+        return false;
+      }
 
-      supervisor.lhs.updatePendingSegmentMapping(rootPendingSegment);
+      SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
+      seekableStreamSupervisor.updatePendingSegmentMapping(rootPendingSegment, upgradedPendingSegment);
       return true;
     }
     catch (Exception e) {
