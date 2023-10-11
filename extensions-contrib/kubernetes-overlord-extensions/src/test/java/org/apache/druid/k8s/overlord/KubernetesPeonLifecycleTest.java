@@ -360,8 +360,8 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     logWatch.close();
     EasyMock.expectLastCall();
     executor.execute(EasyMock.anyObject());
-    taskRunnerListener.locationChanged(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall();
+    taskRunnerListener.locationChanged(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall();
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());

@@ -249,7 +249,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void updateStatus(Task task, TaskStatus status)
   {
     KubernetesWorkItem workItem = tasks.get(task.getId());
-    if (workItem != null && !workItem.getResult().isDone()) {
+    if (workItem != null && !workItem.getResult().isDone() && status.isComplete()) {
       workItem.setResult(status);
     }
 
