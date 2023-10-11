@@ -26,8 +26,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -35,7 +37,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(Parameterized.class)
 public class ColumnAccessorsTest
 {
-  private TestAccessorShim mode;
+  private TestAccessorShim testAccessor;
 
   @Parameters
   public static List<Object[]> getParameters()
@@ -153,9 +155,7 @@ public class ColumnAccessorsTest
       {
         return 42.1D;
       }
-    }
-
-    ;
+    };
 
     abstract ColumnAccessor getColumnAccessor(Object val);
 
@@ -164,14 +164,14 @@ public class ColumnAccessorsTest
 
   public ColumnAccessorsTest(TestAccessorShim accessor)
   {
-    this.mode = accessor;
+    this.testAccessor = accessor;
   }
 
   @Test
   public void testSomeValue()
   {
-    Object expectedValue = mode.getSomeValue();
-    ColumnAccessor acc = mode.getColumnAccessor(expectedValue);
+    Object expectedValue = testAccessor.getSomeValue();
+    ColumnAccessor acc = testAccessor.getColumnAccessor(expectedValue);
 
     assertFalse(acc.isNull(0));
     assertEquals(expectedValue, acc.getObject(0));
@@ -180,7 +180,7 @@ public class ColumnAccessorsTest
   @Test
   public void testNull()
   {
-    ColumnAccessor acc = mode.getColumnAccessor(null);
+    ColumnAccessor acc = testAccessor.getColumnAccessor(null);
 
     assertTrue(acc.isNull(0));
     assertEquals(null, acc.getObject(0));
