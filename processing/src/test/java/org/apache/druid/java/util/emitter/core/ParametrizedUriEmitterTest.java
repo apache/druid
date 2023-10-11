@@ -180,7 +180,7 @@ public class ParametrizedUriEmitterTest
             Assert.assertEquals("http://example.com/val1/val2", request.getUrl());
             String event1Json = sortedJsonStrings(JSON_MAPPER.writeValueAsString(events.get(0)));
             String event2Json = sortedJsonStrings(JSON_MAPPER.writeValueAsString(events.get(1)));
-            String expectedJsonContent = "[" + event1Json + "," + event2Json + "]";
+            String expectedJsonContent = "[ " + event1Json + ", " + event2Json + " ]";
             byte[] requestBytes = request.getByteBufferData().slice().array();
             String actualJsonContent = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(requestBytes)).toString();
             List<Map<String, Object>> jsonArray = new ObjectMapper().readValue(actualJsonContent, List.class);
@@ -191,9 +191,7 @@ public class ParametrizedUriEmitterTest
             }
             ObjectWriter writer = new ObjectMapper().writerWithDefaultPrettyPrinter();
             String sorted = writer.writeValueAsString(sortedJsonArray);
-            String expectedJsonNoSpaces = removeWhitespace(expectedJsonContent);
-            String actualJsonNoSpaces = removeWhitespace(sorted);
-            Assert.assertEquals(sorted, expectedJsonNoSpaces, actualJsonNoSpaces);
+            Assert.assertEquals(expectedJsonContent, sorted);
             return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(1)
@@ -205,16 +203,6 @@ public class ParametrizedUriEmitterTest
     emitter.flush();
 
     Assert.assertTrue(httpClient.succeeded());
-  }
-  private String removeWhitespace(String input) 
-  {
-    StringBuilder result = new StringBuilder();
-    for (char c : input.toCharArray()) {
-      if (!Character.isWhitespace(c)) {
-        result.append(c);
-      }
-    }
-    return result.toString();
   }
   private String sortedJsonStrings(String jsonString) throws JsonProcessingException 
   {
