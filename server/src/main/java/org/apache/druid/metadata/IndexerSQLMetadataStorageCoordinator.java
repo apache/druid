@@ -105,7 +105,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
   private static final int MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE = 100;
 
-  private static final String UPGRADED_PENDING_SEGMENT_PREFIX = "upgraded_to_replace_version_";
+  private static final String UPGRADED_PENDING_SEGMENT_PREFIX = "upgraded_to_version__";
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
@@ -420,7 +420,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           (handle, transactionStatus) -> {
             final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
             segmentsToInsert.addAll(
-                createUpgradedVersionsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask)
+                createNewIdsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask)
             );
             return SegmentPublishResult.ok(
                 insertSegments(handle, segmentsToInsert)
@@ -670,8 +670,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Finds pending segments contained in each replace interval and upgrades them
-   * to the replace version.
+   * Creates and inserts new IDs for the pending segments contained in each replace
+   * interval. The newly created pending segment IDs
+   * <ul>
+   * <li>Have the same interval and version as that of an overlapping segment
+   * committed by the REPLACE task.</li>
+   * <li>Cannot be committed but are only used to serve realtime queries against
+   * those versions.</li>
+   * </ul>
+   *
+   * @return Set of pending segments for which new IDs have been created.
    */
   private Set<SegmentIdWithShardSpec> upgradePendingSegments(
       Handle handle,
@@ -699,7 +707,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         final String pendingSegmentSequence = overlappingPendingSegment.getValue();
         if (shouldUpgradePendingSegment(pendingSegmentId, pendingSegmentSequence, replaceInterval, replaceVersion)) {
           upgradedPendingSegments.add(pendingSegmentId);
-          // There cannot be any duplicates because this version not been committed before
+          // Ensure unique sequence_name_prev_id_sha1 by setting
+          // sequence_prev_id -> pendingSegmentId
+          // sequence_name -> prefix + replaceVersion
           newPendingSegmentVersions.put(
               new SegmentCreateRequest(
                   UPGRADED_PENDING_SEGMENT_PREFIX + replaceVersion,
@@ -1135,16 +1145,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final String dataSource = appendSegments.iterator().next().getDataSource();
-    final Set<DataSegment> upgradedSegments = connector.retryTransaction(
+    final Set<DataSegment> segmentIdsForNewVersions = connector.retryTransaction(
         (handle, transactionStatus)
-            -> createUpgradedVersionsOfAppendSegments(handle, dataSource, appendSegments),
+            -> createNewIdsForAppendSegments(handle, dataSource, appendSegments),
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
 
     // Create entries for all required versions of the append segments
     final Set<DataSegment> allSegmentsToInsert = new HashSet<>(appendSegments);
-    allSegmentsToInsert.addAll(upgradedSegments);
+    allSegmentsToInsert.addAll(segmentIdsForNewVersions);
 
     final AtomicBoolean metadataNotUpdated = new AtomicBoolean(false);
     try {
@@ -1262,15 +1272,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Creates and returns any extra versions that need to be committed for the
-   * given append segments.
-   * <p>
-   * This is typically needed when a REPLACE task started and finished after
-   * these append segments had already been allocated. As such,
-   * there would be some used segments in the DB with versions higher than these
-   * append segments.
+   * Creates new IDs for the given append segments if a REPLACE task started and
+   * finished after these append segments had already been allocated. The newly
+   * created IDs belong to the same interval and version as the segments committed
+   * by the REPLACE task.
    */
-  private Set<DataSegment> createUpgradedVersionsOfAppendSegments(
+  private Set<DataSegment> createNewIdsForAppendSegments(
       Handle handle,
       String dataSource,
       Set<DataSegment> segmentsToAppend
@@ -1313,12 +1320,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           appendVersionToSegments
       );
       for (Map.Entry<Interval, Set<DataSegment>> upgradeEntry : segmentsToUpgrade.entrySet()) {
-        Set<DataSegment> segmentsUpgradedToVersion = createUpgradedVersionOfSegments(
+        final Interval upgradeInterval = upgradeEntry.getKey();
+        final Set<DataSegment> segmentsAlreadyOnVersion
+            = overlappingIntervalToSegments.getOrDefault(upgradeInterval, Collections.emptySet())
+                                           .stream()
+                                           .filter(s -> s.getVersion().equals(upgradeVersion))
+                                           .collect(Collectors.toSet());
+        Set<DataSegment> segmentsUpgradedToVersion = createNewIdsForAppendSegmentsWithVersion(
             handle,
             upgradeVersion,
-            upgradeEntry.getKey(),
+            upgradeInterval,
             upgradeEntry.getValue(),
-            overlappingIntervalToSegments
+            segmentsAlreadyOnVersion
         );
         log.info("Upgraded [%d] segments to version[%s].", segmentsUpgradedToVersion.size(), upgradeVersion);
         upgradedSegments.addAll(segmentsUpgradedToVersion);
@@ -1366,23 +1379,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Computes new Segment IDs for the {@code segmentsToUpgrade} being upgraded
-   * to the given {@code upgradeVersion}.
+   * Computes new segment IDs that belong to the upgradeInterval and upgradeVersion.
+   *
+   * @param committedSegments Segments that already exist in the upgradeInterval
+   *                          at upgradeVersion.
    */
-  private Set<DataSegment> createUpgradedVersionOfSegments(
+  private Set<DataSegment> createNewIdsForAppendSegmentsWithVersion(
       Handle handle,
       String upgradeVersion,
-      Interval interval,
+      Interval upgradeInterval,
       Set<DataSegment> segmentsToUpgrade,
-      Map<Interval, Set<DataSegment>> committedSegmentsByInterval
+      Set<DataSegment> committedSegments
   ) throws IOException
   {
-    final Set<DataSegment> committedSegments
-        = committedSegmentsByInterval.getOrDefault(interval, Collections.emptySet())
-                                     .stream()
-                                     .filter(s -> s.getVersion().equals(upgradeVersion))
-                                     .collect(Collectors.toSet());
-
+    // Find the committed segments with the higest partition number
     SegmentIdWithShardSpec committedMaxId = null;
     for (DataSegment committedSegment : committedSegments) {
       if (committedMaxId == null
@@ -1391,14 +1401,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
-    // Get pending segments for the new version, if any
+    // Get pending segments for the new version to determine the next partition number to allocate
     final String dataSource = segmentsToUpgrade.iterator().next().getDataSource();
-    final Set<SegmentIdWithShardSpec> pendingSegments
-        = new HashSet<>(getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet());
+    final Set<SegmentIdWithShardSpec> pendingSegmentIds
+        = getPendingSegmentsForIntervalWithHandle(handle, dataSource, upgradeInterval).keySet();
+    final Set<SegmentIdWithShardSpec> allAllocatedIds = new HashSet<>(pendingSegmentIds);
 
-    // Determine new IDs for each append segment by taking into account both
-    // committed and pending segments for this version
-    final Set<DataSegment> upgradedSegments = new HashSet<>();
+    // Create new IDs for each append segment
+    final Set<DataSegment> newSegmentIds = new HashSet<>();
     for (DataSegment segment : segmentsToUpgrade) {
       SegmentCreateRequest request = new SegmentCreateRequest(
           segment.getId() + "__" + upgradeVersion,
@@ -1406,19 +1416,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           upgradeVersion,
           NumberedPartialShardSpec.instance()
       );
-      // allocate new segment id
+
+      // Create new segment ID based on committed segments, allocated pending segments
+      // and new IDs created so far in this method
       final SegmentIdWithShardSpec newId = createNewSegment(
           request,
           dataSource,
-          interval,
+          upgradeInterval,
           upgradeVersion,
           committedMaxId,
-          pendingSegments
+          allAllocatedIds
       );
 
-      // Add to set of pending segments so that shard specs are computed taking the new id into account
-      pendingSegments.add(newId);
-      upgradedSegments.add(
+      // Update the set so that subsequent segment IDs use a higher partition number
+      allAllocatedIds.add(newId);
+      newSegmentIds.add(
           DataSegment.builder(segment)
                      .interval(newId.getInterval())
                      .version(newId.getVersion())
@@ -1427,7 +1439,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       );
     }
 
-    return upgradedSegments;
+    return newSegmentIds;
   }
 
   private Map<SegmentCreateRequest, SegmentIdWithShardSpec> createNewSegments(
@@ -1884,7 +1896,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   /**
    * Creates new versions of segments appended while a REPLACE task was in progress.
    */
-  private Set<DataSegment> createUpgradedVersionsOfAppendSegmentsAfterReplace(
+  private Set<DataSegment> createNewIdsOfAppendSegmentsAfterReplace(
       final Handle handle,
       final Set<DataSegment> replaceSegments,
       final Set<ReplaceTaskLock> locksHeldByReplaceTask

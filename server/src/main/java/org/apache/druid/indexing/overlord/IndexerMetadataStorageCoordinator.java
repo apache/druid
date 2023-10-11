@@ -335,15 +335,32 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Creates new versions for the pending segments that overlap with the given
-   * replace segments being committed.
+   * Creates and inserts new IDs for the pending segments hat overlap with the given
+   * replace segments being committed. The newly created pending segment IDs:
+   * <ul>
+   * <li>Have the same interval and version as that of an overlapping segment
+   * committed by the REPLACE task.</li>
+   * <li>Cannot be committed but are only used to serve realtime queries against
+   * those versions.</li>
+   * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @return List of pending segments chosen for upgrade. The returned list does
-   * not contain the new versions of the pending segments.
+   * @return List of pending segments for which new IDs have been created.
+   * The returned list does not contain the new IDs themselves.
    */
   Set<SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments);
 
+  /**
+   * Finds all versions of a pending segment allocated to an appending task.
+   *
+   * @param segmentIdWithShardSpec Pending segment that was originally allocated
+   *                               to an appending task. Allocated segments take
+   *                               the highest version that exists at the time of
+   *                               allocation.
+   * @return All versions of the given pending segment in the metadata store.
+   * Different versions of the same pending segment may have different shard
+   * specs and intervals, but they refer to the same data.
+   */
   Set<SegmentIdWithShardSpec> findAllVersionsOfPendingSegment(SegmentIdWithShardSpec segmentIdWithShardSpec);
 
   /**

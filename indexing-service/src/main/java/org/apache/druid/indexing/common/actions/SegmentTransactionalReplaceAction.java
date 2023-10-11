@@ -141,8 +141,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
             toolbox.getSupervisorManager().updatePendingSegmentMapping(supervisorId, pendingSegment);
           }
         }
-
-        // These upgraded pending segments should be forwarded to the SupervisorManager
       }
       catch (Exception e) {
         log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
