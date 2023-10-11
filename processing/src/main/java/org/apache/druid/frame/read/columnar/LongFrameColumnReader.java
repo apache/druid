@@ -292,11 +292,5 @@ public class LongFrameColumnReader implements FrameColumnReader
         return memory.getLong(rowPosition);
       }
     }
-
-    protected Object getObjectNotNull(int rowNum)
-    {
-      return null;
-
-    }
   }
 }
