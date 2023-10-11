@@ -124,13 +124,11 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -850,6 +848,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQuery(
       final String sql,
       final List<Query<?>> expectedQueries,
+      final ResultMatchMode resultsMatchMode,
+      final List<Object[]> expectedResults
+  )
+  {
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(resultsMatchMode, expectedResults)
+        .run();
+  }
+
+  public void testQuery(
+      final String sql,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final RowSignature expectedResultSignature
   )
@@ -1495,8 +1507,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         assertResultsValid(expectedResultMatchMode, expectedResults, queryResults);
       }
       catch (AssertionError e) {
-        System.out.println("sql: " + sql);
-        displayResults("Actual", queryResults.results);
+        log.info("sql: %s", sql);
+        log.info(resultsToString("Actual", queryResults.results));
         throw e;
       }
     }
@@ -1509,58 +1521,82 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * expected results: let the test fail with empty results. The actual results
    * are printed to the console. Copy them into the test.
    */
-  public static void displayResults(String name, List<Object[]> results)
+  public static String resultsToString(String name, List<Object[]> results)
   {
-    PrintStream out = System.out;
-    out.printf(Locale.ENGLISH, "-- %s results --", name);
-    for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
-      printArray(results.get(rowIndex), out);
-      if (rowIndex < results.size() - 1) {
-        out.print(",");
+    return new ResultsPrinter(name, results).getResult();
+  }
+
+  static class ResultsPrinter
+  {
+    private StringBuilder sb;
+
+    private ResultsPrinter(String name, List<Object[]> results)
+    {
+      sb = new StringBuilder();
+      sb.append("-- " + name + " results --\n");
+
+      for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
+        printArray(results.get(rowIndex));
+        if (rowIndex < results.size() - 1) {
+          outprint(",");
+        }
+        sb.append('\n');
       }
-      out.println();
+      sb.append("----");
     }
-    out.println("----");
-  }
 
-  private static void printArray(final Object[] array, final PrintStream out)
-  {
-    printArrayImpl(array, out, "new Object[]{", "}");
-  }
-
-  private static void printList(final List<?> list, final PrintStream out)
-  {
-    printArrayImpl(list.toArray(new Object[0]), out, "ImmutableList.of(", ")");
-  }
-
-  private static void printArrayImpl(final Object[] array, final PrintStream out, final String pre, final String post)
-  {
-    out.print(pre);
-    for (int colIndex = 0; colIndex < array.length; colIndex++) {
-      Object col = array[colIndex];
-      if (colIndex > 0) {
-        out.print(", ");
-      }
-      if (col == null) {
-        out.print("null");
-      } else if (col instanceof String) {
-        out.print("\"");
-        out.print(StringEscapeUtils.escapeJava((String) col));
-        out.print("\"");
-      } else if (col instanceof Long) {
-        out.print(col);
-        out.print("L");
-      } else if (col instanceof Double) {
-        out.print(col);
-        out.print("D");
-      } else if (col instanceof Object[]) {
-        printArray(array, out);
-      } else if (col instanceof List) {
-        printList((List<?>) col, out);
-      } else {
-        out.print(col);
-      }
+    private String getResult()
+    {
+      return sb.toString();
     }
-    out.print(post);
+
+    private void printArray(final Object[] array)
+    {
+      printArrayImpl(array, "new Object[]{", "}");
+    }
+
+    private void printList(final List<?> list)
+    {
+      printArrayImpl(list.toArray(new Object[0]), "ImmutableList.of(", ")");
+    }
+
+    private void printArrayImpl(final Object[] array, final String pre, final String post)
+    {
+      sb.append(pre);
+      for (int colIndex = 0; colIndex < array.length; colIndex++) {
+        Object col = array[colIndex];
+        if (colIndex > 0) {
+          sb.append(", ");
+        }
+        if (col == null) {
+          sb.append("null");
+        } else if (col instanceof String) {
+          outprint("\"");
+          outprint(StringEscapeUtils.escapeJava((String) col));
+          outprint("\"");
+        } else if (col instanceof Long) {
+          outprint(col);
+          outprint("L");
+        } else if (col instanceof Double) {
+          outprint(col);
+          outprint("D");
+        } else if (col instanceof Float) {
+          outprint(col);
+          outprint("F");
+        } else if (col instanceof Object[]) {
+          printArray(array);
+        } else if (col instanceof List) {
+          printList((List<?>) col);
+        } else {
+          outprint(col);
+        }
+      }
+      outprint(post);
+    }
+
+    private void outprint(Object post)
+    {
+      sb.append(post);
+    }
   }
 }
