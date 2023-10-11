@@ -147,6 +147,7 @@ import static org.junit.Assert.assertEquals;
 public class BaseCalciteQueryTest extends CalciteTestBase
     implements QueryComponentSupplier, PlannerComponentSupplier
 {
+  public static final double ASSERTION_EPSILON = 1e-5;
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
@@ -1098,13 +1099,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              1e-5);
+              ASSERTION_EPSILON);
         } else if (expectedCell instanceof Double) {
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              1e-5);
+              ASSERTION_EPSILON);
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
@@ -1115,7 +1116,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     private static String mismatchMessage(int row, int column)
     {
-      return String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, column);
+      return StringUtils.format("column content mismatch at %d,%d", row, column);
     }
 
   }
