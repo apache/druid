@@ -193,7 +193,6 @@ public class ParametrizedUriEmitterTest
             String sorted = writer.writeValueAsString(sortedJsonArray);
             String expectedJsonNoSpaces = removeWhitespace(expectedJsonContent);
             String actualJsonNoSpaces = removeWhitespace(sorted);
-            System.out.print(sorted);
             Assert.assertEquals(sorted, expectedJsonNoSpaces, actualJsonNoSpaces);
             return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
@@ -204,7 +203,7 @@ public class ParametrizedUriEmitterTest
       emitter.emit(event);
     }
     emitter.flush();
-    Thread.sleep(1000);
+
     Assert.assertTrue(httpClient.succeeded());
   }
   private String removeWhitespace(String input) 
