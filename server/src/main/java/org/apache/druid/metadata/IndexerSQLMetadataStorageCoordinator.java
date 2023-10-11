@@ -680,6 +680,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws IOException
   {
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> newPendingSegmentVersions = new HashMap<>();
+    final Set<SegmentIdWithShardSpec> upgradedPendingSegments = new HashSet<>();
 
     for (Map.Entry<Interval, DataSegment> entry : replaceIntervalToMaxId.entrySet()) {
       final Interval replaceInterval = entry.getKey();
@@ -697,6 +698,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         final SegmentIdWithShardSpec pendingSegmentId = overlappingPendingSegment.getKey();
         final String pendingSegmentSequence = overlappingPendingSegment.getValue();
         if (shouldUpgradePendingSegment(pendingSegmentId, pendingSegmentSequence, replaceInterval, replaceVersion)) {
+          upgradedPendingSegments.add(pendingSegmentId);
           // There cannot be any duplicates because this version not been committed before
           newPendingSegmentVersions.put(
               new SegmentCreateRequest(
@@ -729,7 +731,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         numInsertedPendingSegments, newPendingSegmentVersions.size()
     );
 
-    return new HashSet<>(newPendingSegmentVersions.values());
+    return upgradedPendingSegments;
   }
 
   private boolean shouldUpgradePendingSegment(
