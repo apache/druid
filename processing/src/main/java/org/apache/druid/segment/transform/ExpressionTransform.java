@@ -100,7 +100,11 @@ public class ExpressionTransform implements Transform
     public Object eval(final Row row)
     {
       try {
-        return expr.eval(InputBindings.forRow(row)).valueOrDefault();
+        Object result = expr.eval(InputBindings.forRow(row)).valueOrDefault();
+        if (result != null && result.getClass().isArray()) {
+          return Rows.objectToStrings(result);
+        }
+        return result;
       }
       catch (Throwable t) {
         throw new ISE(t, "Could not transform value for %s reason: %s", name, t.getMessage());

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,8 @@ public final class Rows
     } else if (inputValue instanceof byte[]) {
       // convert byte[] to base64 encoded string
       return Collections.singletonList(StringUtils.encodeBase64String((byte[]) inputValue));
+    } else if (inputValue instanceof Object[]) {
+      return Arrays.stream((Object[]) inputValue).map(String::valueOf).collect(Collectors.toList());
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }

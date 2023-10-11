@@ -25,6 +25,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -37,6 +39,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -443,5 +447,72 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(3.4, (Double) raw[3], 0.0);
     Assert.assertEquals(Arrays.asList("1.2", "2.3", "null", "3.4"), actual.getDimension("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
+  }
+
+  @Test
+  public void testTransformWithExpr()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(new ExpressionTransform("dim", "array_slice(dim, 0, 5)", TestExprMacroTable.INSTANCE))
+        )
+    );
+    final List<String> dimList = ImmutableList.of("a", "b", "c", "d", "e", "f", "g");
+    final MapBasedRow row = new MapBasedRow(
+        DateTimes.nowUtc(),
+        ImmutableMap.of("dim", dimList)
+    );
+    Assert.assertEquals(row.getDimension("dim"), dimList);
+    Assert.assertEquals(row.getRaw("dim"), dimList);
+
+    final InputRow actualTranformedRow = transformer.transform(new InputRow()
+    {
+      @Override
+      public List<String> getDimensions()
+      {
+        return new ArrayList<>(row.getEvent().keySet());
+      }
+
+      @Override
+      public long getTimestampFromEpoch()
+      {
+        return 0;
+      }
+
+      @Override
+      public DateTime getTimestamp()
+      {
+        return row.getTimestamp();
+      }
+
+      @Override
+      public List<String> getDimension(String dimension)
+      {
+        return row.getDimension(dimension);
+      }
+
+      @Nullable
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return row.getRaw(dimension);
+      }
+
+      @Nullable
+      @Override
+      public Number getMetric(String metric)
+      {
+        return row.getMetric(metric);
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return row.compareTo(o);
+      }
+    });
+    Assert.assertEquals(actualTranformedRow.getDimension("dim"), dimList.subList(0, 5));
+    Assert.assertEquals(actualTranformedRow.getRaw("dim"), dimList.subList(0, 5));
   }
 }
