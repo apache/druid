@@ -1533,7 +1533,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     private ResultsPrinter(String name, List<Object[]> results)
     {
       sb = new StringBuilder();
-      sb.append("-- " + name + " results --\n");
+      sb.append("-- ");
+      sb.append(name);
+      sb.append(" results --\n");
 
       for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
         printArray(results.get(rowIndex));
