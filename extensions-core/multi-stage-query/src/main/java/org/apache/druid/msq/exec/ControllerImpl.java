@@ -1771,10 +1771,7 @@ public class ControllerImpl implements Controller
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
       if (finalShuffleStageDef.doesSortDuringShuffle()) {
         final QueryDefinitionBuilder builder = QueryDefinition.builder();
-        for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
-          builder.add(StageDefinition.builder(stageDef));
-        }
-
+        builder.addAll(queryDef);
         builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
                                    .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
                                    .maxWorkerCount(tuningConfig.getMaxNumWorkers())
