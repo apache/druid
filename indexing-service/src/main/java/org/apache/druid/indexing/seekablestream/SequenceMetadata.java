@@ -79,7 +79,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       @JsonProperty("endOffsets") Map<PartitionIdType, SequenceOffsetType> endOffsets,
       @JsonProperty("checkpointed") boolean checkpointed,
       @JsonProperty("exclusiveStartPartitions") Set<PartitionIdType> exclusiveStartPartitions,
-      @JsonProperty("taskLockType") TaskLockType taskLockType
+      @JsonProperty("taskLockType") @Nullable TaskLockType taskLockType
   )
   {
     Preconditions.checkNotNull(sequenceName);

@@ -164,7 +164,7 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    * @param versionsOfPendingSegment - the ids belonging to the versions to which the root segment needs to be updated
    * @return true if the update succeeds
    */
-  ListenableFuture<Boolean> updatePendingSegmentMapping(
+  ListenableFuture<Boolean> updatePendingSegmentMappingAsync(
       String id,
       SegmentIdWithShardSpec rootPendingSegment,
       Set<SegmentIdWithShardSpec> versionsOfPendingSegment

@@ -1038,21 +1038,25 @@ public class StreamAppenderator implements Appenderator
     if (!rootPendingSegmentToNewerVersions.containsKey(rootSegment.getId())) {
       return;
     }
-    for (SegmentIdWithShardSpec newId : rootPendingSegmentToNewerVersions.get(rootSegment.getId())) {
-      final DataSegment newSegment = new DataSegment(
-          newId.getDataSource(),
-          newId.getInterval(),
-          newId.getVersion(),
-          rootSegment.getLoadSpec(),
-          rootSegment.getDimensions(),
-          rootSegment.getMetrics(),
-          newId.getShardSpec(),
-          rootSegment.getBinaryVersion(),
-          rootSegment.getSize()
-      );
-      segmentAnnouncer.unannounceSegment(newSegment);
+    try {
+      for (SegmentIdWithShardSpec newId : rootPendingSegmentToNewerVersions.get(rootSegment.getId())) {
+        final DataSegment newSegment = new DataSegment(
+            newId.getDataSource(),
+            newId.getInterval(),
+            newId.getVersion(),
+            rootSegment.getLoadSpec(),
+            rootSegment.getDimensions(),
+            rootSegment.getMetrics(),
+            newId.getShardSpec(),
+            rootSegment.getBinaryVersion(),
+            rootSegment.getSize()
+        );
+        segmentAnnouncer.unannounceSegment(newSegment);
+      }
     }
-    rootPendingSegmentToNewerVersions.remove(rootSegment.getId());
+    finally {
+      rootPendingSegmentToNewerVersions.remove(rootSegment.getId());
+    }
   }
 
   public void updatePendingSegmentMapping(

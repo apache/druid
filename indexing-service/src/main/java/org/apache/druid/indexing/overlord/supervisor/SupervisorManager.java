@@ -35,7 +35,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,9 +71,8 @@ public class SupervisorManager
     return supervisors.keySet();
   }
 
-  public Set<String> getSeekableStreamSupervisorIdsForDatasource(String datasource)
+  public String getSeekableStreamSupervisorIdForDatasource(String datasource)
   {
-    final Set<String> retVal = new HashSet<>();
     for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
       final String supervisorId = entry.getKey();
       final Supervisor supervisor = entry.getValue().lhs;
@@ -85,9 +83,9 @@ public class SupervisorManager
       if (supervisorSpec.isSuspended() || !supervisorSpec.getDataSources().contains(datasource)) {
         continue;
       }
-      retVal.add(supervisorId);
+      return supervisorId;
     }
-    return retVal;
+    return null;
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)

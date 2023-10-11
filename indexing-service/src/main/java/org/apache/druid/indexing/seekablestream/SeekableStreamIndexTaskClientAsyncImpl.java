@@ -196,7 +196,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
-  public ListenableFuture<Boolean> updatePendingSegmentMapping(
+  public ListenableFuture<Boolean> updatePendingSegmentMappingAsync(
       String id,
       SegmentIdWithShardSpec rootPendingSegment,
       Set<SegmentIdWithShardSpec> versionsOfPendingSegment

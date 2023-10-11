@@ -1098,7 +1098,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (String taskId : taskGroup.taskIds()) {
-        taskClient.updatePendingSegmentMapping(
+        taskClient.updatePendingSegmentMappingAsync(
             taskId,
             rootPendingSegment,
             indexerMetadataStorageCoordinator.findAllVersionsOfPendingSegment(rootPendingSegment)
@@ -1108,7 +1108,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
       for (TaskGroup taskGroup : taskGroupList) {
         for (String taskId : taskGroup.taskIds()) {
-          taskClient.updatePendingSegmentMapping(
+          taskClient.updatePendingSegmentMappingAsync(
               taskId,
               rootPendingSegment,
               indexerMetadataStorageCoordinator.findAllVersionsOfPendingSegment(rootPendingSegment)
