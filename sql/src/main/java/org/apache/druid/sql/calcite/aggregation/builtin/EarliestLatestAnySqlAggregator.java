@@ -39,6 +39,7 @@ import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.util.Optionality;
@@ -336,7 +337,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     }
 
     @Override
-    public <R> R accept(org.apache.calcite.sql.util.SqlVisitor<R> visitor)
+    public <R> R accept(SqlVisitor<R> visitor)
     {
 
       try {
