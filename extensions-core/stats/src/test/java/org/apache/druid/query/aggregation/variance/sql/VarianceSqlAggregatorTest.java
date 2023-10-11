@@ -62,7 +62,6 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -196,6 +195,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -243,6 +243,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -298,6 +299,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -351,6 +353,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -409,6 +412,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -455,6 +459,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -491,6 +496,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
             .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new Object[]{3.61497656362466, 3.960008417499471, 3.960008417499471, 15.681666666666667}
@@ -541,6 +547,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new Object[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
@@ -621,6 +628,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new Object[]{"a", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
@@ -674,27 +682,8 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
-  }
-
-  @Override
-  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
-  {
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Object[] expectedResult = expectedResults.get(i);
-      Object[] result = results.get(i);
-      Assert.assertEquals(expectedResult.length, result.length);
-      for (int j = 0; j < expectedResult.length; j++) {
-        if (expectedResult[j] instanceof Float) {
-          Assert.assertEquals((Float) expectedResult[j], (Float) result[j], 1e-5);
-        } else if (expectedResult[j] instanceof Double) {
-          Assert.assertEquals((Double) expectedResult[j], (Double) result[j], 1e-5);
-        } else {
-          Assert.assertEquals(expectedResult[j], result[j]);
-        }
-      }
-    }
   }
 }
