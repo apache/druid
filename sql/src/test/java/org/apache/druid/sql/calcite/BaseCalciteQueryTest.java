@@ -1126,14 +1126,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * In case {@link NullHandling#replaceWithDefault()} is true, if the expected result is <code>null</code> it accepts
    * both <code>null</code> and the default value for that column as actual result.
    */
-  public void assertResultsValid(ResultMatchMode matchMode, List<Object[]> expected, QueryResults queryResults)
+  public void assertResultsValid(final ResultMatchMode matchMode, final List<Object[]> expected, final QueryResults queryResults)
   {
-    List<Object[]> results = queryResults.results;
+    final List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());
 
     final List<ValueType> types = new ArrayList<>();
 
-    boolean isMSQ = isMSQRowType(queryResults.signature);
+    final boolean isMSQ = isMSQRowType(queryResults.signature);
 
     if (!isMSQ) {
       for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
@@ -1146,18 +1146,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
     }
 
-    int numRows = results.size();
+    final int numRows = results.size();
     for (int row = 0; row < numRows; row++) {
-      Object[] expectedRow = expected.get(row);
-      Object[] resultRow = results.get(row);
+      final Object[] expectedRow = expected.get(row);
+      final Object[] resultRow = results.get(row);
       assertEquals("column count mismatch; at row#" + row, expectedRow.length, resultRow.length);
 
       for (int i = 0; i < resultRow.length; i++) {
-        Object resultCell = resultRow[i];
-        Object expectedCell = expectedRow[i];
+        final Object resultCell = resultRow[i];
+        final Object expectedCell = expectedRow[i];
 
-        ResultMatchMode cellValidator = matchMode;
-        cellValidator.validate(
+        matchMode.validate(
             row,
             i,
             isMSQ ? null : types.get(i),
