@@ -95,6 +95,22 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_columnar_unsupportedColumnType1()
+  {
+    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
+        FrameType.COLUMNAR,
+        new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
+        RowSignature.builder().add("x", ColumnType.LONG).build(),
+        Collections.emptyList()
+    );
+
+    FrameWriter aa = factory.newFrameWriter(new AllNullColumnSelectorFactory());
+    int nr = aa.getNumRows();
+    System.out.println(nr);
+  }
+
+
+  @Test
   public void test_rowBased_unsupportedSortColumnType()
   {
     // Register, but don't unregister at the end of this test, because many other tests out there expect this to exist

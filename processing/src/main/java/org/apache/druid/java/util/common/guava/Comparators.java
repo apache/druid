@@ -43,6 +43,7 @@ public class Comparators
   //CHECKSTYLE.OFF: Regexp
   // Ordering.natural().nullsFirst() is generally prohibited, but we need a single exception.
   private static final Ordering NATURAL_NULLS_FIRST = Ordering.natural().nullsFirst();
+  private static final Ordering NATURAL_NULLS_LAST = Ordering.natural().nullsLast();
   //CHECKSTYLE.ON: Regexp
 
   @SuppressWarnings("unchecked")
@@ -55,6 +56,12 @@ public class Comparators
   public static <T extends Comparable<? super T>> Ordering<T> naturalNullsFirst()
   {
     return NATURAL_NULLS_FIRST;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T extends Comparable<? super T>> Ordering<T> naturalNullsLast()
+  {
+    return NATURAL_NULLS_LAST;
   }
 
   private static final Comparator<Interval> INTERVAL_BY_START_THEN_END = new Comparator<Interval>()
