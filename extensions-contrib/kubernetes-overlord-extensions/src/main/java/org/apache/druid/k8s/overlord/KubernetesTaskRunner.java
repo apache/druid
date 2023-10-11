@@ -215,6 +215,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
     finally {
       updateStatus(task, taskStatus);
+      TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), TaskLocation.unknown());
     }
   }
 
