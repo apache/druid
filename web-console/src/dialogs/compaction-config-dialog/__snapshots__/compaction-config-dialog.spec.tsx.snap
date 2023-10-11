@@ -341,7 +341,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
             "info": <p>
               Allows or forbids concurrent compactions.
             </p>,
-            "label": "Allow concurrent append tasks",
+            "label": "Allow concurrent compactions (experimental)",
             "name": "taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],
@@ -734,7 +734,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
             "info": <p>
               Allows or forbids concurrent compactions.
             </p>,
-            "label": "Allow concurrent append tasks",
+            "label": "Allow concurrent compactions (experimental)",
             "name": "taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],
@@ -1127,7 +1127,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
             "info": <p>
               Allows or forbids concurrent compactions.
             </p>,
-            "label": "Allow concurrent append tasks",
+            "label": "Allow concurrent compactions (experimental)",
             "name": "taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],
@@ -1520,7 +1520,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
             "info": <p>
               Allows or forbids concurrent compactions.
             </p>,
-            "label": "Allow concurrent append tasks",
+            "label": "Allow concurrent compactions (experimental)",
             "name": "taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],

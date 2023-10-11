@@ -3174,11 +3174,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               {
                 name: 'context.taskLockType',
                 type: 'boolean',
-                label: `Allow concurrent ${appendToExisting ? 'append' : 'replace'} tasks`,
+                label: `Allow concurrent ${
+                  appendToExisting ? 'append' : 'replace'
+                } tasks (experimental)`,
                 defaultValue: undefined,
                 valueAdjustment: v => (v ? (appendToExisting ? 'APPEND' : 'REPLACE') : undefined),
                 adjustValue: v => v === (appendToExisting ? 'APPEND' : 'REPLACE'),
-                info: <p>Allows or forbids concurrent compactions.</p>,
+                info: <p>Allows or forbids concurrent tasks.</p>,
               },
             ]}
             model={spec}
