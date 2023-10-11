@@ -30,6 +30,7 @@ import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -137,6 +138,26 @@ public class DruidLogicalValuesRuleTest
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
       Assert.assertSame(Long.class, fromLiteral.getClass());
       Assert.assertEquals(0L, fromLiteral);
+    }
+
+    @Test
+    public void testGetValueFromNullBooleanLiteral()
+    {
+      RexLiteral literal = REX_BUILDER.makeLiteral(null, REX_BUILDER.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN));
+
+      try {
+        ExpressionProcessing.initializeForStrictBooleansTests(true);
+        final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+        Assert.assertNull(fromLiteral);
+
+        ExpressionProcessing.initializeForStrictBooleansTests(false);
+        final Object fromLiteralNonStrict = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+        Assert.assertSame(Long.class, fromLiteralNonStrict.getClass());
+        Assert.assertEquals(0L, fromLiteralNonStrict);
+      }
+      finally {
+        ExpressionProcessing.initializeForTests();
+      }
     }
 
     @Test

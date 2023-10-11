@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.error.InvalidSqlInput;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -120,6 +121,9 @@ public class DruidLogicalValuesRule extends RelOptRule
         }
         return ((Number) RexLiteral.value(literal)).longValue();
       case BOOLEAN:
+        if (ExpressionProcessing.useStrictBooleans() && literal.isNull()) {
+          return null;
+        }
         return literal.isAlwaysTrue() ? 1L : 0L;
       case TIMESTAMP:
       case DATE:
