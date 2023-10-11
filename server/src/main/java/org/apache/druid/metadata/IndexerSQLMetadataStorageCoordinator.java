@@ -635,24 +635,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       SegmentIdWithShardSpec pendingSegment
   ) throws IOException
   {
-    final Interval interval = pendingSegment.getInterval();
     final Query<Map<String, Object>> query = handle
         .createQuery(
             StringUtils.format(
                 "SELECT payload "
                 + "FROM %s WHERE "
                 + "dataSource = :dataSource AND "
-                + "start = :start AND "
-                + "%2$send%2$s = :end AND "
                 + "sequence_prev_id = :sequence_prev_id",
-                dbTables.getPendingSegmentsTable(),
-                connector.getQuoteString()
+                dbTables.getPendingSegmentsTable()
             )
         )
         .bind("dataSource", pendingSegment.getDataSource())
-        .bind("sequence_prev_id", pendingSegment.asSegmentId().toString())
-        .bind("start", interval.getStart().toString())
-        .bind("end", interval.getEnd().toString());
+        .bind("sequence_prev_id", pendingSegment.asSegmentId().toString());
 
     final ResultIterator<byte[]> dbSegments = query
         .map(ByteArrayMapper.FIRST)
