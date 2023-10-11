@@ -19,15 +19,15 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.query.rowsandcols.column.accessor.DoubleColumnAccessorBase;
+import org.apache.druid.query.rowsandcols.column.accessor.FloatColumnAccessorBase;
 import org.apache.druid.query.rowsandcols.column.accessor.LongColumnAccessorBase;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -36,21 +36,22 @@ import static org.junit.Assert.assertTrue;
 public class ColumnAccessorsTest
 {
   private TestAccessorShim mode;
-  private TestAccessorShim accessor;
-  private Object expectedValue;
 
   @Parameters
   public static List<Object[]> getParameters()
   {
     List<Object[]> ret = new ArrayList<>();
 
-    ret.add(new Object[] {TestAccessorShim.LONG, 42L});
+    for (TestAccessorShim accessor : TestAccessorShim.values()) {
+      ret.add(new Object[] {accessor});
+    }
 
     return ret;
   }
 
-  enum TestAccessorShim  {
-    LONG    {
+  enum TestAccessorShim
+  {
+    LONG {
       @Override
       ColumnAccessor getColumnAccessor(Object value)
       {
@@ -76,34 +77,112 @@ public class ColumnAccessorsTest
           }
         };
       }
-    };
+
+      @Override
+      protected Object getSomeValue()
+      {
+        return 42L;
+      }
+
+
+    },
+    FLOAT {
+      @Override
+      ColumnAccessor getColumnAccessor(Object value)
+      {
+        Float val = (Float) value;
+        return new FloatColumnAccessorBase()
+        {
+
+          @Override
+          public int numRows()
+          {
+            return 1;
+          }
+
+          @Override
+          public boolean isNull(int rowNum)
+          {
+            return val == null;
+          }
+
+          @Override
+          public float getFloat(int rowNum)
+          {
+            return val;
+          }
+        };
+      }
+
+      @Override
+      protected Object getSomeValue()
+      {
+        return 42.1F;
+      }
+    },
+    DOUBLE {
+      @Override
+      ColumnAccessor getColumnAccessor(Object value)
+      {
+        Double val = (Double) value;
+        return new DoubleColumnAccessorBase()
+        {
+
+          @Override
+          public int numRows()
+          {
+            return 1;
+          }
+
+          @Override
+          public boolean isNull(int rowNum)
+          {
+            return val == null;
+          }
+
+          @Override
+          public double getDouble(int rowNum)
+          {
+            return val;
+          }
+        };
+      }
+
+      @Override
+      protected Object getSomeValue()
+      {
+        return 42.1D;
+      }
+    }
+
+    ;
 
     abstract ColumnAccessor getColumnAccessor(Object val);
+
+    protected abstract Object getSomeValue();
   }
 
-  public ColumnAccessorsTest(TestAccessorShim accessor, Object expectedValue)
+  public ColumnAccessorsTest(TestAccessorShim accessor)
   {
     this.mode = accessor;
-    this.expectedValue = expectedValue;
   }
 
   @Test
-  public void testValue()
+  public void testSomeValue()
   {
+    Object expectedValue = mode.getSomeValue();
     ColumnAccessor acc = mode.getColumnAccessor(expectedValue);
 
     assertFalse(acc.isNull(0));
-    assertEquals(expectedValue, acc.getLong(0));
     assertEquals(expectedValue, acc.getObject(0));
   }
 
   @Test
-  public void testSanity2()
+  public void testNull()
   {
     ColumnAccessor acc = mode.getColumnAccessor(null);
 
     assertTrue(acc.isNull(0));
     assertEquals(null, acc.getObject(0));
   }
-
 }
