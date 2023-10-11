@@ -329,6 +329,11 @@
                 <version>${aws.sdk.version}</version>
             </dependency>
             <dependency>
+                <groupId>software.aws.rds</groupId>
+                <artifactId>aws-mysql-jdbc</artifactId>
+                <version>1.1.10</version>
+            </dependency>
+            <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
                 <version>1.0.4</version>

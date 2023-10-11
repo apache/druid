@@ -47,6 +47,10 @@
       <version>${aws.sdk.version}</version>
     </dependency>
     <dependency>
+      <groupId>software.aws.rds</groupId>
+      <artifactId>aws-mysql-jdbc</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <scope>provided</scope>
