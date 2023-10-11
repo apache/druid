@@ -39,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -170,7 +171,7 @@ public class SqlStatementResourceHelperTest
     ChannelCounters worker2 = createChannelCounters(new int[]{20});
     ChannelCounters worker3 = createChannelCounters(new int[]{2, 2, 5, 6, 7, 9, 15});
 
-    counterSnapshots.put(0, 0, new CounterSnapshots(Maps.newHashMap()));
+    counterSnapshots.put(0, 0, new CounterSnapshots(new HashMap<>()));
     counterSnapshots.put(0, 1, new CounterSnapshots(ImmutableMap.of("output", worker1.snapshot())));
     counterSnapshots.put(0, 2, new CounterSnapshots(ImmutableMap.of("output", worker2.snapshot())));
     counterSnapshots.put(0, 3, new CounterSnapshots(ImmutableMap.of("output", worker3.snapshot())));
@@ -265,7 +266,7 @@ public class SqlStatementResourceHelperTest
   )
   {
     if (workers == null || workers.length == 0) {
-      return Maps.newHashMap();
+      return new HashMap<>();
     } else {
       Map<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerToRowsBytes = new TreeMap<>();
       for (int worker = 0; worker < workers.length; worker++) {
