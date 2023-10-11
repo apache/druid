@@ -1375,7 +1375,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             );
 
             if (!pages.isPresent()) {
-              throw new ISE("Query no results found");
+              throw new ISE("No query results found");
             }
 
             rows = new ArrayList<>();
