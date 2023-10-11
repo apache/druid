@@ -145,7 +145,6 @@ import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.DataSegmentWithLocation;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
-import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -1663,12 +1662,7 @@ public class ControllerImpl implements Controller
     final ShuffleSpecFactory shuffleSpecFactory;
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      shuffleSpecFactory = (clusterBy, aggregate) ->
-          new GlobalSortTargetSizeShuffleSpec(
-              clusterBy,
-              tuningConfig.getRowsPerSegment(),
-              aggregate
-          );
+      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(tuningConfig.getRowsPerSegment());
 
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
@@ -1693,13 +1687,9 @@ public class ControllerImpl implements Controller
       shuffleSpecFactory = ShuffleSpecFactories.singlePartition();
       queryToPlan = querySpec.getQuery();
     } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
-
-      shuffleSpecFactory = (clusterBy, aggregate) ->
-          new GlobalSortTargetSizeShuffleSpec(
-              clusterBy,
-              MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context()),
-              aggregate
-          );
+      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(
+          MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
+      );
       queryToPlan = querySpec.getQuery();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
@@ -1800,6 +1790,8 @@ public class ControllerImpl implements Controller
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
   }
+
+
 
   private static DataSchema generateDataSchema(
       MSQSpec querySpec,

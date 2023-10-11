@@ -219,6 +219,18 @@ public class MSQSelectTest extends MSQTestBase
                 .with().totalFiles(1),
             0, 0, "input0"
         )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1, 2, 3} : new long[]{6})
+                .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
+            0, 0, "shuffle"
+        )
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, ""},
             new Object[]{1L, "10.1"},
@@ -334,6 +346,17 @@ public class MSQSelectTest extends MSQTestBase
             CounterSnapshotMatcher
                 .with().totalFiles(1),
             0, 0, "input0"
+        ).setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1, 2, 3} : new long[]{6})
+                .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
+            0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, ""},
@@ -2410,5 +2433,10 @@ public class MSQSelectTest extends MSQTestBase
   public boolean isDurableStorageDestination()
   {
     return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName) || QUERY_RESULTS_WITH_DEFAULT_CONTEXT.equals(context);
+  }
+
+  public boolean isPageSizeLimited()
+  {
+    return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName);
   }
 }

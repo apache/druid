@@ -21,9 +21,7 @@ package org.apache.druid.msq.util;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -36,6 +34,7 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.indexing.report.MSQTaskReportTest;
 import org.apache.druid.msq.sql.entity.PageInformation;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -305,35 +304,19 @@ public class SqlStatementResourceHelperTest
       if (prev > current) {
         throw new IllegalArgumentException("Channel numbers should be in increasing order");
       }
-      channelCounters.addFrame(current, new TestFrame(current * 10 + 1, 100));
+      channelCounters.addFrame(current, createFrame(current * 10 + 1, 100L));
       prev = current;
     }
     return channelCounters;
   }
 
-  public static class TestFrame extends Frame
+
+  private Frame createFrame(int numRows, long numBytes)
   {
-
-    int numRows;
-    int numBytes;
-
-    public TestFrame(int numRows, int numBytes)
-    {
-      super(Memory.wrap(new byte[0]), FrameType.COLUMNAR, numBytes, numRows, 1, false);
-      this.numRows = numRows;
-      this.numBytes = numBytes;
-    }
-
-    @Override
-    public long numBytes()
-    {
-      return numBytes;
-    }
-
-    @Override
-    public int numRows()
-    {
-      return numRows;
-    }
+    Frame frame = EasyMock.mock(Frame.class);
+    EasyMock.expect(frame.numRows()).andReturn(numRows).anyTimes();
+    EasyMock.expect(frame.numBytes()).andReturn(numBytes).anyTimes();
+    EasyMock.replay(frame);
+    return frame;
   }
 }

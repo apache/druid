@@ -105,7 +105,7 @@ public class Frame
   private final int numRegions;
   private final boolean permuted;
 
-  protected Frame(Memory memory, FrameType frameType, long numBytes, int numRows, int numRegions, boolean permuted)
+  private Frame(Memory memory, FrameType frameType, long numBytes, int numRows, int numRegions, boolean permuted)
   {
     this.memory = memory;
     this.frameType = frameType;
