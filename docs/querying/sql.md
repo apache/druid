@@ -87,11 +87,6 @@ documentation.
 
 ## UNNEST
 
-:::info
- The UNNEST SQL function is [experimental](../development/experimental.md). Its API and behavior are subject
- to change in future releases. It is not recommended to use this feature in production at this time.
-:::
-
 The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
 
 The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
@@ -110,7 +105,6 @@ SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression1) A
 
 Keep the following things in mind when writing your query:
 
-- You must include the context parameter `"enableUnnest": true`.
 - You can unnest multiple source expressions in a single query.
 - Notice the CROSS JOIN between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
 - If you view the native explanation of a SQL UNNEST, you'll notice that Druid uses `j0.unnest` as a virtual column to perform the unnest. An underscore is added for each unnest, so you may notice virtual columns named `_j0.unnest` or `__j0.unnest`.

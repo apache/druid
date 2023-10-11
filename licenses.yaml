@@ -1289,7 +1289,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.94.Final
+version: 4.1.100.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2060,7 +2060,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.51.v20230217
+version: 9.4.53.v20231009
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
