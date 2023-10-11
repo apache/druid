@@ -307,6 +307,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     Map<String, Object> context = defaultAsyncContext();
     context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
+    context.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2);
 
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
@@ -321,6 +322,12 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     ).getEntity();
 
+    Assert.assertEquals(ImmutableList.of(
+        new PageInformation(0, 1L, 75L, 0, 0),
+        new PageInformation(1, 2L, 121L, 0, 1),
+        new PageInformation(2, 3L, 164L, 0, 2)
+    ), sqlStatementResult.getResultSetInformation().getPages());
+
     assertExpectedResults(
         "{\"cnt\":1,\"dim1\":\"\"}\n"
         + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
@@ -335,23 +342,33 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             ResultFormat.OBJECTLINES.name(),
             SqlStatementResourceTest.makeOkRequest()
         ),
-        objectMapper);
+        objectMapper
+    );
 
     assertExpectedResults(
-        "{\"cnt\":1,\"dim1\":\"\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"2\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"1\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"def\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"abc\"}\n"
-        + "\n",
+        "{\"cnt\":1,\"dim1\":\"\"}\n\n",
         resource.doGetResults(
             sqlStatementResult.getQueryId(),
             0L,
             ResultFormat.OBJECTLINES.name(),
             SqlStatementResourceTest.makeOkRequest()
         ),
-        objectMapper);
+        objectMapper
+    );
+
+    assertExpectedResults(
+        "{\"cnt\":1,\"dim1\":\"1\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"def\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"abc\"}\n"
+        + "\n",
+        resource.doGetResults(
+            sqlStatementResult.getQueryId(),
+            2L,
+            ResultFormat.OBJECTLINES.name(),
+            SqlStatementResourceTest.makeOkRequest()
+        ),
+        objectMapper
+    );
   }
 
   @Test
@@ -457,7 +474,12 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     )));
   }
 
-  private byte[] createExpectedResultsInFormat(ResultFormat resultFormat, List<Object[]> resultsList, List<ColumnNameAndTypes> rowSignature, ObjectMapper jsonMapper) throws Exception
+  private byte[] createExpectedResultsInFormat(
+      ResultFormat resultFormat,
+      List<Object[]> resultsList,
+      List<ColumnNameAndTypes> rowSignature,
+      ObjectMapper jsonMapper
+  ) throws Exception
   {
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     try (final ResultFormat.Writer writer = resultFormat.createFormatter(os, jsonMapper)) {
@@ -466,7 +488,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     return os.toByteArray();
   }
 
-  private void assertExpectedResults(String expectedResult, Response resultsResponse, ObjectMapper objectMapper) throws IOException
+  private void assertExpectedResults(String expectedResult, Response resultsResponse, ObjectMapper objectMapper)
+      throws IOException
   {
     byte[] bytes = responseToByteArray(resultsResponse, objectMapper);
     Assert.assertEquals(expectedResult, new String(bytes, StandardCharsets.UTF_8));
