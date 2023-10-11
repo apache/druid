@@ -23,15 +23,23 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.util.SqlVisitor;
+import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -61,14 +69,21 @@ import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class EarliestLatestAnySqlAggregator implements SqlAggregator
 {
-  public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(AggregatorType.EARLIEST);
-  public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(AggregatorType.LATEST);
-  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE);
+  public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(
+      AggregatorType.EARLIEST,
+      EarliestLatestBySqlAggregator.EARLIEST_BY.calciteFunction()
+  );
+  public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(
+      AggregatorType.LATEST,
+      EarliestLatestBySqlAggregator.LATEST_BY.calciteFunction()
+  );
+  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE, null);
 
   enum AggregatorType
   {
@@ -161,10 +176,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   private final AggregatorType aggregatorType;
   private final SqlAggFunction function;
 
-  private EarliestLatestAnySqlAggregator(final AggregatorType aggregatorType)
+  private EarliestLatestAnySqlAggregator(final AggregatorType aggregatorType, final SqlAggFunction replacementAggFunc)
   {
     this.aggregatorType = aggregatorType;
-    this.function = new EarliestLatestSqlAggFunction(aggregatorType);
+    this.function = new EarliestLatestSqlAggFunction(aggregatorType, replacementAggFunc);
   }
 
   @Override
@@ -305,12 +320,48 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     }
   }
 
+  private static class TimeColIdentifer extends SqlIdentifier
+  {
+
+    public TimeColIdentifer()
+    {
+      super("__time", SqlParserPos.ZERO);
+    }
+
+    @Override
+    public <R> R accept(SqlVisitor<R> visitor)
+    {
+
+      try {
+        return super.accept(visitor);
+      }
+      catch (CalciteContextException e) {
+        if (e.getCause() instanceof SqlValidatorException) {
+          throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build(
+                                  e,
+                                  "Query could not be planned. A possible reason is [%s]",
+                                  "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
+                                  + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
+                                  + "and specify the column explicitly."
+                              );
+
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+
   private static class EarliestLatestSqlAggFunction extends SqlAggFunction
   {
     private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
         new EarliestLatestReturnTypeInference(0);
 
-    EarliestLatestSqlAggFunction(AggregatorType aggregatorType)
+    private final SqlAggFunction replacementAggFunc;
+
+    EarliestLatestSqlAggFunction(AggregatorType aggregatorType, SqlAggFunction replacementAggFunc)
     {
       super(
           aggregatorType.name(),
@@ -331,6 +382,43 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           false,
           Optionality.FORBIDDEN
       );
+      this.replacementAggFunc = replacementAggFunc;
+    }
+
+    @Override
+    public SqlNode rewriteCall(
+        SqlValidator validator,
+        SqlCall call
+    )
+    {
+      // Rewrite EARLIEST/LATEST to EARLIEST_BY/LATEST_BY to make
+      // reference to __time column explicit so that Calcite tracks it
+
+      if (replacementAggFunc == null) {
+        return call;
+      }
+
+      List<SqlNode> operands = call.getOperandList();
+
+      SqlParserPos pos = call.getParserPosition();
+
+      if (operands.isEmpty() || operands.size() > 2) {
+        throw InvalidSqlInput.exception(
+            "Function [%s] expects 1 or 2 arguments but found [%s]",
+            getName(),
+            operands.size()
+        );
+      }
+
+      List<SqlNode> newOperands = new ArrayList<>();
+      newOperands.add(operands.get(0));
+      newOperands.add(new TimeColIdentifer());
+
+      if (operands.size() == 2) {
+        newOperands.add(operands.get(1));
+      }
+
+      return replacementAggFunc.createCall(pos, newOperands);
     }
   }
 }

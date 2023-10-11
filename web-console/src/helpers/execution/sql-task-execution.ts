@@ -57,7 +57,13 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const { query, context, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+  const { query, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+
+  // setting waitTillSegmentsLoad to true by default
+  const context = {
+    waitTillSegmentsLoad: true,
+    ...(options.context || {}),
+  };
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
@@ -259,6 +265,11 @@ export async function updateExecutionWithDatasourceLoadedIfNeeded(
     execution.status !== 'SUCCESS'
   ) {
     return execution;
+  }
+
+  // This means we don't have to perform the SQL query to check if the segments are loaded
+  if (execution.queryContext?.waitTillSegmentsLoad === true) {
+    return execution.markDestinationDatasourceLoaded();
   }
 
   const endTime = execution.getEndTime();
