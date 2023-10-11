@@ -181,7 +181,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       if (DUMP_ACTUAL_RESULTS) {
         StringBuilder sb = new StringBuilder();
         for (Object[] row : results) {
-          sb.append("  - " + queryJackson.writeValueAsString(row) + "\n");
+          sb.append("  - ");
+          sb.append(queryJackson.writeValueAsString(row));
+          sb.append("\n");
         }
         log.info("Actual results:\n%s", sb.toString());
       }

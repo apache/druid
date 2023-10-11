@@ -56,7 +56,6 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -196,6 +195,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -243,6 +243,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -298,6 +299,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -351,6 +353,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -409,6 +412,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -455,6 +459,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -491,6 +496,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
             .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new Object[]{3.61497656362466, 3.960008417499471, 3.960008417499471, 15.681666666666667}
@@ -541,6 +547,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new Object[]{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
@@ -621,6 +628,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new Object[]{"a", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
@@ -674,13 +682,8 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
-  }
-
-  @Override
-  public void assertResultsValid(ResultMatchMode matchMode, List<Object[]> expected, QueryResults queryResults)
-  {
-    super.assertResultsValid(ResultMatchMode.EQUALS_EPS, expected, queryResults);
   }
 }

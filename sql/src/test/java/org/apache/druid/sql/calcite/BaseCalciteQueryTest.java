@@ -124,13 +124,11 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -147,6 +145,7 @@ import static org.junit.Assert.assertEquals;
 public class BaseCalciteQueryTest extends CalciteTestBase
     implements QueryComponentSupplier, PlannerComponentSupplier
 {
+  public static final double ASSERTION_EPSILON = 1e-5;
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
@@ -849,6 +848,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQuery(
       final String sql,
       final List<Query<?>> expectedQueries,
+      final ResultMatchMode resultsMatchMode,
+      final List<Object[]> expectedResults
+  )
+  {
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(resultsMatchMode, expectedResults)
+        .run();
+  }
+
+  public void testQuery(
+      final String sql,
+      final List<Query<?>> expectedQueries,
       final List<Object[]> expectedResults,
       final RowSignature expectedResultSignature
   )
@@ -1098,13 +1111,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              1e-5);
+              ASSERTION_EPSILON);
         } else if (expectedCell instanceof Double) {
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              1e-5);
+              ASSERTION_EPSILON);
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
@@ -1115,7 +1128,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     private static String mismatchMessage(int row, int column)
     {
-      return String.format(Locale.ENGLISH, "column content mismatch at %d,%d", row, column);
+      return StringUtils.format("column content mismatch at %d,%d", row, column);
     }
 
   }
@@ -1126,14 +1139,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * In case {@link NullHandling#replaceWithDefault()} is true, if the expected result is <code>null</code> it accepts
    * both <code>null</code> and the default value for that column as actual result.
    */
-  public void assertResultsValid(ResultMatchMode matchMode, List<Object[]> expected, QueryResults queryResults)
+  public void assertResultsValid(final ResultMatchMode matchMode, final List<Object[]> expected, final QueryResults queryResults)
   {
-    List<Object[]> results = queryResults.results;
+    final List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());
 
     final List<ValueType> types = new ArrayList<>();
 
-    boolean isMSQ = isMSQRowType(queryResults.signature);
+    final boolean isMSQ = isMSQRowType(queryResults.signature);
 
     if (!isMSQ) {
       for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
@@ -1146,18 +1159,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
     }
 
-    int numRows = results.size();
+    final int numRows = results.size();
     for (int row = 0; row < numRows; row++) {
-      Object[] expectedRow = expected.get(row);
-      Object[] resultRow = results.get(row);
+      final Object[] expectedRow = expected.get(row);
+      final Object[] resultRow = results.get(row);
       assertEquals("column count mismatch; at row#" + row, expectedRow.length, resultRow.length);
 
       for (int i = 0; i < resultRow.length; i++) {
-        Object resultCell = resultRow[i];
-        Object expectedCell = expectedRow[i];
+        final Object resultCell = resultRow[i];
+        final Object expectedCell = expectedRow[i];
 
-        ResultMatchMode cellValidator = matchMode;
-        cellValidator.validate(
+        matchMode.validate(
             row,
             i,
             isMSQ ? null : types.get(i),
@@ -1495,9 +1507,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         assertResultsValid(expectedResultMatchMode, expectedResults, queryResults);
       }
       catch (AssertionError e) {
-        System.out.println("sql: " + sql);
-        displayResults("Expected", expectedResults);
-        displayResults("Actual", queryResults.results);
+        log.info("sql: %s", sql);
+        log.info(resultsToString("Expected", expectedResults));
+        log.info(resultsToString("Actual", queryResults.results));
         throw e;
       }
     }
@@ -1510,58 +1522,84 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * expected results: let the test fail with empty results. The actual results
    * are printed to the console. Copy them into the test.
    */
-  public static void displayResults(String name, List<Object[]> results)
+  public static String resultsToString(String name, List<Object[]> results)
   {
-    PrintStream out = System.out;
-    out.printf(Locale.ENGLISH, "-- %s results --", name);
-    for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
-      printArray(results.get(rowIndex), out);
-      if (rowIndex < results.size() - 1) {
-        out.print(",");
+    return new ResultsPrinter(name, results).getResult();
+  }
+
+  static class ResultsPrinter
+  {
+    private StringBuilder sb;
+
+    private ResultsPrinter(String name, List<Object[]> results)
+    {
+      sb = new StringBuilder();
+      sb.append("-- ");
+      sb.append(name);
+      sb.append(" results --\n");
+
+      for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
+        printArray(results.get(rowIndex));
+        if (rowIndex < results.size() - 1) {
+          outprint(",");
+        }
+        sb.append('\n');
       }
-      out.println();
+      sb.append("----");
     }
-    out.println("----");
-  }
 
-  private static void printArray(final Object[] array, final PrintStream out)
-  {
-    printArrayImpl(array, out, "new Object[]{", "}");
-  }
-
-  private static void printList(final List<?> list, final PrintStream out)
-  {
-    printArrayImpl(list.toArray(new Object[0]), out, "ImmutableList.of(", ")");
-  }
-
-  private static void printArrayImpl(final Object[] array, final PrintStream out, final String pre, final String post)
-  {
-    out.print(pre);
-    for (int colIndex = 0; colIndex < array.length; colIndex++) {
-      Object col = array[colIndex];
-      if (colIndex > 0) {
-        out.print(", ");
-      }
-      if (col == null) {
-        out.print("null");
-      } else if (col instanceof String) {
-        out.print("\"");
-        out.print(StringEscapeUtils.escapeJava((String) col));
-        out.print("\"");
-      } else if (col instanceof Long) {
-        out.print(col);
-        out.print("L");
-      } else if (col instanceof Double) {
-        out.print(col);
-        out.print("D");
-      } else if (col instanceof Object[]) {
-        printArray(array, out);
-      } else if (col instanceof List) {
-        printList((List<?>) col, out);
-      } else {
-        out.print(col);
-      }
+    private String getResult()
+    {
+      return sb.toString();
     }
-    out.print(post);
+
+    private void printArray(final Object[] array)
+    {
+      printArrayImpl(array, "new Object[]{", "}");
+    }
+
+    private void printList(final List<?> list)
+    {
+      printArrayImpl(list.toArray(new Object[0]), "ImmutableList.of(", ")");
+    }
+
+    private void printArrayImpl(final Object[] array, final String pre, final String post)
+    {
+      sb.append(pre);
+      for (int colIndex = 0; colIndex < array.length; colIndex++) {
+        Object col = array[colIndex];
+        if (colIndex > 0) {
+          sb.append(", ");
+        }
+        if (col == null) {
+          sb.append("null");
+        } else if (col instanceof String) {
+          outprint("\"");
+          outprint(StringEscapeUtils.escapeJava((String) col));
+          outprint("\"");
+        } else if (col instanceof Long) {
+          outprint(col);
+          outprint("L");
+        } else if (col instanceof Double) {
+          outprint(col);
+          outprint("D");
+        } else if (col instanceof Float) {
+          outprint(col);
+          outprint("F");
+        } else if (col instanceof Object[]) {
+          printArray(array);
+        } else if (col instanceof List) {
+          printList((List<?>) col);
+        } else {
+          outprint(col);
+        }
+      }
+      outprint(post);
+    }
+
+    private void outprint(Object post)
+    {
+      sb.append(post);
+    }
   }
 }

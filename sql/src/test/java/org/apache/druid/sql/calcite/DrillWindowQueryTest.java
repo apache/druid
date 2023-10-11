@@ -374,9 +374,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         assertResultsEquals(sql, expectedResults, results);
       }
       catch (AssertionError e) {
-        System.out.println("query: " + sql);
-        displayResults("Expected", expectedResults);
-        displayResults("Actual", results);
+        log.info("query: %s", sql);
+        log.info(resultsToString("Expected", expectedResults));
+        log.info(resultsToString("Actual", results));
         throw e;
       }
     }
