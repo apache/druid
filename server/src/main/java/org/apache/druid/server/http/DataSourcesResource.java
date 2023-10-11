@@ -61,6 +61,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -885,12 +886,19 @@ public class DataSourcesResource
         return Response.ok(true).build();
       }
 
-      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+      VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
           new TableDataSource(dataSourceName)
       );
       if (timeline == null) {
-        log.debug("No timeline found for datasource[%s]", dataSourceName);
+        log.error("No timeline found for datasource[%s]", dataSourceName);
         return Response.ok(false).build();
+      }
+
+      // If the segment being handed off has a lower version than the current chunk's, do not wait.
+      // This can happen when a concurrent replace occurs and there are multiple versions of segments being appended
+      if (!timeline.lookup(Intervals.of(interval)).isEmpty()
+          && timeline.lookup(Intervals.of(interval)).get(0).getVersion().compareTo(version) > 0) {
+        return Response.ok(true).build();
       }
 
       Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =
