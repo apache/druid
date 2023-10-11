@@ -20,7 +20,6 @@
 package org.apache.druid.msq.util;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.Pair;
