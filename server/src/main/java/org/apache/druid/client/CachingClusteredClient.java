@@ -69,6 +69,8 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.SampledTableDataSource;
+import org.apache.druid.query.SampledTableDataSource.SamplingType;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
@@ -344,6 +346,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
+      pruneSegmentsForShardSampling(segmentServers);
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
@@ -460,6 +463,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           segments.add(new SegmentServerSelector(server, segment));
         }
       }
+
       return segments;
     }
 
@@ -503,6 +507,33 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
+    private void pruneSegmentsForShardSampling(
+        final Set<SegmentServerSelector> segments
+    ) {
+      if (
+          query.getDataSource() instanceof SampledTableDataSource
+      ) {
+        if (((SampledTableDataSource) query.getDataSource()).getSamplingType()
+            == SamplingType.FIXED_SHARD) {
+          int allShards = segments.stream().mapToInt(s->s.getSegmentDescriptor().getPartitionNumber()).max().getAsInt();
+          int targetShards = Math.round(
+              allShards * ((SampledTableDataSource) query.getDataSource()).getSamplingPercentage());
+          Iterator<SegmentServerSelector> iterator = segments.iterator();
+          while (iterator.hasNext()) {
+            SegmentServerSelector segmentServerSelector = iterator.next();
+            SegmentDescriptor segmentDescriptor = segmentServerSelector.getSegmentDescriptor();
+            int shard = segmentDescriptor.getPartitionNumber();
+            if (targetShards < shard) {
+              iterator.remove();
+            }
+          }
+        } else {
+          throw new UnsupportedOperationException("");
+        }
+      }
+    }
+
+
     private List<Pair<Interval, byte[]>> pruneSegmentsWithCachedResults(
         final byte[] queryCacheKey,
         final Set<SegmentServerSelector> segments
@@ -541,6 +572,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         byte[] queryCacheKey
     )
     {
+
       // cacheKeys map must preserve segment ordering, in order for shards to always be combined in the same order
       Map<SegmentServerSelector, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
       for (SegmentServerSelector segmentServer : segments) {
