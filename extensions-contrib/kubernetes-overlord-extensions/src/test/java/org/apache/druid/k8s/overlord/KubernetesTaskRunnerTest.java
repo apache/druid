@@ -277,7 +277,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_run_updateStatus() throws ExecutionException, InterruptedException {
+  public void test_run_updateStatus() throws ExecutionException, InterruptedException
+  {
     KubernetesTaskRunner runner = new KubernetesTaskRunner(
         taskAdapter,
         config,
@@ -300,7 +301,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_run_updateStatus_running() {
+  public void test_run_updateStatus_running()
+  {
     KubernetesTaskRunner runner = new KubernetesTaskRunner(
         taskAdapter,
         config,
@@ -321,7 +323,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_registerListener_runningTask() {
+  public void test_registerListener_runningTask()
+  {
     KubernetesTaskRunner runner = new KubernetesTaskRunner(
         taskAdapter,
         config,
@@ -333,6 +336,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     KubernetesPeonLifecycle kubernetesPeonLifecycle = EasyMock.mock(KubernetesPeonLifecycle.class);
     EasyMock.expect(kubernetesPeonLifecycle.getState()).andReturn(KubernetesPeonLifecycle.State.RUNNING);
+    EasyMock.expect(kubernetesPeonLifecycle.getTaskLocation()).andReturn(TaskLocation.unknown());
     KubernetesWorkItem workItem = new KubernetesWorkItem(task);
     workItem.setKubernetesPeonLifecycle(kubernetesPeonLifecycle);
     runner.tasks.put(task.getId(), workItem);
@@ -345,8 +349,10 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     EasyMock.expectLastCall();
 
     replayAll();
+    EasyMock.replay(kubernetesPeonLifecycle);
     runner.registerListener(taskRunnerListener, executor);
     verifyAll();
+    EasyMock.verify(kubernetesPeonLifecycle);
   }
 
   @Test
