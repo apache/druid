@@ -46,7 +46,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.ConflictingLockRequest;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
@@ -960,10 +960,10 @@ public class TaskLockbox
   }
 
   /**
-   * @param conflictingLockRequests Requests for conflicing lock intervals for various datasources
-   * @return Map from datasource to intervals locked by tasks that have a conflicting lock type that cannot be revoked
+   * @param lockFilterPolicies Lock filters for the given datasources
+   * @return Map from datasource to intervals locked by tasks satisfying the lock filter condititions
    */
-  public Map<String, List<Interval>> getConflictingLockIntervals(List<ConflictingLockRequest> conflictingLockRequests)
+  public Map<String, List<Interval>> getLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
   {
     final Map<String, Set<Interval>> datasourceToIntervals = new HashMap<>();
 
@@ -971,12 +971,12 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      conflictingLockRequests.forEach(
-          conflictingLockRequest -> {
-            final String datasource = conflictingLockRequest.getDatasource();
-            final int priority = conflictingLockRequest.getPriority();
+      lockFilterPolicies.forEach(
+          lockFilter -> {
+            final String datasource = lockFilter.getDatasource();
+            final int priority = lockFilter.getPriority();
             final boolean ignoreAppendLocks =
-                TaskLockType.REPLACE.name().equals(conflictingLockRequest.getContext().get(Tasks.TASK_LOCK_TYPE));
+                TaskLockType.REPLACE.name().equals(lockFilter.getContext().get(Tasks.TASK_LOCK_TYPE));
             if (!running.containsKey(datasource)) {
               return;
             }

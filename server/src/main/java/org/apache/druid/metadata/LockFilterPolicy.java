@@ -27,16 +27,16 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Request object used by CompactSegments to determine intervals with conflicting locks on the Overlord
+ * Specifies a policy to filter active locks held by a datasource
  */
-public class ConflictingLockRequest
+public class LockFilterPolicy
 {
   private final String datasource;
   private final int priority;
   private final Map<String, Object> context;
 
   @JsonCreator
-  public ConflictingLockRequest(
+  public LockFilterPolicy(
       @JsonProperty("datasource") String datasource,
       @JsonProperty("priority") int priority,
       @JsonProperty("context") Map<String, Object> context
@@ -74,7 +74,7 @@ public class ConflictingLockRequest
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ConflictingLockRequest that = (ConflictingLockRequest) o;
+    LockFilterPolicy that = (LockFilterPolicy) o;
     return Objects.equals(datasource, that.datasource)
            && priority == that.priority
            && Objects.equals(context, that.context);

@@ -58,7 +58,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.metadata.ConflictingLockRequest;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -1093,7 +1093,7 @@ public class CompactSegmentsTest
            .thenReturn(
                Futures.immediateFuture(
                    CloseableIterators.withEmptyBaggage(ImmutableList.of(runningConflictCompactionTask).iterator())));
-    Mockito.when(mockClient.findConflictingLockIntervals(ArgumentMatchers.any()))
+    Mockito.when(mockClient.findLockedIntervalsV2(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.cancelTask(conflictTaskId))
            .thenReturn(Futures.immediateFuture(null));
@@ -1997,8 +1997,8 @@ public class CompactSegmentsTest
 
 
     @Override
-    public ListenableFuture<Map<String, List<Interval>>> findConflictingLockIntervals(
-        List<ConflictingLockRequest> conflictingLockRequests
+    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervalsV2(
+        List<LockFilterPolicy> lockFilterPolicies
     )
     {
       return Futures.immediateFuture(lockedIntervals);
@@ -2190,7 +2190,7 @@ public class CompactSegmentsTest
     final ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     Mockito.when(mockClient.taskStatuses(null, null, 0))
            .thenReturn(Futures.immediateFuture(CloseableIterators.withEmptyBaggage(Collections.emptyIterator())));
-    Mockito.when(mockClient.findConflictingLockIntervals(ArgumentMatchers.any()))
+    Mockito.when(mockClient.findLockedIntervalsV2(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())
            .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));
