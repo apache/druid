@@ -1329,8 +1329,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
     }
     catch (Exception e) {
-      Assert.fail(e.getMessage());
-      return null;
+      throw new RuntimeException(e);
     }
   }
 
