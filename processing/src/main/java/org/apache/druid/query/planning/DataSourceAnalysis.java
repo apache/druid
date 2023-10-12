@@ -114,7 +114,8 @@ public class DataSourceAnalysis
    * Note that this can return empty even if {@link #isConcreteAndTableBased()} is true. This happens if the base
    * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
    */
-  public Optional<TableDataSource> getBaseTableDataSource() {
+  public Optional<TableDataSource> getBaseTableDataSource()
+  {
     if (baseDataSource instanceof TableDataSource) {
       return Optional.of((TableDataSource) baseDataSource);
     } else if (baseDataSource instanceof SampledTableDataSource) {

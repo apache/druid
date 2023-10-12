@@ -23,24 +23,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Preconditions;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import org.apache.druid.java.util.common.Cacheable;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.SegmentReference;
 
 @JsonTypeName("sampled_table")
 public class SampledTableDataSource extends TableDataSource
 {
   private final SamplingType samplingType;
   private final int samplingPercentage;
+
   public enum SamplingType implements Cacheable
   {
     FIXED_SHARD;
@@ -88,17 +79,20 @@ public class SampledTableDataSource extends TableDataSource
 
 
   @JsonProperty
-  public SamplingType getSamplingType() {
+  public SamplingType getSamplingType()
+  {
     return samplingType;
   }
 
   @JsonProperty
-  public float getSamplingPercentage() {
+  public float getSamplingPercentage()
+  {
     return samplingPercentage;
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(Object o)
+  {
     if (this == o) {
       return true;
     }
@@ -118,7 +112,8 @@ public class SampledTableDataSource extends TableDataSource
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     int result = super.hashCode();
     result = 31 * result + (samplingType != null ? samplingType.hashCode() : 0);
     result = 31 * result + samplingPercentage;

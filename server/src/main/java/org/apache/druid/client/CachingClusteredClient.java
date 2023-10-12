@@ -19,8 +19,6 @@
 
 package org.apache.druid.client;
 
-import static org.apache.druid.query.context.ResponseContext.Keys.SAMPLING_COMPOSITION;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -350,7 +348,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       Pair<Integer, Integer> ratio = pruneSegmentsForShardSampling(segmentServers);
       if (ratio != null) {
-        responseContext.add(SAMPLING_COMPOSITION, ratio.lhs + "/" + ratio.rhs);
+        responseContext.addSamplingComposition(ratio.lhs + "/" + ratio.rhs);
       }
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
@@ -512,7 +510,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private Pair<Integer, Integer> pruneSegmentsForShardSampling(final Set<SegmentServerSelector> segments) {
+    private Pair<Integer, Integer> pruneSegmentsForShardSampling(final Set<SegmentServerSelector> segments)
+    {
       if (query.getDataSource() instanceof SampledTableDataSource) {
         if (((SampledTableDataSource) query.getDataSource()).getSamplingType()
             == SamplingType.FIXED_SHARD) {
