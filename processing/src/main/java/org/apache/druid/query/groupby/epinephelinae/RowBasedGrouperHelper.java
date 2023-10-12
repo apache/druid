@@ -1116,7 +1116,8 @@ public class RowBasedGrouperHelper
         final StringComparator comparator = comparators.get(i);
 
         final ColumnType fieldType = fieldTypes.get(i);
-        if (fieldType.isNumeric() && comparator.equals(StringComparators.NUMERIC)) {
+        if (fieldType.isNumeric()
+            && (comparator.equals(StringComparators.NUMERIC) || comparator.equals(StringComparators.NATURAL))) {
           // use natural comparison
           if (fieldType.is(ValueType.DOUBLE)) {
             // sometimes doubles can become floats making the round trip from serde, make sure to coerce them both

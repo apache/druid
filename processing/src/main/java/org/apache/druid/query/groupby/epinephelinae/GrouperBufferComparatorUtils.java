@@ -434,6 +434,9 @@ public class GrouperBufferComparatorUtils
 
   private static boolean isPrimitiveComparable(boolean pushLimitDown, @Nullable StringComparator stringComparator)
   {
-    return !pushLimitDown || stringComparator == null || stringComparator.equals(StringComparators.NUMERIC);
+    return !pushLimitDown
+           || stringComparator == null
+           || stringComparator.equals(StringComparators.NUMERIC)
+           || stringComparator.equals(StringComparators.NATURAL);
   }
 }

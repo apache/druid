@@ -33,6 +33,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -43,6 +44,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.hamcrest.CoreMatchers;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
@@ -67,6 +69,8 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MSQArraysTest extends MSQTestBase
 {
+  private File dataFile;
+  private String dataFileNameAsJsonString;
 
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
@@ -85,6 +89,23 @@ public class MSQArraysTest extends MSQTestBase
 
   @Parameterized.Parameter(1)
   public Map<String, Object> context;
+
+  @Before
+  public void setup() throws IOException
+  {
+    // Read the file and make the name available to the tests
+    dataFile = temporaryFolder.newFile();
+    final InputStream resourceStream = NestedDataTestUtils.class.getClassLoader()
+                                                                .getResourceAsStream(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
+    final InputStream decompressing = CompressionUtils.decompress(
+        resourceStream,
+        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+    );
+    Files.copy(decompressing, dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    decompressing.close();
+
+    dataFileNameAsJsonString = queryFramework().queryJsonMapper().writeValueAsString(dataFile);
+  }
 
   /**
    * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
@@ -164,18 +185,6 @@ public class MSQArraysTest extends MSQTestBase
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_USE_AUTO_SCHEMAS, true);
 
-    final File tmpFile = temporaryFolder.newFile();
-    final InputStream resourceStream = NestedDataTestUtils.class.getClassLoader()
-                                                                .getResourceAsStream(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
-    final InputStream decompressing = CompressionUtils.decompress(
-        resourceStream,
-        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
-    );
-    Files.copy(decompressing, tmpFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    decompressing.close();
-
-    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(tmpFile);
-
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
                              + "  arrayString,\n"
@@ -183,7 +192,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  arrayDouble\n"
                              + "FROM TABLE(\n"
                              + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{ \"files\": [" + dataFileNameAsJsonString + "],\"type\":\"local\"}',\n"
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '[{\"name\": \"timestamp\", \"type\": \"STRING\"}, {\"name\": \"arrayString\", \"type\": \"COMPLEX<json>\"}, {\"name\": \"arrayLong\", \"type\": \"COMPLEX<json>\"}, {\"name\": \"arrayDouble\", \"type\": \"COMPLEX<json>\"}]'\n"
                              + "  )\n"
@@ -221,18 +230,6 @@ public class MSQArraysTest extends MSQTestBase
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "mvd");
 
-    final File tmpFile = temporaryFolder.newFile();
-    final InputStream resourceStream = NestedDataTestUtils.class.getClassLoader()
-                                                                .getResourceAsStream(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
-    final InputStream decompressing = CompressionUtils.decompress(
-        resourceStream,
-        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
-    );
-    Files.copy(decompressing, tmpFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    decompressing.close();
-
-    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(tmpFile);
-
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
                              + "  arrayString,\n"
@@ -243,7 +240,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  arrayDoubleNulls\n"
                              + "FROM TABLE(\n"
                              + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{ \"files\": [" + dataFileNameAsJsonString + "],\"type\":\"local\"}',\n"
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '" + queryFramework().queryJsonMapper().writeValueAsString(fileSignature) + "'\n"
                              + "  )\n"
@@ -416,18 +413,6 @@ public class MSQArraysTest extends MSQTestBase
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
 
-    final File tmpFile = temporaryFolder.newFile();
-    final InputStream resourceStream = NestedDataTestUtils.class.getClassLoader()
-                                                                .getResourceAsStream(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
-    final InputStream decompressing = CompressionUtils.decompress(
-        resourceStream,
-        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
-    );
-    Files.copy(decompressing, tmpFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    decompressing.close();
-
-    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(tmpFile);
-
     testIngestQuery().setSql(" INSERT INTO foo1 SELECT\n"
                              + "  TIME_PARSE(\"timestamp\") as __time,\n"
                              + "  arrayString,\n"
@@ -438,7 +423,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  arrayDoubleNulls\n"
                              + "FROM TABLE(\n"
                              + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{ \"files\": [" + dataFileNameAsJsonString + "],\"type\":\"local\"}',\n"
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '" + queryFramework().queryJsonMapper().writeValueAsString(fileSignature) + "'\n"
                              + "  )\n"
@@ -634,21 +619,9 @@ public class MSQArraysTest extends MSQTestBase
     final Map<String, Object> adjustedContext = new HashMap<>(context);
     adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, arrayIngestMode);
 
-    final File tmpFile = temporaryFolder.newFile();
-    final InputStream resourceStream = NestedDataTestUtils.class.getClassLoader()
-                                                                .getResourceAsStream(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
-    final InputStream decompressing = CompressionUtils.decompress(
-        resourceStream,
-        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
-    );
-    Files.copy(decompressing, tmpFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    decompressing.close();
-
-    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(tmpFile);
-
     Query<?> expectedQuery = newScanQueryBuilder()
         .dataSource(new ExternalDataSource(
-            new LocalInputSource(null, null, ImmutableList.of(tmpFile)),
+            new LocalInputSource(null, null, ImmutableList.of(dataFile)),
             new JsonInputFormat(null, null, null, null, null),
             fileSignature
         ))
@@ -681,7 +654,7 @@ public class MSQArraysTest extends MSQTestBase
                              + "  arrayDoubleNulls\n"
                              + "FROM TABLE(\n"
                              + "  EXTERN(\n"
-                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{ \"files\": [" + dataFileNameAsJsonString + "],\"type\":\"local\"}',\n"
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '" + queryFramework().queryJsonMapper().writeValueAsString(fileSignature) + "'\n"
                              + "  )\n"
@@ -708,6 +681,233 @@ public class MSQArraysTest extends MSQTestBase
                      .verifyResults();
   }
 
+  @Test
+  public void testScanWithOrderByOnStringArray() throws IOException
+  {
+    final List<Object[]> expectedRows = Arrays.asList(
+        new Object[]{Arrays.asList("d", "e")},
+        new Object[]{Arrays.asList("d", "e")},
+        new Object[]{Arrays.asList("b", "c")},
+        new Object[]{Arrays.asList("b", "c")},
+        new Object[]{Arrays.asList("a", "b", "c")},
+        new Object[]{Arrays.asList("a", "b", "c")},
+        new Object[]{Arrays.asList("a", "b")},
+        new Object[]{Arrays.asList("a", "b")},
+        new Object[]{Arrays.asList("a", "b")},
+        new Object[]{Arrays.asList("a", "b")},
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{null}
+    );
+
+    RowSignature fileSignature = RowSignature.builder()
+                                             .add("timestamp", ColumnType.STRING)
+                                             .add("arrayString", ColumnType.STRING_ARRAY)
+                                             .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                                             .add("arrayLong", ColumnType.LONG_ARRAY)
+                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                                             .build();
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("arrayString", ColumnType.STRING_ARRAY)
+                                            .build();
+
+    RowSignature scanSignature = RowSignature.builder()
+                                             .add("arrayString", ColumnType.STRING_ARRAY)
+                                             .build();
+
+    Query<?> expectedQuery = newScanQueryBuilder()
+        .dataSource(new ExternalDataSource(
+            new LocalInputSource(null, null, ImmutableList.of(dataFile)),
+            new JsonInputFormat(null, null, null, null, null),
+            fileSignature
+        ))
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("arrayString")
+        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayString", ScanQuery.Order.DESCENDING)))
+        .context(defaultScanQueryContext(context, scanSignature))
+        .build();
+
+    testSelectQuery().setSql("SELECT\n"
+                             + "  arrayString\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + dataFileNameAsJsonString + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '" + queryFramework().queryJsonMapper().writeValueAsString(fileSignature) + "'\n"
+                             + "  )\n"
+                             + ")\n"
+                             + "ORDER BY arrayString DESC")
+                     .setQueryContext(context)
+                     .setExpectedMSQSpec(MSQSpec
+                                             .builder()
+                                             .query(expectedQuery)
+                                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                                 new ColumnMapping("arrayString", "arrayString")
+                                             )))
+                                             .tuningConfig(MSQTuningConfig.defaultConfig())
+                                             .destination(TaskReportMSQDestination.INSTANCE)
+                                             .build()
+                     )
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedResultRows(expectedRows)
+                     .verifyResults();
+  }
+
+  @Test
+  public void testScanWithOrderByOnLongArray() throws IOException
+  {
+    final List<Object[]> expectedRows = Arrays.asList(
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{Arrays.asList(1L, 2L, 3L)},
+        new Object[]{Arrays.asList(1L, 2L, 3L)},
+        new Object[]{Arrays.asList(1L, 2L, 3L)},
+        new Object[]{Arrays.asList(1L, 2L, 3L)},
+        new Object[]{Arrays.asList(1L, 2L, 3L, 4L)},
+        new Object[]{Arrays.asList(1L, 2L, 3L, 4L)},
+        new Object[]{Arrays.asList(1L, 4L)},
+        new Object[]{Arrays.asList(1L, 4L)},
+        new Object[]{Arrays.asList(2L, 3L)},
+        new Object[]{Arrays.asList(2L, 3L)}
+    );
+
+    RowSignature fileSignature = RowSignature.builder()
+                                             .add("timestamp", ColumnType.STRING)
+                                             .add("arrayString", ColumnType.STRING_ARRAY)
+                                             .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                                             .add("arrayLong", ColumnType.LONG_ARRAY)
+                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                                             .build();
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("arrayLong", ColumnType.LONG_ARRAY)
+                                            .build();
+
+    RowSignature scanSignature = RowSignature.builder()
+                                             .add("arrayLong", ColumnType.LONG_ARRAY)
+                                             .build();
+
+    Query<?> expectedQuery = newScanQueryBuilder()
+        .dataSource(new ExternalDataSource(
+            new LocalInputSource(null, null, ImmutableList.of(dataFile)),
+            new JsonInputFormat(null, null, null, null, null),
+            fileSignature
+        ))
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("arrayLong")
+        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayLong", ScanQuery.Order.ASCENDING)))
+        .context(defaultScanQueryContext(context, scanSignature))
+        .build();
+
+    testSelectQuery().setSql("SELECT\n"
+                             + "  arrayLong\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + dataFileNameAsJsonString + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '" + queryFramework().queryJsonMapper().writeValueAsString(fileSignature) + "'\n"
+                             + "  )\n"
+                             + ")\n"
+                             + "ORDER BY arrayLong")
+                     .setQueryContext(context)
+                     .setExpectedMSQSpec(MSQSpec
+                                             .builder()
+                                             .query(expectedQuery)
+                                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                                 new ColumnMapping("arrayLong", "arrayLong")
+                                             )))
+                                             .tuningConfig(MSQTuningConfig.defaultConfig())
+                                             .destination(TaskReportMSQDestination.INSTANCE)
+                                             .build()
+                     )
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedResultRows(expectedRows)
+                     .verifyResults();
+  }
+
+  @Test
+  public void testScanWithOrderByOnDoubleArray() throws IOException
+  {
+    final List<Object[]> expectedRows = Arrays.asList(
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{null},
+        new Object[]{Arrays.asList(1.1d, 2.2d, 3.3d)},
+        new Object[]{Arrays.asList(1.1d, 2.2d, 3.3d)},
+        new Object[]{Arrays.asList(1.1d, 2.2d, 3.3d)},
+        new Object[]{Arrays.asList(1.1d, 2.2d, 3.3d)},
+        new Object[]{Arrays.asList(1.1d, 3.3d)},
+        new Object[]{Arrays.asList(1.1d, 3.3d)},
+        new Object[]{Arrays.asList(2.2d, 3.3d, 4.0d)},
+        new Object[]{Arrays.asList(2.2d, 3.3d, 4.0d)},
+        new Object[]{Arrays.asList(3.3d, 4.4d, 5.5d)},
+        new Object[]{Arrays.asList(3.3d, 4.4d, 5.5d)}
+    );
+
+    RowSignature fileSignature = RowSignature.builder()
+                                             .add("timestamp", ColumnType.STRING)
+                                             .add("arrayString", ColumnType.STRING_ARRAY)
+                                             .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                                             .add("arrayLong", ColumnType.LONG_ARRAY)
+                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                                             .build();
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                            .build();
+
+    RowSignature scanSignature = RowSignature.builder()
+                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                             .build();
+
+    Query<?> expectedQuery = newScanQueryBuilder()
+        .dataSource(new ExternalDataSource(
+            new LocalInputSource(null, null, ImmutableList.of(dataFile)),
+            new JsonInputFormat(null, null, null, null, null),
+            fileSignature
+        ))
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("arrayDouble")
+        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayDouble", ScanQuery.Order.ASCENDING)))
+        .context(defaultScanQueryContext(context, scanSignature))
+        .build();
+
+    testSelectQuery().setSql("SELECT\n"
+                             + "  arrayDouble\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + dataFileNameAsJsonString + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '" + queryFramework().queryJsonMapper().writeValueAsString(fileSignature) + "'\n"
+                             + "  )\n"
+                             + ")\n"
+                             + "ORDER BY arrayDouble")
+                     .setQueryContext(context)
+                     .setExpectedMSQSpec(MSQSpec
+                                             .builder()
+                                             .query(expectedQuery)
+                                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                                 new ColumnMapping("arrayDouble", "arrayDouble")
+                                             )))
+                                             .tuningConfig(MSQTuningConfig.defaultConfig())
+                                             .destination(TaskReportMSQDestination.INSTANCE)
+                                             .build()
+                     )
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedResultRows(expectedRows)
+                     .verifyResults();
+  }
 
   private List<Object[]> expectedMultiValueFooRowsToArray()
   {
