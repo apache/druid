@@ -139,16 +139,34 @@ The style guide should serve as a point of reference to enable contributors and 
 
 In some cases, Google Style might make the Druid docs more difficult to read and understand. This section highlights those exceptions.
 
-#### SQL syntax
+#### SQL keyword syntax
 For SQL keywords and functions, use all caps, but do not use code font.
 
 :::tip
 
 **Correct**
+
 The UNNEST clause unnests array values.
 
 **Incorrect**
-The `UNNEST` clause unnests array values.
+
+The \`UNNEST\` clause unnests array values.
+:::
+
+
+#### Optional parameters and arguments
+
+For optional parameters and arguments, enclose the optional parameter and leading command in brackets.
+
+:::tip
+
+**Correct**
+
+HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])
+
+**Incorrect**
+
+HUMAN_READABLE_BINARY_BYTE_FORMAT(value, \[precision])
 :::
 
 ### Style checklist
