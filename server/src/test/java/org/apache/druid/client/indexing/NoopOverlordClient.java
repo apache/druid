@@ -24,7 +24,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.metadata.ConflictingLockRequest;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.joda.time.Interval;
@@ -96,8 +96,8 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Interval>>> findConflictingLockIntervals(
-      List<ConflictingLockRequest> conflictingLockRequests
+  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervalsV2(
+      List<LockFilterPolicy> lockFilterPolicies
   )
   {
     throw new UnsupportedOperationException();

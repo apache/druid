@@ -32,7 +32,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.metadata.ConflictingLockRequest;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.joda.time.Interval;
 
@@ -188,13 +188,12 @@ public interface OverlordClient
   /**
    * Returns a list of intervals locked by higher priority conflicting lock types
    *
-   * @param conflictingLockRequests List of all requests for different datasources
-   *
+   * @param lockFilterPolicies List of all filters for different datasources
    * @return Map from datasource name to list of intervals locked by tasks that have a conflicting lock type with
    * priority greater than or equal to the {@code minTaskPriority} for that datasource.
    */
-  ListenableFuture<Map<String, List<Interval>>> findConflictingLockIntervals(
-      List<ConflictingLockRequest> conflictingLockRequests
+  ListenableFuture<Map<String, List<Interval>>> findLockedIntervalsV2(
+      List<LockFilterPolicy> lockFilterPolicies
   );
 
   /**

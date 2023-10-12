@@ -41,7 +41,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.apache.druid.metadata.ConflictingLockRequest;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
@@ -222,12 +222,12 @@ public class OverlordClientImplTest
   {
     final Map<String, List<Interval>> lockMap =
         ImmutableMap.of("foo", Collections.singletonList(Intervals.of("2000/2001")));
-    final List<ConflictingLockRequest> requests = ImmutableList.of(
-        new ConflictingLockRequest("foo", 3, null)
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null)
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/conflictingLockIntervals")
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
             .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -236,19 +236,19 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         lockMap,
-        overlordClient.findConflictingLockIntervals(requests).get()
+        overlordClient.findLockedIntervalsV2(requests).get()
     );
   }
 
   @Test
   public void test_findLockedIntervals_nullReturn() throws Exception
   {
-    final List<ConflictingLockRequest> requests = ImmutableList.of(
-        new ConflictingLockRequest("foo", 3, null)
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null)
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/conflictingLockIntervals")
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
             .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -257,7 +257,7 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         Collections.emptyMap(),
-        overlordClient.findConflictingLockIntervals(requests).get()
+        overlordClient.findLockedIntervalsV2(requests).get()
     );
   }
 

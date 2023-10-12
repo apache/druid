@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.ConflictingLockRequest;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -176,7 +176,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     // Skip all the intervals locked by higher priority tasks for each datasource
     // This must be done after the invalid compaction tasks are cancelled
     // in the loop above so that their intervals are not considered locked
-    getConflictingLockIntervals(compactionConfigList).forEach(
+    getLockedIntervalsV2(compactionConfigList).forEach(
         (dataSource, intervals) ->
             intervalsToSkipCompaction
                 .computeIfAbsent(dataSource, ds -> new ArrayList<>())
@@ -261,16 +261,16 @@ public class CompactSegments implements CoordinatorCustomDuty
    *   higher priority Task</li>
    * </ul>
    */
-  private Map<String, List<Interval>> getConflictingLockIntervals(
+  private Map<String, List<Interval>> getLockedIntervalsV2(
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    final List<ConflictingLockRequest> conflictingLockRequests = compactionConfigs
+    final List<LockFilterPolicy> lockFilterPolicies = compactionConfigs
         .stream()
-        .map(DataSourceCompactionConfig::toConflictingLockRequest)
+        .map(config -> new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), config.getTaskContext()))
         .collect(Collectors.toList());
     final Map<String, List<Interval>> datasourceToLockedIntervals =
-        new HashMap<>(FutureUtils.getUnchecked(overlordClient.findConflictingLockIntervals(conflictingLockRequests), true));
+        new HashMap<>(FutureUtils.getUnchecked(overlordClient.findLockedIntervalsV2(lockFilterPolicies), true));
     LOG.debug(
         "Skipping the following intervals for Compaction as they are currently locked: %s",
         datasourceToLockedIntervals

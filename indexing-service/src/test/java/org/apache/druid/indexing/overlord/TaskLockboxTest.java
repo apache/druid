@@ -54,10 +54,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.metadata.ConflictingLockRequest;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
@@ -1252,7 +1252,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetConflictingLockIntervalsForHigherPriorityExclusiveLock()
+  public void testGetLockedIntervalsV2ForHigherPriorityExclusiveLock()
   {
     final Task task = NoopTask.ofPriority(50);
     lockbox.add(task);
@@ -1263,19 +1263,19 @@ public class TaskLockboxTest
         Intervals.of("2017/2018")
     );
 
-    ConflictingLockRequest requestForExclusiveLowerPriorityLock = new ConflictingLockRequest(
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
         task.getDataSource(),
         75,
         null
     );
 
     Map<String, List<Interval>> conflictingIntervals =
-        lockbox.getConflictingLockIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+        lockbox.getLockedIntervalsV2(ImmutableList.of(requestForExclusiveLowerPriorityLock));
     Assert.assertTrue(conflictingIntervals.isEmpty());
   }
 
   @Test
-  public void testGetConflictingLockIntervalsForLowerPriorityExclusiveLock()
+  public void testGetLockedIntervalsForLowerPriorityExclusiveLock()
   {
     final Task task = NoopTask.ofPriority(50);
     lockbox.add(task);
@@ -1286,14 +1286,14 @@ public class TaskLockboxTest
         Intervals.of("2017/2018")
     );
 
-    ConflictingLockRequest requestForExclusiveLowerPriorityLock = new ConflictingLockRequest(
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
         task.getDataSource(),
         25,
         null
     );
 
     Map<String, List<Interval>> conflictingIntervals =
-        lockbox.getConflictingLockIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+        lockbox.getLockedIntervalsV2(ImmutableList.of(requestForExclusiveLowerPriorityLock));
     Assert.assertEquals(1, conflictingIntervals.size());
     Assert.assertEquals(
         Collections.singletonList(Intervals.of("2017/2018")),
@@ -1302,7 +1302,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetConflictingLockIntervalsForLowerPriorityReplaceLock()
+  public void testGetLockedIntervalsV2ForLowerPriorityReplaceLock()
   {
     final Task task = NoopTask.ofPriority(50);
     lockbox.add(task);
@@ -1313,14 +1313,14 @@ public class TaskLockboxTest
         Intervals.of("2017/2018")
     );
 
-    ConflictingLockRequest requestForExclusiveLowerPriorityLock = new ConflictingLockRequest(
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
         task.getDataSource(),
         25,
         ImmutableMap.of(Tasks.TASK_LOCK_TYPE, TaskLockType.REPLACE.name())
     );
 
     Map<String, List<Interval>> conflictingIntervals =
-        lockbox.getConflictingLockIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+        lockbox.getLockedIntervalsV2(ImmutableList.of(requestForExclusiveLowerPriorityLock));
     Assert.assertTrue(conflictingIntervals.isEmpty());
   }
 
