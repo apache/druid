@@ -3,13 +3,18 @@ type: "operatorValidation"
 sql: |
    SELECT
      l2,
-     MIN(l2) OVER()
+     MIN(l2) OVER(partition by l2)
    FROM druid.numfoo
-   WHERE l2 is null or l2 = -1111
+   WHERE l2 is null or l2 = -1111 or l2 = 0
 
 
 expectedOperators:
-  - { type: "naivePartition", partitionColumns: [ ] }
+  - type: "naiveSort"
+    columns:
+      - column: "l2"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ "l2" ]
   - type: "window"
     processor:
       type: "framedAgg"
@@ -22,3 +27,4 @@ expectedResults:
   - [null,null]
   - [null,null]
   - [null,null]
+  - [0,0]
