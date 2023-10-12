@@ -34,7 +34,6 @@ import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;

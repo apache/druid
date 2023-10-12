@@ -70,14 +70,16 @@ public class FirstLastUtils
 
   public static boolean[] getNullVector(Object[] objectVector)
   {
-    boolean containsNonNullValues = false;
+    boolean containsNullValues = false;
     boolean[] nullValueVector = new boolean[objectVector.length];
     for (int i = 0; i < objectVector.length; i++) {
       if (objectVector[i] != null) {
-        containsNonNullValues = true;
         nullValueVector[i] = false;
+      } else {
+        nullValueVector[i] = true;
+        containsNullValues = true;
       }
     }
-    return containsNonNullValues ? null : nullValueVector;
+    return containsNullValues ? nullValueVector : null;
   }
 }

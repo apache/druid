@@ -328,7 +328,7 @@ public class SerializablePairLongLongBufferStoreTest
   private static SerializablePairLongLongComplexColumn createComplexColumn(
       AbstractSerializablePairLongObjectBufferStore.TransferredBuffer transferredBuffer,
       HeapByteBufferWriteOutBytes resultChannel
-  ) throws IOException
+  )
   {
     ByteBuffer byteBuffer = ByteBuffer.allocate(Ints.checkedCast(transferredBuffer.getSerializedSize()));
 

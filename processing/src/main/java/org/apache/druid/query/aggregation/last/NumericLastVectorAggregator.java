@@ -92,7 +92,7 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
     final boolean foldNeeded = FirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeNumeric[index], pairClass);
     if (foldNeeded) {
       final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[index];
-      if (inPair.lhs >= lastTime) {
+      if (inPair.lhs != null && inPair.lhs >= lastTime) {
         lastTime = inPair.lhs;
         if (useDefault || inPair.rhs != null) {
           updateTimeWithValue(buf, position, lastTime, inPair.getRhs());
@@ -159,11 +159,13 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
 
       if (foldNeeded) {
         final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[row];
-        if (inPair.lhs >= lastTime) {
-          if (useDefault || inPair.rhs != null) {
-            updateTimeWithValue(buf, position, inPair.lhs, inPair.rhs);
-          } else {
-            updateTimeWithNull(buf, position, inPair.lhs);
+        if (useDefault || inPair != null) {
+          if (inPair.lhs != null && inPair.lhs >= lastTime) {
+            if (inPair.rhs != null) {
+              updateTimeWithValue(buf, position, inPair.lhs, inPair.rhs);
+            } else {
+              updateTimeWithNull(buf, position, inPair.lhs);
+            }
           }
         }
       } else {
@@ -175,7 +177,6 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
           }
         }
       }
-
     }
   }
 

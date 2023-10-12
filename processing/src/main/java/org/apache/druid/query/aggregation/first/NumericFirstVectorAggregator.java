@@ -89,7 +89,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
       if (foldNeeded) {
         final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[index];
 
-        if (inPair.lhs < firstTime) {
+        if (inPair.lhs != null && inPair.lhs < firstTime) {
           firstTime = inPair.lhs;
           if (useDefault || inPair.rhs != null) {
             updateTimeWithValue(buf, position, firstTime, inPair.getRhs());
@@ -158,11 +158,13 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
       if (foldNeeded) {
         final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[row];
         if (useDefault || inPair != null) {
-          if (inPair.lhs < firstTime) {
-            updateTimeWithValue(buf, position, inPair.lhs, inPair.rhs);
+          if (inPair.lhs != null && inPair.lhs < firstTime) {
+            if (inPair.rhs != null) {
+              updateTimeWithValue(buf, position, inPair.lhs, inPair.rhs);
+            } else {
+              updateTimeWithNull(buf, position, inPair.lhs);
+            }
           }
-        } else {
-          updateTimeWithNull(buf, position, inPair.lhs);
         }
       } else {
         if (timeVector[row] < firstTime) {
@@ -173,7 +175,6 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
           }
         }
       }
-
     }
   }
 

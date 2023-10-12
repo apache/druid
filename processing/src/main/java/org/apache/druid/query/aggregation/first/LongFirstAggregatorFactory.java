@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -59,7 +58,6 @@ import java.util.Map;
 public class LongFirstAggregatorFactory extends AggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongLongComplexMetricSerde.TYPE_NAME);
-  private static final Logger log = new Logger(LongFirstAggregatorFactory.class);
 
   private static final Aggregator NIL_AGGREGATOR = new LongFirstAggregator(
       NilColumnValueSelector.instance(),
