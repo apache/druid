@@ -189,29 +189,6 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority)
-  {
-    final String path = "/druid/indexer/v1/lockedIntervals";
-
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path)
-                .jsonContent(jsonMapper, minTaskPriority),
-            new BytesFullResponseHandler()
-        ),
-        holder -> {
-          final Map<String, List<Interval>> response = JacksonUtils.readValue(
-              jsonMapper,
-              holder.getContent(),
-              new TypeReference<Map<String, List<Interval>>>() {}
-          );
-
-          return response == null ? Collections.emptyMap() : response;
-        }
-    );
-  }
-
-  @Override
   public ListenableFuture<Map<String, List<Interval>>> findConflictingLockIntervals(
       List<ConflictingLockRequest> conflictingLockRequests
   )

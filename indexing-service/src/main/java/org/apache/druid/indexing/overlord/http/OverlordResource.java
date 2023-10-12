@@ -261,6 +261,7 @@ public class OverlordResource
     }
   }
 
+  @Deprecated
   @POST
   @Path("/lockedIntervals")
   @Produces(MediaType.APPLICATION_JSON)

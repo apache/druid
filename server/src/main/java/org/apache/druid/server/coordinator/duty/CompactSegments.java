@@ -246,6 +246,21 @@ public class CompactSegments implements CoordinatorCustomDuty
     return true;
   }
 
+  /**
+   * Gets a List of Intervals locked by higher priority tasks for each datasource.
+   * However, when using a REPLACE lock for compaction, intervals locked with any APPEND lock will not be returned
+   * Since compaction tasks submitted for these Intervals would have to wait anyway,
+   * we skip these Intervals until the next compaction run.
+   * <p>
+   * For now, Segment Locks are being treated the same as Time Chunk Locks even
+   * though they lock only a Segment and not the entire Interval. Thus,
+   * a compaction task will not be submitted for an Interval if
+   * <ul>
+   *   <li>either the whole Interval is locked by a higher priority Task with an incompatible lock type</li>
+   *   <li>or there is atleast one Segment in the Interval that is locked by a
+   *   higher priority Task</li>
+   * </ul>
+   */
   private Map<String, List<Interval>> getConflictingLockIntervals(
       List<DataSourceCompactionConfig> compactionConfigs
   )
@@ -264,20 +279,6 @@ public class CompactSegments implements CoordinatorCustomDuty
     return datasourceToLockedIntervals;
   }
 
-  /**
-   * Gets a List of Intervals locked by higher priority tasks for each datasource.
-   * Since compaction tasks submitted for these Intervals would have to wait anyway,
-   * we skip these Intervals until the next compaction run.
-   * <p>
-   * For now, Segment Locks are being treated the same as Time Chunk Locks even
-   * though they lock only a Segment and not the entire Interval. Thus,
-   * a compaction task will not be submitted for an Interval if
-   * <ul>
-   *   <li>either the whole Interval is locked by a higher priority Task</li>
-   *   <li>or there is atleast one Segment in the Interval that is locked by a
-   *   higher priority Task</li>
-   * </ul>
-   */
   private Map<String, List<Interval>> getLockedIntervalsToSkip(
       List<DataSourceCompactionConfig> compactionConfigs
   )

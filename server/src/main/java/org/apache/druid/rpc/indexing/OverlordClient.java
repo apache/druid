@@ -186,17 +186,6 @@ public interface OverlordClient
   ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses();
 
   /**
-   * Returns a list of intervals locked by higher priority tasks for each datasource.
-   *
-   * @param minTaskPriority Minimum task priority for each datasource. Only the intervals that are locked by tasks with
-   *                        equal or higher priority than this are returned.
-   *
-   * @return Map from datasource name to list of intervals locked by tasks that have priority greater than or equal to
-   * the {@code minTaskPriority} for that datasource.
-   */
-  ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority);
-
-  /**
    * Returns a list of intervals locked by higher priority conflicting lock types
    *
    * @param conflictingLockRequests List of all requests for different datasources
