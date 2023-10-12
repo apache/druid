@@ -30,6 +30,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -2102,5 +2104,58 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
         ),
         ImmutableList.of());
+  }
+
+  @Test
+  public void testVirtualColumnRegistryReusedInWindowing()
+  {
+    cannotVectorize();
+
+    PlannerConfig withOverrides = PLANNER_CONFIG_DEFAULT.withOverrides(
+        ImmutableMap.of());
+    String sql = "  SELECT\n"
+    + "    dim1,\n"
+    + "    dim1 || dim1,\n"
+    + "    length(dim1 || dim1)\n"
+    + "    ,MIN(length(dim1 || dim1)) OVER ()\n"
+    + "  FROM foo\n";
+    ImmutableList<Query<?>> of = ImmutableList.of(
+        GroupByQuery.builder()
+            .setDataSource(
+                GroupByQuery.builder()
+                    .setDataSource(CalciteTests.DATASOURCE1)
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(
+                        dimensions(
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.FLOAT)))
+                    .setVirtualColumns(
+                        expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"m1\",null)",
+                            ColumnType.FLOAT))
+                    .build())
+            .setInterval(querySegmentSpec(Filtration.eternity()))
+            .setGranularity(Granularities.ALL)
+            .setHavingSpec(having(
+                range("a0", ColumnType.LONG, 3L, null, true, false)
+                ))
+            .setAggregatorSpecs(aggregators(
+                useDefault
+                    ? new CountAggregatorFactory("a0")
+                    : new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"),
+                        notNull("d0"))))
+            .build()
+
+    );
+    ImmutableList<Object[]> of2 = ImmutableList.of();
+    testBuilder()
+    .plannerConfig(PLANNER_CONFIG_DEFAULT)
+    .sql(sql)
+    .queryContext(ImmutableMap.of(
+        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+        QueryContexts.ENABLE_DEBUG, true))
+    .expectedQueries(of)
+    .expectedResults(of2)
+    .run();
   }
 }

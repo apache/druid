@@ -56,7 +56,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Runs a test built up by {@link QueryTestBuilder}. Running a SQL query test
@@ -402,10 +401,11 @@ public class QueryTestRunner
         expectedQueries.add(BaseCalciteQueryTest.recursivelyClearContext(query, queryJsonMapper));
       }
 
-      final List<Query<?>> recordedQueries = queryResults.recordedQueries
-          .stream()
-          .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
-          .collect(Collectors.toList());
+//      final List<Query<?>> recordedQueries = queryResults.recordedQueries
+//          .stream()
+//          .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
+//          .collect(Collectors.toList());
+      List<Query<?>> recordedQueries = queryResults.recordedQueries;
 
       Assert.assertEquals(
           StringUtils.format("query count: %s", builder.sql),
