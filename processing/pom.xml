@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>28.0.0-SNAPSHOT</version>
+    <version>29.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -364,9 +364,16 @@
       <artifactId>caliper</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- explicitly declare mockito-core dependency to make anaylize-dependencies happy when running with Java 8 -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-${mockito.inline.artifact}</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -424,11 +431,6 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

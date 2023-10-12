@@ -27,21 +27,21 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 
 /**
  * Helper for {@link FrameProcessorExecutor#runAllFully}. See the javadoc for that method for details about the
@@ -57,29 +57,23 @@ public class RunAllFullyWidget<T, ResultType>
 {
   private static final Logger log = new Logger(RunAllFullyWidget.class);
 
-  private final Sequence<? extends FrameProcessor<T>> processors;
+  private final ProcessorManager<T, ResultType> processorManager;
   private final FrameProcessorExecutor exec;
-  private final ResultType initialResult;
-  private final BiFunction<ResultType, T, ResultType> accumulateFn;
   private final int maxOutstandingProcessors;
   private final Bouncer bouncer;
   @Nullable
   private final String cancellationId;
 
   RunAllFullyWidget(
-      Sequence<? extends FrameProcessor<T>> processors,
+      ProcessorManager<T, ResultType> processorManager,
       FrameProcessorExecutor exec,
-      ResultType initialResult,
-      BiFunction<ResultType, T, ResultType> accumulateFn,
       int maxOutstandingProcessors,
       Bouncer bouncer,
       @Nullable String cancellationId
   )
   {
-    this.processors = processors;
+    this.processorManager = processorManager;
     this.exec = exec;
-    this.initialResult = initialResult;
-    this.accumulateFn = accumulateFn;
     this.maxOutstandingProcessors = maxOutstandingProcessors;
     this.bouncer = bouncer;
     this.cancellationId = cancellationId;
@@ -87,21 +81,25 @@ public class RunAllFullyWidget<T, ResultType>
 
   ListenableFuture<ResultType> run()
   {
-    final Yielder<? extends FrameProcessor<T>> processorYielder;
+    final ListenableFuture<Optional<ProcessorAndCallback<T>>> nextProcessorFuture;
 
     try {
-      processorYielder = Yielders.each(processors);
+      nextProcessorFuture = processorManager.next();
+      if (nextProcessorFuture.isDone() && !nextProcessorFuture.get().isPresent()) {
+        // Save some time and return immediately.
+        final ResultType retVal = processorManager.result();
+        processorManager.close();
+        return Futures.immediateFuture(retVal);
+      }
     }
     catch (Throwable e) {
+      CloseableUtils.closeAndSuppressExceptions(processorManager, e::addSuppressed);
       return Futures.immediateFailedFuture(e);
     }
 
-    if (processorYielder.isDone()) {
-      return Futures.immediateFuture(initialResult);
-    }
-
     // This single RunAllFullyRunnable will be submitted to the executor "maxOutstandingProcessors" times.
-    final RunAllFullyRunnable runnable = new RunAllFullyRunnable(processorYielder);
+    // It runs concurrently with itself.
+    final RunAllFullyRunnable runnable = new RunAllFullyRunnable(nextProcessorFuture);
 
     for (int i = 0; i < maxOutstandingProcessors; i++) {
       exec.getExecutorService().submit(runnable);
@@ -117,27 +115,37 @@ public class RunAllFullyWidget<T, ResultType>
     private final Object runAllFullyLock = new Object();
 
     @GuardedBy("runAllFullyLock")
-    Yielder<? extends FrameProcessor<T>> processorYielder;
+    ListenableFuture<Optional<ProcessorAndCallback<T>>> nextProcessorFuture;
 
+    /**
+     * Number of processors currently outstanding. Final cleanup is done when there are no more processors in
+     * {@link #processorManager}, and when this reaches zero.
+     */
     @GuardedBy("runAllFullyLock")
-    ResultType currentResult = null;
+    int outstandingProcessors;
 
-    @GuardedBy("runAllFullyLock")
-    boolean seenFirstResult = false;
-
-    @GuardedBy("runAllFullyLock")
-    int outstandingProcessors = 0;
-
+    /**
+     * Currently outstanding futures from {@link FrameProcessorExecutor#runFully}. Used for cancellation.
+     */
     @GuardedBy("runAllFullyLock")
     Set<ListenableFuture<?>> outstandingFutures = Collections.newSetFromMap(new IdentityHashMap<>());
 
+    /**
+     * Tickets from a {@link Bouncer} that are available for use by the next instance of this class to run.
+     */
     @Nullable // nulled out by cleanup()
     @GuardedBy("runAllFullyLock")
-    Queue<Bouncer.Ticket> bouncerQueue = new ArrayDeque<>();
+    Queue<Bouncer.Ticket> bouncerTicketQueue = new ArrayDeque<>();
 
-    private RunAllFullyRunnable(final Yielder<? extends FrameProcessor<T>> processorYielder)
+    /**
+     * Whether {@link #cleanup()} has executed.
+     */
+    @GuardedBy("runAllFullyLock")
+    boolean didCleanup;
+
+    private RunAllFullyRunnable(final ListenableFuture<Optional<ProcessorAndCallback<T>>> nextProcessorFuture)
     {
-      this.processorYielder = processorYielder;
+      this.nextProcessorFuture = nextProcessorFuture;
       this.finishedFuture = exec.registerCancelableFuture(SettableFuture.create(), false, cancellationId);
       this.finishedFuture.addListener(
           () -> {
@@ -165,18 +173,47 @@ public class RunAllFullyWidget<T, ResultType>
     @Override
     public void run()
     {
-      final FrameProcessor<T> nextProcessor;
+      final ProcessorAndCallback<T> nextProcessor;
       Bouncer.Ticket nextTicket = null;
 
       synchronized (runAllFullyLock) {
-        if (finished.get() != null) {
-          cleanupIfNoMoreProcessors();
-          return;
-        } else if (!processorYielder.isDone()) {
-          assert bouncerQueue != null;
+        try {
+          if (finished.get() != null) {
+            cleanupIfNoMoreProcessors();
+            return;
+          } else {
+            if (!nextProcessorFuture.isDone()) {
+              final ListenableFuture<Optional<ProcessorAndCallback<T>>> futureRef = nextProcessorFuture;
+              // Wait for readability.
+              // Note: this code effectively runs *all* outstanding RunAllFullyRunnable when the future resolves, even
+              // if only a single processor is available to be run. Still correct, but may be wasteful in situations
+              // where a processor manager blocks frequently.
+              futureRef.addListener(
+                  () -> {
+                    if (!futureRef.isCancelled()) {
+                      exec.getExecutorService().submit(RunAllFullyRunnable.this);
+                    }
+                  },
+                  Execs.directExecutor()
+              );
+              return;
+            }
 
-          try {
-            final Bouncer.Ticket ticketFromQueue = bouncerQueue.poll();
+            final Optional<ProcessorAndCallback<T>> maybeNextProcessor = nextProcessorFuture.get();
+
+            if (!maybeNextProcessor.isPresent()) {
+              // Finished.
+              if (outstandingProcessors == 0) {
+                finished.compareAndSet(null, Either.value(processorManager.result()));
+                cleanupIfNoMoreProcessors();
+              }
+              return;
+            }
+
+            // Next processor is ready to run. Let's do it.
+            assert bouncerTicketQueue != null;
+
+            final Bouncer.Ticket ticketFromQueue = bouncerTicketQueue.poll();
 
             if (ticketFromQueue != null) {
               nextTicket = ticketFromQueue;
@@ -187,6 +224,7 @@ public class RunAllFullyWidget<T, ResultType>
               if (ticketFuture.isDone() && !ticketFuture.isCancelled()) {
                 nextTicket = FutureUtils.getUncheckedImmediately(ticketFuture);
               } else {
+                // No ticket available. Run again when there's a ticket.
                 ticketFuture.addListener(
                     () -> {
                       if (!ticketFuture.isCancelled()) {
@@ -198,7 +236,7 @@ public class RunAllFullyWidget<T, ResultType>
                             ticket.giveBack();
                             return;
                           } else {
-                            bouncerQueue.add(ticket);
+                            bouncerTicketQueue.add(ticket);
                           }
                         }
                         exec.getExecutorService().submit(RunAllFullyRunnable.this);
@@ -212,25 +250,25 @@ public class RunAllFullyWidget<T, ResultType>
             }
 
             assert outstandingProcessors < maxOutstandingProcessors;
-            nextProcessor = processorYielder.get();
-            processorYielder = processorYielder.next(null);
+            nextProcessor = maybeNextProcessor.get();
+            nextProcessorFuture = processorManager.next();
             outstandingProcessors++;
           }
-          catch (Throwable e) {
-            if (nextTicket != null) {
-              nextTicket.giveBack();
-            }
-            finished.compareAndSet(null, Either.error(e));
-            cleanupIfNoMoreProcessors();
-            return;
+        }
+        catch (Throwable e) {
+          if (nextTicket != null) {
+            nextTicket.giveBack();
           }
-        } else {
+          finished.compareAndSet(null, Either.error(e));
+          cleanupIfNoMoreProcessors();
           return;
         }
 
         assert nextTicket != null;
+        assert nextProcessor != null;
+
         final ListenableFuture<T> future = exec.runFully(
-            FrameProcessors.withBaggage(nextProcessor, nextTicket::giveBack),
+            FrameProcessors.withBaggage(nextProcessor.processor(), nextTicket::giveBack),
             cancellationId
         );
 
@@ -244,25 +282,17 @@ public class RunAllFullyWidget<T, ResultType>
               public void onSuccess(T result)
               {
                 final boolean isDone;
-                ResultType retVal = null;
 
                 try {
                   synchronized (runAllFullyLock) {
                     outstandingProcessors--;
                     outstandingFutures.remove(future);
 
-                    if (!seenFirstResult) {
-                      currentResult = accumulateFn.apply(initialResult, result);
-                      seenFirstResult = true;
-                    } else {
-                      currentResult = accumulateFn.apply(currentResult, result);
-                    }
+                    isDone = outstandingProcessors == 0
+                             && nextProcessorFuture.isDone()
+                             && !nextProcessorFuture.get().isPresent();
 
-                    isDone = outstandingProcessors == 0 && processorYielder.isDone();
-
-                    if (isDone) {
-                      retVal = currentResult;
-                    }
+                    nextProcessor.onComplete(result);
                   }
                 }
                 catch (Throwable e) {
@@ -276,7 +306,7 @@ public class RunAllFullyWidget<T, ResultType>
                 }
 
                 if (isDone) {
-                  finished.compareAndSet(null, Either.value(retVal));
+                  finished.compareAndSet(null, Either.value(processorManager.result()));
 
                   synchronized (runAllFullyLock) {
                     cleanupIfNoMoreProcessors();
@@ -310,7 +340,7 @@ public class RunAllFullyWidget<T, ResultType>
     @GuardedBy("runAllFullyLock")
     private void cleanupIfNoMoreProcessors()
     {
-      if (outstandingProcessors == 0 && finished.get() != null) {
+      if (outstandingProcessors == 0 && finished.get() != null && !didCleanup) {
         cleanup();
       }
     }
@@ -324,33 +354,42 @@ public class RunAllFullyWidget<T, ResultType>
       assert finished.get() != null;
       assert outstandingProcessors == 0;
 
+      Throwable caught = null;
+
       try {
-        if (bouncerQueue != null) {
+        if (bouncerTicketQueue != null) {
           // Drain ticket queue, return everything.
 
           Bouncer.Ticket ticket;
-          while ((ticket = bouncerQueue.poll()) != null) {
+          while ((ticket = bouncerTicketQueue.poll()) != null) {
             ticket.giveBack();
           }
 
-          bouncerQueue = null;
+          bouncerTicketQueue = null;
         }
 
-        if (processorYielder != null) {
-          processorYielder.close();
-          processorYielder = null;
-        }
+        processorManager.close();
       }
       catch (Throwable e) {
-        // No point throwing, since our caller is just a future callback.
-        log.noStackTrace().warn(e, "Exception encountered while cleaning up from runAllFully");
+        caught = e;
       }
       finally {
+        didCleanup = true;
+
         // Set finishedFuture after all cleanup is done.
         if (finished.get().isValue()) {
-          finishedFuture.set(finished.get().valueOrThrow());
+          if (caught != null) {
+            // Propagate exception caught during cleanup.
+            finishedFuture.setException(caught);
+          } else {
+            finishedFuture.set(finished.get().valueOrThrow());
+          }
         } else {
-          finishedFuture.setException(finished.get().error());
+          final Throwable t = finished.get().error();
+          if (caught != null) {
+            t.addSuppressed(caught);
+          }
+          finishedFuture.setException(t);
         }
       }
     }

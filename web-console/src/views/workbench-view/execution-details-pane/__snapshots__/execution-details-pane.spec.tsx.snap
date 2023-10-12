@@ -22,6 +22,7 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
         "id": "native",
         "label": "Native query",
       },
+      false,
       undefined,
       undefined,
       Object {
@@ -286,6 +287,7 @@ PARTITIONED BY DAY",
             "maxParseExceptions": 2,
           },
           "result": undefined,
+          "segmentStatus": undefined,
           "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
 SELECT
   TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
@@ -909,6 +911,7 @@ PARTITIONED BY DAY",
             "maxParseExceptions": 2,
           },
           "result": undefined,
+          "segmentStatus": undefined,
           "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
 SELECT
   TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
@@ -1319,6 +1322,7 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
         "id": "native",
         "label": "Native query",
       },
+      false,
       undefined,
       undefined,
       Object {
@@ -1576,6 +1580,7 @@ PARTITIONED BY DAY",
           "maxParseExceptions": 2,
         },
         "result": undefined,
+        "segmentStatus": undefined,
         "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
 SELECT
   TIME_PARSE(\\"timestamp\\") AS \\"__time\\",

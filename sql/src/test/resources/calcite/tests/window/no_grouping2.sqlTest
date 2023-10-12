@@ -1,0 +1,26 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    m1,
+    SUM(m1) OVER () cc
+  FROM druid.foo
+
+expectedOperators:
+  - type: "naivePartition"
+    partitionColumns: []
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - type: "doubleSum"
+          name: "w0"
+          fieldName: "m1"
+expectedResults:
+  - [1.0,21.0]
+  - [2.0,21.0]
+  - [3.0,21.0]
+  - [4.0,21.0]
+  - [5.0,21.0]
+  - [6.0,21.0]

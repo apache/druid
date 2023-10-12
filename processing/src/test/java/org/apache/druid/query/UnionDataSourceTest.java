@@ -123,7 +123,7 @@ public class UnionDataSourceTest
   @Test
   public void test_withChildren_sameNumber()
   {
-    final List<TableDataSource> newDataSources = ImmutableList.of(
+    final List<DataSource> newDataSources = ImmutableList.of(
         new TableDataSource("baz"),
         new TableDataSource("qux")
     );
