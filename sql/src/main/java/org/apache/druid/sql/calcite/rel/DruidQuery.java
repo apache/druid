@@ -282,7 +282,8 @@ public class DruidQuery
                 partialQuery,
                 plannerContext,
                 sourceRowSignature, // Plans immediately after Scan, so safe to use the row signature from scan
-                rexBuilder
+                rexBuilder,
+                virtualColumnRegistry
             )
         );
       } else {
