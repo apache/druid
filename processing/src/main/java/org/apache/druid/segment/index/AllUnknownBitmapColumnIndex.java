@@ -19,44 +19,46 @@
 
 package org.apache.druid.segment.index;
 
-import com.google.common.collect.Iterables;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.segment.filter.Filters;
-
-import javax.annotation.Nullable;
-import java.util.Collections;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 
 /**
- * {@link SimpleBitmapColumnIndex} for anything which can compute an {@link Iterable<ImmutableBitmap>} in some manner
+ * Like {@link AllFalseBitmapColumnIndex} during normal operation, except if called with 'includeUnknowns' becomes like
+ * {@link AllTrueBitmapColumnIndex}.
  */
-public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
+public class AllUnknownBitmapColumnIndex implements BitmapColumnIndex
 {
+  private final ColumnIndexSelector selector;
+
+
+  public AllUnknownBitmapColumnIndex(ColumnIndexSelector indexSelector)
+  {
+    this.selector = indexSelector;
+  }
+
+  @Override
+  public ColumnIndexCapabilities getIndexCapabilities()
+  {
+    return SimpleColumnIndexCapabilities.getConstant();
+  }
+
   @Override
   public double estimateSelectivity(int totalRows)
   {
-    return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
+    return 0;
   }
 
   @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     if (includeUnknown) {
-      final ImmutableBitmap unknownsBitmap = getUnknownsBitmap();
-      if (unknownsBitmap != null) {
-        return bitmapResultFactory.unionDimensionValueBitmaps(
-            Iterables.concat(
-                getBitmapIterable(),
-                Collections.singletonList(unknownsBitmap)
-            )
-        );
-      }
+      return bitmapResultFactory.wrapAllTrue(
+          selector.getBitmapFactory()
+                  .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows())
+      );
     }
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+    return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
   }
-
-  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
-
-  @Nullable
-  protected abstract ImmutableBitmap getUnknownsBitmap();
 }
