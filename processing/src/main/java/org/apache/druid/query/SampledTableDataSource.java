@@ -37,11 +37,10 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 @JsonTypeName("sampled_table")
-public class SampledTableDataSource implements DataSource
+public class SampledTableDataSource extends TableDataSource
 {
-  private final String name;
   private final SamplingType samplingType;
-  private final float samplingPercentage;
+  private final int samplingPercentage;
   public enum SamplingType implements Cacheable
   {
     FIXED_SHARD;
@@ -70,123 +69,59 @@ public class SampledTableDataSource implements DataSource
   public SampledTableDataSource(
       @JsonProperty("name") String name,
       @JsonProperty("samplingType") SamplingType samplingType,
-      @JsonProperty("samplingPercentage") float samplingPercentage
+      @JsonProperty("samplingPercentage") int samplingPercentage
   )
   {
-    this.name = Preconditions.checkNotNull(name, "'name' must be nonnull");
+    super(name);
     this.samplingType = samplingType;
     this.samplingPercentage = samplingPercentage;
   }
 
   @JsonCreator
-public static SampledTableDataSource create(final String name, final String samplingType, final float samplingRatio)
+  public static SampledTableDataSource create(
+      @JsonProperty("name")final String name,
+      @JsonProperty("samplingType")final String samplingType,
+      @JsonProperty("samplingPercentage")final int samplingPercentage)
   {
-    return new SampledTableDataSource(name, SamplingType.fromString(samplingType), samplingRatio);
+    return new SampledTableDataSource(name, SamplingType.fromString(samplingType), samplingPercentage);
   }
+
 
   @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
-  public Set<String> getTableNames()
-  {
-    return Collections.singleton(name);
-  }
-
-  @Override
-  public List<DataSource> getChildren()
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public DataSource withChildren(List<DataSource> children)
-  {
-    if (!children.isEmpty()) {
-      throw new IAE("Cannot accept children");
-    }
-
-    return this;
-  }
-
-  @Override
-  public boolean isCacheable(boolean isBroker)
-  {
-    return true;
-  }
-
-  @Override
-  public boolean isGlobal()
-  {
-    return false;
-  }
-
-  @Override
-  public boolean isConcrete()
-  {
-    return true;
-  }
-
-  @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTime
-  )
-  {
-    return Function.identity();
-  }
-
-  @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return newSource;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new byte[0];
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
-  }
-
   public SamplingType getSamplingType() {
     return samplingType;
   }
 
+  @JsonProperty
   public float getSamplingPercentage() {
     return samplingPercentage;
   }
 
   @Override
-  public String toString()
-  {
-    return name;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
+  public boolean equals(Object o) {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof SampledTableDataSource)) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
+
     SampledTableDataSource that = (SampledTableDataSource) o;
-    return name.equals(that.name);
+
+    if (samplingPercentage != that.samplingPercentage) {
+      return false;
+    }
+    return samplingType == that.samplingType;
   }
 
   @Override
-  public int hashCode()
-  {
-    return Objects.hash(name);
+  public int hashCode() {
+    int result = super.hashCode();
+    result = 31 * result + (samplingType != null ? samplingType.hashCode() : 0);
+    result = 31 * result + samplingPercentage;
+    return result;
   }
 }

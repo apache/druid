@@ -19,6 +19,8 @@
 
 package org.apache.druid.client;
 
+import static org.apache.druid.query.context.ResponseContext.Keys.SAMPLING_COMPOSITION;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -346,7 +348,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
-      pruneSegmentsForShardSampling(segmentServers);
+      Pair<Integer, Integer> ratio = pruneSegmentsForShardSampling(segmentServers);
+      if (ratio != null) {
+        responseContext.add(SAMPLING_COMPOSITION, ratio.lhs + "/" + ratio.rhs);
+      }
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
@@ -507,30 +512,32 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private void pruneSegmentsForShardSampling(
-        final Set<SegmentServerSelector> segments
-    ) {
-      if (
-          query.getDataSource() instanceof SampledTableDataSource
-      ) {
+    private Pair<Integer, Integer> pruneSegmentsForShardSampling(final Set<SegmentServerSelector> segments) {
+      if (query.getDataSource() instanceof SampledTableDataSource) {
         if (((SampledTableDataSource) query.getDataSource()).getSamplingType()
             == SamplingType.FIXED_SHARD) {
-          int allShards = segments.stream().mapToInt(s->s.getSegmentDescriptor().getPartitionNumber()).max().getAsInt();
+          int allSegmentsSize = segments.size();
+          int allShards = segments.stream()
+              .mapToInt(s -> s.getSegmentDescriptor().getPartitionNumber()).max().getAsInt();
           int targetShards = Math.round(
               allShards * ((SampledTableDataSource) query.getDataSource()).getSamplingPercentage());
           Iterator<SegmentServerSelector> iterator = segments.iterator();
+          int removedSegments = 0;
           while (iterator.hasNext()) {
             SegmentServerSelector segmentServerSelector = iterator.next();
             SegmentDescriptor segmentDescriptor = segmentServerSelector.getSegmentDescriptor();
             int shard = segmentDescriptor.getPartitionNumber();
             if (targetShards < shard) {
+              removedSegments++;
               iterator.remove();
             }
           }
+          return Pair.of(allSegmentsSize - removedSegments, allSegmentsSize);
         } else {
           throw new UnsupportedOperationException("");
         }
       }
+      return null;
     }
 
 

@@ -24,6 +24,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.SampledTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -113,10 +114,11 @@ public class DataSourceAnalysis
    * Note that this can return empty even if {@link #isConcreteAndTableBased()} is true. This happens if the base
    * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
    */
-  public Optional<TableDataSource> getBaseTableDataSource()
-  {
+  public Optional<TableDataSource> getBaseTableDataSource() {
     if (baseDataSource instanceof TableDataSource) {
       return Optional.of((TableDataSource) baseDataSource);
+    } else if (baseDataSource instanceof SampledTableDataSource) {
+      return Optional.of((SampledTableDataSource) baseDataSource);
     } else {
       return Optional.empty();
     }
@@ -216,6 +218,7 @@ public class DataSourceAnalysis
   public boolean isTableBased()
   {
     return (baseDataSource instanceof TableDataSource
+            || baseDataSource instanceof SampledTableDataSource
             || (baseDataSource instanceof UnionDataSource &&
                 baseDataSource.getChildren()
                               .stream()

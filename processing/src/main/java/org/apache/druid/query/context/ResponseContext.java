@@ -453,6 +453,12 @@ public abstract class ResponseContext
         false
     );
 
+    public static final Key SAMPLING_COMPOSITION = new StringKey(
+        "samplingComposition",
+        true,
+        false
+    );
+
     /**
      * Indicates if a {@link ResponseContext} was truncated during serialization.
      */
@@ -488,6 +494,7 @@ public abstract class ResponseContext
               TIMEOUT_AT,
               NUM_SCANNED_ROWS,
               CPU_CONSUMED_NANOS,
+              SAMPLING_COMPOSITION,
               TRUNCATED,
               }
       );
