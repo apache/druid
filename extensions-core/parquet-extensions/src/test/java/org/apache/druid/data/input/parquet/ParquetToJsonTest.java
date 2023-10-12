@@ -33,6 +33,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 @SuppressWarnings("ALL")
 public class ParquetToJsonTest
 {
@@ -75,5 +78,28 @@ public class ParquetToJsonTest
   {
     Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{}));
     Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{"a", "b"}));
+  }
+
+  @Test
+  public void testEmptyDir() throws Exception
+  {
+    final File tmpDir = tmp.newFolder();
+    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {tmpDir.getAbsolutePath()}));
+  }
+
+  @Test
+  public void testSomeFile() throws Exception
+  {
+    final File file = tmp.newFile();
+    assertTrue(file.exists());
+    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
+  }
+
+  @Test
+  public void testNonExistentFile() throws Exception
+  {
+    final File file = new File(tmp.getRoot(), "nonExistent");
+    assertFalse(file.exists());
+    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
   }
 }

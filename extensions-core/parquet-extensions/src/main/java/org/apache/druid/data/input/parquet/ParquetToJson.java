@@ -47,9 +47,16 @@ public class ParquetToJson
     ParquetGroupConverter converter = new ParquetGroupConverter(true);
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    File[] inputFiles = new File(args[0]).listFiles(
+    File dir = new File(args[0]);
+    if (!dir.isDirectory()) {
+      throw new IAE("Not a directory [%s]", args[0]);
+    }
+    File[] inputFiles = dir.listFiles(
         pathname -> pathname.getName().endsWith(".parquet")
     );
+    if (inputFiles == null || inputFiles.length == 0) {
+      throw new IAE("No parquet files in directory [%s]", args[0]);
+    }
     for (File inputFile : inputFiles) {
       File outputFile = new File(inputFile.getAbsolutePath() + ".json");
 
