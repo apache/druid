@@ -61,6 +61,12 @@ public final class ObjectMetadata implements DataSourceMetadata
   }
 
   @Override
+  public int compareTo(DataSourceMetadata o)
+  {
+    return -1;
+  }
+
+  @Override
   public DataSourceMetadata plus(DataSourceMetadata other)
   {
     return other;

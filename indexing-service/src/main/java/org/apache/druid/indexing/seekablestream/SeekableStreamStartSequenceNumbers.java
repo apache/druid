@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Represents the start sequenceNumber per partition of a sequence. This class keeps an additional set of
@@ -158,6 +159,40 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
     } else {
       // Different stream, prefer "other".
       return other;
+    }
+  }
+
+  @Override
+  public int compareTo(SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other)
+  {
+    if (this.getClass() != other.getClass()) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getName(),
+          other.getClass().getName()
+      );
+    }
+
+    final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherStart =
+        (SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType>) other;
+
+    if (stream.equals(otherStart.stream)) {
+      //Same stream, compare the offset
+      AtomicReference<Boolean> res = new AtomicReference<>(false);
+      partitionSequenceNumberMap.forEach(
+          (partitionId, sequenceOffset) -> {
+            if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && Long.parseLong(String.valueOf(sequenceOffset)) > Long.parseLong(String.valueOf(otherStart.partitionSequenceNumberMap.get(partitionId)))) {
+              res.set(true);
+            }
+          }
+      );
+      if (res.get()) {
+        return 1;
+      }
+      return -1;
+    } else {
+      // Different streams
+      return -1;
     }
   }
 

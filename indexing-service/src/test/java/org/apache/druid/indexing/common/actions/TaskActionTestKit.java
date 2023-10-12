@@ -59,6 +59,11 @@ public class TaskActionTestKit extends ExternalResource
     return taskLockbox;
   }
 
+  public TaskStorage getTaskStorage()
+  {
+    return taskStorage;
+  }
+
   public IndexerMetadataStorageCoordinator getMetadataStorageCoordinator()
   {
     return metadataStorageCoordinator;

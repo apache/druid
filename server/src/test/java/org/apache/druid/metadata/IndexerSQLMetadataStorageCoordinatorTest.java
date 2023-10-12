@@ -680,13 +680,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
-        "happen if you update input topic in a spec without changing the supervisor name. " +
-        "Stored state: [null], " +
-        "Target state: [ObjectMetadata{theObject={foo=bar}}]."), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("org.apache.druid.metadata.RetryTransactionException: Failed to update the metadata Store. " +
+            "The new start metadata: [ObjectMetadata{theObject={foo=bar}}] is ahead of last commited end state: [null]."), result1);
 
     // Should only be tried once.
-    Assert.assertEquals(1, metadataUpdateCounter.get());
+    // The code will retry for this test case as well, So it will be equal to total retries available which is 2.
+    Assert.assertEquals(2, metadataUpdateCounter.get());
   }
 
   @Test

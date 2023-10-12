@@ -32,7 +32,7 @@ import java.util.Map;
     @Type(name = "start", value = SeekableStreamStartSequenceNumbers.class),
     @Type(name = "end", value = SeekableStreamEndSequenceNumbers.class)
 })
-public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
+public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> extends Comparable<SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>>
 {
   /**
    * Returns the stream/topic name.

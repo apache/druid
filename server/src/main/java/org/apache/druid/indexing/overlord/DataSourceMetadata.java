@@ -36,7 +36,7 @@ import java.util.Set;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "object", value = ObjectMetadata.class)
 })
-public interface DataSourceMetadata
+public interface DataSourceMetadata extends Comparable<DataSourceMetadata>
 {
   /**
    * Returns true if this instance should be considered a valid starting point for a new dataSource that has
