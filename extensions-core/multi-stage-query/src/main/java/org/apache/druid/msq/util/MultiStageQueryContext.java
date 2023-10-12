@@ -115,6 +115,9 @@ public class MultiStageQueryContext
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
   static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
+  public static final String CTX_ROWS_PER_PAGE = "rowsPerPage";
+  static final int DEFAULT_ROWS_PER_PAGE = 100000;
+
   public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
   // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
   // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
@@ -237,6 +240,15 @@ public class MultiStageQueryContext
         DEFAULT_ROWS_PER_SEGMENT
     );
   }
+
+  public static int getRowsPerPage(final QueryContext queryContext)
+  {
+    return queryContext.getInt(
+        CTX_ROWS_PER_PAGE,
+        DEFAULT_ROWS_PER_PAGE
+    );
+  }
+
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
