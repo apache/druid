@@ -871,18 +871,18 @@ public class DataSourcesResource
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
-      // dropped means a segment will never be handed off, i.e it completed hand off
-      // init to true, reset to false only if this segment can be loaded by rules
-      boolean dropped = true;
+
+      // A segment that is not eligible for load will never be handed off
+      boolean notEligibleForLoad = true;
       for (Rule rule : rules) {
         if (rule.appliesTo(theInterval, now)) {
           if (rule instanceof LoadRule) {
-            dropped = false;
+            notEligibleForLoad = false;
           }
           break;
         }
       }
-      if (dropped) {
+      if (notEligibleForLoad) {
         return Response.ok(true).build();
       }
 
@@ -894,10 +894,11 @@ public class DataSourcesResource
         return Response.ok(false).build();
       }
 
-      // If the segment being handed off has a lower version than the current chunk's, do not wait.
-      // This can happen when a concurrent replace occurs and there are multiple versions of segments being appended
-      if (!timeline.lookup(Intervals.of(interval)).isEmpty()
-          && timeline.lookup(Intervals.of(interval)).get(0).getVersion().compareTo(version) > 0) {
+      // A segment with version lower than that of the latest chunk might never get handed off
+      // If there are multiple versions of this segment (due to a concurrent replace task),
+      // only the latest version would get handed off
+      List<TimelineObjectHolder<String, SegmentLoadInfo>> timelineObjects = timeline.lookup(Intervals.of(interval));
+      if (!timelineObjects.isEmpty() && timelineObjects.get(0).getVersion().compareTo(version) > 0) {
         return Response.ok(true).build();
       }
 

@@ -265,15 +265,21 @@ public class SupervisorManager
     return false;
   }
 
-  public boolean updatePendingSegmentMapping(
+  /**
+   * Registers a new version of the given pending segment on a supervisor. This
+   * allows the supervisor to include the pending segment in queries fired against
+   * that segment version.
+   */
+  public boolean registerNewVersionOfPendingSegmentOnSupervisor(
       String supervisorId,
-      SegmentIdWithShardSpec rootPendingSegment,
-      SegmentIdWithShardSpec upgradedPendingSegment
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
   )
   {
     try {
       Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
-      Preconditions.checkNotNull(rootPendingSegment, "rootPendingSegment cannot be null");
+      Preconditions.checkNotNull(basePendingSegment, "rootPendingSegment cannot be null");
+      Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion cannot be null");
 
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
@@ -282,7 +288,7 @@ public class SupervisorManager
       }
 
       SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
-      seekableStreamSupervisor.updatePendingSegmentMapping(rootPendingSegment, upgradedPendingSegment);
+      seekableStreamSupervisor.registerNewVersionOfPendingSegment(basePendingSegment, newSegmentVersion);
       return true;
     }
     catch (Exception e) {

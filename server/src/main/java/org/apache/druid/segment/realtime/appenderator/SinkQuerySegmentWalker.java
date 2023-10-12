@@ -69,7 +69,6 @@ import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -95,7 +94,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
-  private final ConcurrentMap<SegmentDescriptor, SegmentDescriptor> newIdToRootPendingSegment
+  private final ConcurrentMap<SegmentDescriptor, SegmentDescriptor> newIdToBasePendingSegment
       = new ConcurrentHashMap<>();
 
   public SinkQuerySegmentWalker(
@@ -188,7 +187,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
         newDescriptor -> {
-          final SegmentDescriptor descriptor = newIdToRootPendingSegment.getOrDefault(newDescriptor, newDescriptor);
+          final SegmentDescriptor descriptor = newIdToBasePendingSegment.getOrDefault(newDescriptor, newDescriptor);
           final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
               descriptor.getInterval(),
               descriptor.getVersion(),
@@ -303,17 +302,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     );
   }
 
-  public void updatePendingSegmentMapping(
-      SegmentIdWithShardSpec rootPendingSegment,
-      List<SegmentIdWithShardSpec> versionsOfPendingSegment
+  public void registerNewVersionOfPendingSegment(
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
   )
   {
-    for (SegmentIdWithShardSpec versionOfPendingSegment : versionsOfPendingSegment) {
-      newIdToRootPendingSegment.put(
-          versionOfPendingSegment.asSegmentId().toDescriptor(),
-          rootPendingSegment.asSegmentId().toDescriptor()
-      );
-    }
+    newIdToBasePendingSegment.put(
+        newSegmentVersion.asSegmentId().toDescriptor(),
+        basePendingSegment.asSegmentId().toDescriptor()
+    );
   }
 
   @VisibleForTesting

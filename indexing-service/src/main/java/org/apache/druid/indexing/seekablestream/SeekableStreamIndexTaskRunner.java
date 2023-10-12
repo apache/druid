@@ -1553,17 +1553,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   @POST
-  @Path("pendingSegmentMapping")
+  @Path("/pendingSegmentVersion")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response updatePendingSegmentMapping(
-      List<SegmentIdWithShardSpec> allVersionsOfPendingSegment,
+  public Response registerNewVersionOfPendingSegment(
+      PendingSegmentVersions pendingSegmentVersions,
       // this field is only for internal purposes, shouldn't be usually set by users
       @Context final HttpServletRequest req
   )
   {
     authorizationCheck(req, Action.WRITE);
-    return updatePendingSegmentMapping(allVersionsOfPendingSegment);
+    return registerNewVersionOfPendingSegment(
+        pendingSegmentVersions.getBaseSegment(),
+        pendingSegmentVersions.getNewVersion()
+    );
   }
 
   public Map<String, Object> doGetRowStats()
@@ -1771,12 +1774,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return Response.ok(sequenceNumbers).build();
   }
 
-  private Response updatePendingSegmentMapping(List<SegmentIdWithShardSpec> allVersionsOfPendingSegment)
+  private Response registerNewVersionOfPendingSegment(
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
+  )
   {
     try {
-      ((StreamAppenderator) appenderator).updatePendingSegmentMapping(
-          allVersionsOfPendingSegment.get(0),
-          allVersionsOfPendingSegment.subList(1, allVersionsOfPendingSegment.size())
+      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(
+          basePendingSegment,
+          newSegmentVersion
       );
       return Response.ok().build();
     }
