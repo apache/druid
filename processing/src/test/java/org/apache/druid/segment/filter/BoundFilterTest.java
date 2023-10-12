@@ -51,8 +51,8 @@ public class BoundFilterTest extends BaseFilterTest
 {
   private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
       .addAll(DEFAULT_ROWS)
-      .add(makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, 6.6, null, 10L))
-      .add(makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, null, 3.0f, null))
+      .add(makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, null, 6.6, null, 10L))
+      .add(makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, "e", null, 3.0f, null))
       .build();
 
   public BoundFilterTest(
@@ -892,7 +892,12 @@ public class BoundFilterTest extends BaseFilterTest
   {
     EqualsVerifier.forClass(BoundFilter.BoundDimFilterDruidPredicateFactory.class)
                   .usingGetClass()
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withIgnoredFields(
+                      "longPredicateSupplier",
+                      "floatPredicateSupplier",
+                      "doublePredicateSupplier",
+                      "isNullUnknown"
+                  )
                   .verify();
   }
 }

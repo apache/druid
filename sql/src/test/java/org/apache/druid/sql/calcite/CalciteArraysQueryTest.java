@@ -5753,9 +5753,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"b"},
             new Object[]{"b"},
             new Object[]{"c"},
-            new Object[]{""},
-            new Object[]{null},
-            new Object[]{null}
+            new Object[]{""}
         )
     );
   }

@@ -76,8 +76,8 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -442,7 +442,7 @@ public class RowBasedGrouperHelper
              );
 
     final ValueMatcher filterMatcher = filter == null
-                                       ? BooleanValueMatcher.of(true)
+                                       ? ValueMatchers.allTrue()
                                        : filter.makeMatcher(columnSelectorFactory);
 
     if (subquery.getUniversalTimestamp() != null
@@ -466,7 +466,7 @@ public class RowBasedGrouperHelper
         }
       }
       rowSupplier.set(row);
-      return filterMatcher.matches();
+      return filterMatcher.matches(false);
     };
   }
 

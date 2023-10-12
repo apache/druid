@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.field;
 
-import com.google.common.base.Predicate;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
@@ -28,6 +27,7 @@ import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -261,9 +261,9 @@ public class StringFieldReader implements FieldReader
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+    public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
     {
-      return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+      return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
     }
 
     @Override
