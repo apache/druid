@@ -513,6 +513,6 @@ public class TransformerTest extends InitializedNullHandlingTest
       }
     });
     Assert.assertEquals(actualTranformedRow.getDimension("dim"), dimList.subList(0, 5));
-    Assert.assertEquals(actualTranformedRow.getRaw("dim"), dimList.subList(0, 5));
+    Assert.assertArrayEquals(dimList.subList(0, 5).toArray(), (Object[]) actualTranformedRow.getRaw("dim"));
   }
 }
