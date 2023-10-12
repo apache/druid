@@ -96,12 +96,6 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public ListenableFuture<Map<String, List<Interval>>> findConflictingLockIntervals(
       List<ConflictingLockRequest> conflictingLockRequests
   )
