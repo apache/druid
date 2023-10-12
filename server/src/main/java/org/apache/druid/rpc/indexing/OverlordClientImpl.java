@@ -189,7 +189,7 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervalsV2(
+  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
       List<LockFilterPolicy> lockFilterPolicies
   )
   {

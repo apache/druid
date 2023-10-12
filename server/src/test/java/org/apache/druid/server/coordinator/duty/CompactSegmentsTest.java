@@ -1093,7 +1093,7 @@ public class CompactSegmentsTest
            .thenReturn(
                Futures.immediateFuture(
                    CloseableIterators.withEmptyBaggage(ImmutableList.of(runningConflictCompactionTask).iterator())));
-    Mockito.when(mockClient.findLockedIntervalsV2(ArgumentMatchers.any()))
+    Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.cancelTask(conflictTaskId))
            .thenReturn(Futures.immediateFuture(null));
@@ -1997,7 +1997,7 @@ public class CompactSegmentsTest
 
 
     @Override
-    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervalsV2(
+    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
         List<LockFilterPolicy> lockFilterPolicies
     )
     {
@@ -2190,7 +2190,7 @@ public class CompactSegmentsTest
     final ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     Mockito.when(mockClient.taskStatuses(null, null, 0))
            .thenReturn(Futures.immediateFuture(CloseableIterators.withEmptyBaggage(Collections.emptyIterator())));
-    Mockito.when(mockClient.findLockedIntervalsV2(ArgumentMatchers.any()))
+    Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())
            .thenReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(0, 0)));

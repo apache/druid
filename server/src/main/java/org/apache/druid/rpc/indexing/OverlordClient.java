@@ -192,7 +192,7 @@ public interface OverlordClient
    * @return Map from datasource name to list of intervals locked by tasks that have a conflicting lock type with
    * priority greater than or equal to the {@code minTaskPriority} for that datasource.
    */
-  ListenableFuture<Map<String, List<Interval>>> findLockedIntervalsV2(
+  ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
       List<LockFilterPolicy> lockFilterPolicies
   );
 

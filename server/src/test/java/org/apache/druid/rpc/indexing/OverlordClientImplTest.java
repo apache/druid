@@ -236,7 +236,7 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         lockMap,
-        overlordClient.findLockedIntervalsV2(requests).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
@@ -257,7 +257,7 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         Collections.emptyMap(),
-        overlordClient.findLockedIntervalsV2(requests).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
