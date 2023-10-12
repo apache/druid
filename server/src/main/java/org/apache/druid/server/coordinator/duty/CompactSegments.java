@@ -279,28 +279,6 @@ public class CompactSegments implements CoordinatorCustomDuty
     return datasourceToLockedIntervals;
   }
 
-  private Map<String, List<Interval>> getLockedIntervalsToSkip(
-      List<DataSourceCompactionConfig> compactionConfigs
-  )
-  {
-    final Map<String, Integer> minTaskPriority = compactionConfigs
-        .stream()
-        .collect(
-            Collectors.toMap(
-                DataSourceCompactionConfig::getDataSource,
-                DataSourceCompactionConfig::getTaskPriority
-            )
-        );
-    final Map<String, List<Interval>> datasourceToLockedIntervals =
-        new HashMap<>(FutureUtils.getUnchecked(overlordClient.findLockedIntervals(minTaskPriority), true));
-    LOG.debug(
-        "Skipping the following intervals for Compaction as they are currently locked: %s",
-        datasourceToLockedIntervals
-    );
-
-    return datasourceToLockedIntervals;
-  }
-
   /**
    * Returns the maximum number of task slots used by one compaction task at any time when the task is issued with
    * the given tuningConfig.
