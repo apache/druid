@@ -564,6 +564,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+    private final boolean hasNull;
 
     public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
@@ -572,6 +573,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     {
       this.extractionFn = extractionFn;
       this.values = values;
+      this.hasNull = values.contains(null);
 
       // As the set of filtered values can be large, parsing them as numbers should be done only if needed, and
       // only once. Pass in a common long predicate supplier to all filters created by .toFilter(), so that we only
@@ -625,6 +627,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       } else {
         return doublePredicateSupplier.get();
       }
+    }
+
+    @Override
+    public boolean isNullInputUnknown()
+    {
+      return !hasNull;
     }
 
     @Override

@@ -28,7 +28,7 @@ public class SelectorPredicateFactoryTest
   public void testEqualsContract()
   {
     EqualsVerifier.forClass(SelectorPredicateFactory.class)
-                  .withIgnoredFields("initLock", "longPredicate", "floatPredicate", "doublePredicate")
+                  .withIgnoredFields("initLock", "longPredicate", "floatPredicate", "doublePredicate", "isNullUnknown")
                   .usingGetClass()
                   .verify();
   }

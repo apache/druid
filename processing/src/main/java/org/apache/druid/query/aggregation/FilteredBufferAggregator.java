@@ -44,7 +44,7 @@ public class FilteredBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (matcher.matches()) {
+    if (matcher.matches(false)) {
       delegate.aggregate(buf, position);
     }
   }

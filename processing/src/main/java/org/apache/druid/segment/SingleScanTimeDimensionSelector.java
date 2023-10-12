@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -77,9 +78,10 @@ public class SingleScanTimeDimensionSelector implements DimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
-        return Objects.equals(lookupName(getDimensionValueIndex()), value);
+        final String rowVal = lookupName(getDimensionValueIndex());
+        return (includeUnknown && rowVal == null) || Objects.equals(rowVal, value);
       }
 
       @Override
@@ -91,21 +93,24 @@ public class SingleScanTimeDimensionSelector implements DimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
   {
+    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
-        return predicate.apply(lookupName(getDimensionValueIndex()));
+        final String rowVal = lookupName(getDimensionValueIndex());
+        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
+        return (matchNull && rowVal == null) || predicate.apply(lookupName(getDimensionValueIndex()));
       }
 
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("selector", SingleScanTimeDimensionSelector.this);
-        inspector.visit("predicate", predicate);
+        inspector.visit("predicate", predicateFactory);
       }
     };
   }

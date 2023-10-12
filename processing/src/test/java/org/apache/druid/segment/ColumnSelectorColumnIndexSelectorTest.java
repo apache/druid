@@ -82,7 +82,7 @@ public class ColumnSelectorColumnIndexSelectorTest
     EasyMock.expect(valueIndex.getBitmap(0)).andReturn(someBitmap).anyTimes();
 
     EasyMock.expect(someIndex.forValue("foo")).andReturn(columnIndex).anyTimes();
-    EasyMock.expect(columnIndex.computeBitmapResult(EasyMock.anyObject())).andReturn(someBitmap).anyTimes();
+    EasyMock.expect(columnIndex.computeBitmapResult(EasyMock.anyObject(), EasyMock.eq(false))).andReturn(someBitmap).anyTimes();
 
     ColumnHolder nonStringHolder = EasyMock.createMock(ColumnHolder.class);
     EasyMock.expect(index.getColumnHolder(NON_STRING_DICTIONARY_COLUMN_NAME)).andReturn(nonStringHolder).anyTimes();
@@ -112,7 +112,8 @@ public class ColumnSelectorColumnIndexSelectorTest
     Assert.assertNotNull(valueIndex);
     ImmutableBitmap valueBitmap = valueIndex.forValue("foo")
                                             .computeBitmapResult(
-                                                new DefaultBitmapResultFactory(indexSelector.getBitmapFactory())
+                                                new DefaultBitmapResultFactory(indexSelector.getBitmapFactory()),
+                                                false
                                             );
     Assert.assertNotNull(valueBitmap);
     EasyMock.verify(bitmapFactory, virtualColumns, index, indexSupplier);
