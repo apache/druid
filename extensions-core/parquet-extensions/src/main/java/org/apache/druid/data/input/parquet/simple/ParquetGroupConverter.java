@@ -314,7 +314,7 @@ public class ParquetGroupConverter
         // convert logical types
         switch (ot) {
           case DATE:
-            long ts = g.getInteger(fieldIndex, index) * MILLIS_IN_DAY;
+            long ts = convertDateToMillis(g.getInteger(fieldIndex, index));
             return ts;
           case TIME_MICROS:
             return g.getLong(fieldIndex, index);
@@ -445,6 +445,20 @@ public class ParquetGroupConverter
     catch (Exception ex) {
       return null;
     }
+  }
+
+  /**
+   * https://github.com/apache/drill/blob/2ab46a9411a52f12a0f9acb1144a318059439bc4/exec/java-exec/src/main/java/org/apache/drill/exec/store/parquet/ParquetReaderUtility.java#L89
+   */
+  public static final long JULIAN_DAY_NUMBER_FOR_UNIX_EPOCH = 2440588;
+  public static final long CORRECT_CORRUPT_DATE_SHIFT = 2 * JULIAN_DAY_NUMBER_FOR_UNIX_EPOCH;
+
+  private long convertDateToMillis(int value)
+  {
+    if(convertCorruptDates) {
+      value -= CORRECT_CORRUPT_DATE_SHIFT;
+    }
+    return value * MILLIS_IN_DAY;
   }
 
   /**

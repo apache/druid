@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SequenceWriter;
 import com.github.rvesse.airline.Cli;
 import com.github.rvesse.airline.annotations.Arguments;
+import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.builder.CliBuilder;
-import com.github.rvesse.airline.help.Help;
 import org.apache.druid.data.input.parquet.simple.ParquetGroupConverter;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
@@ -44,29 +44,27 @@ import java.util.concurrent.Callable;
  * appending ".json" to the old file name. Will overwrite any output file that
  * already exists.
  */
+@Command(name="ParquetToJson")
 public class ParquetToJson implements Callable<Void>
 {
+
+  @Option(name = "--convert-corrupt-dates")
+  public boolean convertCorruptDates = false;
 
   @Arguments(description = "directory")
   public List<String> directories;
 
-  @Option(name = "convert-corrupt-dates")
-  public boolean convertCorruptDates = false;
 
   public static void main(String[] args) throws Exception
   {
     CliBuilder<Callable> builder = Cli.builder("ParquetToJson");
-
-    builder
-        .withDefaultCommand(Help.class)
-        .withCommand(ParquetToJson.class);
-
+    builder.withDefaultCommand(ParquetToJson.class);
     builder.build().parse(args).call();
   }
 
   private File[] getInputFiles()
   {
-    if (directories.size() != 1) {
+    if (directories == null || directories.size() != 1) {
       throw new IAE("Only one directory argument is supported!");
     }
 

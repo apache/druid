@@ -74,6 +74,38 @@ public class ParquetToJsonTest
   }
 
   @Test
+  public void testConvertedDates() throws Exception
+  {
+    final File tmpDir = tmp.newFolder();
+    try (InputStream in = new BufferedInputStream(ClassLoader.getSystemResourceAsStream("smlTbl.parquet"))) {
+      Files.copy(in, tmpDir.toPath().resolve("smlTbl.parquet"));
+    }
+
+    ParquetToJson.main(new String[]{"--convert-corrupt-dates", tmpDir.toString()});
+
+    DefaultObjectMapper mapper = DefaultObjectMapper.INSTANCE;
+    List<Object> objs = mapper.readerFor(Object.class).readValues(new File(tmpDir, "smlTbl.parquet.json")).readAll();
+
+    Assert.assertEquals(56, objs.size());
+    Assert.assertEquals(
+        ImmutableMap
+            .builder()
+            .put("col_int", 8122)
+            .put("col_bgint", 817200)
+            .put("col_char_2", "IN")
+            .put("col_vchar_52", "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB")
+            .put("col_tmstmp", 1409617682418L)
+            .put("col_dt", 984009600000L)
+            .put("col_booln", false)
+            .put("col_dbl", 12900.48)
+            .put("col_tm", 33109170)
+            .build(),
+        objs.get(0)
+    );
+  }
+
+
+  @Test
   public void testInputValidation()
   {
     Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{}));
