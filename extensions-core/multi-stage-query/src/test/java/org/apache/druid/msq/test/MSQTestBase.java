@@ -112,6 +112,7 @@ import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -206,6 +207,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -1348,9 +1350,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
 
         MSQTaskReportPayload payload = getPayloadOrThrow(controllerId);
-        verifyCounters(payload.getCounters());
-        verifyWorkerCount(payload.getCounters());
-
 
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
@@ -1365,24 +1364,36 @@ public class MSQTestBase extends BaseCalciteQueryTest
           } else {
             StageDefinition finalStage = Objects.requireNonNull(SqlStatementResourceHelper.getFinalStage(
                 payload)).getStageDefinition();
-            Closer closer = Closer.create();
-            InputChannelFactory inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
-                controllerId,
-                localFileStorageConnector,
-                closer,
-                true
-            );
-            rows = new FrameChannelSequence(inputChannelFactory.openChannel(
-                finalStage.getId(),
-                0,
-                0
-            )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
-                msqControllerTask,
-                finalStage,
-                frame,
-                objectMapper
-            )).withBaggage(closer).toList();
 
+            Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
+                payload,
+                spec.getDestination()
+            );
+
+            if (!pages.isPresent()) {
+              throw new ISE("No query results found");
+            }
+
+            rows = new ArrayList<>();
+            for (PageInformation pageInformation : pages.get()) {
+              Closer closer = Closer.create();
+              InputChannelFactory inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
+                  controllerId,
+                  localFileStorageConnector,
+                  closer,
+                  true
+              );
+              rows.addAll(new FrameChannelSequence(inputChannelFactory.openChannel(
+                  finalStage.getId(),
+                  pageInformation.getWorker(),
+                  pageInformation.getPartition()
+              )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
+                  msqControllerTask,
+                  finalStage,
+                  frame,
+                  objectMapper
+              )).withBaggage(closer).toList());
+            }
           }
           if (rows == null) {
             throw new ISE("Query successful but no results found");
@@ -1395,6 +1406,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }
 
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
+
+          verifyCounters(payload.getCounters());
+          verifyWorkerCount(payload.getCounters());
+
           return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
         }
       }
