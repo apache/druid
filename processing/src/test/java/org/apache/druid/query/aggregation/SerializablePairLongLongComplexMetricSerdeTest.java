@@ -86,7 +86,7 @@ public class SerializablePairLongLongComplexMetricSerdeTest
       valueList.add(new SerializablePairLongLong(Integer.MAX_VALUE + (long) i, longList.get(i % numLongs)));
     }
 
-    assertExpected(valueList, 80258);
+    assertExpected(valueList, 80509);
   }
 
   @Test
@@ -99,7 +99,7 @@ public class SerializablePairLongLongComplexMetricSerdeTest
       valueList.add(new SerializablePairLongLong(Integer.MAX_VALUE + (long) i, longValue));
     }
 
-    assertExpected(valueList, 80023);
+    assertExpected(valueList, 80274);
   }
 
   @Test
@@ -111,13 +111,13 @@ public class SerializablePairLongLongComplexMetricSerdeTest
       valueList.add(new SerializablePairLongLong(random.nextLong(), random.nextLong()));
     }
 
-    assertExpected(valueList, 200618);
+    assertExpected(valueList, 210967);
   }
 
   @Test
   public void testNullRHS() throws Exception
   {
-    assertExpected(ImmutableList.of(new SerializablePairLongLong(100L, null)), 70);
+    assertExpected(ImmutableList.of(new SerializablePairLongLong(100L, null)), 71);
   }
 
   @Test

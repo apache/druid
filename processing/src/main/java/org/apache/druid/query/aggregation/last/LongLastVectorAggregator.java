@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -32,9 +33,9 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
 {
   long lastValue;
 
-  public LongLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  public LongLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector)
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, SerializablePairLongLong.class);
     lastValue = 0;
   }
 
@@ -44,11 +45,10 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
     buf.putLong(position, 0);
   }
 
-
   @Override
-  void putValue(ByteBuffer buf, int position, int index)
+  void putValue(ByteBuffer buf, int position, Number number)
   {
-    lastValue = valueSelector.getLongVector()[index];
+    lastValue = number.longValue();
     buf.putLong(position, lastValue);
   }
 

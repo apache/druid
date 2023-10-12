@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -35,7 +34,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetri
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -46,7 +45,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -116,7 +117,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       return new DoubleLastAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
-          StringFirstLastUtils.selectorNeedsFoldCheck(
+          FirstLastUtils.selectorNeedsFoldCheck(
               valueSelector,
               metricFactory.getColumnCapabilities(fieldName),
               SerializablePairLongDouble.class
@@ -136,13 +137,26 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       VectorColumnSelectorFactory columnSelectorFactory
   )
   {
+    VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+
     if (Types.isNumeric(capabilities)) {
       VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-      VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
-      return new DoubleLastVectorAggregator(timeSelector, valueSelector);
+      VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
+          columnSelectorFactory.getReadableVectorInspector(),
+          fieldName,
+          valueSelector,
+          capabilities.toColumnType(),
+          ColumnType.DOUBLE
+      );
+      return new DoubleLastVectorAggregator(timeSelector, objectSelector);
+    }
+
+    VectorObjectSelector vSelector = columnSelectorFactory.makeObjectSelector(fieldName);
+    if (capabilities != null) {
+      return new DoubleLastVectorAggregator(timeSelector, vSelector);
     } else {
-      return NilVectorAggregator.of(new SerializablePair<>(0L, NullHandling.defaultDoubleValue()));
+      return NilVectorAggregator.of(NilVectorAggregator.DOUBLE_NIL_PAIR);
     }
   }
 
@@ -156,7 +170,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       return new DoubleLastBufferAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
-          StringFirstLastUtils.selectorNeedsFoldCheck(
+          FirstLastUtils.selectorNeedsFoldCheck(
               valueSelector,
               metricFactory.getColumnCapabilities(fieldName),
               SerializablePairLongDouble.class

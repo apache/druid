@@ -59,7 +59,7 @@ public class SerializablePairLongFloatComplexMetricSerdeTest
   @Test
   public void testSingle() throws Exception
   {
-    assertExpected(ImmutableList.of(new SerializablePairLongFloat(100L, 10F)), 74);
+    assertExpected(ImmutableList.of(new SerializablePairLongFloat(100L, 10F)), 75);
   }
 
   @Test
@@ -69,7 +69,7 @@ public class SerializablePairLongFloatComplexMetricSerdeTest
     assertExpected(ImmutableList.of(new SerializablePairLongFloat(
         100L,
         random.nextFloat()
-    )), 74);
+    )), 75);
   }
 
   @Test
@@ -86,7 +86,7 @@ public class SerializablePairLongFloatComplexMetricSerdeTest
       valueList.add(new SerializablePairLongFloat(Integer.MAX_VALUE + (long) i, floatList.get(i % numLongs)));
     }
 
-    assertExpected(valueList, 80124);
+    assertExpected(valueList, 80418);
   }
 
   @Test
@@ -99,7 +99,7 @@ public class SerializablePairLongFloatComplexMetricSerdeTest
       valueList.add(new SerializablePairLongFloat(Integer.MAX_VALUE + (long) i, floatValue));
     }
 
-    assertExpected(valueList, 79970);
+    assertExpected(valueList, 80260);
   }
 
   @Test
@@ -111,13 +111,13 @@ public class SerializablePairLongFloatComplexMetricSerdeTest
       valueList.add(new SerializablePairLongFloat(random.nextLong(), random.nextFloat()));
     }
 
-    assertExpected(valueList, 160464);
+    assertExpected(valueList, 170749);
   }
 
   @Test
   public void testNullRHS() throws Exception
   {
-    assertExpected(ImmutableList.of(new SerializablePairLongFloat(100L, null)), 70);
+    assertExpected(ImmutableList.of(new SerializablePairLongFloat(100L, null)), 71);
   }
 
   @Test

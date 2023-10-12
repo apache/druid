@@ -241,7 +241,7 @@ public class SerializablePairLongLongBufferStoreTest
         writeOutMedium
     );
 
-    Assert.assertEquals(92, transferredBuffer.getSerializedSize());
+    Assert.assertEquals(94, transferredBuffer.getSerializedSize());
   }
 
   @Test

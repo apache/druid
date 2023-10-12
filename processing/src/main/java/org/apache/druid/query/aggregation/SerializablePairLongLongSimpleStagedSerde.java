@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.common.config.NullHandling;
+
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -42,7 +44,7 @@ public class SerializablePairLongLongSimpleStagedSerde extends AbstractSerializa
     long lhs = readOnlyBuffer.getLong();
 
     Long rhs = null;
-    if (readOnlyBuffer.hasRemaining()) {
+    if (readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE) {
       rhs = readOnlyBuffer.getLong();
     }
 

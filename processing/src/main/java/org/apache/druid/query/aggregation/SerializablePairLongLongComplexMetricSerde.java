@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
@@ -34,6 +33,8 @@ import java.util.Comparator;
 public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializableLongObjectPairSerde<SerializablePairLongLong>
 {
   public static final String TYPE_NAME = "serializablePairLongLong";
+
+  private static final SerializablePairLongLongSimpleStagedSerde SERDE = new SerializablePairLongLongSimpleStagedSerde();
 
   private static final Comparator<SerializablePair<Long, Long>> COMPARATOR = SerializablePair.createNullHandlingComparator(
       Long::compare,
@@ -90,32 +91,17 @@ public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializ
       @Override
       public SerializablePairLongLong fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-        long lhs = readOnlyBuffer.getLong();
-        boolean isNotNull = readOnlyBuffer.get() == NullHandling.IS_NOT_NULL_BYTE;
-        if (isNotNull) {
-          return new SerializablePairLongLong(lhs, readOnlyBuffer.getLong());
-        } else {
-          return new SerializablePairLongLong(lhs, null);
-        }
+        ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
+
+        readOnlyByteBuffer.limit(buffer.position() + numBytes);
+
+        return SERDE.deserialize(readOnlyByteBuffer);
       }
 
       @Override
       public byte[] toBytes(@Nullable SerializablePairLongLong inPair)
       {
-        if (inPair == null) {
-          return new byte[]{};
-        }
-
-        ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Byte.BYTES + Long.BYTES);
-        bbuf.putLong(inPair.lhs);
-        if (inPair.rhs == null) {
-          bbuf.put(NullHandling.IS_NULL_BYTE);
-        } else {
-          bbuf.put(NullHandling.IS_NOT_NULL_BYTE);
-          bbuf.putLong(inPair.rhs);
-        }
-        return bbuf.array();
+        return SERDE.serialize(inPair);
       }
     };
   }

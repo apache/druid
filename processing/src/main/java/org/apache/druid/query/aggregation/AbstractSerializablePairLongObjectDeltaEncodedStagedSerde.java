@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.serde.cell.StorableBuffer;
 
@@ -75,6 +76,7 @@ public abstract class AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<
         }
 
         if (rhsObject != null) {
+          byteBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
           if (pairClass.isAssignableFrom(SerializablePairLongLong.class)) {
             byteBuffer.putLong((long) rhsObject);
           } else if (pairClass.isAssignableFrom(SerializablePairLongDouble.class)) {
@@ -82,6 +84,8 @@ public abstract class AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<
           } else if (pairClass.isAssignableFrom(SerializablePairLongFloat.class)) {
             byteBuffer.putFloat((float) rhsObject);
           }
+        } else {
+          byteBuffer.put(NullHandling.IS_NULL_BYTE);
         }
       }
 
@@ -100,7 +104,7 @@ public abstract class AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<
           }
         }
 
-        return (useIntegerDelta ? Integer.BYTES : Long.BYTES) + rhsBytes;
+        return (useIntegerDelta ? Integer.BYTES : Long.BYTES) + Byte.BYTES + rhsBytes;
       }
     };
   }

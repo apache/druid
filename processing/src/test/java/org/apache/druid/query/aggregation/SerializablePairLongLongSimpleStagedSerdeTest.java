@@ -35,7 +35,7 @@ public class SerializablePairLongLongSimpleStagedSerdeTest
   @Test
   public void testSimple()
   {
-    assertValueEquals(new SerializablePairLongLong(Long.MAX_VALUE, 10L), 16);
+    assertValueEquals(new SerializablePairLongLong(Long.MAX_VALUE, 10L), 17);
   }
 
   @Test
@@ -47,7 +47,7 @@ public class SerializablePairLongLongSimpleStagedSerdeTest
   @Test
   public void testNullString()
   {
-    assertValueEquals(new SerializablePairLongLong(Long.MAX_VALUE, null), 8);
+    assertValueEquals(new SerializablePairLongLong(Long.MAX_VALUE, null), 9);
   }
 
   @Test
@@ -55,7 +55,7 @@ public class SerializablePairLongLongSimpleStagedSerdeTest
   {
     assertValueEquals(
         new SerializablePairLongLong(Long.MAX_VALUE, random.nextLong()),
-        16
+        17
     );
   }
 

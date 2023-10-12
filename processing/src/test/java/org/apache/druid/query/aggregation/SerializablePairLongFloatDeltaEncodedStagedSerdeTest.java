@@ -44,13 +44,13 @@ public class SerializablePairLongFloatDeltaEncodedStagedSerdeTest
   @Test
   public void testSimpleInteger()
   {
-    assertValueEquals(new SerializablePairLongFloat(100L, 10F), 8, INTEGER_SERDE);
+    assertValueEquals(new SerializablePairLongFloat(100L, 10F), 9, INTEGER_SERDE);
   }
 
   @Test
   public void testNullRHSInteger()
   {
-    assertValueEquals(new SerializablePairLongFloat(100L, null), 4, INTEGER_SERDE);
+    assertValueEquals(new SerializablePairLongFloat(100L, null), 5, INTEGER_SERDE);
   }
 
   @Test
@@ -58,7 +58,7 @@ public class SerializablePairLongFloatDeltaEncodedStagedSerdeTest
   {
     assertValueEquals(
         new SerializablePairLongFloat(100L, random.nextFloat()),
-        8,
+        9,
         INTEGER_SERDE
     );
   }
@@ -66,13 +66,13 @@ public class SerializablePairLongFloatDeltaEncodedStagedSerdeTest
   @Test
   public void testSimpleLong()
   {
-    assertValueEquals(new SerializablePairLongFloat(100L, 10F), 12, LONG_SERDE);
+    assertValueEquals(new SerializablePairLongFloat(100L, 10F), 13, LONG_SERDE);
   }
 
   @Test
   public void testNullRHSLong()
   {
-    assertValueEquals(new SerializablePairLongFloat(100L, null), 8, LONG_SERDE);
+    assertValueEquals(new SerializablePairLongFloat(100L, null), 9, LONG_SERDE);
   }
 
   @Test
@@ -80,7 +80,7 @@ public class SerializablePairLongFloatDeltaEncodedStagedSerdeTest
   {
     assertValueEquals(
         new SerializablePairLongFloat(100L, random.nextFloat()),
-        12,
+        13,
         LONG_SERDE
     );
   }

@@ -43,7 +43,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -125,7 +127,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       return new DoubleFirstAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
-          StringFirstLastUtils.selectorNeedsFoldCheck(
+          FirstLastUtils.selectorNeedsFoldCheck(
               valueSelector,
               metricFactory.getColumnCapabilities(fieldName),
               SerializablePairLongDouble.class
@@ -144,7 +146,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       return new DoubleFirstBufferAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
-          StringFirstLastUtils.selectorNeedsFoldCheck(
+          FirstLastUtils.selectorNeedsFoldCheck(
               valueSelector,
               metricFactory.getColumnCapabilities(fieldName),
               SerializablePairLongDouble.class
@@ -158,12 +160,24 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
       VectorColumnSelectorFactory columnSelectorFactory
   )
   {
+    VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+
     if (Types.isNumeric(capabilities)) {
       VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-      VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(
-          timeColumn);
-      return new DoubleFirstVectorAggregator(timeSelector, valueSelector);
+      VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
+          columnSelectorFactory.getReadableVectorInspector(),
+          fieldName,
+          valueSelector,
+          capabilities.toColumnType(),
+          ColumnType.DOUBLE
+      );
+      return new DoubleFirstVectorAggregator(timeSelector, objectSelector);
+    }
+
+    VectorObjectSelector vSelector = columnSelectorFactory.makeObjectSelector(fieldName);
+    if (capabilities != null) {
+      return new DoubleFirstVectorAggregator(timeSelector, vSelector);
     }
     return NilVectorAggregator.of(NilVectorAggregator.DOUBLE_NIL_PAIR);
   }

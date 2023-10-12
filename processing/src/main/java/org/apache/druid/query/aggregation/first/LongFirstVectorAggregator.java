@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -27,9 +28,9 @@ import java.nio.ByteBuffer;
 
 public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
 {
-  public LongFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  public LongFirstVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector)
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, SerializablePairLongLong.class);
   }
 
   @Override
@@ -38,14 +39,12 @@ public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
     buf.putLong(position, 0);
   }
 
-
   @Override
-  void putValue(ByteBuffer buf, int position, int index)
+  void putValue(ByteBuffer buf, int position, Number number)
   {
-    long firstValue = valueSelector.getLongVector()[index];
+    long firstValue = number.longValue();
     buf.putLong(position, firstValue);
   }
-
 
   /**
    * @return The object as a pair with the position and the value stored at the position in the buffer.

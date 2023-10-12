@@ -19,8 +19,11 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -33,15 +36,18 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
 {
   static final int NULL_OFFSET = Long.BYTES;
   static final int VALUE_OFFSET = NULL_OFFSET + Byte.BYTES;
-  final VectorValueSelector valueSelector;
+  final VectorObjectSelector valueSelector;
+  private final Class<?> pairClass;
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final VectorValueSelector timeSelector;
   private long lastTime;
 
-  public NumericLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+
+  NumericLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector, Class<?> pairClass)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
+    this.pairClass = pairClass;
     lastTime = Long.MIN_VALUE;
   }
 
@@ -56,13 +62,17 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
+    if (timeSelector == null) {
+      return;
+    }
+
     final long[] timeVector = timeSelector.getLongVector();
-    final boolean[] nullValueVector = valueSelector.getNullVector();
+    final Object[] objectsWhichMightBeNumeric = valueSelector.getObjectVector();
+    final boolean[] nullValueVector = FirstLastUtils.getNullVector(objectsWhichMightBeNumeric);
+
     boolean nullAbsent = false;
     lastTime = buf.getLong(position);
-    //check if nullVector is found or not
-    // the nullVector is null if no null values are found
-    // set the nullAbsent flag accordingly
+
     if (nullValueVector == null) {
       nullAbsent = true;
     }
@@ -79,14 +89,26 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
       }
     }
 
-    //find the first non-null value
-    final long latestTime = timeVector[index];
-    if (latestTime >= lastTime) {
-      lastTime = latestTime;
-      if (useDefault || nullValueVector == null || !nullValueVector[index]) {
-        updateTimeWithValue(buf, position, lastTime, index);
-      } else {
-        updateTimeWithNull(buf, position, lastTime);
+    final boolean foldNeeded = FirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeNumeric[index], pairClass);
+    if (foldNeeded) {
+      final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[index];
+      if (inPair.lhs >= lastTime) {
+        lastTime = inPair.lhs;
+        if (useDefault || inPair.rhs != null) {
+          updateTimeWithValue(buf, position, lastTime, inPair.getRhs());
+        } else {
+          updateTimeWithNull(buf, position, lastTime);
+        }
+      }
+    } else {
+      final long latestTime = timeVector[index];
+      if (latestTime >= lastTime) {
+        lastTime = latestTime;
+        if (useDefault || nullValueVector == null || !nullValueVector[index]) {
+          updateTimeWithValue(buf, position, lastTime, (Number) objectsWhichMightBeNumeric[index]);
+        } else {
+          updateTimeWithNull(buf, position, lastTime);
+        }
       }
     }
   }
@@ -113,21 +135,47 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
+    if (timeSelector == null) {
+      return;
+    }
 
-    boolean[] nulls = useDefault ? null : valueSelector.getNullVector();
-    long[] timeVector = timeSelector.getLongVector();
+    final long[] timeVector = timeSelector.getLongVector();
+
+    final Object[] objectsWhichMightBeNumeric = valueSelector.getObjectVector();
+    boolean[] nulls = useDefault ? null : FirstLastUtils.getNullVector(objectsWhichMightBeNumeric);
+
+    boolean foldNeeded = false;
+    for (Object obj : objectsWhichMightBeNumeric) {
+      if (obj != null) {
+        foldNeeded = FirstLastUtils.objectNeedsFoldCheck(obj, pairClass);
+        break;
+      }
+    }
 
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long lastTime = buf.getLong(position);
-      if (timeVector[row] >= lastTime) {
-        if (useDefault || nulls == null || !nulls[row]) {
-          updateTimeWithValue(buf, position, timeVector[row], row);
-        } else {
-          updateTimeWithNull(buf, position, timeVector[row]);
+
+      if (foldNeeded) {
+        final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[row];
+        if (inPair.lhs >= lastTime) {
+          if (useDefault || inPair.rhs != null) {
+            updateTimeWithValue(buf, position, inPair.lhs, inPair.rhs);
+          } else {
+            updateTimeWithNull(buf, position, inPair.lhs);
+          }
+        }
+      } else {
+        if (timeVector[row] >= lastTime) {
+          if (useDefault || nulls == null || !nulls[row]) {
+            updateTimeWithValue(buf, position, timeVector[row], (Number) objectsWhichMightBeNumeric[row]);
+          } else {
+            updateTimeWithNull(buf, position, timeVector[row]);
+          }
         }
       }
+
     }
   }
 
@@ -136,13 +184,13 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
    * @param buf         byte buffer storing the byte array representation of the aggregate
    * @param position    offset within the byte buffer at which the current aggregate value is stored
    * @param time        the time to be updated in the buffer as the last time
-   * @param index       the index of the vectorized vector which is the last value
+   * @param number      number which is the last value
    */
-  void updateTimeWithValue(ByteBuffer buf, int position, long time, int index)
+  void updateTimeWithValue(ByteBuffer buf, int position, long time, Number number)
   {
     buf.putLong(position, time);
     buf.put(position + NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-    putValue(buf, position + VALUE_OFFSET, index);
+    putValue(buf, position + VALUE_OFFSET, number);
   }
 
   /**
@@ -166,7 +214,7 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
    *Abstract function which needs to be overridden by subclasses to set the
    * latest value in the buffer depending on the datatype
    */
-  abstract void putValue(ByteBuffer buf, int position, int index);
+  abstract void putValue(ByteBuffer buf, int position, Number number);
 
   @Override
   public void close()

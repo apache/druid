@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.serde.cell.StorableBuffer;
 
@@ -57,6 +58,7 @@ public abstract class AbstractSerializablePairLongObjectSimpleStagedSerde<T exte
         Preconditions.checkNotNull(value.getLhs(), String.format(Locale.ENGLISH, "Long in %s must be non-null", pairCLass.getSimpleName()));
         byteBuffer.putLong(value.getLhs());
         if (rhsObject != null) {
+          byteBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
           if (pairCLass.isAssignableFrom(SerializablePairLongLong.class)) {
             byteBuffer.putLong((long) rhsObject);
           } else if (pairCLass.isAssignableFrom(SerializablePairLongDouble.class)) {
@@ -64,6 +66,8 @@ public abstract class AbstractSerializablePairLongObjectSimpleStagedSerde<T exte
           } else if (pairCLass.isAssignableFrom(SerializablePairLongFloat.class)) {
             byteBuffer.putFloat((float) rhsObject);
           }
+        } else {
+          byteBuffer.put(NullHandling.IS_NULL_BYTE);
         }
       }
 
@@ -81,7 +85,7 @@ public abstract class AbstractSerializablePairLongObjectSimpleStagedSerde<T exte
             rhsBytes = Float.BYTES;
           }
         }
-        return Long.BYTES + rhsBytes;
+        return Long.BYTES + Byte.BYTES + rhsBytes;
       }
     };
   }
