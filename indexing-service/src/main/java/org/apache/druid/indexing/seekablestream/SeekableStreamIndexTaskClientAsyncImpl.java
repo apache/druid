@@ -69,7 +69,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -196,24 +195,17 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
   }
 
   @Override
-  public ListenableFuture<Boolean> updatePendingSegmentMappingAsync(
-      String id,
-      SegmentIdWithShardSpec rootPendingSegment,
-      Set<SegmentIdWithShardSpec> versionsOfPendingSegment
+  public ListenableFuture<Boolean> registerNewVersionOfPendingSegmentAsync(
+      String taskId,
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newVersionOfSegment
   )
   {
-    if (versionsOfPendingSegment.isEmpty()) {
-      return Futures.immediateFuture(true);
-    }
-    final List<SegmentIdWithShardSpec> allVersionsOfPendingSegment = new ArrayList<>();
-    allVersionsOfPendingSegment.add(rootPendingSegment);
-    allVersionsOfPendingSegment.addAll(versionsOfPendingSegment);
-    final RequestBuilder requestBuilder = new RequestBuilder(
-        HttpMethod.POST,
-        "/pendingSegmentMapping"
-    ).jsonContent(jsonMapper, allVersionsOfPendingSegment);
+    final RequestBuilder requestBuilder
+        = new RequestBuilder(HttpMethod.POST, "/pendingSegmentVersion")
+        .jsonContent(jsonMapper, new PendingSegmentVersions(basePendingSegment, newVersionOfSegment));
 
-    return makeRequest(id, requestBuilder)
+    return makeRequest(taskId, requestBuilder)
         .handler(IgnoreHttpResponseHandler.INSTANCE)
         .onSuccess(r -> true)
         .go();

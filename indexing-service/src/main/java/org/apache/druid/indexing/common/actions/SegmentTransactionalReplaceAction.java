@@ -153,7 +153,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
     upgradedPendingSegments.forEach(
         (oldId, newId) -> toolbox.getSupervisorManager()
-                                 .updatePendingSegmentMapping(activeSupervisorId.get(), oldId, newId)
+                                 .registerNewVersionOfPendingSegmentOnSupervisor(activeSupervisorId.get(), oldId, newId)
     );
   }
 

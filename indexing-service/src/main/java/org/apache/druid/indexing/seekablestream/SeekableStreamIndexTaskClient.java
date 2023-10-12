@@ -27,7 +27,6 @@ import org.joda.time.DateTime;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>
@@ -159,15 +158,15 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    * Update the task state to redirect queries for later versions to the root pending segment.
    * The task also announces that it is serving the segments belonging to the subsequent versions.
    * The update is processed only if the task is serving the original pending segment.
-   * @param id - task id
-   * @param rootPendingSegment - the pending segment that was originally allocated
-   * @param versionsOfPendingSegment - the ids belonging to the versions to which the root segment needs to be updated
+   * @param taskId - task id
+   * @param basePendingSegment - the pending segment that was originally allocated
+   * @param newVersionOfSegment - the ids belonging to the versions to which the root segment needs to be updated
    * @return true if the update succeeds
    */
-  ListenableFuture<Boolean> updatePendingSegmentMappingAsync(
-      String id,
-      SegmentIdWithShardSpec rootPendingSegment,
-      Set<SegmentIdWithShardSpec> versionsOfPendingSegment
+  ListenableFuture<Boolean> registerNewVersionOfPendingSegmentAsync(
+      String taskId,
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newVersionOfSegment
   );
 
   Class<PartitionIdType> getPartitionType();

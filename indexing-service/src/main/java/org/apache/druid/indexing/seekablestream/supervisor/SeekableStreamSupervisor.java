@@ -1093,28 +1093,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
-  public void updatePendingSegmentMapping(
-      SegmentIdWithShardSpec rootPendingSegment,
-      SegmentIdWithShardSpec upgradedPendingSegment
+  public void registerNewVersionOfPendingSegment(
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
   )
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (String taskId : taskGroup.taskIds()) {
-        taskClient.updatePendingSegmentMappingAsync(
-            taskId,
-            rootPendingSegment,
-            Collections.singleton(upgradedPendingSegment)
-        );
+        taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
       }
     }
     for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
       for (TaskGroup taskGroup : taskGroupList) {
         for (String taskId : taskGroup.taskIds()) {
-          taskClient.updatePendingSegmentMappingAsync(
-              taskId,
-              rootPendingSegment,
-              Collections.singleton(upgradedPendingSegment)
-          );
+          taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
         }
       }
     }

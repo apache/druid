@@ -1059,36 +1059,35 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
-  public void updatePendingSegmentMapping(
-      SegmentIdWithShardSpec rootPendingSegment,
-      List<SegmentIdWithShardSpec> versionsOfPendingSegment
+  public void registerNewVersionOfPendingSegment(
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
   ) throws IOException
   {
-    if (!sinks.containsKey(rootPendingSegment) || droppingSinks.contains(rootPendingSegment)) {
+    if (!sinks.containsKey(basePendingSegment) || droppingSinks.contains(basePendingSegment)) {
       return;
     }
 
     // Update query mapping with SinkQuerySegmentWalker
-    ((SinkQuerySegmentWalker) texasRanger).updatePendingSegmentMapping(rootPendingSegment, versionsOfPendingSegment);
+    ((SinkQuerySegmentWalker) texasRanger).registerNewVersionOfPendingSegment(basePendingSegment, newSegmentVersion);
 
     // Announce segments
-    rootPendingSegmentToNewerVersions.putIfAbsent(rootPendingSegment.asSegmentId(), new HashSet<>());
-    final DataSegment rootSegment = sinks.get(rootPendingSegment).getSegment();
-    for (SegmentIdWithShardSpec idWithShardSpec : versionsOfPendingSegment) {
-      final DataSegment newSegment = new DataSegment(
-          idWithShardSpec.getDataSource(),
-          idWithShardSpec.getInterval(),
-          idWithShardSpec.getVersion(),
-          rootSegment.getLoadSpec(),
-          rootSegment.getDimensions(),
-          rootSegment.getMetrics(),
-          idWithShardSpec.getShardSpec(),
-          rootSegment.getBinaryVersion(),
-          rootSegment.getSize()
-      );
-      segmentAnnouncer.announceSegment(newSegment);
-      rootPendingSegmentToNewerVersions.get(rootPendingSegment.asSegmentId()).add(idWithShardSpec);
-    }
+    rootPendingSegmentToNewerVersions.putIfAbsent(basePendingSegment.asSegmentId(), new HashSet<>());
+    final DataSegment rootSegment = sinks.get(basePendingSegment).getSegment();
+
+    final DataSegment newSegment = new DataSegment(
+        newSegmentVersion.getDataSource(),
+        newSegmentVersion.getInterval(),
+        newSegmentVersion.getVersion(),
+        rootSegment.getLoadSpec(),
+        rootSegment.getDimensions(),
+        rootSegment.getMetrics(),
+        newSegmentVersion.getShardSpec(),
+        rootSegment.getBinaryVersion(),
+        rootSegment.getSize()
+    );
+    segmentAnnouncer.announceSegment(newSegment);
+    rootPendingSegmentToNewerVersions.get(basePendingSegment.asSegmentId()).add(newSegmentVersion);
   }
 
   private void lockBasePersistDirectory()
