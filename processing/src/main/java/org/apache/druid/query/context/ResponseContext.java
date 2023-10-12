@@ -745,6 +745,12 @@ public abstract class ResponseContext
     addValue(Keys.CPU_CONSUMED_NANOS, ns);
   }
 
+
+  public void addSamplingComposition(String samplingComposition)
+  {
+    addValue(Keys.SAMPLING_COMPOSITION, samplingComposition);
+  }
+
   private Object addValue(Key key, Object value)
   {
     return getDelegate().merge(key, value, key::mergeValues);

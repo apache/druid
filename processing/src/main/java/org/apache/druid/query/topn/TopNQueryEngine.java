@@ -132,7 +132,7 @@ public class TopNQueryEngine
 
 
     final TopNAlgorithm<?, ?> topNAlgorithm;
-    if (canUsePooledAlgorithm(selector,  query, columnCapabilities)) {
+    if (canUsePooledAlgorithm(selector, query, columnCapabilities)) {
       // pool based algorithm selection, if we can
       if (selector.isAggregateAllMetrics()) {
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
