@@ -176,7 +176,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     // Skip all the intervals locked by higher priority tasks for each datasource
     // This must be done after the invalid compaction tasks are cancelled
     // in the loop above so that their intervals are not considered locked
-    getLockedIntervalsV2(compactionConfigList).forEach(
+    getLockedIntervals(compactionConfigList).forEach(
         (dataSource, intervals) ->
             intervalsToSkipCompaction
                 .computeIfAbsent(dataSource, ds -> new ArrayList<>())
@@ -261,7 +261,7 @@ public class CompactSegments implements CoordinatorCustomDuty
    *   higher priority Task</li>
    * </ul>
    */
-  private Map<String, List<Interval>> getLockedIntervalsV2(
+  private Map<String, List<Interval>> getLockedIntervals(
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {

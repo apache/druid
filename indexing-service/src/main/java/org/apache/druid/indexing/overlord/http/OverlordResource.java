@@ -277,7 +277,7 @@ public class OverlordResource
   }
 
   @POST
-  @Path("/getLockedIntervals/v2")
+  @Path("/lockedIntervals/v2")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
   public Response getDatasourceLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
