@@ -20,12 +20,15 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.curator.shaded.com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContexts;
 import org.joda.time.DateTimeZone;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class PlannerConfig
 {
@@ -339,51 +342,71 @@ public class PlannerConfig
       return this;
     }
 
-    public Builder withOverrides(final Map<String, Object> queryContext)
+    public Builder withOverrides(final Map<String, Object> overrideContext)
     {
+      Set<String> validKeys=new HashSet<>();
       useApproximateCountDistinct = QueryContexts.parseBoolean(
-          queryContext,
+          overrideContext,
           CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
           useApproximateCountDistinct
       );
+      validKeys.add(CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT);
+
       useGroupingSetForExactDistinct = QueryContexts.parseBoolean(
-          queryContext,
+          overrideContext,
           CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
           useGroupingSetForExactDistinct
       );
+      validKeys.add(CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT);
+
       useApproximateTopN = QueryContexts.parseBoolean(
-          queryContext,
+          overrideContext,
           CTX_KEY_USE_APPROXIMATE_TOPN,
           useApproximateTopN
       );
+      validKeys.add(CTX_KEY_USE_APPROXIMATE_TOPN);
+
       computeInnerJoinCostAsFilter = QueryContexts.parseBoolean(
-          queryContext,
+          overrideContext,
           CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
           computeInnerJoinCostAsFilter
       );
+      validKeys.add(CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER);
+
       useNativeQueryExplain = QueryContexts.parseBoolean(
-          queryContext,
+          overrideContext,
           CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
           useNativeQueryExplain
       );
+      validKeys.add(CTX_KEY_USE_NATIVE_QUERY_EXPLAIN);
+
       forceExpressionVirtualColumns = QueryContexts.parseBoolean(
-          queryContext,
+          overrideContext,
           CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS,
           forceExpressionVirtualColumns
       );
+      validKeys.add(CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS);
+
       final int queryContextMaxNumericInFilters = QueryContexts.parseInt(
-          queryContext,
+          overrideContext,
           CTX_MAX_NUMERIC_IN_FILTERS,
           maxNumericInFilters
       );
+      validKeys.add(CTX_MAX_NUMERIC_IN_FILTERS);
       maxNumericInFilters = validateMaxNumericInFilters(
           queryContextMaxNumericInFilters,
           maxNumericInFilters);
       nativeQuerySqlPlanningMode = QueryContexts.parseString(
-          queryContext,
+          overrideContext,
           CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
           nativeQuerySqlPlanningMode
       );
+      validKeys.add(CTX_NATIVE_QUERY_SQL_PLANNING_MODE);
+
+      Set<String> difference = Sets.difference(overrideContext.keySet(), validKeys);
+      if (!difference.isEmpty()) {
+        throw new RuntimeException("Invalid override keys were passed to this builder!" + difference);
+      }
       return this;
     }
 
