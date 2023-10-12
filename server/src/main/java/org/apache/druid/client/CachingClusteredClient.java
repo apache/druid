@@ -519,7 +519,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           int allShards = segments.stream()
               .mapToInt(s -> s.getSegmentDescriptor().getPartitionNumber()).max().getAsInt();
           int targetShards = Math.round(
-              allShards * ((SampledTableDataSource) query.getDataSource()).getSamplingPercentage());
+              allShards * ((SampledTableDataSource) query.getDataSource()).getSamplingPercentage()) / 100;
           Iterator<SegmentServerSelector> iterator = segments.iterator();
           int removedSegments = 0;
           while (iterator.hasNext()) {
