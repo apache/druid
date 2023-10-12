@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.scan;
 
-import com.google.common.base.Predicate;
 import com.google.common.math.IntMath;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -86,12 +86,12 @@ public class ConcatCursor implements Cursor
           }
 
           @Override
-          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+          public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
           {
             return cursors.get(currentCursor)
                           .getColumnSelectorFactory()
                           .makeDimensionSelector(dimensionSpec)
-                          .makeValueMatcher(predicate);
+                          .makeValueMatcher(predicateFactory);
           }
 
           @Override
