@@ -19,8 +19,6 @@
 
 package org.apache.druid.storage.cloudfiles;
 
-import org.easymock.EasyMock;
-import org.easymock.EasyMockSupport;
 import org.jclouds.io.Payload;
 import org.junit.Assert;
 import org.junit.Test;
@@ -28,30 +26,35 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class CloudFilesByteSourceTest extends EasyMockSupport
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+public class CloudFilesByteSourceTest
 {
   @Test
   public void openStreamTest() throws IOException
   {
     final String path = "path";
 
-    CloudFilesObjectApiProxy objectApi = createMock(CloudFilesObjectApiProxy.class);
-    CloudFilesObject cloudFilesObject = createMock(CloudFilesObject.class);
-    Payload payload = createMock(Payload.class);
-    InputStream stream = createMock(InputStream.class);
+    CloudFilesObjectApiProxy objectApi = mock(CloudFilesObjectApiProxy.class);
+    CloudFilesObject cloudFilesObject = mock(CloudFilesObject.class);
+    Payload payload = mock(Payload.class);
+    InputStream stream = mock(InputStream.class);
 
-    EasyMock.expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
-    EasyMock.expect(cloudFilesObject.getPayload()).andReturn(payload);
-    EasyMock.expect(payload.openStream()).andReturn(stream);
+    when(objectApi.get(path, 0)).thenReturn(cloudFilesObject);
+    when(cloudFilesObject.getPayload()).thenReturn(payload);
+    when(payload.openStream()).thenReturn(stream);
     payload.close();
-
-    replayAll();
 
     CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
     Assert.assertEquals(stream, byteSource.openStream());
     byteSource.closeStream();
 
-    verifyAll();
+    verify(objectApi).get(path, 0);
+    verify(cloudFilesObject).getPayload();
+    verify(payload).openStream();
   }
 
   @Test()
@@ -59,17 +62,16 @@ public class CloudFilesByteSourceTest extends EasyMockSupport
   {
     final String path = "path";
 
-    CloudFilesObjectApiProxy objectApi = createMock(CloudFilesObjectApiProxy.class);
-    CloudFilesObject cloudFilesObject = createMock(CloudFilesObject.class);
-    Payload payload = createMock(Payload.class);
-    InputStream stream = createMock(InputStream.class);
+    CloudFilesObjectApiProxy objectApi = mock(CloudFilesObjectApiProxy.class);
+    CloudFilesObject cloudFilesObject = mock(CloudFilesObject.class);
+    Payload payload = mock(Payload.class);
+    InputStream stream = mock(InputStream.class);
 
-    EasyMock.expect(objectApi.get(path, 0)).andReturn(cloudFilesObject);
-    EasyMock.expect(cloudFilesObject.getPayload()).andReturn(payload);
-    EasyMock.expect(payload.openStream()).andThrow(new IOException()).andReturn(stream);
+    when(objectApi.get(path, 0)).thenReturn(cloudFilesObject);
+    when(cloudFilesObject.getPayload()).thenReturn(payload);
+    when(payload.openStream()).thenThrow(new IOException())
+                              .thenReturn(stream);
     payload.close();
-
-    replayAll();
 
     CloudFilesByteSource byteSource = new CloudFilesByteSource(objectApi, path);
     try {
@@ -82,6 +84,8 @@ public class CloudFilesByteSourceTest extends EasyMockSupport
     Assert.assertEquals(stream, byteSource.openStream());
     byteSource.closeStream();
 
-    verifyAll();
+    verify(objectApi).get(path, 0);
+    verify(cloudFilesObject).getPayload();
+    verify(payload, times(2)).openStream();
   }
 }

@@ -21,21 +21,19 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
-import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
+import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
@@ -67,8 +65,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
         final FieldTypeInfo fieldInfo;
         final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
         final ImmutableBitmap nullValues;
-        final GenericIndexed<ByteBuffer> stringDictionary;
-        final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
+        final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
         final Supplier<FixedIndexed<Long>> longDictionarySupplier;
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
@@ -82,34 +79,12 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
             NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
         );
 
-        final int dictionaryStartPosition = stringDictionaryBuffer.position();
-        final byte dictionaryVersion = stringDictionaryBuffer.get();
+        stringDictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+            mapper,
+            stringDictionaryBuffer,
+            byteOrder
+        );
 
-        if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
-          final byte encodingId = stringDictionaryBuffer.get();
-          if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
-            frontCodedStringDictionarySupplier = FrontCodedIndexed.read(
-                stringDictionaryBuffer,
-                byteOrder
-            );
-            stringDictionary = null;
-          } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
-            // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
-            // this provides backwards compatibility should we switch at some point in the future to always
-            // writing dictionaryVersion
-            stringDictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
-            frontCodedStringDictionarySupplier = null;
-          } else {
-            throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
-          }
-        } else {
-          // legacy format that only supports plain utf8 enoding stored in GenericIndexed and the byte we are reading
-          // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
-          // GenericIndexed version can be correctly read
-          stringDictionaryBuffer.position(dictionaryStartPosition);
-          stringDictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
-          frontCodedStringDictionarySupplier = null;
-        }
         final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
@@ -173,8 +148,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
             fieldInfo,
             compressedRawColumnSupplier,
             nullValues,
-            stringDictionary,
-            frontCodedStringDictionarySupplier,
+            stringDictionarySupplier,
             longDictionarySupplier,
             doubleDictionarySupplier,
             arrayDictionarySupplier,
@@ -198,8 +172,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   private final FieldTypeInfo fieldInfo;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
-  private final GenericIndexed<ByteBuffer> stringDictionary;
-  private final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
+  private final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
@@ -217,8 +190,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
       FieldTypeInfo fieldInfo,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
-      GenericIndexed<ByteBuffer> stringDictionary,
-      Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier,
+      Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
@@ -234,8 +206,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
     this.fieldInfo = fieldInfo;
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
     this.nullValues = nullValues;
-    this.stringDictionary = stringDictionary;
-    this.frontCodedStringDictionarySupplier = frontCodedStringDictionarySupplier;
+    this.stringDictionarySupplier = stringDictionarySupplier;
     this.longDictionarySupplier = longDictionarySupplier;
     this.doubleDictionarySupplier = doubleDictionarySupplier;
     this.arrayDictionarySupplier = arrayDictionarySupplier;
@@ -249,24 +220,6 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   @Override
   public NestedCommonFormatColumn get()
   {
-    if (frontCodedStringDictionarySupplier != null) {
-      return new NestedDataColumnV5<>(
-          columnName,
-          getLogicalType(),
-          columnConfig,
-          compressedRawColumnSupplier,
-          nullValues,
-          fields,
-          fieldInfo,
-          frontCodedStringDictionarySupplier,
-          longDictionarySupplier,
-          doubleDictionarySupplier,
-          arrayDictionarySupplier,
-          fileMapper,
-          bitmapSerdeFactory,
-          byteOrder
-      );
-    }
     return new NestedDataColumnV5<>(
         columnName,
         getLogicalType(),
@@ -275,7 +228,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
         nullValues,
         fields,
         fieldInfo,
-        stringDictionary::singleThreaded,
+        stringDictionarySupplier,
         longDictionarySupplier,
         doubleDictionarySupplier,
         arrayDictionarySupplier,

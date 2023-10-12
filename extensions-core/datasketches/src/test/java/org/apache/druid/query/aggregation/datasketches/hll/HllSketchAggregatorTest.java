@@ -89,7 +89,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
       for (String vectorize : new String[]{"false", "force"}) {
         for (StringEncoding stringEncoding : StringEncoding.values()) {
-          if (!("v1".equals(config.getDefaultStrategy()) && "force".equals(vectorize))) {
+          if (!("force".equals(vectorize))) {
             constructors.add(new Object[]{config, vectorize, stringEncoding});
           }
         }

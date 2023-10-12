@@ -370,7 +370,6 @@ public class ProtobufInputFormatTest
     Assert.assertEquals(
         ImmutableList.of(
             "someOtherId",
-            "bar",
             "someIntColumn",
             "isValid",
             "foo",
@@ -378,6 +377,7 @@ public class ProtobufInputFormatTest
             "someLongColumn",
             "someFloatColumn",
             "eventType",
+            "bar",
             "id",
             "someBytesColumn"
         ),

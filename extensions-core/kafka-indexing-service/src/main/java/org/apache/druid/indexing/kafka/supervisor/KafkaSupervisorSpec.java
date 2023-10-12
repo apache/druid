@@ -33,9 +33,9 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -114,7 +114,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
   @Override
   public String getSource()
   {
-    return getIoConfig() != null ? getIoConfig().getTopic() : null;
+    return getIoConfig() != null ? getIoConfig().getStream() : null;
   }
 
   @Override

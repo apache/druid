@@ -53,7 +53,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
@@ -63,6 +62,7 @@ import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAn
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.LinearPartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.PartitionAnalysis;
+import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -133,14 +133,13 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
-
-
 
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
@@ -253,8 +252,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
     );
   }
 
@@ -504,7 +502,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                                         .inputIntervals()
                                                         .isEmpty();
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getInputSource();
+      final InputSource inputSource = ingestionSchema.getIOConfig()
+                                                     .getNonNullInputSource(toolbox);
 
       final File tmpDir = toolbox.getIndexingTmpDir();
 
@@ -523,7 +522,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final DataSchema dataSchema;
       if (determineIntervals) {
         final boolean gotLocks = determineLockGranularityAndTryLock(
-            toolbox.getTaskActionClient(), allocateIntervals, ingestionSchema.getIOConfig()
+            toolbox.getTaskActionClient(),
+            allocateIntervals
         );
         if (!gotLocks) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
@@ -911,9 +911,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
-        toolbox.getTaskActionClient()
-               .submit(SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish));
+    final TransactionalSegmentPublisher publisher =
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
+            toolbox.getTaskActionClient().submit(buildPublishAction(segmentsToBeOverwritten, segmentsToPublish));
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
     if (effectiveId == null) {
@@ -979,8 +979,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         for (Interval interval : tombstoneIntervals) {
           SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
               ingestionSchema,
-              interval.getStart(),
-              toolbox
+              interval.getStart()
           );
           tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
         }
@@ -995,7 +994,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final SegmentsAndCommitMetadata published =
           awaitPublish(driver.publishAll(
               inputSegments,
-              null,
               tombStones,
               publisher,
               annotateFunction
@@ -1149,6 +1147,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
+    private final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
     private final InputFormat inputFormat;
     private boolean appendToExisting;
     private boolean dropExisting;
@@ -1199,6 +1198,24 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return inputSource;
     }
 
+    public InputSource getNonNullInputSource()
+    {
+      return Preconditions.checkNotNull(inputSource, "inputSource");
+    }
+
+    public InputSource getNonNullInputSource(TaskToolbox toolbox)
+    {
+      Preconditions.checkNotNull(inputSource, "inputSource");
+      if (inputSourceWithToolbox.get() == null) {
+        if (inputSource instanceof TaskInputSource) {
+          inputSourceWithToolbox.set(((TaskInputSource) inputSource).withTaskToolbox(toolbox));
+        } else {
+          inputSourceWithToolbox.set(inputSource);
+        }
+      }
+      return inputSourceWithToolbox.get();
+    }
+
     /**
      * Returns {@link InputFormat}. Can be null if {@link DataSchema#parserMap} is specified.
      * Also can be null in {@link InputSourceSampler}.
@@ -1209,11 +1226,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public InputFormat getInputFormat()
     {
       return inputFormat;
-    }
-
-    public InputSource getNonNullInputSource()
-    {
-      return Preconditions.checkNotNull(inputSource, "inputSource");
     }
 
     public InputFormat getNonNullInputFormat()

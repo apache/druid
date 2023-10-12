@@ -107,16 +107,6 @@ public class QueryContext
   }
 
   /**
-   * Return a value as a generic {@code Object}, returning the default value if the
-   * context value is not set.
-   */
-  public Object get(String key, Object defaultValue)
-  {
-    final Object val = get(key);
-    return val == null ? defaultValue : val;
-  }
-
-  /**
    * Return a value as an {@code String}, returning {@link null} if the
    * context value is not set.
    *
@@ -357,9 +347,14 @@ public class QueryContext
     return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
-  public long getMaxSubqueryMemoryBytes(long defaultMemoryBytes)
+  public String getMaxSubqueryMemoryBytes(String defaultMemoryBytes)
   {
-    return getLong(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
+    // Generic to allow for both strings and numbers to be passed as values in the query context
+    Object maxSubqueryBytesObject = get(QueryContexts.MAX_SUBQUERY_BYTES_KEY);
+    if (maxSubqueryBytesObject == null) {
+      maxSubqueryBytesObject = defaultMemoryBytes;
+    }
+    return String.valueOf(maxSubqueryBytesObject);
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)

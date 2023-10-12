@@ -42,8 +42,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnType;
@@ -76,7 +76,6 @@ import java.util.regex.Pattern;
  */
 public class Calcites
 {
-  private static final EmittingLogger log = new EmittingLogger(Calcites.class);
   private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
   private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
       new DateTimeFormatterBuilder()
@@ -132,9 +131,15 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
-   * Caller who want to coerce all ARRAY types to STRING can set `druid.expressions.allowArrayToStringCast`
-   * runtime property in {@link org.apache.druid.math.expr.ExpressionProcessingConfig}
+   * Convert {@link RelDataType} to the most appropriate {@link ColumnType}, or null if there is no {@link ColumnType}
+   * that is appropriate for this {@link RelDataType}.
+   *
+   * Equivalent to {@link #getValueTypeForRelDataTypeFull(RelDataType)}, except this method returns
+   * {@link ColumnType#STRING} when {@link ColumnType#isArray()} if
+   * {@link ExpressionProcessingConfig#processArraysAsMultiValueStrings()} is set via the server property
+   * {@code druid.expressions.allowArrayToStringCast}.
+   *
+   * @return type, or null if there is no matching type
    */
   @Nullable
   public static ColumnType getColumnTypeForRelDataType(final RelDataType type)
@@ -148,7 +153,13 @@ public class Calcites
   }
 
   /**
-   * Convert {@link RelDataType} to the most appropriate {@link ValueType}
+   * Convert {@link RelDataType} to the most appropriate {@link ColumnType}, or null if there is no {@link ColumnType}
+   * that is appropriate for this {@link RelDataType}.
+   *
+   * Equivalent to {@link #getColumnTypeForRelDataType(RelDataType)}, but ignores
+   * {@link ExpressionProcessingConfig#processArraysAsMultiValueStrings()} (and acts as if it is false).
+   *
+   * @return type, or null if there is no matching type
    */
   @Nullable
   public static ColumnType getValueTypeForRelDataTypeFull(final RelDataType type)
@@ -236,8 +247,9 @@ public class Calcites
 
     switch (typeName) {
       case TIMESTAMP:
+      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         // Our timestamps are down to the millisecond (precision = 3).
-        dataType = typeFactory.createSqlType(typeName, 3);
+        dataType = typeFactory.createSqlType(typeName, DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION);
         break;
       case CHAR:
       case VARCHAR:
@@ -263,9 +275,12 @@ public class Calcites
       final boolean nullable
   )
   {
-    final RelDataType dataType = typeFactory.createArrayType(
-        createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
-        -1
+    final RelDataType dataType = typeFactory.createTypeWithNullability(
+        typeFactory.createArrayType(
+            createSqlTypeWithNullability(typeFactory, elementTypeName, nullable),
+            -1
+        ),
+        true
     );
 
     return dataType;
@@ -313,13 +328,29 @@ public class Calcites
       final int precision
   )
   {
+    return rexBuilder.makeTimestampLiteral(jodaToCalciteTimestampString(dateTime, sessionTimeZone), precision);
+  }
+
+  /**
+   * Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the local time zone.
+   *
+   * @param dateTime        joda timestamp
+   * @param sessionTimeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static TimestampString jodaToCalciteTimestampString(
+      final DateTime dateTime,
+      final DateTimeZone sessionTimeZone
+  )
+  {
     // Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the session time zone.
     // The TRAILING_ZEROS ... replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
     final String timestampString = TRAILING_ZEROS
         .matcher(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(sessionTimeZone)))
         .replaceAll("");
 
-    return rexBuilder.makeTimestampLiteral(new TimestampString(timestampString), precision);
+    return new TimestampString(timestampString);
   }
 
   /**

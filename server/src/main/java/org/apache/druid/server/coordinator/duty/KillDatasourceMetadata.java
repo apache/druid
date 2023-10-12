@@ -19,17 +19,13 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.Stats;
+import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.Map;
@@ -42,80 +38,49 @@ import java.util.stream.Collectors;
  * Note that this class relies on the supervisorSpec.getDataSources names to match with the
  * 'datasource' column of the datasource metadata table.
  */
-public class KillDatasourceMetadata implements CoordinatorDuty
+public class KillDatasourceMetadata extends MetadataCleanupDuty
 {
-  private static final Logger log = new Logger(KillDatasourceMetadata.class);
-
-  private final long period;
-  private final long retainDuration;
-  private long lastKillTime = 0;
-
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final MetadataSupervisorManager metadataSupervisorManager;
 
-  @Inject
   public KillDatasourceMetadata(
       DruidCoordinatorConfig config,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       MetadataSupervisorManager metadataSupervisorManager
   )
   {
+    super(
+        "datasources",
+        "druid.coordinator.kill.datasource",
+        config.isDatasourceKillEnabled(),
+        config.getCoordinatorDatasourceKillPeriod(),
+        config.getCoordinatorDatasourceKillDurationToRetain(),
+        Stats.Kill.DATASOURCES,
+        config
+    );
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.metadataSupervisorManager = metadataSupervisorManager;
-    this.period = config.getCoordinatorDatasourceKillPeriod().getMillis();
-    Preconditions.checkArgument(
-        this.period >= config.getCoordinatorMetadataStoreManagementPeriod().getMillis(),
-        "Coordinator datasource metadata kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod"
-    );
-    this.retainDuration = config.getCoordinatorDatasourceKillDurationToRetain().getMillis();
-    Preconditions.checkArgument(this.retainDuration >= 0, "Coordinator datasource metadata kill retainDuration must be >= 0");
-    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator datasource metadata kill retainDuration cannot be greater than current time in ms");
-    log.debug(
-        "Datasource Metadata Kill Task scheduling enabled with period [%s], retainDuration [%s]",
-        this.period,
-        this.retainDuration
-    );
   }
 
   @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
   {
-    long currentTimeMillis = System.currentTimeMillis();
-    if ((lastKillTime + period) < currentTimeMillis) {
-      lastKillTime = currentTimeMillis;
-      long timestamp = currentTimeMillis - retainDuration;
-      try {
-        // Datasource metadata only exists for datasource with supervisor
-        // To determine if datasource metadata is still active, we check if the supervisor for that particular datasource
-        // is still active or not
-        Map<String, SupervisorSpec> allActiveSupervisor = metadataSupervisorManager.getLatestActiveOnly();
-        Set<String> allDatasourceWithActiveSupervisor = allActiveSupervisor.values()
-                                                                           .stream()
-                                                                           .map(supervisorSpec -> supervisorSpec.getDataSources())
-                                                                           .flatMap(Collection::stream)
-                                                                           .filter(datasource -> !Strings.isNullOrEmpty(datasource))
-                                                                           .collect(Collectors.toSet());
-        // We exclude removing datasource metadata with active supervisor
-        int datasourceMetadataRemovedCount = indexerMetadataStorageCoordinator.removeDataSourceMetadataOlderThan(
-            timestamp,
-            allDatasourceWithActiveSupervisor
-        );
-        ServiceEmitter emitter = params.getEmitter();
-        emitter.emit(
-            new ServiceMetricEvent.Builder().build(
-                "metadata/kill/datasource/count",
-                datasourceMetadataRemovedCount
-            )
-        );
-        log.info(
-            "Finished running KillDatasourceMetadata duty. Removed %,d datasource metadata",
-            datasourceMetadataRemovedCount
-        );
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to kill datasource metadata");
-      }
-    }
-    return params;
+    // Datasource metadata only exists for datasource with supervisor
+    // To determine if datasource metadata is still active, we check if the supervisor for that particular datasource
+    // is still active or not
+    Map<String, SupervisorSpec> allActiveSupervisor = metadataSupervisorManager.getLatestActiveOnly();
+    Set<String> allDatasourceWithActiveSupervisor
+        = allActiveSupervisor.values()
+                             .stream()
+                             .map(SupervisorSpec::getDataSources)
+                             .flatMap(Collection::stream)
+                             .filter(datasource -> !Strings.isNullOrEmpty(datasource))
+                             .collect(Collectors.toSet());
+
+    // We exclude removing datasource metadata with active supervisor
+    return indexerMetadataStorageCoordinator.removeDataSourceMetadataOlderThan(
+        minCreatedTime.getMillis(),
+        allDatasourceWithActiveSupervisor
+    );
   }
 }

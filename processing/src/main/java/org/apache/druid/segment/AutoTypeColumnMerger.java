@@ -66,8 +66,7 @@ import java.util.TreeMap;
  */
 public class AutoTypeColumnMerger implements DimensionMergerV9
 {
-  private static final Logger log = new Logger(NestedDataColumnMerger.class);
-
+  private static final Logger log = new Logger(AutoTypeColumnMerger.class);
   public static final Comparator<PeekingIterator<String>> STRING_MERGING_COMPARATOR =
       SimpleDictionaryMergingIterator.makePeekingComparator();
   public static final Comparator<PeekingIterator<Long>> LONG_MERGING_COMPARATOR =
@@ -229,13 +228,12 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       } else {
         // all the bells and whistles
         logicalType = ColumnType.NESTED_DATA;
-        final NestedDataColumnSerializer defaultSerializer = new NestedDataColumnSerializer(
+        serializer = new NestedDataColumnSerializer(
             name,
             indexSpec,
             segmentWriteOutMedium,
             closer
         );
-        serializer = defaultSerializer;
       }
 
       serializer.openDictionaryWriter();

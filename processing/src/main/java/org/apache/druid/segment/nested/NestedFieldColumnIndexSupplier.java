@@ -22,6 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
@@ -34,6 +35,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -44,23 +46,23 @@ import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.NumericRangeIndex;
-import org.apache.druid.segment.column.SimpleBitmapColumnIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIterableIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -132,7 +134,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     if (clazz.equals(NullValueIndex.class)) {
       final BitmapColumnIndex nullIndex;
       if (localDictionarySupplier.get().get(0) == 0) {
-        // null index is always 0 in the global dictionary, even if there are no null rows in any of the literal columns
+        // null index is always 0 in the global dictionary, even if there are no null rows in any of the nested fields
         nullIndex = new SimpleImmutableBitmapIndex(bitmaps.get(0));
       } else {
         nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
@@ -145,40 +147,40 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     if (singleType != null) {
       switch (singleType.getType()) {
         case STRING:
-          if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedStringValueSetIndex();
-          } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-            return (T) new NestedStringLexicographicalRangeIndex();
-          } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedStringPredicateIndex();
+          if (clazz.equals(StringValueSetIndexes.class)) {
+            return (T) new NestedStringValueSetIndexes();
+          } else if (clazz.equals(LexicographicalRangeIndexes.class)) {
+            return (T) new NestedStringLexicographicalRangeIndexes();
+          } else if (clazz.equals(DruidPredicateIndexes.class)) {
+            return (T) new NestedStringPredicateIndexes();
           }
           return null;
         case LONG:
-          if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedLongValueSetIndex();
-          } else if (clazz.equals(NumericRangeIndex.class)) {
-            return (T) new NestedLongNumericRangeIndex();
-          } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedLongPredicateIndex();
+          if (clazz.equals(StringValueSetIndexes.class)) {
+            return (T) new NestedLongStringValueSetIndex();
+          } else if (clazz.equals(NumericRangeIndexes.class)) {
+            return (T) new NestedLongNumericRangeIndexes();
+          } else if (clazz.equals(DruidPredicateIndexes.class)) {
+            return (T) new NestedLongPredicateIndexes();
           }
           return null;
         case DOUBLE:
-          if (clazz.equals(StringValueSetIndex.class)) {
-            return (T) new NestedDoubleValueSetIndex();
-          } else if (clazz.equals(NumericRangeIndex.class)) {
-            return (T) new NestedDoubleNumericRangeIndex();
-          } else if (clazz.equals(DruidPredicateIndex.class)) {
-            return (T) new NestedDoublePredicateIndex();
+          if (clazz.equals(StringValueSetIndexes.class)) {
+            return (T) new NestedDoubleStringValueSetIndex();
+          } else if (clazz.equals(NumericRangeIndexes.class)) {
+            return (T) new NestedDoubleNumericRangeIndexes();
+          } else if (clazz.equals(DruidPredicateIndexes.class)) {
+            return (T) new NestedDoublePredicateIndexes();
           }
           return null;
         default:
           return null;
       }
     }
-    if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new NestedVariantValueSetIndex();
-    } else if (clazz.equals(DruidPredicateIndex.class)) {
-      return (T) new NestedVariantPredicateIndex();
+    if (clazz.equals(StringValueSetIndexes.class)) {
+      return (T) new NestedVariantStringValueSetIndexes();
+    } else if (clazz.equals(DruidPredicateIndexes.class)) {
+      return (T) new NestedVariantPredicateIndexes();
     }
     return null;
   }
@@ -310,6 +312,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
           }
         };
       }
+
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (localDictionary.get(0) == 0) {
+          return bitmaps.get(0);
+        }
+        return null;
+      }
     };
   }
 
@@ -353,7 +365,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedStringValueSetIndex implements StringValueSetIndex
+  private class NestedStringValueSetIndexes implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -373,9 +385,20 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int globalId = stringDictionary.indexOf(StringUtils.toUtf8ByteBuffer(value));
+          if (includeUnknown && localDictionary.get(0) == 0) {
+            if (globalId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(bitmaps.get(0));
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(
+                    getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)),
+                    bitmaps.get(0)
+                )
+            );
+          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -431,11 +454,22 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
-  private class NestedStringLexicographicalRangeIndex implements LexicographicalRangeIndex
+  private class NestedStringLexicographicalRangeIndexes implements LexicographicalRangeIndexes
   {
     @Override
     @Nullable
@@ -529,11 +563,21 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
-  private class NestedStringPredicateIndex implements DruidPredicateIndex
+  private class NestedStringPredicateIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable
@@ -594,11 +638,21 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
-  private class NestedLongValueSetIndex implements StringValueSetIndex
+  private class NestedLongStringValueSetIndex implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -628,7 +682,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (longValue == null) {
             if (inputNull) {
@@ -638,6 +692,17 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           }
           final int globalId = longDictionary.indexOf(longValue);
+          if (includeUnknown && localDictionary.get(0) == 0) {
+            if (globalId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(bitmaps.get(0));
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(
+                    getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)),
+                    bitmaps.get(0)
+                )
+            );
+          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -714,11 +779,22 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
-  private class NestedLongNumericRangeIndex implements NumericRangeIndex
+  private class NestedLongNumericRangeIndexes implements NumericRangeIndexes
   {
     @Override
     @Nullable
@@ -729,10 +805,26 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         boolean endStrict
     )
     {
+      final Long startLong;
+      final Long endLong;
+      if (startValue == null) {
+        startLong = null;
+      } else if (startStrict) {
+        startLong = (long) Math.floor(startValue.doubleValue());
+      } else {
+        startLong = (long) Math.ceil(startValue.doubleValue());
+      }
+      if (endValue == null) {
+        endLong = null;
+      } else if (endStrict) {
+        endLong = (long) Math.ceil(endValue.doubleValue());
+      } else {
+        endLong = (long) Math.floor(endValue.doubleValue());
+      }
       return makeRangeIndex(
-          startValue != null ? startValue.longValue() : null,
+          startLong,
           startStrict,
-          endValue != null ? endValue.longValue() : null,
+          endLong,
           endStrict,
           localDictionarySupplier.get(),
           globalLongDictionarySupplier.get(),
@@ -741,7 +833,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedLongPredicateIndex implements DruidPredicateIndex
+  private class NestedLongPredicateIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable
@@ -807,11 +899,21 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
-  private class NestedDoubleValueSetIndex implements StringValueSetIndex
+  private class NestedDoubleStringValueSetIndex implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -840,7 +942,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (doubleValue == null) {
             if (inputNull) {
@@ -850,6 +952,17 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           }
           final int globalId = doubleDictionary.indexOf(doubleValue);
+          if (includeUnknown && localDictionary.get(0) == 0) {
+            if (globalId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(bitmaps.get(0));
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(
+                    getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)),
+                    bitmaps.get(0)
+                )
+            );
+          }
           if (globalId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -926,11 +1039,22 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
-  private class NestedDoubleNumericRangeIndex implements NumericRangeIndex
+  private class NestedDoubleNumericRangeIndexes implements NumericRangeIndexes
   {
     @Override
     @Nullable
@@ -953,7 +1077,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
   }
 
-  private class NestedDoublePredicateIndex implements DruidPredicateIndex
+  private class NestedDoublePredicateIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable
@@ -1019,11 +1143,21 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
-  private abstract class NestedVariantLiteralIndex
+  private abstract class NestedVariantIndexes
   {
     final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
     final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
@@ -1072,9 +1206,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
   }
 
   /**
-   * {@link StringValueSetIndex} but for variant typed nested literal columns
+   * {@link StringValueSetIndexes} but for variant typed nested columns
    */
-  private class NestedVariantValueSetIndex extends NestedVariantLiteralIndex implements StringValueSetIndex
+  private class NestedVariantStringValueSetIndexes extends NestedVariantIndexes implements StringValueSetIndexes
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -1099,6 +1233,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               return getBitmap(iterator.nextInt());
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (value != null && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
         }
       };
     }
@@ -1146,14 +1290,25 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             }
           };
         }
+
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null) && localDictionarySupplier.get().get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
   }
 
   /**
-   * {@link DruidPredicateIndex} but for variant typed nested literal columns
+   * {@link DruidPredicateIndexes} but for variant typed nested fields
    */
-  private class NestedVariantPredicateIndex extends NestedVariantLiteralIndex implements DruidPredicateIndex
+  private class NestedVariantPredicateIndexes extends NestedVariantIndexes implements DruidPredicateIndexes
   {
     @Override
     @Nullable
@@ -1219,6 +1374,16 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
+            return bitmaps.get(0);
+          }
+          return null;
         }
       };
     }

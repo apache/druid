@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.constant;
 
 import org.apache.commons.lang.math.RandomUtils;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,9 +37,8 @@ public class LongConstantBufferAggregatorTest
   {
     randomVal = RandomUtils.nextLong();
     aggregator = new LongConstantBufferAggregator(randomVal);
-    byteBuffer = EasyMock.mock(ByteBuffer.class);
-    EasyMock.replay(byteBuffer);
-    EasyMock.verifyUnexpectedCalls(byteBuffer);
+    // mark byteBuffer null to verify no methods ever get called on it.
+    byteBuffer = null;
   }
 
   @Test

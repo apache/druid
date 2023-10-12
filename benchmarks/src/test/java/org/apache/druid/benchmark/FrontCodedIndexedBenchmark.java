@@ -88,10 +88,10 @@ public class FrontCodedIndexedBenchmark
 
   @Param({
       "generic",
-      "front-coded-4",
-      "front-coded-16",
-      "front-coded-incremental-buckets-4",
-      "front-coded-incremental-buckets-16"
+      "front-coded-v0-4",
+      "front-coded-v0-16",
+      "front-coded-v1-4",
+      "front-coded-v1-16"
   })
   public String indexType;
 
@@ -138,7 +138,7 @@ public class FrontCodedIndexedBenchmark
     FrontCodedIndexedWriter frontCodedIndexedWriter = new FrontCodedIndexedWriter(
         new OnHeapMemorySegmentWriteOutMedium(),
         ByteOrder.nativeOrder(),
-        "front-coded-4".equals(indexType) ? 4 : 16,
+        "front-coded-v0-4".equals(indexType) ? 4 : 16,
         FrontCodedIndexed.V0
     );
     frontCodedIndexedWriter.open();
@@ -146,7 +146,7 @@ public class FrontCodedIndexedBenchmark
     FrontCodedIndexedWriter frontCodedIndexedWriterIncrementalBuckets = new FrontCodedIndexedWriter(
         new OnHeapMemorySegmentWriteOutMedium(),
         ByteOrder.nativeOrder(),
-        "front-coded-incremental-buckets-4".equals(indexType) ? 4 : 16,
+        "front-coded-v1-4".equals(indexType) ? 4 : 16,
         FrontCodedIndexed.V1
     );
     frontCodedIndexedWriterIncrementalBuckets.open();
@@ -166,11 +166,11 @@ public class FrontCodedIndexedBenchmark
     fileGeneric = File.createTempFile("genericIndexedBenchmark", "meta");
 
     smooshDirFrontCodedIncrementalBuckets = FileUtils.createTempDir();
-    fileFrontCodedIncrementalBuckets = File.createTempFile("frontCodedIndexedBenchmarkIncrementalBuckets", "meta");
+    fileFrontCodedIncrementalBuckets = File.createTempFile("frontCodedIndexedBenchmarkv1Buckets", "meta");
 
     EncodingSizeProfiler.encodedSize = (int) ("generic".equals(indexType)
                                               ? genericIndexedWriter.getSerializedSize()
-                                              : indexType.startsWith("front-coded-incremental-buckets")
+                                              : indexType.startsWith("front-coded-v1")
                                                 ? frontCodedIndexedWriterIncrementalBuckets.getSerializedSize()
                                                 : frontCodedIndexedWriter.getSerializedSize());
     try (
@@ -286,7 +286,7 @@ public class FrontCodedIndexedBenchmark
     }
     if ("generic".equals(indexType)) {
       indexed = genericIndexed.singleThreaded();
-    } else if (indexType.startsWith("front-coded-incremental-buckets")) {
+    } else if (indexType.startsWith("front-coded-v1")) {
       indexed = frontCodedIndexedIncrementalBuckets;
     } else {
       indexed = frontCodedIndexed;

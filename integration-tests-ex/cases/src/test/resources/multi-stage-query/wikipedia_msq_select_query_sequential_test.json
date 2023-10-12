@@ -1,0 +1,15 @@
+[
+  {
+    "query": "SELECT __time, isRobot, added, delta, deleted, namespace FROM %%DATASOURCE%%",
+    "expectedResults": [
+      {
+        "__time": 1377933081000,
+        "isRobot": null,
+        "added": 123,
+        "delta": 111,
+        "deleted": 12,
+        "namespace":"article"
+      }
+    ]
+  }
+]

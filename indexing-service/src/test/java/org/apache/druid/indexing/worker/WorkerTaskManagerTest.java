@@ -22,8 +22,8 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.client.indexing.NoopOverlordClient;
-import org.apache.druid.discovery.DruidLeaderClient;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -43,6 +43,9 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
@@ -52,6 +55,9 @@ import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,8 +66,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -79,6 +88,7 @@ public class WorkerTaskManagerTest
   private final boolean restoreTasksOnRestart;
 
   private WorkerTaskManager workerTaskManager;
+  private OverlordClient overlordClient;
 
   public WorkerTaskManagerTest(boolean restoreTasksOnRestart)
   {
@@ -90,7 +100,7 @@ public class WorkerTaskManagerTest
     this.restoreTasksOnRestart = restoreTasksOnRestart;
   }
 
-  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, useMultipleBaseTaskDirPaths = {1}")
+  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}")
   public static Collection<Object[]> getParameters()
   {
     Object[][] parameters = new Object[][]{{false}, {true}};
@@ -112,6 +122,7 @@ public class WorkerTaskManagerTest
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
+    overlordClient = EasyMock.createMock(OverlordClient.class);
 
     return new WorkerTaskManager(
         jsonMapper,
@@ -149,8 +160,8 @@ public class WorkerTaskManagerTest
                 new NoopChatHandlerProvider(),
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
-                new NoopOverlordClient(),
-                null,
+                overlordClient,
+                new NoopCoordinatorClient(),
                 null,
                 null,
                 null,
@@ -160,7 +171,7 @@ public class WorkerTaskManagerTest
             location
         ),
         taskConfig,
-        EasyMock.createNiceMock(DruidLeaderClient.class)
+        overlordClient
     )
     {
       @Override
@@ -190,6 +201,8 @@ public class WorkerTaskManagerTest
   @Test(timeout = 60_000L)
   public void testTaskRun() throws Exception
   {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
     Task task1 = createNoopTask("task1-assigned-via-assign-dir");
     Task task2 = createNoopTask("task2-completed-already");
     Task task3 = createNoopTask("task3-assigned-explicitly");
@@ -282,7 +295,7 @@ public class WorkerTaskManagerTest
   @Test(timeout = 30_000L)
   public void testTaskStatusWhenTaskRunnerFutureThrowsException() throws Exception
   {
-    Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    Task task = new NoopTask("id", null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)
@@ -296,6 +309,7 @@ public class WorkerTaskManagerTest
     Map<String, TaskAnnouncement> completeTasks;
     do {
       completeTasks = workerTaskManager.getCompletedTasks();
+      Thread.sleep(10);
     } while (completeTasks.isEmpty());
 
     Assert.assertEquals(1, completeTasks.size());
@@ -308,8 +322,159 @@ public class WorkerTaskManagerTest
     );
   }
 
+  @Test(timeout = 30_000L)
+  public void test_completedTasksCleanup_running() throws Exception
+  {
+    final Task task = setUpCompletedTasksCleanupTest();
+
+    EasyMock.expect(overlordClient.taskStatuses(Collections.singleton(task.getId())))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(task.getId(), TaskStatus.running(task.getId()))))
+            .once();
+    EasyMock.replay(overlordClient);
+
+    workerTaskManager.doCompletedTasksCleanup();
+    Assert.assertEquals(1, workerTaskManager.getCompletedTasks().size());
+
+    EasyMock.verify(overlordClient);
+  }
+
+  @Test(timeout = 30_000L)
+  public void test_completedTasksCleanup_noStatus() throws Exception
+  {
+    final Task task = setUpCompletedTasksCleanupTest();
+
+    EasyMock.expect(overlordClient.taskStatuses(Collections.singleton(task.getId())))
+            .andReturn(Futures.immediateFuture(Collections.emptyMap()))
+            .once();
+    EasyMock.replay(overlordClient);
+
+    // Missing status (empty map) means we clean up the task. The idea is that this means the Overlord has *never*
+    // heard of it, so we should forget about it.
+    workerTaskManager.doCompletedTasksCleanup();
+    Assert.assertEquals(0, workerTaskManager.getCompletedTasks().size());
+
+    EasyMock.verify(overlordClient);
+  }
+
+  @Test(timeout = 30_000L)
+  public void test_completedTasksCleanup_success() throws Exception
+  {
+    final Task task = setUpCompletedTasksCleanupTest();
+
+    EasyMock.expect(overlordClient.taskStatuses(Collections.singleton(task.getId())))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(task.getId(), TaskStatus.success(task.getId()))))
+            .once();
+    EasyMock.replay(overlordClient);
+
+    workerTaskManager.doCompletedTasksCleanup();
+    Assert.assertEquals(0, workerTaskManager.getCompletedTasks().size());
+
+    EasyMock.verify(overlordClient);
+  }
+
+  @Test(timeout = 30_000L)
+  public void test_completedTasksCleanup_404error() throws Exception
+  {
+    final Task task = setUpCompletedTasksCleanupTest();
+
+    EasyMock.expect(overlordClient.taskStatuses(Collections.singleton(task.getId())))
+            .andReturn(
+                Futures.immediateFailedFuture(
+                    new HttpResponseException(
+                        new StringFullResponseHolder(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+                            StandardCharsets.UTF_8
+                        )
+                    )
+                )
+            )
+            .once();
+    EasyMock.replay(overlordClient);
+
+    // Ending size zero, because 404 means we assume the Overlord does not have the taskStatuses API. In this case
+    // we remove all completed task statuses periodically regardless of Overlord confirmation.
+    workerTaskManager.doCompletedTasksCleanup();
+    Assert.assertEquals(0, workerTaskManager.getCompletedTasks().size());
+
+    EasyMock.verify(overlordClient);
+  }
+
+  @Test(timeout = 30_000L)
+  public void test_completedTasksCleanup_500error() throws Exception
+  {
+    final Task task = setUpCompletedTasksCleanupTest();
+
+    EasyMock.expect(overlordClient.taskStatuses(Collections.singleton(task.getId())))
+            .andReturn(
+                Futures.immediateFailedFuture(
+                    new HttpResponseException(
+                        new StringFullResponseHolder(
+                            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR),
+                            StandardCharsets.UTF_8
+                        )
+                    )
+                )
+            )
+            .once();
+    EasyMock.replay(overlordClient);
+
+    // HTTP 500 is ignored and no cleanup happens.
+    workerTaskManager.doCompletedTasksCleanup();
+    Assert.assertEquals(1, workerTaskManager.getCompletedTasks().size());
+
+    EasyMock.verify(overlordClient);
+  }
+
+  @Test(timeout = 30_000L)
+  public void test_completedTasksCleanup_ioException() throws Exception
+  {
+    final Task task = setUpCompletedTasksCleanupTest();
+
+    EasyMock.expect(overlordClient.taskStatuses(Collections.singleton(task.getId())))
+            .andReturn(Futures.immediateFailedFuture(new IOException()))
+            .once();
+    EasyMock.replay(overlordClient);
+
+    // IOException is ignored and no cleanup happens.
+    workerTaskManager.doCompletedTasksCleanup();
+    Assert.assertEquals(1, workerTaskManager.getCompletedTasks().size());
+
+    EasyMock.verify(overlordClient);
+  }
+
   private NoopTask createNoopTask(String id)
   {
-    return new NoopTask(id, null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    return new NoopTask(id, null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+  }
+
+  /**
+   * Start the {@link #workerTaskManager}, submit a {@link NoopTask}, wait for it to be complete. Common preamble
+   * for various tests of {@link WorkerTaskManager#doCompletedTasksCleanup()}.
+   */
+  private Task setUpCompletedTasksCleanupTest() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final Task task = new NoopTask("id", null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+
+    // Scheduled scheduleCompletedTasksCleanup will not run, because initialDelay is 1 minute, which is longer than
+    // the 30-second timeout of this test case.
+    workerTaskManager.start();
+    workerTaskManager.assignTask(task);
+
+    Map<String, TaskAnnouncement> completeTasks;
+    do {
+      completeTasks = workerTaskManager.getCompletedTasks();
+      Thread.sleep(10);
+    } while (completeTasks.isEmpty());
+
+    Assert.assertEquals(1, completeTasks.size());
+    TaskAnnouncement announcement = completeTasks.get(task.getId());
+    Assert.assertNotNull(announcement);
+    Assert.assertEquals(TaskState.SUCCESS, announcement.getStatus());
+
+    EasyMock.reset(overlordClient);
+    return task;
   }
 }

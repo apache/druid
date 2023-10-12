@@ -28,8 +28,10 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -39,9 +41,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
@@ -112,7 +112,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     }
 
     Expr expr = plannerContext.parseExpression(complexExpr.getExpression());
-    if (expr.isLiteral()) {
+    if (expr.isLiteral() && (plannerContext.isUseBoundsAndSelectors() || simpleExtractionExpr.isDirectColumnAccess())) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
       ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
@@ -124,11 +124,26 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         // to create an empty array with no argument, we just return null.
         return null;
       } else if (arrayElements.length == 1) {
-        return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
+        if (plannerContext.isUseBoundsAndSelectors()) {
+          return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
+        } else {
+          // Cannot handle extractionFn here. We won't get one due to the isDirectColumnAccess check above.
+          return new EqualityFilter(
+              simpleExtractionExpr.getSimpleExtraction().getColumn(),
+              ExpressionType.toColumnType(exprEval.type()),
+              arrayElements[0],
+              null
+          );
+        }
       } else {
+        final InDimFilter.ValuesSet valuesSet = InDimFilter.ValuesSet.create();
+        for (final Object arrayElement : arrayElements) {
+          valuesSet.add(Evals.asString(arrayElement));
+        }
+
         return new InDimFilter(
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            new InDimFilter.ValuesSet(Arrays.stream(arrayElements).map(Evals::asString).collect(Collectors.toList())),
+            valuesSet,
             simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
             null
         );

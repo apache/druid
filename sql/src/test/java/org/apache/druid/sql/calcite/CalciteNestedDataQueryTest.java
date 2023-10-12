@@ -49,10 +49,10 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -929,17 +929,52 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(
                 new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), null},
                 new Object[]{null, null, null, null},
-                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2D, 3.3D, 4.0D), Arrays.asList(1L, 2L)},
+                new Object[]{
+                    Arrays.asList("d", "e"),
+                    Arrays.asList(1L, 4L),
+                    Arrays.asList(2.2D, 3.3D, 4.0D),
+                    Arrays.asList(1L, 2L)
+                },
                 new Object[]{Arrays.asList("a", "b"), null, null, Collections.singletonList(1L)},
-                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), Arrays.asList(1L, 2L, null)},
-                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1D, 3.3D), Collections.singletonList(1L)},
-                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3D, 4.4D, 5.5D), null},
+                new Object[]{
+                    Arrays.asList("a", "b"),
+                    Arrays.asList(1L, 2L, 3L),
+                    Arrays.asList(1.1D, 2.2D, 3.3D),
+                    Arrays.asList(1L, 2L, null)
+                },
+                new Object[]{
+                    Arrays.asList("b", "c"),
+                    Arrays.asList(1L, 2L, 3L, 4L),
+                    Arrays.asList(1.1D, 3.3D),
+                    Collections.singletonList(1L)
+                },
+                new Object[]{
+                    Arrays.asList("a", "b", "c"),
+                    Arrays.asList(2L, 3L),
+                    Arrays.asList(3.3D, 4.4D, 5.5D),
+                    null
+                },
                 new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), null},
                 new Object[]{null, null, null, null},
-                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2D, 3.3D, 4.0D), Arrays.asList(1L, 2L)},
+                new Object[]{
+                    Arrays.asList("d", "e"),
+                    Arrays.asList(1L, 4L),
+                    Arrays.asList(2.2D, 3.3D, 4.0D),
+                    Arrays.asList(1L, 2L)
+                },
                 new Object[]{Arrays.asList("a", "b"), null, null, null},
-                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), Arrays.asList(2L, 3L)},
-                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1D, 3.3D), Collections.singletonList(1L)},
+                new Object[]{
+                    Arrays.asList("a", "b"),
+                    Arrays.asList(1L, 2L, 3L),
+                    Arrays.asList(1.1D, 2.2D, 3.3D),
+                    Arrays.asList(2L, 3L)
+                },
+                new Object[]{
+                    Arrays.asList("b", "c"),
+                    Arrays.asList(1L, 2L, 3L, 4L),
+                    Arrays.asList(1.1D, 3.3D),
+                    Collections.singletonList(1L)
+                },
                 new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3D, 4.4D, 5.5D), null}
 
             )
@@ -1014,6 +1049,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
+
   @Test
   public void testUnnestRootSingleTypeArrayStringNulls()
   {
@@ -1184,6 +1220,57 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByRootSingleTypeArrayLongFilteredArrayEquality()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayLong, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays WHERE arrayLong = ARRAY[1, 2, 3] GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimFilter(
+                                // don't use static functions since context flag indicates to always use equality filter
+                                new EqualityFilter(
+                                    "arrayLong",
+                                    ColumnType.LONG_ARRAY,
+                                    new Object[]{1L, 2L, 3L},
+                                    null
+                                )
+                            )
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayLong", "d0", ColumnType.LONG_ARRAY)
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{Arrays.asList(1L, 2L, 3L), 4L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayLong", ColumnType.LONG_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
   public void testGroupByRootSingleTypeArrayLongNulls()
   {
     cannotVectorize();
@@ -1221,6 +1308,106 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 new Object[]{Arrays.asList(1L, null, 3L), 2L},
                 new Object[]{Arrays.asList(1L, 2L, 3L), 2L},
                 new Object[]{Arrays.asList(2L, 3L), 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeLongJsonValueFilter()
+  {
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(long, '$.') = '1' GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn(
+                                "long",
+                                "v0",
+                                ColumnType.STRING,
+                                Collections.emptyList(),
+                                false,
+                                null,
+                                false
+                            )
+                        )
+                        .setDimFilter(
+                            equality("v0", "1", ColumnType.STRING)
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L}
+        ),
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsFilteredArrayEquality()
+  {
+    if (NullHandling.replaceWithDefault()) {
+      // this fails in default value mode because it relies on equality filter and null filter to behave correctly
+      return;
+    }
+    cannotVectorize();
+    skipVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "arrayLongNulls, "
+            + "SUM(cnt) "
+            + "FROM druid.arrays WHERE arrayLongNulls = ARRAY[null, 2, 9] OR arrayLongNulls IS NULL GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimFilter(
+                                or(
+                                    isNull("arrayLongNulls"),
+                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY)
+                                )
+                            )
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("arrayLongNulls", "d0", ColumnType.LONG_ARRAY)
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null, 3L},
+                new Object[]{Arrays.asList(null, 2L, 9L), 2L}
             )
         )
         .expectedSignature(
@@ -1311,10 +1498,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new ExpressionVirtualColumn("v0", "array_length(\"arrayLongNulls\")", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v0",
+                                    "array_length(\"arrayLongNulls\")",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(\"arrayLongNulls\",1)", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(\"arrayLongNulls\",1)",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -1508,7 +1703,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setDataSource(
                                 UnnestDataSource.create(
                                     TableDataSource.create(DATA_SOURCE_ARRAYS),
-                                    expressionVirtualColumn("j0.unnest", "\"arrayStringNulls\"", ColumnType.STRING_ARRAY),
+                                    expressionVirtualColumn(
+                                        "j0.unnest",
+                                        "\"arrayStringNulls\"",
+                                        ColumnType.STRING_ARRAY
+                                    ),
                                     null
                                 )
                             )
@@ -1568,10 +1767,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new ExpressionVirtualColumn("v0", "array_length(\"arrayStringNulls\")", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v0",
+                                    "array_length(\"arrayStringNulls\")",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(\"arrayStringNulls\",'b')", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(\"arrayStringNulls\",'b')",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -1714,7 +1921,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setDataSource(
                                 UnnestDataSource.create(
                                     TableDataSource.create(DATA_SOURCE_ARRAYS),
-                                    expressionVirtualColumn("j0.unnest", "\"arrayDoubleNulls\"", ColumnType.DOUBLE_ARRAY),
+                                    expressionVirtualColumn(
+                                        "j0.unnest",
+                                        "\"arrayDoubleNulls\"",
+                                        ColumnType.DOUBLE_ARRAY
+                                    ),
                                     null
                                 )
                             )
@@ -1775,10 +1986,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new ExpressionVirtualColumn("v0", "array_length(\"arrayDoubleNulls\")", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v0",
+                                    "array_length(\"arrayDoubleNulls\")",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(\"arrayDoubleNulls\",2.2)", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(\"arrayDoubleNulls\",2.2)",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -1882,7 +2101,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setVirtualColumns(
                                 new NestedFieldVirtualColumn("arrayLong", "$[1]", "v0", ColumnType.LONG)
                             )
-                            .setDimFilter(new SelectorDimFilter("v0", "2", null))
+                            .setDimFilter(equality("v0", 2L, ColumnType.LONG))
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                             .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                             .build()
@@ -2022,7 +2241,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setVirtualColumns(
                                 new NestedFieldVirtualColumn("arrayStringNulls", "$[1]", "v0", ColumnType.STRING)
                             )
-                            .setDimFilter(new SelectorDimFilter("v0", "b", null))
+                            .setDimFilter(equality("v0", "b", ColumnType.STRING))
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                             .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                             .build()
@@ -2073,8 +2292,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             )
         )
         .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
-                new Object[]{NullHandling.defaultDoubleValue(), 12L},
+                new Object[]{null, 12L},
                 new Object[]{5.5, 2L}
             )
         )
@@ -2099,7 +2319,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             + "WHERE JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE) = 5.5"
             + "GROUP BY 1"
         )
-        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
         .expectedQueries(
             ImmutableList.of(
                 GroupByQuery.builder()
@@ -2111,12 +2331,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                     new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE)
                                 )
                             )
-                            .setDimFilter(new SelectorDimFilter("v0", "5.5", null))
+                            .setDimFilter(
+                                // dont use static function since context flag indicates to always use equality
+                                new EqualityFilter("v0", ColumnType.DOUBLE, 5.5, null)
+                            )
                             .setVirtualColumns(
                                 new NestedFieldVirtualColumn("arrayDoubleNulls", "$[2]", "v0", ColumnType.DOUBLE)
                             )
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
                             .build()
             )
         )
@@ -2196,7 +2419,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(selector("v0", "100", null))
+                        .setDimFilter(equality("v0", "100", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2359,7 +2582,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(selector("v0", "100", null))
+                        .setDimFilter(equality("v0", 100L, ColumnType.LONG))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2399,7 +2622,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(selector("v0", "2.02", null))
+                        .setDimFilter(equality("v0", 2.02, ColumnType.DOUBLE))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2439,7 +2662,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(selector("v0", "400", null))
+                        .setDimFilter(equality("v0", "400", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2479,7 +2702,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(selector("v0", "1", null))
+                        .setDimFilter(equality("v0", 1L, ColumnType.LONG))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2514,13 +2737,136 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(selector("v0", "1", null))
+                        .setDimFilter(equality("v0", "1", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
         ImmutableList.of(
             new Object[]{"100", 1L},
+            new Object[]{"200", 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariant2Int()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.mixed2') = 1 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0")
+                            )
+                        )
+                        .setDimFilter(equality("v0", 1L, ColumnType.LONG))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            // this is a bit wonky, we get extra matches for numeric 1 matcher because the virtual column is defined
+            // as long typed, which makes a long processor which will convert the 1.1 to a 1L
+            new Object[]{"100", 2L},
+            new Object[]{"200", 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariant2Double()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.mixed2') = 1.1 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v0", ColumnType.DOUBLE),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0")
+                            )
+                        )
+                        .setDimFilter(equality("v0", 1.1, ColumnType.DOUBLE))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariant2BothTypesMatcher()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nest, '$.mixed2') = '1' OR JSON_VALUE(nest, '$.mixed2') = 1 GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v0", ColumnType.STRING),
+                            new NestedFieldVirtualColumn("nest", "$.mixed2", "v1", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v2", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v2", "d0")
+                            )
+                        )
+                        .setDimFilter(
+                            or(
+                                equality("v0", "1", ColumnType.STRING),
+                                equality("v1", 1L, ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            // this is a bit wonky, we get 2 matches for numeric 1 matcher because the virtual column is defined as
+            // long typed, which makes a long processor which will convert the 1.1 to a 1L
+            new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),
         RowSignature.builder()
@@ -2590,7 +2936,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(selector("v0", "no way", null))
+                        .setDimFilter(equality("v0", "no way", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2625,7 +2971,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(not(selector("v0", null, null)))
+                        .setDimFilter(notNull("v0"))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2662,7 +3008,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "100", "300", false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, "100", "300", false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2699,7 +3045,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "100", null, false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, "100", null, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2736,7 +3082,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", null, "100", false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, null, "100", false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2773,7 +3119,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "100", "300", false, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.LONG, 100L, 300L, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2811,7 +3157,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "100", null, false, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.LONG, 100L, null, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2848,7 +3194,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
                             )
                         )
-                        .setDimFilter(bound("v0", "100", null, false, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.LONG, 100L, null, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2886,13 +3232,17 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", null, "100", false, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.LONG, null, 100L, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{"", 4L},
+            new Object[]{"100", 2L}
+        )
+        : ImmutableList.of(
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -2923,7 +3273,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "1.01", "3.03", false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, "1.01", "3.03", false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2960,7 +3310,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "1.01", null, false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, "1.01", null, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2997,7 +3347,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", null, "2.02", false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, null, "2.02", false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3034,7 +3384,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "2.0", "3.5", false, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.DOUBLE, 2.0, 3.5, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3072,7 +3422,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "1.0", null, false, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.DOUBLE, 1.0, null, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3110,13 +3460,17 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", null, "2.02", false, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.DOUBLE, null, 2.02, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{"", 4L},
+            new Object[]{"2.02", 2L}
+        )
+        : ImmutableList.of(
             new Object[]{"2.02", 2L}
         ),
         RowSignature.builder()
@@ -3147,7 +3501,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "100", "300", false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, "100", "300", false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3185,7 +3539,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", "400", null, false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, "400", null, false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3223,13 +3577,17 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(bound("v0", null, "400", false, false, null, StringComparators.LEXICOGRAPHIC))
+                        .setDimFilter(range("v0", ColumnType.STRING, null, "400", false, false))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{"", 4L},
+            new Object[]{"100", 2L}
+        )
+        : ImmutableList.of(
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -3408,7 +3766,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("100", "200")))
+                        .setDimFilter(
+                            NullHandling.replaceWithDefault()
+                            ? in("v0", ImmutableSet.of("100", "200"), null)
+                            : or(equality("v0", 100L, ColumnType.LONG), equality("v0", 200L, ColumnType.LONG)
+                            )
+                        )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3446,7 +3809,14 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v1", "d0")
                             )
                         )
-                        .setDimFilter(new InDimFilter("v0", ImmutableSet.of("2.02", "3.03")))
+                        .setDimFilter(
+                            NullHandling.replaceWithDefault()
+                            ? in("v0", ImmutableSet.of("2.02", "3.03"), null)
+                            : or(
+                                equality("v0", 2.02, ColumnType.DOUBLE),
+                                equality("v0", 3.03, ColumnType.DOUBLE)
+                            )
+                        )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -3586,7 +3956,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new FilteredAggregatorFactory(
                               new DoubleSumAggregatorFactory("a0", "v1"),
-                              selector("v0", "2.02", null)
+                              equality("v0", 2.02, ColumnType.DOUBLE)
                           )
                       )
                   )
@@ -3623,7 +3993,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new FilteredAggregatorFactory(
                               new DoubleSumAggregatorFactory("a0", "v1"),
-                              selector("v0", "300", null)
+                              equality("v0", "300", ColumnType.STRING)
                           )
                       )
                   )
@@ -3686,12 +4056,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn("nest", "$.mixed", "v0", ColumnType.LONG),
                       new NestedFieldVirtualColumn("nest", "$.mixed", "v1", ColumnType.DOUBLE)
                   )
-
                   .aggregators(
                       aggregators(
                           new FilteredAggregatorFactory(
                               new DoubleSumAggregatorFactory("a0", "v1"),
-                              selector("v0", "1", null)
+                              equality("v0", 1L, ColumnType.LONG)
                           )
                       )
                   )
@@ -3727,7 +4096,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       aggregators(
                           new FilteredAggregatorFactory(
                               new DoubleSumAggregatorFactory("a0", "v0"),
-                              selector("v0", "1.1", null)
+                              equality("v0", 1.1, ColumnType.DOUBLE)
                           )
                       )
                   )
@@ -4623,7 +4992,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
-                        .setDimFilter(selector("v0", null, null))
+                        .setDimFilter(isNull("v0"))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -4660,7 +5029,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .columns(
                       "v0", "v1"
                   )
-                  .filters(selector("v0", null, null))
+                  .filters(isNull("v0"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
@@ -4705,7 +5074,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
-                        .setDimFilter(not(selector("v0", null, null)))
+                        .setDimFilter(notNull("v0"))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -4740,7 +5109,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setVirtualColumns(new NestedFieldVirtualColumn("long", "$", "v0", ColumnType.LONG))
-                        .setDimFilter(not(selector("v0", null, null)))
+                        .setDimFilter(notNull("v0"))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -4778,7 +5147,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setVirtualColumns(new NestedFieldVirtualColumn("string_sparse", "$", "v0", ColumnType.LONG))
-                        .setDimFilter(not(selector("v0", null, null)))
+                        .setDimFilter(notNull("v0"))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -4808,7 +5177,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .virtualColumns(
                       expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG)
                   )
-                  .filters(not(selector("v0", null, null)))
+                  .filters(notNull("v0"))
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
@@ -4859,8 +5228,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("string_sparse", "d0", ColumnType.LONG)
                             )
                         )
-                        .setVirtualColumns(expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG))
-                        .setDimFilter(not(selector("v0", null, null)))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "CAST(\"string_sparse\", 'LONG')",
+                            ColumnType.LONG
+                        ))
+                        .setDimFilter(notNull("v0"))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -4906,7 +5279,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                     new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
                                 )
                             )
-                            .setVirtualColumns(expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING))
+                            .setVirtualColumns(expressionVirtualColumn(
+                                "v0",
+                                "array_to_mv(\"arrayLongNulls\")",
+                                ColumnType.STRING
+                            ))
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                             .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                             .build()
@@ -4965,10 +5342,17 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setVirtualColumns(
                                 expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING),
-                                expressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayLongNulls\"))", ColumnType.LONG)
+                                expressionVirtualColumn(
+                                    "v1",
+                                    "array_length(array_to_mv(\"arrayLongNulls\"))",
+                                    ColumnType.LONG
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(array_to_mv(\"arrayLongNulls\"),'1')",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -5145,10 +5529,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setVirtualColumns(
                                 expressionVirtualColumn("v0", "array_to_mv(\"arrayStringNulls\")", ColumnType.STRING),
-                                new ExpressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayStringNulls\"))", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v1",
+                                    "array_length(array_to_mv(\"arrayStringNulls\"))",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayStringNulls\"),'b')", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(array_to_mv(\"arrayStringNulls\"),'b')",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -5176,6 +5568,39 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         )
         .run();
+  }
+
+  @Test
+  public void testGroupByAndFilterVariant()
+  {
+    testQuery(
+        "SELECT "
+        + "variant, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto WHERE variant = '1' GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("variant", "d0")
+                            )
+                        )
+                        .setDimFilter(equality("variant", "1", ColumnType.STRING))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1", 2L}
+        ),
+        RowSignature.builder()
+                    .add("variant", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
   }
 
   @Test
@@ -5222,7 +5647,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "str",
                       "variant",
                       "variantEmptyObj",
-                      "variantEmtpyArray"
+                      "variantEmtpyArray",
+                      "variantNumeric",
+                      "variantWithArrays"
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
@@ -5230,32 +5657,552 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         useDefault ?
         ImmutableList.of(
-            new Object[]{1672531200000L, "", 0L, 0.0D, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "", 2L, 0.0D, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "c", 0L, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", "", "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "null", 3L, 2.0D, "", "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+            new Object[]{
+                1672531200000L,
+                "",
+                0L,
+                0.0D,
+                1L,
+                "51",
+                -0.13D,
+                "1",
+                "[]",
+                "[51,-35]",
+                "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"v\":[]}",
+                "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}",
+                null,
+                "[\"a\",\"b\"]",
+                null,
+                "[2,3]",
+                null,
+                "[null]",
+                null,
+                "[1,0,1]",
+                null,
+                "[{\"x\":1},{\"x\":2}]",
+                "",
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "",
+                2L,
+                0.0D,
+                0L,
+                "b",
+                1.1D,
+                "\"b\"",
+                "2",
+                "b",
+                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"v\":[]}",
+                "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[null,\"b\"]",
+                "[2,3]",
+                null,
+                "[3.3,4.4,5.5]",
+                "[999.0,null,5.5]",
+                "[null,null,2.2]",
+                "[1,1]",
+                "[null,[null],[]]",
+                "[{\"x\":3},{\"x\":4}]",
+                "",
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "a",
+                1L,
+                1.0D,
+                1L,
+                "1",
+                1.0D,
+                "1",
+                "1",
+                "1",
+                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}",
+                "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
+                "[\"a\",\"b\"]",
+                "[\"a\",\"b\"]",
+                "[1,2,3]",
+                "[1,null,3]",
+                "[1.1,2.2,3.3]",
+                "[1.1,2.2,null]",
+                "[\"a\",\"1\",\"2.2\"]",
+                "[1,0,1]",
+                "[[1,2,null],[3,4]]",
+                "[{\"x\":1},{\"x\":2}]",
+                "",
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "b",
+                4L,
+                3.3D,
+                1L,
+                "1",
+                0.0D,
+                "{}",
+                "4",
+                "1",
+                "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"v\":[]}",
+                "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
+                "[\"d\",\"e\"]",
+                "[\"b\",\"b\"]",
+                "[1,4]",
+                "[1]",
+                "[2.2,3.3,4.0]",
+                null,
+                "[\"a\",\"b\",\"c\"]",
+                "[null,0,1]",
+                "[[1,2],[3,4],[5,6,7]]",
+                "[{\"x\":null},{\"x\":2}]",
+                "",
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "c",
+                0L,
+                4.4D,
+                1L,
+                "hello",
+                -1000.0D,
+                "{}",
+                "[]",
+                "hello",
+                "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"v\":\"a\"}",
+                "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}",
+                null,
+                null,
+                "[1,2,3]",
+                "[]",
+                "[1.1,2.2,3.3]",
+                null,
+                null,
+                "[0]",
+                null,
+                "[{\"x\":1000},{\"y\":2000}]",
+                "",
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "d",
+                5L,
+                5.9D,
+                0L,
+                "",
+                3.33D,
+                "\"a\"",
+                "6",
+                null,
+                "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"v\":\"b\"}",
+                null,
+                "[\"a\",\"b\"]",
+                null,
+                null,
+                "[null,2,9]",
+                null,
+                "[999.0,5.5,null]",
+                "[\"a\",\"1\",\"2.2\"]",
+                "[]",
+                "[[1],[1,2,null]]",
+                "[{\"a\":1},{\"b\":2}]",
+                "",
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "null",
+                3L,
+                2.0D,
+                0L,
+                "3.0",
+                1.0D,
+                "3.3",
+                "3",
+                "3.0",
+                "{\"a\":300}",
+                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
+                "[\"b\",\"c\"]",
+                "[\"d\",null,\"b\"]",
+                "[1,2,3,4]",
+                "[1,2,3]",
+                "[1.1,3.3]",
+                "[null,2.2,null]",
+                "[1,null,1]",
+                "[1,null,1]",
+                "[[1],null,[1,2,3]]",
+                "[null,{\"x\":2}]",
+                "",
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            }
         ) :
         ImmutableList.of(
-            new Object[]{1672531200000L, null, null, null, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "", 2L, null, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "c", null, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", null, "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
-            new Object[]{1672531200000L, "null", 3L, 2.0D, null, "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+            new Object[]{
+                1672531200000L,
+                null,
+                null,
+                null,
+                1L,
+                "51",
+                -0.13D,
+                "1",
+                "[]",
+                "[51,-35]",
+                "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"v\":[]}",
+                "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}",
+                null,
+                "[\"a\",\"b\"]",
+                null,
+                "[2,3]",
+                null,
+                "[null]",
+                null,
+                "[1,0,1]",
+                null,
+                "[{\"x\":1},{\"x\":2}]",
+                null,
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "",
+                2L,
+                null,
+                0L,
+                "b",
+                1.1D,
+                "\"b\"",
+                "2",
+                "b",
+                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"v\":[]}",
+                "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[null,\"b\"]",
+                "[2,3]",
+                null,
+                "[3.3,4.4,5.5]",
+                "[999.0,null,5.5]",
+                "[null,null,2.2]",
+                "[1,1]",
+                "[null,[null],[]]",
+                "[{\"x\":3},{\"x\":4}]",
+                null,
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "a",
+                1L,
+                1.0D,
+                1L,
+                "1",
+                1.0D,
+                "1",
+                "1",
+                "1",
+                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}",
+                "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
+                "[\"a\",\"b\"]",
+                "[\"a\",\"b\"]",
+                "[1,2,3]",
+                "[1,null,3]",
+                "[1.1,2.2,3.3]",
+                "[1.1,2.2,null]",
+                "[\"a\",\"1\",\"2.2\"]",
+                "[1,0,1]",
+                "[[1,2,null],[3,4]]",
+                "[{\"x\":1},{\"x\":2}]",
+                null,
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "b",
+                4L,
+                3.3D,
+                1L,
+                "1",
+                null,
+                "{}",
+                "4",
+                "1",
+                "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"v\":[]}",
+                "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
+                "[\"d\",\"e\"]",
+                "[\"b\",\"b\"]",
+                "[1,4]",
+                "[1]",
+                "[2.2,3.3,4.0]",
+                null,
+                "[\"a\",\"b\",\"c\"]",
+                "[null,0,1]",
+                "[[1,2],[3,4],[5,6,7]]",
+                "[{\"x\":null},{\"x\":2}]",
+                null,
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "c",
+                null,
+                4.4D,
+                1L,
+                "hello",
+                -1000.0D,
+                "{}",
+                "[]",
+                "hello",
+                "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"v\":\"a\"}",
+                "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}",
+                null,
+                null,
+                "[1,2,3]",
+                "[]",
+                "[1.1,2.2,3.3]",
+                null,
+                null,
+                "[0]",
+                null,
+                "[{\"x\":1000},{\"y\":2000}]",
+                null,
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "d",
+                5L,
+                5.9D,
+                0L,
+                null,
+                3.33D,
+                "\"a\"",
+                "6",
+                null,
+                "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"v\":\"b\"}",
+                null,
+                "[\"a\",\"b\"]",
+                null,
+                null,
+                "[null,2,9]",
+                null,
+                "[999.0,5.5,null]",
+                "[\"a\",\"1\",\"2.2\"]",
+                "[]",
+                "[[1],[1,2,null]]",
+                "[{\"a\":1},{\"b\":2}]",
+                null,
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            },
+            new Object[]{
+                1672531200000L,
+                "null",
+                3L,
+                2.0D,
+                null,
+                "3.0",
+                1.0D,
+                "3.3",
+                "3",
+                "3.0",
+                "{\"a\":300}",
+                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
+                "[\"b\",\"c\"]",
+                "[\"d\",null,\"b\"]",
+                "[1,2,3,4]",
+                "[1,2,3]",
+                "[1.1,3.3]",
+                "[null,2.2,null]",
+                "[1,null,1]",
+                "[1,null,1]",
+                "[[1],null,[1,2,3]]",
+                "[null,{\"x\":2}]",
+                null,
+                "hello",
+                1234L,
+                1.234D,
+                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}",
+                "[\"a\",\"b\",\"c\"]",
+                "[1,2,3]",
+                "[1.1,2.2,3.3]",
+                "[]",
+                "{}",
+                "[null,null]",
+                "[{},{},{}]",
+                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
+                1L
+            }
         ),
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
                     .add("str", ColumnType.STRING)
                     .add("long", ColumnType.LONG)
                     .add("double", ColumnType.DOUBLE)
-                    .add("bool", ColumnType.STRING)
+                    .add("bool", ColumnType.LONG)
                     .add("variant", ColumnType.STRING)
+                    .add("variantNumeric", ColumnType.DOUBLE)
                     .add("variantEmptyObj", ColumnType.NESTED_DATA)
                     .add("variantEmtpyArray", ColumnType.LONG_ARRAY)
+                    .add("variantWithArrays", ColumnType.STRING_ARRAY)
                     .add("obj", ColumnType.NESTED_DATA)
                     .add("complexObj", ColumnType.NESTED_DATA)
                     .add("arrayString", ColumnType.STRING_ARRAY)
@@ -5265,7 +6212,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
                     .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
                     .add("arrayVariant", ColumnType.STRING_ARRAY)
-                    .add("arrayBool", ColumnType.STRING_ARRAY)
+                    .add("arrayBool", ColumnType.LONG_ARRAY)
                     .add("arrayNestedLong", ColumnType.NESTED_DATA)
                     .add("arrayObject", ColumnType.NESTED_DATA)
                     .add("null", ColumnType.STRING)
@@ -5282,6 +6229,175 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("cEmptyObjectArray", ColumnType.NESTED_DATA)
                     .add("cObjectArray", ColumnType.NESTED_DATA)
                     .add("cnt", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testFilterJsonIsNotNull()
+  {
+    testQuery(
+        "SELECT nest\n"
+        + "FROM druid.nested WHERE nest IS NOT NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("nest")
+                  .filters(notNull("nest"))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of()
+        : ImmutableList.of(
+            new Object[]{"{\"x\":100,\"y\":2.02,\"z\":\"300\",\"mixed\":1,\"mixed2\":\"1\"}"},
+            new Object[]{"{\"x\":200,\"y\":3.03,\"z\":\"abcdef\",\"mixed\":1.1,\"mixed2\":1}"},
+            new Object[]{"{\"x\":100,\"y\":2.02,\"z\":\"400\",\"mixed2\":1.1}"}
+        ),
+        RowSignature.builder()
+                    .add("nest", ColumnType.NESTED_DATA)
+                    .build()
+
+    );
+  }
+
+  @Test
+  public void testFilterJsonIsNull()
+  {
+    testQuery(
+        "SELECT nest, nester\n"
+        + "FROM druid.nested WHERE nest IS NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("nest", "nester")
+                  .filters(isNull("nest"))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        // selector filter is wrong
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{
+                "{\"x\":100,\"y\":2.02,\"z\":\"300\",\"mixed\":1,\"mixed2\":\"1\"}",
+                "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"
+            },
+            new Object[]{null, "\"hello\""},
+            new Object[]{"{\"x\":200,\"y\":3.03,\"z\":\"abcdef\",\"mixed\":1.1,\"mixed2\":1}", null},
+            new Object[]{null, null},
+            new Object[]{null, null},
+            new Object[]{
+                "{\"x\":100,\"y\":2.02,\"z\":\"400\",\"mixed2\":1.1}",
+                "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"
+            },
+            new Object[]{null, "2"}
+        )
+        : ImmutableList.of(
+            new Object[]{null, "\"hello\""},
+            new Object[]{null, null},
+            new Object[]{null, null},
+            new Object[]{null, "2"}
+        ),
+        RowSignature.builder()
+                    .add("nest", ColumnType.NESTED_DATA)
+                    .add("nester", ColumnType.NESTED_DATA)
+                    .build()
+
+    );
+  }
+
+  @Test
+  public void testCoalesceOnNestedColumns()
+  {
+    // jo.unnest is first entry in coalesce
+    // so Calcite removes the coalesce to be used here
+    testQuery(
+        "select coalesce(c,long) as col "
+        + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) ",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(DATA_SOURCE_ALL),
+                      new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("j0.unnest")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null},
+            new Object[]{3L},
+            new Object[]{4L},
+            new Object[]{3L},
+            new Object[]{4L},
+            new Object[]{1L},
+            new Object[]{2L},
+            new Object[]{null}
+        ),
+        RowSignature.builder()
+                    .add("col", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testCoalesceOnNestedColumnsLater()
+  {
+    // the first column in coalesce comes from the table
+    // so a virtual expression is present for the coalesce
+    testQuery(
+        "select coalesce(long,c) as col "
+        + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) ",
+        useDefault ?
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(DATA_SOURCE_ALL),
+                      new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("long")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ) :
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(DATA_SOURCE_ALL),
+                      new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0", "nvl(\"long\",\"j0.unnest\")", ColumnType.LONG))
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2L},
+            new Object[]{1L},
+            new Object[]{1L},
+            new Object[]{4L},
+            new Object[]{4L},
+            new Object[]{5L},
+            new Object[]{5L},
+            new Object[]{5L}
+        ),
+        RowSignature.builder()
+                    .add("col", ColumnType.LONG)
                     .build()
     );
   }

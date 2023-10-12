@@ -27,7 +27,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.balancer.ReservoirSegmentSampler;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -64,9 +64,6 @@ public class BalancerStrategyBenchmark
   private static final Interval TEST_SEGMENT_INTERVAL = Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000");
   private static final int NUMBER_OF_SERVERS = 20;
 
-  @Param({"default", "useBatchedSegmentSampler"})
-  private String mode;
-  
   @Param({"10000", "100000", "1000000"})
   private int numberOfSegments;
   
@@ -79,9 +76,7 @@ public class BalancerStrategyBenchmark
   @Setup(Level.Trial)
   public void setup()
   {
-    if ("useBatchedSegmentSampler".equals(mode)) {
-      reservoirSize = maxSegmentsToMove;
-    }
+    reservoirSize = maxSegmentsToMove;
     
     List<List<DataSegment>> segmentList = new ArrayList<>(NUMBER_OF_SERVERS);
     IntStream.range(0, NUMBER_OF_SERVERS).forEach(i -> segmentList.add(new ArrayList<>()));
@@ -110,7 +105,7 @@ public class BalancerStrategyBenchmark
                   ImmutableMap.of("test", new ImmutableDruidDataSource("test", Collections.emptyMap(), segments)),
                   segments.size()
               ),
-              new LoadQueuePeonTester()
+              new TestLoadQueuePeon()
           )
       );
     }

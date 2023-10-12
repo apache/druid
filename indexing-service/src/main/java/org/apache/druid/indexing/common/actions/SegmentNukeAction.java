@@ -71,7 +71,7 @@ public class SegmentNukeAction implements TaskAction<Void>
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {
@@ -97,7 +97,7 @@ public class SegmentNukeAction implements TaskAction<Void>
 
     for (DataSegment segment : segments) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("segment/nuked/bytes", segment.getSize()));
+      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/nuked/bytes", segment.getSize()));
     }
 
     return null;

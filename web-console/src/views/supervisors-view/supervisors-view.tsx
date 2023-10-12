@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent, MenuItem } from '@blueprintjs/core';
+import { Code, Intent, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -40,6 +40,7 @@ import {
   SpecDialog,
   SupervisorTableActionDialog,
 } from '../../dialogs';
+import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
 import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
@@ -81,7 +82,6 @@ interface SupervisorQueryResultRow {
   supervisor_id: string;
   type: string;
   source: string;
-  state: string;
   detailed_state: string;
   suspended: boolean;
   running_tasks?: number;
@@ -109,6 +109,7 @@ export interface SupervisorsViewState {
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
+  resetOffsetsSupervisorInfo?: { id: string; type: string };
   resetSupervisorId?: string;
   terminateSupervisorId?: string;
 
@@ -124,17 +125,25 @@ export interface SupervisorsViewState {
   visibleColumns: LocalStorageBackedVisibility;
 }
 
-function stateToColor(status: string): string {
-  switch (status) {
+function detailedStateToColor(detailedState: string): string {
+  switch (detailedState) {
     case 'UNHEALTHY_SUPERVISOR':
     case 'UNHEALTHY_TASKS':
+    case 'UNABLE_TO_CONNECT_TO_STREAM':
+    case 'LOST_CONTACT_WITH_STREAM':
       return '#d5100a';
 
     case 'PENDING':
       return '#00eaff';
 
+    case 'DISCOVERING_INITIAL_TASKS':
+    case 'CREATING_TASKS':
+    case 'CONNECTING_TO_STREAM':
     case 'RUNNING':
       return '#2167d5';
+
+    case 'IDLE':
+      return '#44659d';
 
     case 'STOPPING':
       return '#e75c06';
@@ -157,13 +166,17 @@ export class SupervisorsView extends React.PureComponent<
   >;
 
   static SUPERVISOR_SQL = `SELECT
-  "supervisor_id", "type", "source", "state", "detailed_state", "suspended" = 1 AS "suspended"
-FROM sys.supervisors
+  "supervisor_id",
+  "type",
+  "source",
+  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",
+  "suspended" = 1 AS "suspended"
+FROM "sys"."supervisors"
 ORDER BY "supervisor_id"`;
 
   static RUNNING_TASK_SQL = `SELECT
   "datasource", "type", COUNT(*) AS "num_running_tasks"
-FROM sys.tasks WHERE "status" = 'RUNNING' AND "runner_status" = 'RUNNING'
+FROM "sys"."tasks" WHERE "status" = 'RUNNING' AND "runner_status" = 'RUNNING'
 GROUP BY 1, 2`;
 
   constructor(props: SupervisorsViewProps) {
@@ -330,6 +343,11 @@ GROUP BY 1, 2`;
       },
       {
         icon: IconNames.STEP_BACKWARD,
+        title: 'Set offsets',
+        onAction: () => this.setState({ resetOffsetsSupervisorInfo: { id, type } }),
+      },
+      {
+        icon: IconNames.STEP_BACKWARD,
         title: 'Hard reset',
         intent: Intent.DANGER,
         onAction: () => this.setState({ resetSupervisorId: id }),
@@ -368,7 +386,9 @@ GROUP BY 1, 2`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to resume supervisor '${resumeSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to resume supervisor <Code>{resumeSupervisorId}</Code>?
+        </p>
       </AsyncActionDialog>
     );
   }
@@ -397,8 +417,25 @@ GROUP BY 1, 2`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to suspend supervisor '${suspendSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to suspend supervisor <Code>{suspendSupervisorId}</Code>?
+        </p>
       </AsyncActionDialog>
+    );
+  }
+
+  renderResetOffsetsSupervisorAction() {
+    const { resetOffsetsSupervisorInfo } = this.state;
+    if (!resetOffsetsSupervisorInfo) return;
+
+    return (
+      <SupervisorResetOffsetsDialog
+        supervisorId={resetOffsetsSupervisorInfo.id}
+        supervisorType={resetOffsetsSupervisorInfo.type}
+        onClose={() => {
+          this.setState({ resetOffsetsSupervisorInfo: undefined });
+        }}
+      />
     );
   }
 
@@ -411,7 +448,7 @@ GROUP BY 1, 2`;
         action={async () => {
           const resp = await Api.instance.post(
             `/druid/indexer/v1/supervisor/${Api.encodePath(resetSupervisorId)}/reset`,
-            {},
+            '',
           );
           return resp.data;
         }}
@@ -430,7 +467,9 @@ GROUP BY 1, 2`;
           'I understand that this operation cannot be undone.',
         ]}
       >
-        <p>{`Are you sure you want to hard reset supervisor '${resetSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to hard reset supervisor <Code>{resetSupervisorId}</Code>?
+        </p>
         <p>Hard resetting a supervisor will lead to data loss or data duplication.</p>
         <p>
           The reason for using this operation is to recover from a state in which the supervisor
@@ -464,7 +503,9 @@ GROUP BY 1, 2`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to terminate supervisor '${terminateSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to terminate supervisor <Code>{terminateSupervisorId}</Code>?
+        </p>
         <p>This action is not reversible.</p>
       </AsyncActionDialog>
     );
@@ -549,16 +590,16 @@ GROUP BY 1, 2`;
             id: 'status',
             width: 250,
             accessor: 'detailed_state',
-            Cell: row => (
+            Cell: ({ value }) => (
               <TableFilterableCell
                 field="status"
-                value={row.value}
+                value={value}
                 filters={filters}
                 onFiltersChange={onFiltersChange}
               >
                 <span>
-                  <span style={{ color: stateToColor(row.original.state) }}>&#x25cf;&nbsp;</span>
-                  {row.value}
+                  <span style={{ color: detailedStateToColor(value) }}>&#x25cf;&nbsp;</span>
+                  {value}
                 </span>
               </TableFilterableCell>
             ),
@@ -578,9 +619,11 @@ GROUP BY 1, 2`;
               >
                 {typeof value === 'undefined'
                   ? 'n/a'
-                  : !value
-                  ? `No running tasks`
-                  : pluralIfNeeded(value, 'running task')}
+                  : value > 0
+                  ? pluralIfNeeded(value, 'running task')
+                  : original.suspended
+                  ? ''
+                  : `No running tasks`}
               </TableClickableCell>
             ),
             show: visibleColumns.shown('Running tasks'),
@@ -730,7 +773,7 @@ GROUP BY 1, 2`;
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const {
       supervisorSpecDialogOpen,
       alertErrorMsg,
@@ -763,6 +806,7 @@ GROUP BY 1, 2`;
         {this.renderSupervisorTable()}
         {this.renderResumeSupervisorAction()}
         {this.renderSuspendSupervisorAction()}
+        {this.renderResetOffsetsSupervisorAction()}
         {this.renderResetSupervisorAction()}
         {this.renderTerminateSupervisorAction()}
         {supervisorSpecDialogOpen && (

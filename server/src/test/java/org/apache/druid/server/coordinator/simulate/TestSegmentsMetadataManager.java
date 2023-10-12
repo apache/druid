@@ -127,13 +127,22 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
         ++numModifiedSegments;
       }
     }
+
+    if (numModifiedSegments > 0) {
+      snapshot = null;
+    }
     return numModifiedSegments;
   }
 
   @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
-    return usedSegments.remove(segmentId.toString()) != null;
+    boolean updated = usedSegments.remove(segmentId.toString()) != null;
+    if (updated) {
+      snapshot = null;
+    }
+
+    return updated;
   }
 
   @Nullable
@@ -190,7 +199,13 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit)
+  public List<Interval> getUnusedSegmentIntervals(
+      final String dataSource,
+      @Nullable final DateTime minStartTime,
+      final DateTime maxEndTime,
+      final int limit,
+      final DateTime maxUsedFlagLastUpdatedTime
+  )
   {
     return null;
   }
@@ -199,5 +214,15 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public void poll()
   {
 
+  }
+
+  @Override
+  public void populateUsedFlagLastUpdatedAsync()
+  {
+  }
+
+  @Override
+  public void stopAsyncUsedFlagLastUpdatedUpdate()
+  {
   }
 }

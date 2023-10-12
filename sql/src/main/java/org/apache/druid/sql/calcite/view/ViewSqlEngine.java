@@ -22,11 +22,11 @@ package org.apache.druid.sql.calcite.view;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.run.SqlEngines;
 
 import java.util.Map;
 
@@ -63,8 +63,8 @@ public class ViewSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
       case UNNEST:
+      case ALLOW_TOP_LEVEL_UNION_ALL:
         return true;
-
       // Views can't sit on top of INSERT or REPLACE.
       case CAN_INSERT:
       case CAN_REPLACE:
@@ -78,7 +78,7 @@ public class ViewSqlEngine implements SqlEngine
         return false;
 
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(ViewSqlEngine.class.getSimpleName(), feature);
     }
   }
 

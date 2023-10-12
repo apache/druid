@@ -28,6 +28,7 @@ export interface QueryContext {
   // Multi-stage query
   maxNumTasks?: number;
   finalizeAggregations?: boolean;
+  selectDestination?: string;
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
@@ -161,7 +162,23 @@ export function changeFinalizeAggregations(
     : deepDelete(context, 'finalizeAggregations');
 }
 
-// finalizeAggregations
+// waitTillSegmentsLoad
+
+export function getWaitTillSegmentsLoad(context: QueryContext): boolean | undefined {
+  const { waitTillSegmentsLoad } = context;
+  return typeof waitTillSegmentsLoad === 'boolean' ? waitTillSegmentsLoad : undefined;
+}
+
+export function changeWaitTillSegmentsLoad(
+  context: QueryContext,
+  waitTillSegmentsLoad: boolean | undefined,
+): QueryContext {
+  return typeof waitTillSegmentsLoad === 'boolean'
+    ? deepSet(context, 'waitTillSegmentsLoad', waitTillSegmentsLoad)
+    : deepDelete(context, 'waitTillSegmentsLoad');
+}
+
+// groupByEnableMultiValueUnnesting
 
 export function getGroupByEnableMultiValueUnnesting(context: QueryContext): boolean | undefined {
   const { groupByEnableMultiValueUnnesting } = context;

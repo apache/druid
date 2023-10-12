@@ -28,11 +28,13 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -80,10 +82,9 @@ public class PlannerContext
    */
   public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
 
-  /**
-   * Undocumented context key, used to enable {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
-   */
-  public static final String CTX_ENABLE_UNNEST = "enableUnnest";
+  public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
+  public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = NullHandling.replaceWithDefault();
+
 
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
@@ -97,6 +98,7 @@ public class PlannerContext
   private final Map<String, Object> queryContext;
   private final String sqlQueryId;
   private final boolean stringifyArrays;
+  private final boolean useBoundsAndSelectors;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   // bindings for dynamic parameters to bind during planning
@@ -121,6 +123,7 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final boolean stringifyArrays,
+      final boolean useBoundsAndSelectors,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -134,6 +137,7 @@ public class PlannerContext
     this.queryContext = queryContext;
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
+    this.useBoundsAndSelectors = useBoundsAndSelectors;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
 
     String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
@@ -155,10 +159,12 @@ public class PlannerContext
     final DateTime utcNow;
     final DateTimeZone timeZone;
     final boolean stringifyArrays;
+    final boolean useBoundsAndSelectors;
 
     final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
+    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
 
     if (tsParam != null) {
       utcNow = new DateTime(tsParam, DateTimeZone.UTC);
@@ -178,12 +184,19 @@ public class PlannerContext
       stringifyArrays = true;
     }
 
+    if (useBoundsAndSelectorsParam != null) {
+      useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
+    } else {
+      useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
+    }
+
     return new PlannerContext(
         plannerToolbox,
         sql,
         plannerToolbox.plannerConfig().withOverrides(queryContext),
         utcNow.withZone(timeZone),
         stringifyArrays,
+        useBoundsAndSelectors,
         engine,
         queryContext,
         hook
@@ -231,10 +244,17 @@ public class PlannerContext
     return plannerToolbox;
   }
 
+  public ExprMacroTable getExprMacroTable()
+  {
+    return plannerToolbox.exprMacroTable();
+  }
+
   public ExpressionParser getExpressionParser()
   {
     return expressionParser;
   }
+
+
 
   /**
    * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
@@ -297,6 +317,19 @@ public class PlannerContext
   public boolean isStringifyArrays()
   {
     return stringifyArrays;
+  }
+
+  /**
+   * Whether we should use {@link org.apache.druid.query.filter.BoundDimFilter} and
+   * {@link org.apache.druid.query.filter.SelectorDimFilter} (true) or {@link org.apache.druid.query.filter.RangeFilter},
+   * {@link org.apache.druid.query.filter.EqualityFilter}, and {@link org.apache.druid.query.filter.NullFilter} (false).
+   *
+   * Typically true when {@link NullHandling#replaceWithDefault()} and false when {@link NullHandling#sqlCompatible()}.
+   * Can be overriden by the undocumented context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
+   */
+  public boolean isUseBoundsAndSelectors()
+  {
+    return useBoundsAndSelectors;
   }
 
   public List<TypedValue> getParameters()
@@ -489,13 +522,6 @@ public class PlannerContext
       // Short-circuit: feature requires context flag.
       return false;
     }
-
-    if (feature == EngineFeature.UNNEST &&
-        !QueryContexts.getAsBoolean(CTX_ENABLE_UNNEST, queryContext.get(CTX_ENABLE_UNNEST), false)) {
-      // Short-circuit: feature requires context flag.
-      return false;
-    }
-
     return engine.featureAvailable(feature, this);
   }
 

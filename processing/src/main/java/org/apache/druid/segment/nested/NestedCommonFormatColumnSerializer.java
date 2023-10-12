@@ -46,10 +46,6 @@ import java.util.SortedMap;
  *
  * @see NestedDataColumnSerializer    - nested columns
  *
- * @see NestedDataColumnSerializerV4  - legacy nested column format created by
- *                                      {@link org.apache.druid.segment.NestedDataColumnIndexer} and
- *                                      {@link org.apache.druid.segment.NestedDataColumnMerger}
- *
  */
 public abstract class NestedCommonFormatColumnSerializer implements GenericColumnSerializer<StructuredData>
 {
@@ -93,6 +89,14 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     final String internalName = getInternalFileName(getColumnName(), fileName);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
       serializer.writeTo(smooshChannel, smoosher);
+    }
+  }
+
+  protected void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String fileName) throws IOException
+  {
+    final String internalName = getInternalFileName(getColumnName(), fileName);
+    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, buffer.capacity())) {
+      smooshChannel.write(buffer);
     }
   }
 

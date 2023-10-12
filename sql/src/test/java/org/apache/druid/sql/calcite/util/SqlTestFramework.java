@@ -39,6 +39,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -219,7 +220,7 @@ public class SqlTestFramework
       } else {
         return QueryStackTests.createQueryRunnerFactoryConglomerate(
             resourceCloser,
-            QueryStackTests.getProcessingConfig(true, builder.mergeBufferCount)
+            QueryStackTests.getProcessingConfig(builder.mergeBufferCount)
         );
       }
     }
@@ -485,6 +486,7 @@ public class SqlTestFramework
     {
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+      binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null));
     }
 
     @Provides

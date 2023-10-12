@@ -20,10 +20,17 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.collections.DefaultBlockingPool;
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
@@ -31,6 +38,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -74,6 +82,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -1135,5 +1144,61 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   private static ResultRow makeRow(final GroupByQuery query, final String timestamp, final Object... vals)
   {
     return GroupByQueryRunnerTestHelper.createExpectedRow(query, timestamp, vals);
+  }
+
+  @Test
+  public void testIsQueryCacheableOnGroupByStrategyV2()
+  {
+    final GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setGranularity(Granularities.DAY)
+        .setDimensions(new DefaultDimensionSpec("col", "dim"))
+        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+        .setAggregatorSpecs(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+        .build();
+    final DruidProcessingConfig processingConfig = new DruidProcessingConfig()
+    {
+      @Override
+      public String getFormatString()
+      {
+        return "processing-%s";
+      }
+    };
+    final GroupByQueryConfig queryConfig = new GroupByQueryConfig();
+    final Supplier<GroupByQueryConfig> queryConfigSupplier = Suppliers.ofInstance(queryConfig);
+    final Supplier<ByteBuffer> bufferSupplier =
+        () -> ByteBuffer.allocateDirect(processingConfig.intermediateComputeSizeBytes());
+
+    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
+        "GroupByQueryEngine-bufferPool",
+        bufferSupplier
+    );
+    final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
+        bufferSupplier,
+        processingConfig.getNumMergeBuffers()
+    );
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        processingConfig,
+        queryConfigSupplier,
+        bufferPool,
+        mergeBufferPool,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
+    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query);
+    Assert.assertTrue(
+        "result level cache on broker server for GroupByStrategyV2 should be enabled",
+        cacheStrategy.isCacheable(query, false, false)
+    );
+    Assert.assertFalse(
+        "segment level cache on broker server for GroupByStrategyV2 should be disabled",
+        cacheStrategy.isCacheable(query, false, true)
+    );
+    Assert.assertTrue(
+        "segment level cache on data server for GroupByStrategyV2 should be enabled",
+        cacheStrategy.isCacheable(query, true, true)
+    );
   }
 }

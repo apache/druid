@@ -26,6 +26,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -46,11 +47,9 @@ import java.util.Map;
  * the simulation. {@link CoordinatorSimulation#stop()} should not be called as
  * the simulation is stopped when cleaning up after the test in {@link #tearDown()}.
  * <p>
- * Tests that verify balancing behaviour should set
- * {@link CoordinatorDynamicConfig#useBatchedSegmentSampler()} to true.
+ * Tests that verify balancing behaviour use batched segment sampling.
  * Otherwise, the segment sampling is random and can produce repeated values
- * leading to flakiness in the tests. The simulation sets this field to true by
- * default.
+ * leading to flakiness in the tests.
  */
 public abstract class CoordinatorSimulationBaseTest implements
     CoordinatorSimulation.CoordinatorState,
@@ -112,6 +111,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   public void setDynamicConfig(CoordinatorDynamicConfig dynamicConfig)
   {
     sim.coordinator().setDynamicConfig(dynamicConfig);
+  }
+
+  @Override
+  public void setRetentionRules(String datasource, Rule... rules)
+  {
+    sim.coordinator().setRetentionRules(datasource, rules);
   }
 
   @Override
@@ -212,7 +217,9 @@ public abstract class CoordinatorSimulationBaseTest implements
   {
     static final String ASSIGNED_COUNT = "segment/assigned/count";
     static final String MOVED_COUNT = "segment/moved/count";
+    static final String MOVE_SKIPPED = "segment/moveSkipped/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
+    static final String DELETED_COUNT = "segment/deleted/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
@@ -288,6 +295,17 @@ public abstract class CoordinatorSimulationBaseTest implements
     static Rule forever()
     {
       return new ForeverBroadcastDistributionRule();
+    }
+  }
+
+  /**
+   * Builder for a drop rule.
+   */
+  static class Drop
+  {
+    static Rule forever()
+    {
+      return new ForeverDropRule();
     }
   }
 }

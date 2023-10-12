@@ -97,8 +97,9 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final Granularity segmentGranularity =
         QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final RowSignature intermediateSignature = computeIntermediateSignature(queryToRun);
+    final ClusterBy resultClusterByWithoutGranularity = computeClusterByForResults(queryToRun);
     final ClusterBy resultClusterBy =
-        QueryKitUtils.clusterByWithSegmentGranularity(computeClusterByForResults(queryToRun), segmentGranularity);
+        QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
     final RowSignature resultSignature =
         QueryKitUtils.sortableSignature(
             QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(queryToRun), segmentGranularity),
@@ -114,12 +115,19 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
 
-    if (intermediateClusterBy.getColumns().isEmpty()) {
+    // There can be a situation where intermediateClusterBy is empty, while the result is non-empty
+    // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
+    // (i.e. no GROUP BY clause)
+    // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
+    // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
+    if (intermediateClusterBy.isEmpty() && resultClusterBy.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
       shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
     } else if (doOrderBy) {
-      shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
+      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
+                                         ? ShuffleSpecFactories.singlePartition()
+                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
       shuffleSpecFactoryPostAggregation = doLimitOrOffset
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;

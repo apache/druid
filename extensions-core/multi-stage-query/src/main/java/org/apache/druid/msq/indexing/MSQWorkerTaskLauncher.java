@@ -60,7 +60,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.IntStream;
 
 /**
  * Like {@link org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor}, but different.
@@ -183,7 +182,19 @@ public class MSQWorkerTaskLauncher
    */
   public void stop(final boolean interrupt)
   {
-    if (state.compareAndSet(State.STARTED, State.STOPPED)) {
+    if (state.compareAndSet(State.NEW, State.STOPPED)) {
+      state.set(State.STOPPED);
+      if (interrupt) {
+        cancelTasksOnStop.set(true);
+      }
+
+      synchronized (taskIds) {
+        // Wake up sleeping mainLoop.
+        taskIds.notifyAll();
+      }
+      exec.shutdown();
+      stopFuture.set(null);
+    } else if (state.compareAndSet(State.STARTED, State.STOPPED)) {
       if (interrupt) {
         cancelTasksOnStop.set(true);
       }
@@ -232,7 +243,7 @@ public class MSQWorkerTaskLauncher
         taskIds.notifyAll();
       }
 
-      while (taskIds.size() < taskCount || !IntStream.range(0, taskCount).allMatch(fullyStartedTasks::contains)) {
+      while (taskIds.size() < taskCount || !allTasksStarted(taskCount)) {
         if (stopFuture.isDone() || stopFuture.isCancelled()) {
           FutureUtils.getUnchecked(stopFuture, false);
           throw new ISE("Stopped");
@@ -276,6 +287,7 @@ public class MSQWorkerTaskLauncher
 
   /**
    * Report a worker that failed without active orders. To be retried if it is requried for future stages only.
+   *
    * @param workerNumber worker number
    */
   public void reportFailedInactiveWorker(int workerNumber)
@@ -289,6 +301,7 @@ public class MSQWorkerTaskLauncher
    * Blocks the call untill the worker tasks are ready to be contacted for work.
    *
    * @param workerSet
+   *
    * @throws InterruptedException
    */
   public void waitUntilWorkersReady(Set<Integer> workerSet) throws InterruptedException
@@ -465,9 +478,13 @@ public class MSQWorkerTaskLauncher
   public WorkerCount getWorkerTaskCount()
   {
     synchronized (taskIds) {
-      int runningTasks = fullyStartedTasks.size();
-      int pendingTasks = desiredTaskCount - runningTasks;
-      return new WorkerCount(runningTasks, pendingTasks);
+      if (stopFuture.isDone()) {
+        return new WorkerCount(0, 0);
+      } else {
+        int runningTasks = fullyStartedTasks.size();
+        int pendingTasks = desiredTaskCount - runningTasks;
+        return new WorkerCount(runningTasks, pendingTasks);
+      }
     }
   }
 
@@ -685,6 +702,21 @@ public class MSQWorkerTaskLauncher
   }
 
   /**
+   * Whether {@link #fullyStartedTasks} contains all tasks from 0 (inclusive) to taskCount (exclusive).
+   */
+  @GuardedBy("taskIds")
+  private boolean allTasksStarted(final int taskCount)
+  {
+    for (int i = 0; i < taskCount; i++) {
+      if (!fullyStartedTasks.contains(i)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Used by the main loop to decide how often to check task status.
    */
   private long computeSleepTime(final long loopDurationMillis)
@@ -763,7 +795,7 @@ public class MSQWorkerTaskLauncher
      * 2. The location has never been reported by the task. If this is not the case, the task has started already.
      * 3. Task has taken more than maxTaskStartDelayMillis to start.
      * 4. No task has started in maxTaskStartDelayMillis. This is in case the cluster is scaling up and other workers
-     *    are starting.
+     * are starting.
      */
     public boolean didRunTimeOut(final long maxTaskStartDelayMillis)
     {

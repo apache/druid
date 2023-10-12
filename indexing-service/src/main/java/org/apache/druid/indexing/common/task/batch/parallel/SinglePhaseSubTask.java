@@ -218,8 +218,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   {
     return determineLockGranularityAndTryLock(
         new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
 
@@ -270,7 +269,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
 
       final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
           supervisorTaskId,

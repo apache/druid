@@ -21,8 +21,12 @@ package org.apache.druid.query.filter.vector;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.filter.ConstantMatcherType;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
@@ -39,29 +43,18 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
     this.selector = selector;
   }
 
-  @Nullable
-  private static BooleanVectorValueMatcher toBooleanMatcherIfPossible(
-      final SingleValueDimensionVectorSelector selector,
-      final Predicate<String> predicate
-  )
-  {
-    final Boolean booleanValue = ValueMatchers.toBooleanIfPossible(
-        selector,
-        false,
-        predicate
-    );
-
-    return booleanValue == null ? null : BooleanVectorValueMatcher.of(selector, booleanValue);
-  }
-
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
     final String etnValue = NullHandling.emptyToNullIfNeeded(value);
 
-    final VectorValueMatcher booleanMatcher = toBooleanMatcherIfPossible(selector, s -> Objects.equals(s, etnValue));
-    if (booleanMatcher != null) {
-      return booleanMatcher;
+    final ConstantMatcherType constantMatcherType = ValueMatchers.toConstantMatcherTypeIfPossible(
+        selector,
+        false,
+        s -> Objects.equals(s, etnValue)
+    );
+    if (constantMatcherType != null) {
+      return constantMatcherType.asVectorMatcher(selector);
     }
 
     final IdLookup idLookup = selector.idLookup();
@@ -73,8 +66,9 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
       if (id < 0) {
         // Value doesn't exist in this column.
-        return BooleanVectorValueMatcher.of(selector, false);
+        return VectorValueMatcher.allFalseSingleValueDimensionMatcher(selector);
       }
+      final boolean hasNull = NullHandling.isNullOrEquivalent(selector.lookupName(0));
 
       // Check for "id".
       return new BaseVectorValueMatcher(selector)
@@ -82,7 +76,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
         final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
         @Override
-        public ReadableVectorMatch match(final ReadableVectorMatch mask)
+        public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
         {
           final int[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
@@ -91,19 +85,30 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int rowNum = mask.getSelection()[i];
-            if (vector[rowNum] == id) {
+            final int rowId = vector[rowNum];
+            if ((includeUnknown && hasNull && rowId == 0) || rowId == id) {
               selection[numRows++] = rowNum;
             }
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
     } else {
       return makeMatcher(s -> Objects.equals(s, etnValue));
     }
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
+    if (castForComparison == null || castForComparison.asString() == null) {
+      return VectorValueMatcher.allFalseSingleValueDimensionMatcher(selector);
+    }
+    return makeMatcher(castForComparison.asString());
   }
 
   @Override
@@ -114,9 +119,14 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
   private VectorValueMatcher makeMatcher(final Predicate<String> predicate)
   {
-    final VectorValueMatcher booleanMatcher = toBooleanMatcherIfPossible(selector, predicate);
-    if (booleanMatcher != null) {
-      return booleanMatcher;
+    final ConstantMatcherType constantMatcherType = ValueMatchers.toConstantMatcherTypeIfPossible(
+        selector,
+        false,
+        predicate
+    );
+
+    if (constantMatcherType != null) {
+      return constantMatcherType.asVectorMatcher(selector);
     }
 
     if (selector.getValueCardinality() > 0) {
@@ -129,7 +139,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
         private final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
         @Override
-        public ReadableVectorMatch match(final ReadableVectorMatch mask)
+        public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
         {
           final int[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
@@ -144,7 +154,8 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
             if (checkedIds.get(id)) {
               matches = matchingIds.get(id);
             } else {
-              matches = predicate.apply(selector.lookupName(id));
+              final String val = selector.lookupName(id);
+              matches = (includeUnknown && val == null) || predicate.apply(val);
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);
@@ -157,7 +168,6 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };
@@ -168,7 +178,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
         final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
         @Override
-        public ReadableVectorMatch match(final ReadableVectorMatch mask)
+        public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
         {
           final int[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
@@ -177,13 +187,13 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int rowNum = mask.getSelection()[i];
-            if (predicate.apply(selector.lookupName(vector[rowNum]))) {
+            final String val = selector.lookupName(vector[rowNum]);
+            if ((includeUnknown && val == null) || predicate.apply(val)) {
               selection[numRows++] = rowNum;
             }
           }
 
           match.setSelectionSize(numRows);
-          assert match.isValid(mask);
           return match;
         }
       };

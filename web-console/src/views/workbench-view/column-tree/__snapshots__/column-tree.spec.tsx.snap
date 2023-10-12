@@ -32,7 +32,13 @@ exports[`ColumnTree matches snapshot 1`] = `
           Object {
             "childNodes": Array [
               Object {
-                "icon": "time",
+                "icon": <Blueprint4.Icon
+                  aria-hidden={true}
+                  className="bp4-tree-node-icon"
+                  icon="time"
+                  tabIndex={-1}
+                  title="TIMESTAMP"
+                />,
                 "id": "__time",
                 "label": <Blueprint4.Popover2
                   autoFocus={false}
@@ -65,7 +71,13 @@ exports[`ColumnTree matches snapshot 1`] = `
                 </Blueprint4.Popover2>,
               },
               Object {
-                "icon": "numerical",
+                "icon": <Blueprint4.Icon
+                  aria-hidden={true}
+                  className="bp4-tree-node-icon"
+                  icon="numerical"
+                  tabIndex={-1}
+                  title="BIGINT"
+                />,
                 "id": "added",
                 "label": <Blueprint4.Popover2
                   autoFocus={false}
@@ -98,7 +110,13 @@ exports[`ColumnTree matches snapshot 1`] = `
                 </Blueprint4.Popover2>,
               },
               Object {
-                "icon": "floating-point",
+                "icon": <Blueprint4.Icon
+                  aria-hidden={true}
+                  className="bp4-tree-node-icon"
+                  icon="floating-point"
+                  tabIndex={-1}
+                  title="FLOAT"
+                />,
                 "id": "addedBy10",
                 "label": <Blueprint4.Popover2
                   autoFocus={false}

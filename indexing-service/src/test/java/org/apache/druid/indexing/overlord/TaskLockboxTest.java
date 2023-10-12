@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
@@ -34,6 +35,8 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -46,6 +49,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
@@ -221,9 +225,9 @@ public class TaskLockboxTest
   @Test
   public void testTryMixedLocks() throws EntryExistsException
   {
-    final Task lowPriorityTask = NoopTask.create(0);
-    final Task lowPriorityTask2 = NoopTask.create(0);
-    final Task highPiorityTask = NoopTask.create(10);
+    final Task lowPriorityTask = NoopTask.ofPriority(0);
+    final Task lowPriorityTask2 = NoopTask.ofPriority(0);
+    final Task highPiorityTask = NoopTask.ofPriority(10);
     final Interval interval1 = Intervals.of("2017-01-01/2017-01-02");
     final Interval interval2 = Intervals.of("2017-01-02/2017-01-03");
     final Interval interval3 = Intervals.of("2017-01-03/2017-01-04");
@@ -476,13 +480,13 @@ public class TaskLockboxTest
   {
     final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
 
-    final Task task1 = NoopTask.create("task1", 10);
+    final Task task1 = NoopTask.ofPriority(10);
     taskStorage.insert(task1, TaskStatus.running(task1.getId()));
     originalBox.add(task1);
     Assert.assertTrue(originalBox.tryLock(task1, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018"), null)).isOk());
 
     // task2 revokes task1
-    final Task task2 = NoopTask.create("task2", 100);
+    final Task task2 = NoopTask.ofPriority(100);
     taskStorage.insert(task2, TaskStatus.running(task2.getId()));
     originalBox.add(task2);
     Assert.assertTrue(originalBox.tryLock(task2, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018"), null)).isOk());
@@ -492,11 +496,11 @@ public class TaskLockboxTest
         .stream()
         .collect(Collectors.toMap(Task::getId, task -> taskStorage.getLocks(task.getId())));
 
-    final List<TaskLock> task1Locks = beforeLocksInStorage.get("task1");
+    final List<TaskLock> task1Locks = beforeLocksInStorage.get(task1.getId());
     Assert.assertEquals(1, task1Locks.size());
     Assert.assertTrue(task1Locks.get(0).isRevoked());
 
-    final List<TaskLock> task2Locks = beforeLocksInStorage.get("task1");
+    final List<TaskLock> task2Locks = beforeLocksInStorage.get(task1.getId());
     Assert.assertEquals(1, task2Locks.size());
     Assert.assertTrue(task2Locks.get(0).isRevoked());
 
@@ -524,7 +528,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -542,7 +546,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -561,7 +565,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -578,7 +582,7 @@ public class TaskLockboxTest
       Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
     }
 
-    final Task highPriorityTask = NoopTask.create(100);
+    final Task highPriorityTask = NoopTask.ofPriority(100);
     lockbox.add(highPriorityTask);
     taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
     final TaskLock lock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval).getTaskLock();
@@ -587,7 +591,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             highPriorityTask,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -597,8 +601,8 @@ public class TaskLockboxTest
   public void testDoInCriticalSectionWithRevokedLock() throws Exception
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
-    final Task lowPriorityTask = NoopTask.create("task1", 0);
-    final Task highPriorityTask = NoopTask.create("task2", 10);
+    final Task lowPriorityTask = NoopTask.ofPriority(0);
+    final Task highPriorityTask = NoopTask.ofPriority(10);
     lockbox.add(lowPriorityTask);
     lockbox.add(highPriorityTask);
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
@@ -612,7 +616,7 @@ public class TaskLockboxTest
     Assert.assertFalse(
         lockbox.doInCriticalSection(
             lowPriorityTask,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -622,8 +626,8 @@ public class TaskLockboxTest
   public void testAcquireLockAfterRevoked() throws EntryExistsException, InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
-    final Task lowPriorityTask = NoopTask.create("task1", 0);
-    final Task highPriorityTask = NoopTask.create("task2", 10);
+    final Task lowPriorityTask = NoopTask.ofPriority(0);
+    final Task highPriorityTask = NoopTask.ofPriority(10);
     lockbox.add(lowPriorityTask);
     lockbox.add(highPriorityTask);
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
@@ -650,7 +654,7 @@ public class TaskLockboxTest
     final List<Task> highPriorityTasks = new ArrayList<>();
 
     for (int i = 0; i < 8; i++) {
-      final Task task = NoopTask.create(10);
+      final Task task = NoopTask.ofPriority(10);
       lowPriorityTasks.add(task);
       taskStorage.insert(task, TaskStatus.running(task.getId()));
       lockbox.add(task);
@@ -665,7 +669,7 @@ public class TaskLockboxTest
 
     // Revoke some locks
     for (int i = 0; i < 4; i++) {
-      final Task task = NoopTask.create(100);
+      final Task task = NoopTask.ofPriority(100);
       highPriorityTasks.add(task);
       taskStorage.insert(task, TaskStatus.running(task.getId()));
       lockbox.add(task);
@@ -711,8 +715,8 @@ public class TaskLockboxTest
   @Test
   public void testFindLockPosseAfterRevokeWithDifferentLockIntervals() throws EntryExistsException
   {
-    final Task lowPriorityTask = NoopTask.create(0);
-    final Task highPriorityTask = NoopTask.create(10);
+    final Task lowPriorityTask = NoopTask.ofPriority(0);
+    final Task highPriorityTask = NoopTask.ofPriority(10);
 
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
     taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
@@ -821,11 +825,11 @@ public class TaskLockboxTest
   @Test
   public void testSegmentAndTimeChunkLockForSameIntervalWithDifferentPriority() throws EntryExistsException
   {
-    final Task task1 = NoopTask.create(10);
+    final Task task1 = NoopTask.ofPriority(10);
     lockbox.add(task1);
     taskStorage.insert(task1, TaskStatus.running(task1.getId()));
 
-    final Task task2 = NoopTask.create(100);
+    final Task task2 = NoopTask.ofPriority(100);
     lockbox.add(task2);
     taskStorage.insert(task2, TaskStatus.running(task2.getId()));
 
@@ -1086,8 +1090,8 @@ public class TaskLockboxTest
   @Test
   public void testGetTimeChunkAndSegmentLockForSameGroup()
   {
-    final Task task1 = NoopTask.withGroupId("groupId");
-    final Task task2 = NoopTask.withGroupId("groupId");
+    final Task task1 = new NoopTask(null, "groupId", null, 0, 0, null);
+    final Task task2 = new NoopTask(null, "groupId", null, 0, 0, null);
 
     lockbox.add(task1);
     lockbox.add(task2);
@@ -1130,8 +1134,8 @@ public class TaskLockboxTest
   @Test
   public void testGetTimeChunkAndSegmentLockForDifferentGroup()
   {
-    final Task task1 = NoopTask.withGroupId("groupId");
-    final Task task2 = NoopTask.withGroupId("groupId2");
+    final Task task1 = new NoopTask(null, "group1", "wiki", 0, 0, null);
+    final Task task2 = new NoopTask(null, "group2", "wiki", 0, 0, null);
 
     lockbox.add(task1);
     lockbox.add(task2);
@@ -1155,7 +1159,7 @@ public class TaskLockboxTest
   public void testGetLockedIntervals()
   {
     // Acquire locks for task1
-    final Task task1 = NoopTask.create("ds1");
+    final Task task1 = NoopTask.forDatasource("ds1");
     lockbox.add(task1);
 
     tryTimeChunkLock(
@@ -1170,7 +1174,7 @@ public class TaskLockboxTest
     );
 
     // Acquire locks for task2
-    final Task task2 = NoopTask.create("ds2");
+    final Task task2 = NoopTask.forDatasource("ds2");
     lockbox.add(task2);
     tryTimeChunkLock(
         TaskLockType.EXCLUSIVE,
@@ -1204,7 +1208,7 @@ public class TaskLockboxTest
   public void testGetLockedIntervalsForLowPriorityTask()
   {
     // Acquire lock for a low priority task
-    final Task lowPriorityTask = NoopTask.create(5);
+    final Task lowPriorityTask = NoopTask.ofPriority(5);
     lockbox.add(lowPriorityTask);
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
     tryTimeChunkLock(
@@ -1224,7 +1228,7 @@ public class TaskLockboxTest
   public void testGetLockedIntervalsForEqualPriorityTask()
   {
     // Acquire lock for a low priority task
-    final Task task = NoopTask.create(5);
+    final Task task = NoopTask.ofPriority(5);
     lockbox.add(task);
     taskStorage.insert(task, TaskStatus.running(task.getId()));
     tryTimeChunkLock(
@@ -1622,7 +1626,7 @@ public class TaskLockboxTest
   public void testGetLockedIntervalsForRevokedLocks()
   {
     // Acquire lock for a low priority task
-    final Task lowPriorityTask = NoopTask.create(5);
+    final Task lowPriorityTask = NoopTask.ofPriority(5);
     lockbox.add(lowPriorityTask);
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
     tryTimeChunkLock(
@@ -1643,7 +1647,7 @@ public class TaskLockboxTest
     );
 
     // Revoke the lowPriorityTask
-    final Task highPriorityTask = NoopTask.create(10);
+    final Task highPriorityTask = NoopTask.ofPriority(10);
     lockbox.add(highPriorityTask);
     tryTimeChunkLock(
         TaskLockType.EXCLUSIVE,
@@ -1667,8 +1671,8 @@ public class TaskLockboxTest
   {
     // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
     // Please refer to NullLockPosseTaskLockbox
-    final Task taskWithFailingLockAcquisition0 = NoopTask.withGroupId("FailingLockAcquisition");
-    final Task taskWithFailingLockAcquisition1 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithFailingLockAcquisition0 = new NoopTask(null, "FailingLockAcquisition", null, 0, 0, null);
+    final Task taskWithFailingLockAcquisition1 = new NoopTask(null, "FailingLockAcquisition", null, 0, 0, null);
     final Task taskWithSuccessfulLockAcquisition = NoopTask.create();
     taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
     taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
@@ -1725,6 +1729,117 @@ public class TaskLockboxTest
     );
 
     validator.expectActiveLocks(conflictingLock, floorLock);
+  }
+
+  @Test
+  public void testDoNotCleanUsedLockAfterSegmentAllocationFailure()
+  {
+    final Task task = NoopTask.create();
+    final Interval theInterval = Intervals.of("2023/2024");
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    final TaskLockbox testLockbox = new SegmentAllocationFailingTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(task);
+    final LockResult lockResult = testLockbox.tryLock(task, new TimeChunkLockRequest(
+        TaskLockType.SHARED,
+        task,
+        theInterval,
+        null
+    ));
+    Assert.assertTrue(lockResult.isOk());
+
+    SegmentAllocateRequest request = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.YEAR,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    try {
+      testLockbox.allocateSegments(
+          ImmutableList.of(request),
+          "DS",
+          theInterval,
+          false,
+          LockGranularity.TIME_CHUNK
+      );
+    }
+    catch (Exception e) {
+      // do nothing
+    }
+    Assert.assertFalse(testLockbox.getAllLocks().isEmpty());
+    Assert.assertEquals(
+        lockResult.getTaskLock(),
+        testLockbox.getOnlyTaskLockPosseContainingInterval(task, theInterval).get(0).getTaskLock()
+    );
+  }
+
+  @Test
+  public void testCleanUpLocksAfterSegmentAllocationFailure()
+  {
+    final Task task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    final TaskLockbox testLockbox = new SegmentAllocationFailingTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(task);
+
+    SegmentAllocateRequest request0 = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.YEAR,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    SegmentAllocateRequest request1 = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.MONTH,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    try {
+      testLockbox.allocateSegments(
+          ImmutableList.of(request0, request1),
+          "DS",
+          Intervals.of("2023/2024"),
+          false,
+          LockGranularity.TIME_CHUNK
+      );
+    }
+    catch (Exception e) {
+      // do nothing
+    }
+    Assert.assertTrue(testLockbox.getAllLocks().isEmpty());
   }
 
 
@@ -1787,7 +1902,7 @@ public class TaskLockboxTest
 
     private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority)
     {
-      final Task task = NoopTask.create(priority);
+      final Task task = NoopTask.ofPriority(priority);
       tasks.add(task);
       lockbox.add(task);
       taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -1951,6 +2066,28 @@ public class TaskLockboxTest
     {
       return task.getGroupId()
                  .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
+    }
+  }
+
+  private static class SegmentAllocationFailingTaskLockbox extends TaskLockbox
+  {
+    public SegmentAllocationFailingTaskLockbox(
+        TaskStorage taskStorage,
+        IndexerMetadataStorageCoordinator metadataStorageCoordinator
+    )
+    {
+      super(taskStorage, metadataStorageCoordinator);
+    }
+
+    @Override
+    void allocateSegmentIds(
+        String dataSource,
+        Interval interval,
+        boolean skipSegmentLineageCheck,
+        Collection<SegmentAllocationHolder> holders
+    )
+    {
+      throw new RuntimeException("This lockbox cannot allocate segemnts.");
     }
   }
 }

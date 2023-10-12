@@ -19,72 +19,38 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.stats.Stats;
+import org.joda.time.DateTime;
 
 /**
- * CoordinatorDuty for automatic deletion of terminated supervisors from the supervisor table in metadata storage.
+ * Cleans up terminated supervisors from the supervisors table in metadata storage.
  */
-public class KillSupervisors implements CoordinatorDuty
+public class KillSupervisors extends MetadataCleanupDuty
 {
-  private static final Logger log = new Logger(KillSupervisors.class);
-
-  private final long period;
-  private final long retainDuration;
-  private long lastKillTime = 0;
-
   private final MetadataSupervisorManager metadataSupervisorManager;
 
-  @Inject
   public KillSupervisors(
       DruidCoordinatorConfig config,
       MetadataSupervisorManager metadataSupervisorManager
   )
   {
+    super(
+        "supervisors",
+        "druid.coordinator.kill.supervisor",
+        config.isSupervisorKillEnabled(),
+        config.getCoordinatorSupervisorKillPeriod(),
+        config.getCoordinatorSupervisorKillDurationToRetain(),
+        Stats.Kill.SUPERVISOR_SPECS,
+        config
+    );
     this.metadataSupervisorManager = metadataSupervisorManager;
-    this.period = config.getCoordinatorSupervisorKillPeriod().getMillis();
-    Preconditions.checkArgument(
-        this.period >= config.getCoordinatorMetadataStoreManagementPeriod().getMillis(),
-        "Coordinator supervisor kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod"
-    );
-    this.retainDuration = config.getCoordinatorSupervisorKillDurationToRetain().getMillis();
-    Preconditions.checkArgument(this.retainDuration >= 0, "Coordinator supervisor kill retainDuration must be >= 0");
-    Preconditions.checkArgument(this.retainDuration < System.currentTimeMillis(), "Coordinator supervisor kill retainDuration cannot be greater than current time in ms");
-    log.debug(
-        "Supervisor Kill Task scheduling enabled with period [%s], retainDuration [%s]",
-        this.period,
-        this.retainDuration
-    );
   }
 
   @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  protected int cleanupEntriesCreatedBefore(DateTime minCreatedTime)
   {
-    long currentTimeMillis = System.currentTimeMillis();
-    if ((lastKillTime + period) < currentTimeMillis) {
-      lastKillTime = currentTimeMillis;
-      long timestamp = currentTimeMillis - retainDuration;
-      try {
-        int supervisorRemoved = metadataSupervisorManager.removeTerminatedSupervisorsOlderThan(timestamp);
-        ServiceEmitter emitter = params.getEmitter();
-        emitter.emit(
-            new ServiceMetricEvent.Builder().build(
-                "metadata/kill/supervisor/count",
-                supervisorRemoved
-            )
-        );
-        log.info("Finished running KillSupervisors duty. Removed %,d supervisor specs", supervisorRemoved);
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to kill terminated supervisor metadata");
-      }
-    }
-    return params;
+    return metadataSupervisorManager.removeTerminatedSupervisorsOlderThan(minCreatedTime.getMillis());
   }
 }

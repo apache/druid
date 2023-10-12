@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
 
 public abstract class Granularity implements Cacheable
 {
-  public static Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
+  public static final Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
   {
     @Override
     /**
@@ -150,6 +150,11 @@ public abstract class Granularity implements Cacheable
    */
   public abstract boolean isAligned(Interval interval);
 
+  public DateTimeZone getTimeZone()
+  {
+    return DateTimeZone.UTC;
+  }
+
   public DateTime bucketEnd(DateTime time)
   {
     return increment(bucketStart(time));
@@ -211,6 +216,16 @@ public abstract class Granularity implements Cacheable
   }
 
   /**
+   * Decides whether this granularity is finer than the other granularity
+   *
+   * @return true if this {@link Granularity} is finer than the passed one
+   */
+  public boolean isFinerThan(Granularity g)
+  {
+    return IS_FINER_THAN.compare(this, g) < 0;
+  }
+
+  /**
    * Return an iterable of granular buckets that overlap a particular interval.
    *
    * In cases where the number of granular buckets is very large, the Iterable returned by this method will take
@@ -255,21 +270,21 @@ public abstract class Granularity implements Cacheable
   {
     private final Interval inputInterval;
 
-    private DateTime currStart;
-    private DateTime currEnd;
+    private long currStart;
+    private long currEnd;
 
     private IntervalIterator(Interval inputInterval)
     {
       this.inputInterval = inputInterval;
 
-      currStart = bucketStart(inputInterval.getStart());
+      currStart = bucketStart(inputInterval.getStartMillis());
       currEnd = increment(currStart);
     }
 
     @Override
     public boolean hasNext()
     {
-      return currStart.isBefore(inputInterval.getEnd());
+      return currStart < inputInterval.getEndMillis();
     }
 
     @Override
@@ -278,7 +293,7 @@ public abstract class Granularity implements Cacheable
       if (!hasNext()) {
         throw new NoSuchElementException("There are no more intervals");
       }
-      Interval retVal = new Interval(currStart, currEnd);
+      Interval retVal = new Interval(currStart, currEnd, getTimeZone());
 
       currStart = currEnd;
       currEnd = increment(currStart);

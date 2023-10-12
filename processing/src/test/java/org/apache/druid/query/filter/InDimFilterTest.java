@@ -31,12 +31,12 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.StringValueSetIndex;
-import org.apache.druid.segment.column.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -92,7 +92,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetValuesWithValuesSetIncludingEmptyString()
   {
-    final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet(ImmutableSet.of("v1", "", "v3"));
+    final InDimFilter.ValuesSet values = InDimFilter.ValuesSet.copyOf(ImmutableSet.of("v1", "", "v3"));
     final InDimFilter filter = new InDimFilter("dim", values);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertSame(values, filter.getValues());
@@ -239,15 +239,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final ValueMatcher matcher = filter.toFilter().makeMatcher(columnSelectorFactory);
 
     // This would throw an exception without InDimFilter's null-checking lambda wrapping.
-    Assert.assertFalse(matcher.matches());
+    Assert.assertFalse(matcher.matches(false));
 
     row.put("dim", "foo");
     // Now it should match.
-    Assert.assertTrue(matcher.matches());
+    Assert.assertTrue(matcher.matches(false));
 
     row.put("dim", "fox");
     // Now it *shouldn't* match.
-    Assert.assertFalse(matcher.matches());
+    Assert.assertFalse(matcher.matches(false));
   }
 
   @Test
@@ -260,15 +260,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
     final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
-    final Utf8ValueSetIndex valueIndex = Mockito.mock(Utf8ValueSetIndex.class);
+    final Utf8ValueSetIndexes valueIndexes = Mockito.mock(Utf8ValueSetIndexes.class);
     final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
 
     final InDimFilter.ValuesSet expectedValuesSet = new InDimFilter.ValuesSet();
     expectedValuesSet.addAll(Arrays.asList("v1", "v2"));
 
     Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
-    Mockito.when(indexSupplier.as(Utf8ValueSetIndex.class)).thenReturn(valueIndex);
-    Mockito.when(valueIndex.forSortedValuesUtf8(expectedValuesSet.toUtf8())).thenReturn(bitmapColumnIndex);
+    Mockito.when(indexSupplier.as(Utf8ValueSetIndexes.class)).thenReturn(valueIndexes);
+    Mockito.when(valueIndexes.forSortedValuesUtf8(expectedValuesSet.toUtf8())).thenReturn(bitmapColumnIndex);
 
     final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);
     Assert.assertSame("inFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
@@ -284,15 +284,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
     final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
-    final StringValueSetIndex valueIndex = Mockito.mock(StringValueSetIndex.class);
+    final StringValueSetIndexes valueIndex = Mockito.mock(StringValueSetIndexes.class);
     final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
 
     final InDimFilter.ValuesSet expectedValuesSet = new InDimFilter.ValuesSet();
     expectedValuesSet.addAll(Arrays.asList("v1", "v2"));
 
     Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
-    Mockito.when(indexSupplier.as(Utf8ValueSetIndex.class)).thenReturn(null); // Will check for UTF-8 first.
-    Mockito.when(indexSupplier.as(StringValueSetIndex.class)).thenReturn(valueIndex);
+    Mockito.when(indexSupplier.as(Utf8ValueSetIndexes.class)).thenReturn(null); // Will check for UTF-8 first.
+    Mockito.when(indexSupplier.as(StringValueSetIndexes.class)).thenReturn(valueIndex);
     Mockito.when(valueIndex.forSortedValues(expectedValuesSet)).thenReturn(bitmapColumnIndex);
 
     final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);

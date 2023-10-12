@@ -27,6 +27,8 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.duty.DutySchedule;
+import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
+import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.easymock.Capture;
 import org.easymock.EasyMock;

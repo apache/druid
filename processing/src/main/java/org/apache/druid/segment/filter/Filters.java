@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -35,16 +36,16 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
-import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
+import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -90,29 +91,6 @@ public class Filters
     return dimFilter == null ? null : dimFilter.toOptimizedFilter();
   }
 
-  /**
-   * Create a ValueMatcher that compares row values to the provided string.
-   * <p>
-   * An implementation of this method should be able to handle dimensions of various types.
-   *
-   * @param columnSelectorFactory Selector for columns.
-   * @param columnName            The column to filter.
-   * @param value                 The value to match against, represented as a String.
-   *
-   * @return An object that matches row values on the provided value.
-   */
-  public static ValueMatcher makeValueMatcher(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final String columnName,
-      final String value
-  )
-  {
-    return ColumnProcessors.makeProcessor(
-        columnName,
-        new ConstantValueMatcherFactory(value),
-        columnSelectorFactory
-    );
-  }
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.
@@ -154,9 +132,9 @@ public class Filters
     Preconditions.checkNotNull(predicateFactory, "predicateFactory");
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier != null) {
-      final DruidPredicateIndex predicateIndex = indexSupplier.as(DruidPredicateIndex.class);
-      if (predicateIndex != null) {
-        return predicateIndex.forPredicate(predicateFactory);
+      final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+      if (predicateIndexes != null) {
+        return predicateIndexes.forPredicate(predicateFactory);
       }
       // index doesn't exist
       return null;
@@ -164,18 +142,19 @@ public class Filters
     // missing column -> match all rows if the predicate matches null; match no rows otherwise
     return predicateFactory.makeStringPredicate().apply(null)
            ? new AllTrueBitmapColumnIndex(selector)
-           : new AllFalseBitmapColumnIndex(selector);
+           : new AllUnknownBitmapColumnIndex(selector);
   }
 
-  public static BitmapColumnIndex makeNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
+  public static BitmapColumnIndex makeMissingColumnNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
   {
-    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
+    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllUnknownBitmapColumnIndex(selector);
   }
 
   public static ImmutableBitmap computeDefaultBitmapResults(Filter filter, ColumnIndexSelector selector)
   {
     return filter.getBitmapColumnIndex(selector).computeBitmapResult(
-        new DefaultBitmapResultFactory(selector.getBitmapFactory())
+        new DefaultBitmapResultFactory(selector.getBitmapFactory()),
+        false
     );
   }
 
@@ -393,7 +372,7 @@ public class Filters
   public static boolean filterMatchesNull(Filter filter)
   {
     ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
-    return valueMatcher.matches();
+    return valueMatcher.matches(false);
   }
 
 
@@ -444,5 +423,20 @@ public class Filters
     }
 
     return retVal;
+  }
+
+  public static int countNumberOfFilters(@Nullable Filter filter)
+  {
+    if (filter == null) {
+      return 0;
+    }
+    if (filter instanceof BooleanFilter) {
+      return ((BooleanFilter) filter).getFilters()
+                                     .stream()
+                                     .map(f -> countNumberOfFilters(f))
+                                     .mapToInt(Integer::intValue)
+                                     .sum();
+    }
+    return 1;
   }
 }

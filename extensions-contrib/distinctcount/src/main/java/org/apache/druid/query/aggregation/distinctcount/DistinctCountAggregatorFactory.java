@@ -142,14 +142,6 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new DistinctCountAggregatorFactory(fieldName, fieldName, bitMapFactory)
-    );
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     return object;

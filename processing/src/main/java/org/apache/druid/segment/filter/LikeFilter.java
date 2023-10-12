@@ -34,12 +34,12 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
-import org.apache.druid.segment.column.AllTrueBitmapColumnIndex;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -79,26 +79,26 @@ public class LikeFilter implements Filter
       // Treat this as a column full of nulls
       return likeMatcher.matches(null)
              ? new AllTrueBitmapColumnIndex(selector)
-             : new AllFalseBitmapColumnIndex(selector);
+             : new AllUnknownBitmapColumnIndex(selector);
     }
     if (isSimpleEquals()) {
-      StringValueSetIndex valueIndex = indexSupplier.as(StringValueSetIndex.class);
-      if (valueIndex != null) {
-        return valueIndex.forValue(
+      StringValueSetIndexes valueIndexes = indexSupplier.as(StringValueSetIndexes.class);
+      if (valueIndexes != null) {
+        return valueIndexes.forValue(
             NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
         );
       }
     }
     if (isSimplePrefix()) {
-      final LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
-      if (rangeIndex != null) {
+      final LexicographicalRangeIndexes rangeIndexes = indexSupplier.as(LexicographicalRangeIndexes.class);
+      if (rangeIndexes != null) {
         final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
         final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
 
         if (likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_ANY) {
-          return rangeIndex.forRange(lower, false, upper, false);
+          return rangeIndexes.forRange(lower, false, upper, false);
         } else {
-          return rangeIndex.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
+          return rangeIndexes.forRange(lower, false, upper, false, likeMatcher::matchesSuffixOnly);
         }
       }
     }

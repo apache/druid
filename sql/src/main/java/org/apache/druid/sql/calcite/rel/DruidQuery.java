@@ -42,20 +42,26 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
@@ -64,6 +70,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
@@ -573,7 +580,11 @@ public class DruidQuery
           rowSignature,
           virtualColumnRegistry,
           rexBuilder,
-          partialQuery.getSelectProject(),
+          InputAccessor.buildFor(
+              rexBuilder,
+              rowSignature,
+              partialQuery.getSelectProject(),
+              null),
           aggregations,
           aggName,
           aggCall,
@@ -608,9 +619,9 @@ public class DruidQuery
     final OffsetLimit offsetLimit = OffsetLimit.fromSort(sort);
 
     // Extract orderBy column specs.
-    final List<OrderByColumnSpec> orderBys = new ArrayList<>(sort.getChildExps().size());
-    for (int sortKey = 0; sortKey < sort.getChildExps().size(); sortKey++) {
-      final RexNode sortExpression = sort.getChildExps().get(sortKey);
+    final List<OrderByColumnSpec> orderBys = new ArrayList<>(sort.getSortExps().size());
+    for (int sortKey = 0; sortKey < sort.getSortExps().size(); sortKey++) {
+      final RexNode sortExpression = sort.getSortExps().get(sortKey);
       final RelFieldCollation collation = sort.getCollation().getFieldCollations().get(sortKey);
       final OrderByColumnSpec.Direction direction;
       final StringComparator comparator;
@@ -679,7 +690,7 @@ public class DruidQuery
     }
   }
 
-  private VirtualColumns getVirtualColumns(final boolean includeDimensions)
+  VirtualColumns getVirtualColumns(final boolean includeDimensions)
   {
     // 'sourceRowSignature' could provide a list of all defined virtual columns while constructing a query, but we
     // still want to collect the set of VirtualColumns this way to ensure we only add what is still being used after
@@ -770,6 +781,17 @@ public class DruidQuery
     return VirtualColumns.create(columns);
   }
 
+  public static List<DimFilter> getAllFiltersUnderDataSource(DataSource d, List<DimFilter> dimFilterList)
+  {
+    if (d instanceof FilteredDataSource) {
+      dimFilterList.add(((FilteredDataSource) d).getFilter());
+    }
+    for (DataSource ds : d.getChildren()) {
+      dimFilterList.addAll(getAllFiltersUnderDataSource(ds, dimFilterList));
+    }
+    return dimFilterList;
+  }
+
   /**
    * Returns a pair of DataSource and Filtration object created on the query filter. In case the, data source is
    * a join datasource, the datasource may be altered and left filter of join datasource may
@@ -783,8 +805,44 @@ public class DruidQuery
       JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
-    if (!canUseIntervalFiltering(dataSource)) {
+    if (dataSource instanceof UnnestDataSource) {
+      // UnnestDataSource can have another unnest data source
+      // join datasource, filtered data source, etc as base
+      Pair<DataSource, Filtration> pair = getFiltration(
+          ((UnnestDataSource) dataSource).getBase(),
+          filter,
+          virtualColumnRegistry,
+          joinableFactoryWrapper
+      );
+      return Pair.of(dataSource, pair.rhs);
+    } else if (!canUseIntervalFiltering(dataSource)) {
       return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), false));
+    } else if (dataSource instanceof FilteredDataSource) {
+      // A filteredDS is created only inside the rel for Unnest, ensuring it only grabs the outermost filter
+      // and, if possible, pushes it down inside the data source.
+      // So a chain of Filter->Unnest->Filter is typically impossible when the query is done through SQL.
+      // Also, Calcite has filter reduction rules that push filters deep into base data sources for better query planning.
+      // A base table with a chain of filters is synonymous with a filteredDS.
+      // We recursively find all filters under a filteredDS and then
+      // 1) creating a filtration from the filteredDS's filters and
+      // 2) Updating the interval of the outer filter with the intervals in step 1, and you'll see these 2 calls in the code
+      List<DimFilter> dimFilterList = getAllFiltersUnderDataSource(dataSource, new ArrayList<>());
+      final FilteredDataSource filteredDataSource = (FilteredDataSource) dataSource;
+      // Defensive check as in the base of a filter cannot be another filter
+      final DataSource baseOfFilterDataSource = filteredDataSource.getBase();
+      if (baseOfFilterDataSource instanceof FilteredDataSource) {
+        throw DruidException.defensive("Cannot create a filteredDataSource using another filteredDataSource as a base");
+      }
+      final boolean useIntervalFiltering = canUseIntervalFiltering(filteredDataSource);
+      final Filtration baseFiltration = toFiltration(
+          new AndDimFilter(dimFilterList),
+          virtualColumnRegistry.getFullRowSignature(),
+          useIntervalFiltering
+      );
+      // Adds the intervals from the filter of filtered data source to query filtration
+      final Filtration queryFiltration = Filtration.create(filter, baseFiltration.getIntervals())
+                                                   .optimize(virtualColumnRegistry.getFullRowSignature());
+      return Pair.of(filteredDataSource, queryFiltration);
     } else if (dataSource instanceof JoinDataSource && ((JoinDataSource) dataSource).getLeftFilter() != null) {
       final JoinDataSource joinDataSource = (JoinDataSource) dataSource;
 
@@ -806,7 +864,6 @@ public class DruidQuery
           leftFiltration.getDimFilter(),
           joinableFactoryWrapper
       );
-
       return Pair.of(newDataSource, queryFiltration);
     } else {
       return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), true));
@@ -815,7 +872,7 @@ public class DruidQuery
 
   /**
    * Whether the given datasource can make use of "intervals" based filtering. The is true for anything based on
-   * regular tables ({@link org.apache.druid.query.TableDataSource}).
+   * regular tables ({@link TableDataSource}).
    */
   private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {
@@ -1379,12 +1436,19 @@ public class DruidQuery
     if (windowing == null) {
       return null;
     }
+    if (dataSource instanceof TableDataSource) {
+      // We need a scan query to pull the results up for us before applying the window
+      // Returning null here to ensure that the planner generates that alternative
+      return null;
+    }
 
     return new WindowOperatorQuery(
         dataSource,
+        new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
-        windowing.getOperators()
+        windowing.getOperators(),
+        null
     );
   }
 

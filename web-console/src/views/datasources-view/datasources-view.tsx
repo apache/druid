@@ -18,9 +18,9 @@
 
 import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { SqlQuery, T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import { sum } from 'd3-array';
-import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
@@ -57,6 +57,7 @@ import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../.
 import { Api, AppToaster } from '../../singletons';
 import type { NumberLike } from '../../utils';
 import {
+  assemble,
   compact,
   countBy,
   deepGet,
@@ -88,7 +89,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'full': [
     'Datasource name',
     'Availability',
-    'Availability detail',
+    'Historical load/drop queues',
     'Total data size',
     'Running tasks',
     'Segment rows',
@@ -106,7 +107,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-sql': [
     'Datasource name',
     'Availability',
-    'Availability detail',
+    'Historical load/drop queues',
     'Total data size',
     'Running tasks',
     'Compaction',
@@ -118,7 +119,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-proxy': [
     'Datasource name',
     'Availability',
-    'Availability detail',
+    'Historical load/drop queues',
     'Total data size',
     'Running tasks',
     'Segment rows',
@@ -162,15 +163,16 @@ const PERCENT_BRACES = [formatPercent(1)];
 
 interface DatasourceQueryResultRow {
   readonly datasource: string;
-  readonly num_segments: NumberLike;
-  readonly num_segments_to_load: NumberLike;
-  readonly num_segments_to_drop: NumberLike;
-  readonly minute_aligned_segments: NumberLike;
-  readonly hour_aligned_segments: NumberLike;
-  readonly day_aligned_segments: NumberLike;
-  readonly month_aligned_segments: NumberLike;
-  readonly year_aligned_segments: NumberLike;
-  readonly all_granularity_segments: NumberLike;
+  readonly num_segments: number;
+  readonly num_zero_replica_segments: number;
+  readonly num_segments_to_load: number;
+  readonly num_segments_to_drop: number;
+  readonly minute_aligned_segments: number;
+  readonly hour_aligned_segments: number;
+  readonly day_aligned_segments: number;
+  readonly month_aligned_segments: number;
+  readonly year_aligned_segments: number;
+  readonly all_granularity_segments: number;
   readonly total_data_size: NumberLike;
   readonly replicated_size: NumberLike;
   readonly min_segment_rows: NumberLike;
@@ -187,6 +189,7 @@ function makeEmptyDatasourceQueryResultRow(datasource: string): DatasourceQueryR
   return {
     datasource,
     num_segments: 0,
+    num_zero_replica_segments: 0,
     num_segments_to_load: 0,
     num_segments_to_drop: 0,
     minute_aligned_segments: 0,
@@ -335,10 +338,13 @@ export class DatasourcesView extends React.PureComponent<
     const columns = compact(
       [
         visibleColumns.shown('Datasource name') && `datasource`,
-        (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) &&
+        (visibleColumns.shown('Availability') || visibleColumns.shown('Segment granularity')) && [
           `COUNT(*) FILTER (WHERE is_active = 1) AS num_segments`,
-        (visibleColumns.shown('Availability') || visibleColumns.shown('Availability detail')) && [
-          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load`,
+          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND replication_factor = 0) AS num_zero_replica_segments`,
+        ],
+        (visibleColumns.shown('Availability') ||
+          visibleColumns.shown('Historical load/drop queues')) && [
+          `COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0 AND replication_factor > 0) AS num_segments_to_load`,
           `COUNT(*) FILTER (WHERE is_available = 1 AND is_active = 0) AS num_segments_to_drop`,
         ],
         visibleColumns.shown('Total data size') &&
@@ -377,8 +383,8 @@ export class DatasourcesView extends React.PureComponent<
     return `SELECT
 ${columns.join(',\n')}
 FROM sys.segments
-GROUP BY 1
-ORDER BY 1`;
+GROUP BY datasource
+ORDER BY datasource`;
   }
 
   static RUNNING_TASK_SQL = `SELECT
@@ -445,6 +451,7 @@ GROUP BY 1, 2`;
             return {
               datasource: d.name,
               num_segments: numSegments,
+              num_zero_replica_segments: 0,
               num_segments_to_load: segmentsToLoad,
               num_segments_to_drop: 0,
               minute_aligned_segments: -1,
@@ -1031,7 +1038,7 @@ GROUP BY 1, 2`;
     }
   }
 
-  private renderRetentionDialog(): JSX.Element | undefined {
+  private renderRetentionDialog() {
     const { capabilities } = this.props;
     const { retentionDialogOpenOn, datasourcesAndDefaultRulesState } = this.state;
     const defaultRules = datasourcesAndDefaultRulesState.data?.defaultRules;
@@ -1147,7 +1154,8 @@ GROUP BY 1, 2`;
             accessor: 'num_segments',
             className: 'padded',
             Cell: ({ value: num_segments, original }) => {
-              const { datasource, unused, num_segments_to_load, rules } = original as Datasource;
+              const { datasource, unused, num_segments_to_load, num_zero_replica_segments, rules } =
+                original as Datasource;
               if (unused) {
                 return (
                   <span>
@@ -1157,12 +1165,17 @@ GROUP BY 1, 2`;
                 );
               }
 
-              const hasCold = RuleUtil.hasColdRule(rules, defaultRules);
+              const hasZeroReplicationRule = RuleUtil.hasZeroReplicaRule(rules, defaultRules);
+              const descriptor = hasZeroReplicationRule ? 'pre-cached' : 'available';
               const segmentsEl = (
                 <a onClick={() => goToSegments(datasource)}>
                   {pluralIfNeeded(num_segments, 'segment')}
                 </a>
               );
+              const percentZeroReplica = (
+                Math.floor((num_zero_replica_segments / num_segments) * 1000) / 10
+              ).toFixed(1);
+
               if (typeof num_segments_to_load !== 'number' || typeof num_segments !== 'number') {
                 return '-';
               } else if (num_segments === 0) {
@@ -1172,17 +1185,19 @@ GROUP BY 1, 2`;
                     Empty
                   </span>
                 );
-              } else if (num_segments_to_load === 0 || hasCold) {
-                const numAvailableSegments = num_segments - num_segments_to_load;
-                const percentHot = (
-                  Math.floor((numAvailableSegments / num_segments) * 1000) / 10
-                ).toFixed(1);
+              } else if (num_segments_to_load === 0) {
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
                       &#x25cf;&nbsp;
                     </span>
-                    Fully available{hasCold ? `, ${percentHot}% hot` : ''} ({segmentsEl})
+                    {assemble(
+                      num_segments !== num_zero_replica_segments
+                        ? `Fully ${descriptor}`
+                        : undefined,
+                      hasZeroReplicationRule ? `${percentZeroReplica}% async only` : '',
+                    ).join(', ')}{' '}
+                    ({segmentsEl})
                   </span>
                 );
               } else {
@@ -1195,7 +1210,10 @@ GROUP BY 1, 2`;
                     <span style={{ color: DatasourcesView.PARTIALLY_AVAILABLE_COLOR }}>
                       {numAvailableSegments ? '\u25cf' : '\u25cb'}&nbsp;
                     </span>
-                    {percentAvailable}% available ({segmentsEl})
+                    {`${percentAvailable}% ${descriptor}${
+                      hasZeroReplicationRule ? `, ${percentZeroReplica}% async only` : ''
+                    }`}{' '}
+                    ({segmentsEl})
                   </span>
                 );
               }
@@ -1207,17 +1225,14 @@ GROUP BY 1, 2`;
             },
           },
           {
-            Header: twoLines('Availability', 'detail'),
-            show: visibleColumns.shown('Availability detail'),
+            Header: twoLines('Historical', 'load/drop queues'),
+            show: visibleColumns.shown('Historical load/drop queues'),
             accessor: 'num_segments_to_load',
             filterable: false,
             width: 180,
             className: 'padded',
             Cell: ({ original }) => {
-              const { num_segments_to_load, num_segments_to_drop, rules } = original as Datasource;
-              if (RuleUtil.hasColdRule(rules, defaultRules)) {
-                return pluralIfNeeded(num_segments_to_load, 'cold segment');
-              }
+              const { num_segments_to_load, num_segments_to_drop } = original as Datasource;
               return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
             },
           },
@@ -1591,7 +1606,7 @@ GROUP BY 1, 2`;
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { capabilities } = this.props;
     const {
       showUnused,

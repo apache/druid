@@ -162,6 +162,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     final RelDataType returnedRowType;
 
     if (explain != null) {
+      handlerContext.plannerContext().setExplainAttributes(explainAttributes());
       returnedRowType = getExplainStructType(typeFactory);
     } else {
       returnedRowType = returnedRowType();
@@ -672,7 +673,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       );
     }
 
-    return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation);
+    return new RelRoot(newRootRel, root.validatedRowType, root.kind, root.fields, root.collation, root.hints);
   }
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
@@ -695,7 +696,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               exception,
-                              "Query planning failed for unknown reason, our best guess is this [%s]",
+                              "Query could not be planned. A possible reason is [%s]",
                               errorMessage
                           );
     }
