@@ -147,7 +147,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     synchronized (tasks) {
       return tasks.computeIfAbsent(task.getId(), k -> {
-        exec.submit(() -> runTask(task));
+        ListenableFuture<TaskStatus> unused = exec.submit(() -> runTask(task));
         return new KubernetesWorkItem(task);
       }).getResult();
     }
@@ -157,7 +157,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     synchronized (tasks) {
       return tasks.computeIfAbsent(task.getId(), k -> {
-        exec.submit(() -> joinTask(task));
+        ListenableFuture<TaskStatus> unused = exec.submit(() -> joinTask(task));
         return new KubernetesWorkItem(task);
       }).getResult();
     }
