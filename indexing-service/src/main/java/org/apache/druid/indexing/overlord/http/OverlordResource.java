@@ -283,11 +283,11 @@ public class OverlordResource
   public Response getDatasourceLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
   {
     if (lockFilterPolicies == null || lockFilterPolicies.isEmpty()) {
-      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
+      return Response.status(Status.BAD_REQUEST).entity("No filter provided").build();
     }
 
     // Build the response
-    return Response.ok(taskStorageQueryAdapter.getLockedIntervalsV2(lockFilterPolicies)).build();
+    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(lockFilterPolicies)).build();
   }
 
   @GET

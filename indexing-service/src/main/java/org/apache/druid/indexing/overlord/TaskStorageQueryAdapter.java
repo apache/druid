@@ -65,9 +65,9 @@ public class TaskStorageQueryAdapter
    * @param lockFilterPolicies Requests for conflicing lock intervals for various datasources
    * @return Map from datasource to intervals locked by tasks that have a conflicting lock type that cannot be revoked
    */
-  public Map<String, List<Interval>> getLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
   {
-    return taskLockbox.getLockedIntervalsV2(lockFilterPolicies);
+    return taskLockbox.getLockedIntervals(lockFilterPolicies);
   }
 
   /**

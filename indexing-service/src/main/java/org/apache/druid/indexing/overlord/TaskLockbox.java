@@ -963,7 +963,7 @@ public class TaskLockbox
    * @param lockFilterPolicies Lock filters for the given datasources
    * @return Map from datasource to intervals locked by tasks satisfying the lock filter condititions
    */
-  public Map<String, List<Interval>> getLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
   {
     final Map<String, Set<Interval>> datasourceToIntervals = new HashMap<>();
 
@@ -974,12 +974,13 @@ public class TaskLockbox
       lockFilterPolicies.forEach(
           lockFilter -> {
             final String datasource = lockFilter.getDatasource();
-            final int priority = lockFilter.getPriority();
-            final boolean ignoreAppendLocks =
-                TaskLockType.REPLACE.name().equals(lockFilter.getContext().get(Tasks.TASK_LOCK_TYPE));
             if (!running.containsKey(datasource)) {
               return;
             }
+
+            final int priority = lockFilter.getPriority();
+            final boolean ignoreAppendLocks =
+                TaskLockType.REPLACE.name().equals(lockFilter.getContext().get(Tasks.TASK_LOCK_TYPE));
 
             running.get(datasource).forEach(
                 (startTime, startTimeLocks) -> startTimeLocks.forEach(
