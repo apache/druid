@@ -39,6 +39,7 @@ import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.ExecutionMode;
@@ -55,6 +56,7 @@ import org.junit.Test;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -369,6 +371,98 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         ),
         objectMapper
     );
+  }
+
+
+  @Test
+  public void testMultipleWorkersWithPageSizeLimiting() throws IOException
+  {
+    Map<String, Object> context = defaultAsyncContext();
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLESTORAGE.getName());
+    context.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2);
+    context.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 3);
+
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+
+    SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
+        new SqlQuery(
+            "SELECT\n"
+            + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+            + "  user\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [" + toReadAsJson + "," + toReadAsJson + "],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"json\"}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+            + "  )\n"
+            + ") where user like '%ot%'",
+            null,
+            false,
+            false,
+            false,
+            context,
+            null
+        ),
+        SqlStatementResourceTest.makeOkRequest()
+    ).getEntity();
+
+    Assert.assertEquals(ImmutableList.of(
+        new PageInformation(0, 2L, 128L, 0, 0),
+        new PageInformation(1, 2L, 132L, 1, 1),
+        new PageInformation(2, 2L, 128L, 0, 2),
+        new PageInformation(3, 4L, 228L, 1, 3)
+    ), sqlStatementResult.getResultSetInformation().getPages());
+
+
+    List<List<Object>> rows = new ArrayList<>();
+    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
+    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
+    rows.add(ImmutableList.of(1466985600000L, "Beau.bot"));
+    rows.add(ImmutableList.of(1466985600000L, "Beau.bot"));
+    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
+    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
+    rows.add(ImmutableList.of(1466985600000L, "TaxonBot"));
+    rows.add(ImmutableList.of(1466985600000L, "TaxonBot"));
+    rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
+    rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
+
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        null,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows.subList(0, 2), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        0L,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows.subList(2, 4), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        1L,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows.subList(4, 6), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        2L,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows.subList(6, 10), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        3L,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
   }
 
   @Test

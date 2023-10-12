@@ -1373,7 +1373,7 @@ public class MSQSelectTest extends MSQTestBase
                                      ColumnType.LONG,
                                      CalciteTests.createExprMacroTable()
                                  )
-                             ).columns("user", "v0").filters(new LikeDimFilter("user", "%bot%", null, null))
+                             ).columns("user", "v0").filters(new LikeDimFilter("user", "%ot%", null, null))
                              .context(defaultScanQueryContext(multipleWorkerContext, RowSignature.builder()
                                                                                                  .add(
                                                                                                      "user",
@@ -1396,7 +1396,7 @@ public class MSQSelectTest extends MSQTestBase
                 + "    '{\"type\": \"json\"}',\n"
                 + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                 + "  )\n"
-                + ") where user like '%bot%'")
+                + ") where user like '%ot%'")
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(multipleWorkerContext)
         .setExpectedResultRows(ImmutableList.of(
@@ -1405,7 +1405,11 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1466985600000L, "Beau.bot"},
             new Object[]{1466985600000L, "Beau.bot"},
             new Object[]{1466985600000L, "Lsjbot"},
-            new Object[]{1466985600000L, "Lsjbot"}
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "TaxonBot"},
+            new Object[]{1466985600000L, "TaxonBot"},
+            new Object[]{1466985600000L, "GiftBot"},
+            new Object[]{1466985600000L, "GiftBot"}
         ))
         .setExpectedMSQSpec(
             MSQSpec
@@ -1430,14 +1434,14 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with().rows(5).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1L, 2L} : new long[]{3L})
-                .frames(isPageSizeLimited() ? new long[]{1L, 1L} : new long[]{1L}),
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 2L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L} : new long[]{1L}),
             0, 0, "shuffle"
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -1447,34 +1451,34 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with().rows(5).frames(1),
             0, 1, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1L, 2L} : new long[]{3L})
-                .frames(isPageSizeLimited() ? new long[]{1L, 1L} : new long[]{1L}),
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 2L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L} : new long[]{1L}),
             0, 1, "shuffle"
         );
     // adding result stage counter checks
     if (isPageSizeLimited()) {
       selectTester = selectTester.setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2).frames(1),
+              .with().rows(2, 0, 2).frames(1, 0, 1),
           1, 0, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2).frames(1),
+              .with().rows(2, 0, 2).frames(1, 0, 1),
           1, 0, "output"
       );
       selectTester = selectTester.setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 4).frames(0, 1),
+              .with().rows(0, 2, 0, 4).frames(0, 1, 0, 1),
           1, 1, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 4).frames(0, 1),
+              .with().rows(0, 2, 0, 4).frames(0, 1, 0, 1),
           1, 1, "output"
       );
     }

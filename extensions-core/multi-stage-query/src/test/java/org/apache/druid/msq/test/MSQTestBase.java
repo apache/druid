@@ -1350,15 +1350,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
 
         MSQTaskReportPayload payload = getPayloadOrThrow(controllerId);
-        verifyCounters(payload.getCounters());
-        verifyWorkerCount(payload.getCounters());
-
 
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
         } else {
           MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
-
 
           final MSQSpec spec = msqControllerTask.getQuerySpec();
           final List<Object[]> rows;
@@ -1410,6 +1406,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }
 
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
+
+          verifyCounters(payload.getCounters());
+          verifyWorkerCount(payload.getCounters());
+
           return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
         }
       }
