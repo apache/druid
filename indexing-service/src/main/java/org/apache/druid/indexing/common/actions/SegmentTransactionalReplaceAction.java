@@ -145,7 +145,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     }
 
     Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
-        toolbox.getIndexerMetadataStorageCoordinator().upgradePendingSegments(segments);
+        toolbox.getIndexerMetadataStorageCoordinator().upgradePendingSegmentsOverlappingWith(segments);
     log.info(
         "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
         upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments

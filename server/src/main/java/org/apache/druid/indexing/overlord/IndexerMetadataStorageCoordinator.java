@@ -347,7 +347,9 @@ public interface IndexerMetadataStorageCoordinator
    * @param replaceSegments Segments being committed by a REPLACE task
    * @return Map from originally allocated pending segment to its new upgraded ID.
    */
-  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(Set<DataSegment> replaceSegments);
+  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+      Set<DataSegment> replaceSegments
+  );
 
   /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.

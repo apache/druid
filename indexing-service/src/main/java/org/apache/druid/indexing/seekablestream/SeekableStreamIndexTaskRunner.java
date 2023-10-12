@@ -46,6 +46,8 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -83,7 +85,6 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
@@ -1563,10 +1564,27 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.WRITE);
-    return registerNewVersionOfPendingSegment(
-        pendingSegmentVersions.getBaseSegment(),
-        pendingSegmentVersions.getNewVersion()
-    );
+    try {
+      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(
+          pendingSegmentVersions.getBaseSegment(),
+          pendingSegmentVersions.getNewVersion()
+      );
+      return Response.ok().build();
+    }
+    catch (DruidException e) {
+      return Response
+          .status(e.getStatusCode())
+          .entity(new ErrorResponse(e))
+          .build();
+    }
+    catch (Exception e) {
+      log.error(
+          e,
+          "Could not register new version[%s] of pending segment[%s]",
+          pendingSegmentVersions.getNewVersion(), pendingSegmentVersions.getBaseSegment()
+      );
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   public Map<String, Object> doGetRowStats()
@@ -1772,23 +1790,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     resume();
 
     return Response.ok(sequenceNumbers).build();
-  }
-
-  private Response registerNewVersionOfPendingSegment(
-      SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec newSegmentVersion
-  )
-  {
-    try {
-      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(
-          basePendingSegment,
-          newSegmentVersion
-      );
-      return Response.ok().build();
-    }
-    catch (IOException e) {
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-    }
   }
 
   private void resetNextCheckpointTime()
