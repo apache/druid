@@ -22,6 +22,7 @@ package org.apache.druid.common.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 
@@ -61,13 +62,19 @@ public class NullHandling
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new NullValueHandlingConfig(null, null);
+    INSTANCE = new NullValueHandlingConfig(null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean ignoreNullForString)
   {
-    INSTANCE = new NullValueHandlingConfig(useDefForNull, ignoreNullForString);
+    initializeForTestsWithValues(useDefForNull, null, ignoreNullForString);
+  }
+
+  @VisibleForTesting
+  public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean useThreeValueLogic, Boolean ignoreNullForString)
+  {
+    INSTANCE = new NullValueHandlingConfig(useDefForNull, useThreeValueLogic, ignoreNullForString);
   }
 
   /**
@@ -97,6 +104,13 @@ public class NullHandling
   public static boolean sqlCompatible()
   {
     return !replaceWithDefault();
+  }
+
+  public static boolean useThreeValueLogic()
+  {
+    return NullHandling.sqlCompatible() &&
+           INSTANCE.isUseThreeValueLogicForNativeFilters() &&
+           ExpressionProcessing.useStrictBooleans();
   }
 
   @Nullable

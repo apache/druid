@@ -23,6 +23,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -120,38 +121,38 @@ public class ConstantMultiValueDimensionSelectorTest extends InitializedNullHand
   @Test
   public void testValueMatcher()
   {
-    Assert.assertTrue(NULL_SELECTOR.makeValueMatcher((String) null).matches());
-    Assert.assertFalse(NULL_SELECTOR.makeValueMatcher("douglas").matches());
+    Assert.assertTrue(NULL_SELECTOR.makeValueMatcher((String) null).matches(false));
+    Assert.assertFalse(NULL_SELECTOR.makeValueMatcher("douglas").matches(false));
 
-    Assert.assertTrue(EMPTY_SELECTOR.makeValueMatcher((String) null).matches());
-    Assert.assertFalse(EMPTY_SELECTOR.makeValueMatcher("douglas").matches());
+    Assert.assertTrue(EMPTY_SELECTOR.makeValueMatcher((String) null).matches(false));
+    Assert.assertFalse(EMPTY_SELECTOR.makeValueMatcher("douglas").matches(false));
 
-    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher("billy").matches());
-    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher("douglas").matches());
-    Assert.assertFalse(CONST_SELECTOR.makeValueMatcher("debbie").matches());
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher("billy").matches(false));
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher("douglas").matches(false));
+    Assert.assertFalse(CONST_SELECTOR.makeValueMatcher("debbie").matches(false));
 
-    Assert.assertTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches());
-    Assert.assertFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher((String) null).matches());
+    Assert.assertTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches(false));
+    Assert.assertFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher((String) null).matches(false));
 
-    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("bill").matches());
-    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("doug").matches());
-    Assert.assertFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches());
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("bill").matches(false));
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher("doug").matches(false));
+    Assert.assertFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher("billy").matches(false));
 
-    Assert.assertTrue(NULL_SELECTOR.makeValueMatcher(Predicates.isNull()).matches());
-    Assert.assertFalse(NULL_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
+    Assert.assertTrue(NULL_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Predicates.isNull(), false)).matches(false));
+    Assert.assertFalse(NULL_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("billy")).matches(false));
 
-    Assert.assertTrue(EMPTY_SELECTOR.makeValueMatcher(Predicates.equalTo(null)).matches());
-    Assert.assertFalse(EMPTY_SELECTOR.makeValueMatcher(Predicates.equalTo("douglas")).matches());
+    Assert.assertTrue(EMPTY_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(null)).matches(false));
+    Assert.assertFalse(EMPTY_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("douglas")).matches(false));
 
-    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
-    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("douglas")).matches());
-    Assert.assertFalse(CONST_SELECTOR.makeValueMatcher(Predicates.equalTo("debbie")).matches());
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("billy")).matches(false));
+    Assert.assertTrue(CONST_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("douglas")).matches(false));
+    Assert.assertFalse(CONST_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("debbie")).matches(false));
 
-    Assert.assertTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
-    Assert.assertFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo(null)).matches());
+    Assert.assertTrue(NULL_EXTRACTION_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("billy")).matches(false));
+    Assert.assertFalse(NULL_EXTRACTION_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(null)).matches(false));
 
-    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("bill")).matches());
-    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("doug")).matches());
-    Assert.assertFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher(Predicates.equalTo("billy")).matches());
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("bill")).matches(false));
+    Assert.assertTrue(CONST_EXTRACTION_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("doug")).matches(false));
+    Assert.assertFalse(CONST_EXTRACTION_SELECTOR.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("billy")).matches(false));
   }
 }

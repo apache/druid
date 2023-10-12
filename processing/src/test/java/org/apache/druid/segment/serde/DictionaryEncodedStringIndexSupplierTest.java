@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
@@ -40,7 +41,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.TreeSet;
 
 public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHandlingTest
 {
@@ -63,42 +63,42 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("b");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.1, columnIndex.estimateSelectivity(10), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 3);
 
     // non-existent in local column
     columnIndex = valueSetIndex.forValue("fo");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.0, columnIndex.estimateSelectivity(10), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     // set index
-    columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("b", "fooo", "z")));
+    columnIndex = valueSetIndex.forSortedValues(InDimFilter.ValuesSet.copyOf(ImmutableSet.of("b", "fooo", "z")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.5, columnIndex.estimateSelectivity(10), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 3, 4, 5, 6);
 
     // set index with single value in middle
-    columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("foo")));
+    columnIndex = valueSetIndex.forSortedValues(InDimFilter.ValuesSet.copyOf(ImmutableSet.of("foo")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.2, columnIndex.estimateSelectivity(10), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 9);
 
     // set index with no element in column and all elements less than lowest non-null value
-    columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("a", "aa", "aaa")));
+    columnIndex = valueSetIndex.forSortedValues(InDimFilter.ValuesSet.copyOf(ImmutableSet.of("a", "aa", "aaa")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.0, columnIndex.estimateSelectivity(10), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     // set index with no element in column and all elements greater than highest non-null value
-    columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("zz", "zzz", "zzzz")));
+    columnIndex = valueSetIndex.forSortedValues(InDimFilter.ValuesSet.copyOf(ImmutableSet.of("zz", "zzz", "zzzz")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.0, columnIndex.estimateSelectivity(10), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
   }
 
