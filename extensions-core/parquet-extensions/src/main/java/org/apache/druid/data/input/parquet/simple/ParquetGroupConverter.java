@@ -52,10 +52,14 @@ public class ParquetGroupConverter
   private static final long NANOS_PER_MILLISECOND = TimeUnit.MILLISECONDS.toNanos(1);
 
   /**
-   * See {@link ParquetGroupConverter#convertField(Group, String)}
+   * Convert a parquet group field as though it were a map. Logical types of 'list' and 'map' will be transformed
+   * into java lists and maps respectively ({@link ParquetGroupConverter#convertLogicalList} and
+   * {@link ParquetGroupConverter#convertLogicalMap}), repeated fields will also be translated to lists, and
+   * primitive types will be extracted into an ingestion friendly state (e.g. 'int' and 'long'). Finally,
+   * if a field is not present, this method will return null.
    */
   @Nullable
-  private Object convertField(Group g, String fieldName, boolean binaryAsString)
+  Object convertField(Group g, String fieldName)
   {
     if (!g.getType().containsField(fieldName)) {
       return null;
@@ -269,7 +273,7 @@ public class ParquetGroupConverter
     for (int i = 0; i < mapEntries; i++) {
       Group mapEntry = g.getGroup(0, i);
       String key = convertPrimitiveField(mapEntry, 0).toString();
-      Object value = convertField(mapEntry, "value", binaryAsString);
+      Object value = convertField(mapEntry, "value");
       converted.put(key, value);
     }
     return converted;
@@ -516,19 +520,6 @@ public class ParquetGroupConverter
     }
 
     return retVal;
-  }
-
-  /**
-   * Convert a parquet group field as though it were a map. Logical types of 'list' and 'map' will be transformed
-   * into java lists and maps respectively ({@link ParquetGroupConverter#convertLogicalList} and
-   * {@link ParquetGroupConverter#convertLogicalMap}), repeated fields will also be translated to lists, and
-   * primitive types will be extracted into an ingestion friendly state (e.g. 'int' and 'long'). Finally,
-   * if a field is not present, this method will return null.
-   */
-  @Nullable
-  Object convertField(Group g, String fieldName)
-  {
-    return convertField(g, fieldName);
   }
 
   Object unwrapListElement(Object o)
