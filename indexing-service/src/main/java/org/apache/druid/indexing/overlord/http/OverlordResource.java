@@ -63,6 +63,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.ConflictingLockRequest;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
@@ -272,6 +273,20 @@ public class OverlordResource
 
     // Build the response
     return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
+  }
+
+  @POST
+  @Path("/conflictingLockIntervals")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getConflictingLockIntervals(List<ConflictingLockRequest> conflictingLockRequests)
+  {
+    if (conflictingLockRequests == null || conflictingLockRequests.isEmpty()) {
+      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
+    }
+
+    // Build the response
+    return Response.ok(taskStorageQueryAdapter.getConflictingLockIntervals(conflictingLockRequests)).build();
   }
 
   @GET

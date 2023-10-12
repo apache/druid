@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.ConflictingLockRequest;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -1992,6 +1993,15 @@ public class CompactSegmentsTest
 
       compactSegments(timeline, segments, compactionTaskQuery);
       return Futures.immediateFuture(null);
+    }
+
+
+    @Override
+    public ListenableFuture<Map<String, List<Interval>>> findConflictingLockIntervals(
+        List<ConflictingLockRequest> conflictingLockRequests
+    )
+    {
+      return Futures.immediateFuture(lockedIntervals);
     }
 
     @Override

@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.metadata.ConflictingLockRequest;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -196,6 +197,31 @@ public class OverlordClientImpl implements OverlordClient
         client.asyncRequest(
             new RequestBuilder(HttpMethod.POST, path)
                 .jsonContent(jsonMapper, minTaskPriority),
+            new BytesFullResponseHandler()
+        ),
+        holder -> {
+          final Map<String, List<Interval>> response = JacksonUtils.readValue(
+              jsonMapper,
+              holder.getContent(),
+              new TypeReference<Map<String, List<Interval>>>() {}
+          );
+
+          return response == null ? Collections.emptyMap() : response;
+        }
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, List<Interval>>> findConflictingLockIntervals(
+      List<ConflictingLockRequest> conflictingLockRequests
+  )
+  {
+    final String path = "/druid/indexer/v1/conflictingLockIntervals";
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, conflictingLockRequests),
             new BytesFullResponseHandler()
         ),
         holder -> {

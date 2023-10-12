@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.metadata.ConflictingLockRequest;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -58,6 +59,15 @@ public class TaskStorageQueryAdapter
   public List<Task> getActiveTasks()
   {
     return storage.getActiveTasks();
+  }
+
+  /**
+   * @param conflictingLockRequests Requests for conflicing lock intervals for various datasources
+   * @return Map from datasource to intervals locked by tasks that have a conflicting lock type that cannot be revoked
+   */
+  public Map<String, List<Interval>> getConflictingLockIntervals(List<ConflictingLockRequest> conflictingLockRequests)
+  {
+    return taskLockbox.getConflictingLockIntervals(conflictingLockRequests);
   }
 
   /**
