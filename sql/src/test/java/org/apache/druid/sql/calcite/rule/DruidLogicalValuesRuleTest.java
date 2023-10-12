@@ -28,6 +28,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExpressionProcessing;
@@ -145,18 +146,13 @@ public class DruidLogicalValuesRuleTest
     {
       RexLiteral literal = REX_BUILDER.makeLiteral(null, REX_BUILDER.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN));
 
-      try {
-        ExpressionProcessing.initializeForStrictBooleansTests(true);
+      if (NullHandling.sqlCompatible() && ExpressionProcessing.useStrictBooleans()) {
         final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
         Assert.assertNull(fromLiteral);
-
-        ExpressionProcessing.initializeForStrictBooleansTests(false);
+      } else {
         final Object fromLiteralNonStrict = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
         Assert.assertSame(Long.class, fromLiteralNonStrict.getClass());
         Assert.assertEquals(0L, fromLiteralNonStrict);
-      }
-      finally {
-        ExpressionProcessing.initializeForTests();
       }
     }
 
