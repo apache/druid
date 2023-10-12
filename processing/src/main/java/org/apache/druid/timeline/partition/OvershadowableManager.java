@@ -63,7 +63,6 @@ import java.util.TreeMap;
  * rootPartition range, and atomicUpdateGroupSize.
  * In {@link org.apache.druid.timeline.VersionedIntervalTimeline}, this class is used to manage segments in the same
  * timeChunk.
- *
  * This class is not thread-safe.
  */
 class OvershadowableManager<T extends Overshadowable<T>>
@@ -71,10 +70,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
   /**
    * There are 3 states for atomicUpdateGroups.
    * There could be at most one visible atomicUpdateGroup at any time in a non-empty overshadowableManager.
-   *
    * - Visible: fully available atomicUpdateGroup of the highest version if any.
-   *            If there's no fully available atomicUpdateGroup, the standby atomicUpdateGroup of the highest version
-   *            becomes visible.
+   * If there's no fully available atomicUpdateGroup, the standby atomicUpdateGroup of the highest version
+   * becomes visible.
    * - Standby: all atomicUpdateGroups of higher versions than that of the visible atomicUpdateGroup.
    * - Overshadowed: all atomicUpdateGroups of lower versions than that of the visible atomicUpdateGroup.
    */
@@ -288,7 +286,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param minorVersion the minor version to check overshadow relation. The found groups will have lower minor versions
    *                     than this.
    * @param fromState    the state to search for overshadowed groups.
-   *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
   @VisibleForTesting
@@ -327,7 +324,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
   /**
    * Find all atomicUpdateGroups which overshadow others of the given minorVersion in the given rootPartitionRange.
    * Similar to {@link #findOvershadowedBy}.
-   *
    * Note that one atomicUpdateGroup can overshadow multiple other groups. If you're finding overshadowing
    * atomicUpdateGroups by calling this method in a loop, the results of this method can contain duplicate groups.
    *
@@ -335,7 +331,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param minorVersion the minor version to check overshadow relation. The found groups will have higher minor
    *                     versions than this.
    * @param fromState    the state to search for overshadowed groups.
-   *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
   @VisibleForTesting
@@ -439,7 +434,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
   /**
    * This method is called in {@link #determineVisibleGroupAfterAdd}.
    * The given standby group can be visible in the below two cases:
-   *
    * - The standby group is full. Since every standby group has a higher version than the current visible group,
    * it should become visible immediately when it's full.
    * - The standby group is not full but not empty and the current visible is not full. If there's no fully available
@@ -579,7 +573,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
   /**
    * Checks if the given groups fully cover the given partition range. To fully cover the range, the given groups
    * should satisfy the below:
-   *
    * - All groups must be full.
    * - All groups must be adjacent.
    * - The lowest startPartitionId and the highest endPartitionId must be same with the given startPartitionId and
@@ -588,7 +581,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param groups               atomicUpdateGroups sorted by their rootPartitionRange
    * @param startRootPartitionId the start partitionId of the root partition range to check the coverage
    * @param endRootPartitionId   the end partitionId of the root partition range to check the coverage
-   *
    * @return true if the given groups fully cover the given partition range.
    */
   private boolean doGroupsFullyCoverPartitionRange(
@@ -782,7 +774,6 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
   /**
    * Find the latest NON-FULLY available atomicUpdateGroups from the given groups.
-   *
    * This method MUST be called only when there is no fully available ones in the given groups. If the given groups
    * are in the overshadowed state, calls {@link #findLatestFullyAvailableOvershadowedAtomicUpdateGroups} first
    * to check there is any fully available group.
@@ -1040,8 +1031,10 @@ class OvershadowableManager<T extends Overshadowable<T>>
     @VisibleForTesting
     static RootPartitionRange of(int startPartitionId, int endPartitionId)
     {
-      if(startPartitionId>Short.MAX_VALUE){
-        log.error("PartitionId [%s] exceeding range of Short.MAX_VALUE, please compact your segements or reduce number of segments in time period!",startPartitionId);
+      if (startPartitionId > Short.MAX_VALUE) {
+        log.error(
+            "PartitionId [%s] exceeding range of Short.MAX_VALUE, please compact your segements or reduce number of segments in time period!",
+            startPartitionId);
       }
       return new RootPartitionRange(startPartitionId, endPartitionId);
     }
