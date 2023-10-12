@@ -25,6 +25,7 @@ import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Evals;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -72,7 +73,7 @@ public final class Rows
       // convert byte[] to base64 encoded string
       return Collections.singletonList(StringUtils.encodeBase64String((byte[]) inputValue));
     } else if (inputValue instanceof Object[]) {
-      return Arrays.stream((Object[]) inputValue).map(String::valueOf).collect(Collectors.toList());
+      return Arrays.stream((Object[]) inputValue).map(Evals::asString).collect(Collectors.toList());
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }
