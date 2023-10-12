@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -31,8 +30,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.ScanOperator;
-import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -207,12 +204,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
               QueryContexts.ENABLE_DEBUG, true))
-          .expectedQueries(ImmutableList.of())
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
-    Class<ScanOperator> a = ScanOperator.class;
-    Class<ScanOperatorFactory> ss = ScanOperatorFactory.class;
   }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)

@@ -2,10 +2,9 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-    dim1,
-    dim1 || dim1,
-    length(dim1 || dim1),
-    MIN(length(dim1 || dim1)) OVER ()
+    '_'||dim1,
+    MIN(cast(0 as double)) OVER (),
+    MIN(cast((cnt||cnt) as bigint)) OVER ()
   FROM foo
 
 expectedOperators:
