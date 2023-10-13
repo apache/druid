@@ -3,7 +3,7 @@ type: "operatorValidation"
 sql: |
   SELECT
     '_'||dim1,
-    MIN(cast(0 as double)) OVER (),
+    MIN(cast(42 as double)) OVER (),
     MIN(cast((cnt||cnt) as bigint)) OVER ()
   FROM foo
 

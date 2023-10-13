@@ -88,6 +88,9 @@ public class VirtualColumnRegistry
     );
   }
 
+  public boolean isEmpty() {
+    return virtualColumnsByExpression.isEmpty();
+  }
   /**
    * Check if a {@link VirtualColumn} is defined by column name
    */

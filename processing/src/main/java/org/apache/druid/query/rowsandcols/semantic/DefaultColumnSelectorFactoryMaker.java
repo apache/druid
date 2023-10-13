@@ -175,9 +175,13 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
 
     private <T> T withColumnAccessor(String column, Function<ColumnAccessor, T> fn)
     {
+      @Nullable
       ColumnAccessor retVal = accessorCache.get(column);
       if (retVal == null) {
         Column racColumn = rac.findColumn(column);
+        if (racColumn == null) {
+          throw DruidException.defensive("didnt expected this!");
+        }
         retVal = racColumn == null ? null : racColumn.toAccessor();
         accessorCache.put(column, retVal);
       }
