@@ -334,11 +334,11 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         emitter
     );
 
-    KubernetesPeonLifecycle kubernetesPeonLifecycle = EasyMock.mock(KubernetesPeonLifecycle.class);
-    EasyMock.expect(kubernetesPeonLifecycle.getState()).andReturn(KubernetesPeonLifecycle.State.RUNNING);
-    EasyMock.expect(kubernetesPeonLifecycle.getTaskLocation()).andReturn(TaskLocation.unknown());
+    KubernetesPeonLifecycle runningKubernetesPeonLifecycle = EasyMock.mock(KubernetesPeonLifecycle.class);
+    EasyMock.expect(runningKubernetesPeonLifecycle.getState()).andReturn(KubernetesPeonLifecycle.State.RUNNING);
+    EasyMock.expect(runningKubernetesPeonLifecycle.getTaskLocation()).andReturn(TaskLocation.unknown());
     KubernetesWorkItem workItem = new KubernetesWorkItem(task);
-    workItem.setKubernetesPeonLifecycle(kubernetesPeonLifecycle);
+    workItem.setKubernetesPeonLifecycle(runningKubernetesPeonLifecycle);
     runner.tasks.put(task.getId(), workItem);
 
     Executor executor = EasyMock.mock(Executor.class);
@@ -349,10 +349,10 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     EasyMock.expectLastCall();
 
     replayAll();
-    EasyMock.replay(kubernetesPeonLifecycle);
+    EasyMock.replay(runningKubernetesPeonLifecycle);
     runner.registerListener(taskRunnerListener, executor);
     verifyAll();
-    EasyMock.verify(kubernetesPeonLifecycle);
+    EasyMock.verify(runningKubernetesPeonLifecycle);
   }
 
   @Test

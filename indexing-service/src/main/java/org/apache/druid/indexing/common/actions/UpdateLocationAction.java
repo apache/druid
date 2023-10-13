@@ -28,6 +28,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 
+@Deprecated
 public class UpdateLocationAction implements TaskAction<Void>
 {
   @JsonIgnore
@@ -58,10 +59,6 @@ public class UpdateLocationAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox)
   {
-    Optional<TaskRunner> taskRunner = toolbox.getTaskRunner();
-    if (taskRunner.isPresent()) {
-      taskRunner.get().updateLocation(task, taskLocation);
-    }
     return null;
   }
 
