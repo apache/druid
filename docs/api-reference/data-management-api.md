@@ -469,9 +469,9 @@ Accept: application/json, text/plain
 
 ## Segment deletion
 
-### Permanently delete segments with a kill task
+### Permanently delete segments
 
-Sends a [kill task](../ingestion/tasks.md) for a given interval and datasource. The interval value is an ISO 8601 string delimited by `_`. This request permanently deletes all metadata for unused segments and removes them from deep storage.
+The DELETE endpoint sends a [kill task](../ingestion/tasks.md) for a given interval and datasource. The interval value is an ISO 8601 string delimited by `_`. This request permanently deletes all metadata for unused segments and removes them from deep storage.
 
 Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
 
