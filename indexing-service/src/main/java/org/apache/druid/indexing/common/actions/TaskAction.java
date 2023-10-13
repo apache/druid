@@ -40,7 +40,7 @@ import java.util.concurrent.Future;
     @JsonSubTypes.Type(name = "segmentTransactionalReplace", value = SegmentTransactionalReplaceAction.class),
     // Type name doesn't correspond to the name of the class for backward compatibility.
     @JsonSubTypes.Type(name = "segmentListUsed", value = RetrieveUsedSegmentsAction.class),
-    @JsonSubTypes.Type(name = "segmentListLocked", value = RetrieveLockedSegmentsAction.class),
+    @JsonSubTypes.Type(name = "segmentListLocked", value = RetrieveSegmentsToReplaceAction.class),
     // Type name doesn't correspond to the name of the class for backward compatibility.
     @JsonSubTypes.Type(name = "segmentListUnused", value = RetrieveUnusedSegmentsAction.class),
     @JsonSubTypes.Type(name = "markSegmentsAsUnused", value = MarkSegmentsAsUnusedAction.class),

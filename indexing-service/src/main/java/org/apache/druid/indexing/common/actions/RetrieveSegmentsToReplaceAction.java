@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.AbstractBatchSubtask;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.ReplaceTaskLock;
@@ -50,7 +51,7 @@ import java.util.stream.Collectors;
  * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#retrieveUsedSegmentsForIntervals} which returns
  * a collection. Producing a {@link Set} would require an unnecessary copy of segments collection.
  */
-public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataSegment>>
+public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<DataSegment>>
 {
   @JsonIgnore
   private final String dataSource;
@@ -59,7 +60,7 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
   private final Interval interval;
 
   @JsonCreator
-  public RetrieveLockedSegmentsAction(
+  public RetrieveSegmentsToReplaceAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )
@@ -89,6 +90,11 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
   @Override
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
+    if (!task.getDataSource().equals(dataSource)) {
+      return toolbox.getIndexerMetadataStorageCoordinator()
+                    .retrieveUsedSegmentsForInterval(dataSource, interval, Segments.ONLY_VISIBLE);
+    }
+
     final String supervisorId;
     if (task instanceof AbstractBatchSubtask) {
       supervisorId = ((AbstractBatchSubtask) task).getSupervisorTaskId();
@@ -96,31 +102,30 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
       supervisorId = task.getId();
     }
 
-    final Set<ReplaceTaskLock> replaceLocksForTask = toolbox.getTaskLockbox()
-                                                            .getAllReplaceLocksForDatasource(task.getDataSource())
-                                                            .stream()
-                                                            .filter(lock -> supervisorId.equals(lock.getSupervisorTaskId()))
-                                                            .collect(Collectors.toSet());
+    final Set<ReplaceTaskLock> replaceLocksForTask = toolbox
+        .getTaskLockbox()
+        .getAllReplaceLocksForDatasource(task.getDataSource())
+        .stream()
+        .filter(lock -> supervisorId.equals(lock.getSupervisorTaskId()))
+        .collect(Collectors.toSet());
 
     Collection<Pair<DataSegment, String>> segmentsAndCreatedDates =
         toolbox.getIndexerMetadataStorageCoordinator().retrieveUsedSegmentsAndCreatedDates(dataSource, interval);
 
-    Set<DataSegment> allSegmentsToBeReplaced = new HashSet<>(
-        segmentsAndCreatedDates.stream()
-                               .map(segmentsAndCreatedDate -> segmentsAndCreatedDate.lhs)
-                               .collect(Collectors.toSet())
-    );
+    Set<DataSegment> allSegmentsToBeReplaced = new HashSet<>();
+    segmentsAndCreatedDates.forEach(segmentAndCreatedDate -> allSegmentsToBeReplaced.add(segmentAndCreatedDate.lhs));
     for (Pair<DataSegment, String> segmentAndCreatedDate : segmentsAndCreatedDates) {
       final DataSegment segment = segmentAndCreatedDate.lhs;
       final String createdDate = segmentAndCreatedDate.rhs;
       for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
         if (replaceLock.getInterval().contains(segment.getInterval())
-            && createdDate.compareTo(replaceLock.getVersion()) > 0) {
+            && replaceLock.getVersion().compareTo(createdDate) < 0) {
           // If a REPLACE lock covers a segment but has a version less than the segment's created date, remove it
           allSegmentsToBeReplaced.remove(segment);
         }
       }
     }
+
     return SegmentTimeline.forSegments(allSegmentsToBeReplaced)
                           .findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
   }
@@ -141,7 +146,7 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
       return false;
     }
 
-    RetrieveLockedSegmentsAction that = (RetrieveLockedSegmentsAction) o;
+    RetrieveSegmentsToReplaceAction that = (RetrieveSegmentsToReplaceAction) o;
 
     if (!dataSource.equals(that.dataSource)) {
       return false;

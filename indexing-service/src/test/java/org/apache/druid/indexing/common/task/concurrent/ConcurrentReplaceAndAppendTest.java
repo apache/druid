@@ -27,7 +27,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
-import org.apache.druid.indexing.common.actions.RetrieveLockedSegmentsAction;
+import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -907,7 +907,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     try {
       final TaskActionClient taskActionClient = taskActionClientFactory.create(task);
       Collection<DataSegment> allUsedSegments = taskActionClient.submit(
-          new RetrieveLockedSegmentsAction(
+          new RetrieveSegmentsToReplaceAction(
               WIKI,
               interval
           )
