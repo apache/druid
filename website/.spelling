@@ -115,6 +115,7 @@ IcebergInputSource
 IETF
 IP
 IPv4
+IPv6
 IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
@@ -1483,8 +1484,11 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
-isnull
 ipv4_stringify
+ipv6_match
+ipv6_parse
+ipv6_stringify
+isnull
 java.lang.Math
 java.lang.String
 log10
