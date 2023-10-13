@@ -355,7 +355,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     ),
   },
   {
-    name: 'taskLockType',
+    name: 'taskContext.taskLockType',
     type: 'boolean',
     label: 'Allow concurrent compactions (experimental)',
     defaultValue: undefined,
