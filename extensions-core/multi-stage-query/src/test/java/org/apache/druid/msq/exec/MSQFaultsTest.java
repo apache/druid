@@ -20,6 +20,8 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -329,5 +331,47 @@ public class MSQFaultsTest extends MSQTestBase
         .setExpectedRowSignature(dummyRowSignature)
         .setExpectedMSQFault(new TooManyInputFilesFault(numFiles, Limits.MAX_INPUT_FILES_PER_WORKER, 2))
         .verifyResults();
+  }
+
+  @Test
+  public void testUnionAllWithDifferentColumnNames()
+  {
+    // This test fails till MSQ can support arbitrary column names and column types for UNION ALL
+    testIngestQuery()
+        .setSql(
+            "INSERT INTO druid.dst "
+            + "SELECT dim2, dim1, m1 FROM foo2 "
+            + "UNION ALL "
+            + "SELECT dim1, dim2, m1 FROM foo "
+            + "PARTITIONED BY ALL TIME")
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.ADMIN,
+                DruidException.Category.INVALID_INPUT,
+                "general"
+            ).expectMessageContains("SQL requires union between two tables and column names queried for each table are different "
+                              + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."))
+        .verifyPlanningErrors();
+  }
+
+  @Test
+  public void testTopLevelUnionAllWithJoins()
+  {
+    // This test fails becaues it is a top level UNION ALL which cannot be planned using MSQ. It will be supported once
+    // we support arbitrary types and column names for UNION ALL
+    testSelectQuery()
+        .setSql(
+            "(SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k) "
+            + "UNION ALL "
+            + "(SELECT SUM(cnt) FROM foo)"
+        )
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.ADMIN,
+                DruidException.Category.INVALID_INPUT,
+                "general"
+            ).expectMessageContains(
+                "SQL requires union between inputs that are not simple table scans and involve a filter or aliasing"))
+        .verifyPlanningErrors();
   }
 }

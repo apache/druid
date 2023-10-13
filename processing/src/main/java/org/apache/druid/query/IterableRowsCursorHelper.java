@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedCursor;
@@ -32,6 +33,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.io.Closeable;
+import java.util.Iterator;
 
 /**
  * Helper methods to create cursor from iterable of rows
@@ -81,5 +83,36 @@ public class IterableRowsCursorHelper
     );
 
     return Pair.of(baseCursor, rowWalker);
+  }
+
+  public static Pair<Cursor, Closeable> getCursorFromYielder(Yielder<Object[]> yielderParam, RowSignature rowSignature)
+  {
+    return getCursorFromIterable(
+        new Iterable<Object[]>()
+        {
+          Yielder<Object[]> yielder = yielderParam;
+          @Override
+          public Iterator<Object[]> iterator()
+          {
+            return new Iterator<Object[]>()
+            {
+              @Override
+              public boolean hasNext()
+              {
+                return !yielder.isDone();
+              }
+
+              @Override
+              public Object[] next()
+              {
+                Object[] retVal = yielder.get();
+                yielder = yielder.next(null);
+                return retVal;
+              }
+            };
+          }
+        },
+        rowSignature
+    );
   }
 }

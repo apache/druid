@@ -72,7 +72,7 @@ public class PostJoinCursor implements Cursor
   private void advanceToMatch()
   {
     if (valueMatcher != null) {
-      while (!isDone() && !valueMatcher.matches()) {
+      while (!isDone() && !valueMatcher.matches(false)) {
         baseCursor.advanceUninterruptibly();
       }
     }

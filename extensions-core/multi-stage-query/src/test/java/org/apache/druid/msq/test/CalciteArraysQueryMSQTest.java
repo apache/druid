@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -80,7 +81,8 @@ public class CalciteArraysQueryMSQTest extends CalciteArraysQueryTest
         queryJsonMapper,
         injector,
         new MSQTestTaskActionClient(queryJsonMapper),
-        workerMemoryParameters
+        workerMemoryParameters,
+        ImmutableList.of()
     );
     return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }

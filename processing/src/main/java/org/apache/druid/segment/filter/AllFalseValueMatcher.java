@@ -22,21 +22,20 @@ package org.apache.druid.segment.filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-final class FalseValueMatcher implements ValueMatcher
+/**
+ * Constant condition {@link ValueMatcher} that always returns false, for columns with no null 'unknown' values
+ */
+final class AllFalseValueMatcher implements ValueMatcher
 {
-  private static final FalseValueMatcher INSTANCE = new FalseValueMatcher();
+  private static final AllFalseValueMatcher INSTANCE = new AllFalseValueMatcher();
 
-  public static FalseValueMatcher instance()
+  public static AllFalseValueMatcher instance()
   {
     return INSTANCE;
   }
 
-  private FalseValueMatcher()
-  {
-  }
-
   @Override
-  public boolean matches()
+  public boolean matches(boolean includeUnknown)
   {
     return false;
   }

@@ -22,17 +22,20 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -42,6 +45,8 @@ import java.util.stream.Collectors;
  */
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
+  private static final Logger log = new Logger(SegmentTransactionalReplaceAction.class);
+
   /**
    * Set of segments to be inserted into metadata storage
    */
@@ -88,9 +93,9 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     final Set<ReplaceTaskLock> replaceLocksForTask
         = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
-    final SegmentPublishResult retVal;
+    final SegmentPublishResult publishResult;
     try {
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+      publishResult = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
@@ -111,24 +116,45 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       throw new RuntimeException(e);
     }
 
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
 
-    if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
-
-      for (DataSegment segment : retVal.getSegments()) {
-        final String partitionType = segment.getShardSpec() == null ? null : segment.getShardSpec().getType();
-        metricBuilder.setDimension(DruidMetrics.PARTITIONING_TYPE, partitionType);
-        metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-        toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
+    // Upgrade any overlapping pending segments
+    // Do not perform upgrade in the same transaction as replace commit so that
+    // failure to upgrade pending segments does not affect success of the commit
+    if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
+      try {
+        tryUpgradeOverlappingPendingSegments(task, toolbox);
       }
-    } else {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
+      catch (Exception e) {
+        log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
+      }
     }
 
-    return retVal;
+    return publishResult;
+  }
+
+  /**
+   * Tries to upgrade any pending segments that overlap with the committed segments.
+   */
+  private void tryUpgradeOverlappingPendingSegments(Task task, TaskActionToolbox toolbox)
+  {
+    final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
+    final Optional<String> activeSupervisorId = supervisorManager.getActiveSupervisorIdForDatasource(task.getDataSource());
+    if (!activeSupervisorId.isPresent()) {
+      return;
+    }
+
+    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
+        toolbox.getIndexerMetadataStorageCoordinator().upgradePendingSegmentsOverlappingWith(segments);
+    log.info(
+        "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
+        upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
+    );
+
+    upgradedPendingSegments.forEach(
+        (oldId, newId) -> toolbox.getSupervisorManager()
+                                 .registerNewVersionOfPendingSegmentOnSupervisor(activeSupervisorId.get(), oldId, newId)
+    );
   }
 
   @Override

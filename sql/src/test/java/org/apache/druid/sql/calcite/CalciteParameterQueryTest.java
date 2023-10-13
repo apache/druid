@@ -221,7 +221,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         + "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{8L, 1249L, 156L, -5L, 1111L}
+            new Object[]{8L, 1249L, 156.125, -5L, 1111L}
         ),
         ImmutableList.of(
             new SqlParameter(SqlType.VARCHAR, "druid"),
@@ -323,10 +323,15 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{"10.1", 1L},
             new Object[]{"2", 1L},
             new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"2", 1L},
             new Object[]{"def", 1L}
         ),
         ImmutableList.of(

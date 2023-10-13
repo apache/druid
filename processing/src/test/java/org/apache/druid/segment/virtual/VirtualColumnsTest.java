@@ -20,7 +20,6 @@
 package org.apache.druid.segment.virtual;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -29,6 +28,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.BucketExtractionFn;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -579,9 +579,9 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
         {
-          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
         }
 
         @Override
