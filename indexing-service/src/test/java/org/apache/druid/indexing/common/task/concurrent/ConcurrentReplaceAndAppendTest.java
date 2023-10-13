@@ -846,6 +846,34 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(YEAR_23, segmentV20, segmentV21, segmentV22, segmentV23);
   }
 
+  @Test
+  public void testSegmentsToReplace()
+  {
+    final SegmentIdWithShardSpec pendingSegmentV01
+        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
+    Assert.assertEquals(SEGMENT_V0, pendingSegmentV01.getVersion());
+    Assert.assertEquals(JAN_23, pendingSegmentV01.getInterval());
+    final DataSegment segment1 = asSegment(pendingSegmentV01);
+    appendTask.commitAppendSegments(segment1);
+
+    final SegmentIdWithShardSpec pendingSegmentV02
+        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
+    Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV02.asSegmentId());
+    Assert.assertEquals(SEGMENT_V0, pendingSegmentV02.getVersion());
+    Assert.assertEquals(JAN_23, pendingSegmentV02.getInterval());
+
+    verifyInputSegments(replaceTask, JAN_23, segment1);
+
+    replaceTask.acquireReplaceLockOn(JAN_23);
+
+    final DataSegment segment2 = asSegment(pendingSegmentV02);
+    appendTask.commitAppendSegments(segment2);
+
+    verifyInputSegments(replaceTask, JAN_23, segment1);
+
+    replaceTask.releaseLock(JAN_23);
+  }
+
   @Nullable
   private DataSegment findSegmentWith(String version, Map<String, Object> loadSpec, Set<DataSegment> segments)
   {
@@ -902,7 +930,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     }
   }
 
-  private void verifyInputSegments(Interval interval, Task task, DataSegment... expectedSegments)
+  private void verifyInputSegments(Task task, Interval interval, DataSegment... expectedSegments)
   {
     try {
       final TaskActionClient taskActionClient = taskActionClientFactory.create(task);
@@ -915,7 +943,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
     }
     catch (IOException e) {
-      throw new ISE(e, "Error while fetching locked segments in interval[%s]", interval);
+      throw new ISE(e, "Error while fetching segments to replace in interval[%s]", interval);
     }
   }
 
