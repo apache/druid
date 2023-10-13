@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.parquet;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
@@ -34,7 +36,11 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Duplicate of {@link FlattenSpecParquetInputTest} but for {@link ParquetReader} instead of Hadoop
@@ -42,10 +48,10 @@ import java.util.List;
 public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
 {
   private static final String FLAT_JSON = "{\n"
-                                          + "  \"listDim\" : [ \"listDim1v1\", \"listDim1v2\" ],\n"
-                                          + "  \"dim3\" : 1,\n"
-                                          + "  \"dim2\" : \"d2v1\",\n"
                                           + "  \"dim1\" : \"d1v1\",\n"
+                                          + "  \"dim2\" : \"d2v1\",\n"
+                                          + "  \"dim3\" : 1,\n"
+                                          + "  \"listDim\" : [ \"listDim1v1\", \"listDim1v2\" ],\n"
                                           + "  \"metric1\" : 1,\n"
                                           + "  \"timestamp\" : 1537229880023\n"
                                           + "}";
@@ -93,7 +99,12 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+
+    ObjectMapper obj = new ObjectMapper();
+    JsonNode expectedJson = obj.readTree(FLAT_JSON);
+
+    JsonNode sampledAsStringJson = obj.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assert.assertEquals(expectedJson, sampledAsStringJson);
   }
 
   @Test
@@ -205,8 +216,14 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Map<String, Object> map = sampled.get(0).getRawValues();
+    SortedSet<String> keys = new TreeSet<>(map.keySet());
+    Map<String, Object> newMap = new LinkedHashMap<String, Object>();
+    for (String key : keys) { 
+      Object value = map.get(key);
+      newMap.put(key, value);
+    }
+    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(newMap));
   }
 
 
