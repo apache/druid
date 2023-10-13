@@ -82,27 +82,20 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   private final List<OperatorFactory> operators;
   private final List<OperatorFactory> leafOperators;
 
-  @JsonCreator
-  public WindowOperatorQuery(
-      @JsonProperty("dataSource") DataSource dataSource,
-      @JsonProperty("intervals") QuerySegmentSpec intervals,
-      @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("outputSignature") RowSignature rowSignature,
-      @JsonProperty("operatorDefinition") List<OperatorFactory> operators,
-      @JsonProperty("leafOperators") List<OperatorFactory> leafOperators
-  )
-  {
-    super(
-        validateMaybeRewriteDataSource(dataSource, leafOperators != null),
-        intervals,
-        false,
-        context
-    );
-    this.rowSignature = rowSignature;
-    this.operators = operators;
 
-    if (leafOperators == null) {
-      this.leafOperators = new ArrayList<>();
+  public WindowOperatorQuery(
+      DataSource dataSource,
+      QuerySegmentSpec intervals,
+      Map<String, Object> context,
+      RowSignature rowSignature,
+      List<OperatorFactory> operators
+  ) {
+    this(dataSource,intervals,context,rowSignature,operators,buildLeafOperatos(dataSource));
+  }
+
+  private static List<OperatorFactory> buildLeafOperatos(DataSource dataSource)
+  {
+      List<OperatorFactory> leafOperators = new ArrayList<>();
       // We have to double check again because this was validated in a static context before passing to the `super()`
       // and we cannot save state from that...  Ah well.
 
@@ -123,21 +116,42 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
             );
           }
 
-          this.leafOperators.add(
+          leafOperators.add(
               new ScanOperatorFactory(
                   null,
                   scan.getFilter(),
                   (int) scan.getScanRowsLimit(),
                   scan.getColumns(),
                   scan.getVirtualColumns(),
+//                  vc_union(scan.getVirtualColumns(),virtualColumns),
                   ordering
               )
           );
         }
       }
-    } else {
-      this.leafOperators = leafOperators;
-    }
+
+      return leafOperators;
+  }
+
+  @JsonCreator
+  public WindowOperatorQuery(
+      @JsonProperty("dataSource") DataSource dataSource,
+      @JsonProperty("intervals") QuerySegmentSpec intervals,
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("outputSignature") RowSignature rowSignature,
+      @JsonProperty("operatorDefinition") List<OperatorFactory> operators,
+      @JsonProperty("leafOperators") List<OperatorFactory> leafOperators
+  )
+  {
+    super(
+        validateMaybeRewriteDataSource(dataSource, leafOperators != null),
+        intervals,
+        false,
+        context
+    );
+    this.rowSignature = rowSignature;
+    this.operators = operators;
+    this.leafOperators = leafOperators;
   }
 
   @JsonProperty("operatorDefinition")
