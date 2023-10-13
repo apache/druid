@@ -51,7 +51,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveLockedSegmentsAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -552,13 +551,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     } else {
       try {
         usedSegments = toolbox.getTaskActionClient()
-                              .submit(
-                                  new RetrieveLockedSegmentsAction(
-                                      dataSource,
-                                      interval,
-                                      Segments.ONLY_VISIBLE
-                                  )
-                              );
+                              .submit(new RetrieveLockedSegmentsAction(dataSource, interval));
       }
       catch (IOException e) {
         LOG.error(e, "Error retrieving the used segments for interval[%s].", interval);

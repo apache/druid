@@ -909,8 +909,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       Collection<DataSegment> allUsedSegments = taskActionClient.submit(
           new RetrieveLockedSegmentsAction(
               WIKI,
-              interval,
-              Segments.ONLY_VISIBLE
+              interval
           )
       );
       Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));

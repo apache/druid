@@ -23,17 +23,21 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.common.task.batch.parallel.AbstractBatchSubtask;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This TaskAction returns a collection of segments which have data within the specified interval and are marked as
@@ -54,22 +58,14 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
   @JsonIgnore
   private final Interval interval;
 
-  @JsonIgnore
-  private final Segments visibility;
-
   @JsonCreator
   public RetrieveLockedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
-      // When JSON object is deserialized, this parameter is optional for backward compatibility.
-      // Otherwise, it shouldn't be considered optional.
-      @JsonProperty("visibility") @Nullable Segments visibility
+      @JsonProperty("interval") Interval interval
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
-    // Defaulting to the former behaviour when visibility wasn't explicitly specified for backward compatibility
-    this.visibility = visibility != null ? visibility : Segments.ONLY_VISIBLE;
   }
 
   @JsonProperty
@@ -84,12 +80,6 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
     return interval;
   }
 
-  @JsonProperty
-  public Segments getVisibility()
-  {
-    return visibility;
-  }
-
   @Override
   public TypeReference<Collection<DataSegment>> getReturnTypeReference()
   {
@@ -99,18 +89,40 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
   @Override
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
-    final Set<ReplaceTaskLock> replaceLocksForTask = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
-    String createdBefore = null;
-    if (task.getDataSource().equals(dataSource)) {
+    final String supervisorId;
+    if (task instanceof AbstractBatchSubtask) {
+      supervisorId = ((AbstractBatchSubtask) task).getSupervisorTaskId();
+    } else {
+      supervisorId = task.getId();
+    }
+
+    final Set<ReplaceTaskLock> replaceLocksForTask = toolbox.getTaskLockbox()
+                                                            .getAllReplaceLocksForDatasource(task.getDataSource())
+                                                            .stream()
+                                                            .filter(lock -> supervisorId.equals(lock.getSupervisorTaskId()))
+                                                            .collect(Collectors.toSet());
+
+    Collection<Pair<DataSegment, String>> segmentsAndCreatedDates =
+        toolbox.getIndexerMetadataStorageCoordinator().retrieveUsedSegmentsAndCreatedDates(dataSource, interval);
+
+    Set<DataSegment> allSegmentsToBeReplaced = new HashSet<>(
+        segmentsAndCreatedDates.stream()
+                               .map(segmentsAndCreatedDate -> segmentsAndCreatedDate.lhs)
+                               .collect(Collectors.toSet())
+    );
+    for (Pair<DataSegment, String> segmentAndCreatedDate : segmentsAndCreatedDates) {
+      final DataSegment segment = segmentAndCreatedDate.lhs;
+      final String createdDate = segmentAndCreatedDate.rhs;
       for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
-        if (replaceLock.getInterval().contains(interval)) {
-          createdBefore = replaceLock.getVersion();
-          break;
+        if (replaceLock.getInterval().contains(segment.getInterval())
+            && createdDate.compareTo(replaceLock.getVersion()) > 0) {
+          // If a REPLACE lock covers a segment but has a version less than the segment's created date, remove it
+          allSegmentsToBeReplaced.remove(segment);
         }
       }
     }
-    return toolbox.getIndexerMetadataStorageCoordinator()
-                  .retrieveUsedSegmentsForIntervals(dataSource, ImmutableList.of(interval), visibility, createdBefore);
+    return SegmentTimeline.forSegments(allSegmentsToBeReplaced)
+                          .findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
   }
 
   @Override
@@ -137,13 +149,13 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
     if (!interval.equals(that.interval)) {
       return false;
     }
-    return visibility.equals(that.visibility);
+    return true;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, interval, visibility);
+    return Objects.hash(dataSource, interval);
   }
 
   @Override
@@ -152,7 +164,6 @@ public class RetrieveLockedSegmentsAction implements TaskAction<Collection<DataS
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
-           ", visibility=" + visibility +
            '}';
   }
 }
