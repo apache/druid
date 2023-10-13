@@ -44,7 +44,7 @@ import java.util.concurrent.Callable;
  * appending ".json" to the old file name. Will overwrite any output file that
  * already exists.
  */
-@Command(name="ParquetToJson")
+@Command(name = "ParquetToJson")
 public class ParquetToJson implements Callable<Void>
 {
 

@@ -455,7 +455,7 @@ public class ParquetGroupConverter
 
   private long convertDateToMillis(int value)
   {
-    if(convertCorruptDates) {
+    if (convertCorruptDates) {
       value -= CORRECT_CORRUPT_DATE_SHIFT;
     }
     return value * MILLIS_IN_DAY;
