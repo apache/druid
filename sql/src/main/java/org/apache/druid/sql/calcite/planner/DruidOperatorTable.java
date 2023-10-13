@@ -87,6 +87,7 @@ import org.apache.druid.sql.calcite.expression.builtin.HumanReadableFormatOperat
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.IPv6AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
@@ -293,6 +294,11 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new IPv4AddressParseOperatorConversion())
                    .add(new IPv4AddressStringifyOperatorConversion())
                    .build();
+
+  private static final List<SqlOperatorConversion> IPV6ADDRESS_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                  .add(new IPv6AddressMatchOperatorConversion())
+                  .build();
 
   private static final List<SqlOperatorConversion> FORMAT_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
