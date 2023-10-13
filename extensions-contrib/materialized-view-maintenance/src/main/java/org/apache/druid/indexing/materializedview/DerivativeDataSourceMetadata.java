@@ -88,7 +88,7 @@ public class DerivativeDataSourceMetadata implements DataSourceMetadata
   @Override
   public int compareTo(DataSourceMetadata o)
   {
-    return -1;
+    throw new UnsupportedOperationException("compareTo function is not implemented for Derivative dataSource metadata");
   }
 
   @Override
