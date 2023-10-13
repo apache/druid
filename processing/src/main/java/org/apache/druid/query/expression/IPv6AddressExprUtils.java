@@ -74,13 +74,13 @@ public class IPv6AddressExprUtils
   * @return IPv6 address from supplied array of bytes
   */
   @Nullable
-  public static IPv6Address parse(byte[] bytes)
+  public static IPv6Address parse(@Nullable byte[] bytes)
   {
-    return new IPv6Address(bytes);
+    return bytes == null ? null : new IPv6Address(bytes);
   }
  
   /**
-  * @return IPv6 address dotted-decimal canonical string.
+  * @return IPv6 address canonical string.
   */
   public static String toString(IPv6Address address)
   {
