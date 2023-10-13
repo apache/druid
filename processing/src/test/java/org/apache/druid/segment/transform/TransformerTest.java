@@ -455,7 +455,10 @@ public class TransformerTest extends InitializedNullHandlingTest
     final Transformer transformer = new Transformer(
         new TransformSpec(
             null,
-            ImmutableList.of(new ExpressionTransform("dim", "array_slice(dim, 0, 5)", TestExprMacroTable.INSTANCE))
+            ImmutableList.of(
+                new ExpressionTransform("dim", "array_slice(dim, 0, 5)", TestExprMacroTable.INSTANCE),
+                new ExpressionTransform("dim1", "array_slice(dim, 0, 1)", TestExprMacroTable.INSTANCE)
+            )
         )
     );
     final List<String> dimList = ImmutableList.of("a", "b", "c", "d", "e", "f", "g");
@@ -514,5 +517,6 @@ public class TransformerTest extends InitializedNullHandlingTest
     });
     Assert.assertEquals(actualTranformedRow.getDimension("dim"), dimList.subList(0, 5));
     Assert.assertArrayEquals(dimList.subList(0, 5).toArray(), (Object[]) actualTranformedRow.getRaw("dim"));
+    Assert.assertArrayEquals(new Object[]{"a"}, actualTranformedRow.getDimension("dim1").toArray());
   }
 }
