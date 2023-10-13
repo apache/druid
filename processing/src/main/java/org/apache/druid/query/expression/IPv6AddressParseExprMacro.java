@@ -19,33 +19,32 @@
 
 package org.apache.druid.query.expression;
 
+import inet.ipaddr.ipv6.IPv6Address;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExpressionType;
  
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
  
- /**
+/**
   * <pre>
-  * Implements an expression that converts a string into an IPv6 address string.
+  * Implements an expression that parses a string into an IPv6 address
   *
   * Expression signatures:
-  * - string ipv6_stringify(string)
+  * - long ipv6_parse(string)
   *
-  * String arguments that are IPv6 addresses e.g. "2001:4860:4860::8888"
+  * String arguments should be formatted as an IPv6 string e.g. "2001:4860:4860::8888"
   * Invalid arguments return null.
   * </pre>
   *
-  * @see IPv6AddressParseExprMacro
+  * @see IPv6AddressStringifyExprMacro
   * @see IPv6AddressMatchExprMacro
   */
-public class IPv6AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
+public class IPv6AddressParseExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String FN_NAME = "ipv6_stringify";
-
+  public static final String FN_NAME = "ipv6_parse";
+ 
   @Override
   public String name()
   {
@@ -56,12 +55,11 @@ public class IPv6AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     validationHelperCheckArgumentCount(args, 1);
- 
     Expr arg = args.get(0);
- 
-    class IPv6AddressStringifyExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+
+    class IPv6AddressParseExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
-      private IPv6AddressStringifyExpr(Expr arg)
+      private IPv6AddressParseExpr(Expr arg)
       {
         super(FN_NAME, arg);
       }
@@ -84,23 +82,15 @@ public class IPv6AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
       {
         return shuttle.visit(apply(shuttle.visitAll(args)));
       }
- 
-      @Nullable
-      @Override
-      public ExpressionType getOutputType(InputBindingInspector inspector)
-      {
-        return ExpressionType.STRING;
-      }
     }
-
-    return new IPv6AddressStringifyExpr(arg);
+ 
+    return new IPv6AddressParseExpr(arg);
   }
  
   private static ExprEval evalAsString(ExprEval eval)
   {
-    if (IPv6AddressExprUtils.isValidIPv6Address(eval.asString())) {
-      return eval;
-    }
-    return ExprEval.of(null);
+    IPv6Address address = IPv6AddressExprUtils.parse(eval.asString());
+    String value = address == null ? null : IPv6AddressExprUtils.toString(address);
+    return ExprEval.of(value);
   }
 }

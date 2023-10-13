@@ -38,7 +38,7 @@ import java.util.List;
   * - long ipv6_match(string address, string subnet)
   *
   * Valid "address" argument formats are:
-  * - IPv6 address semicolan separated string (e.g., "2001:4860:4860::8888")
+  * - IPv6 address string (e.g., "2001:4860:4860::8888")
   *
   * The argument format for the "subnet" argument should be a literal in CIDR notation
   * (e.g., "2001:db8::/64 ").
