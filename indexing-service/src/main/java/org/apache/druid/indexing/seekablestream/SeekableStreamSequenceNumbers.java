@@ -32,6 +32,11 @@ import java.util.Map;
     @Type(name = "start", value = SeekableStreamStartSequenceNumbers.class),
     @Type(name = "end", value = SeekableStreamEndSequenceNumbers.class)
 })
+/**
+ * Comparable is used to compare this and the other sequence offsets.
+ * Returns 1, if this sequence is ahead of the other.
+ * otherwise, Return -1
+ */
 public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> extends Comparable<SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>>
 {
   /**
