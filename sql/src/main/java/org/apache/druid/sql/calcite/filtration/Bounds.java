@@ -197,10 +197,9 @@ public class Bounds
 
   public static BoundDimFilter interval(final BoundRefKey boundRefKey, final Interval interval)
   {
-    if (!boundRefKey.getComparator().equals(StringComparators.NUMERIC)
-        && !boundRefKey.getComparator().equals(StringComparators.NATURAL)) {
-      // Interval comparison only works with NUMERIC comparator or the NATURAL comparator
-      throw new ISE("Comparator must be NUMERIC or NATURAL but was[%s]", boundRefKey.getComparator());
+    if (!boundRefKey.getComparator().equals(StringComparators.NUMERIC)) {
+      // Interval comparison only works with NUMERIC comparator
+      throw new ISE("Comparator must be NUMERIC but was[%s]", boundRefKey.getComparator());
     }
 
     return new BoundDimFilter(

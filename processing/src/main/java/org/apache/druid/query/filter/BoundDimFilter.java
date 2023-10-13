@@ -88,7 +88,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     // will be used if the new 'ordering'
     // property is missing. If both 'ordering' and 'alphaNumeric' are present,
     // make sure they are consistent.
-    if (ordering == null || ordering.equals(StringComparators.NATURAL)) {
+    if (ordering == null) {
       if (alphaNumeric == null || !alphaNumeric) {
         this.ordering = StringComparators.LEXICOGRAPHIC;
       } else {

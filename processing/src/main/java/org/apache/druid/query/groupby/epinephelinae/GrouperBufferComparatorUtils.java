@@ -437,6 +437,8 @@ public class GrouperBufferComparatorUtils
     return !pushLimitDown
            || stringComparator == null
            || stringComparator.equals(StringComparators.NUMERIC)
+           // NATURAL isn't set for numeric types, however if it is, then that would mean that we are ordering the
+           // numeric type with its natural comparator (which is NUMERIC)
            || stringComparator.equals(StringComparators.NATURAL);
   }
 }
