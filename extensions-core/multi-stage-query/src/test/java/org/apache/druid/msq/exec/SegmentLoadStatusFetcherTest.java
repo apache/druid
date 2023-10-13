@@ -20,13 +20,18 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.discovery.BrokerClient;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -76,8 +81,7 @@ public class SegmentLoadStatusFetcherTest
         new ObjectMapper(),
         "id",
         TEST_DATASOURCE,
-        ImmutableSet.of("version1"),
-        5,
+        IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
         false
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
@@ -114,8 +118,7 @@ public class SegmentLoadStatusFetcherTest
         new ObjectMapper(),
         "id",
         TEST_DATASOURCE,
-        ImmutableSet.of("version1"),
-        5,
+        IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
         false
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
@@ -153,8 +156,7 @@ public class SegmentLoadStatusFetcherTest
         new ObjectMapper(),
         "id",
         TEST_DATASOURCE,
-        ImmutableSet.of("version1"),
-        5,
+        IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
         true
     );
 
@@ -169,4 +171,18 @@ public class SegmentLoadStatusFetcherTest
     Assert.assertTrue(segmentLoadWaiter.status().getState() == SegmentLoadStatusFetcher.State.FAILED);
   }
 
+  private static DataSegment createTestDataSegment(String version, int partitionNumber)
+  {
+    return new DataSegment(
+        TEST_DATASOURCE,
+        Intervals.ETERNITY,
+        version,
+        null,
+        null,
+        null,
+        new NumberedShardSpec(partitionNumber, 1),
+        0,
+        0
+    );
+  }
 }
