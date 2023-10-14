@@ -22,8 +22,8 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.InternalQueryConfig;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -72,7 +72,7 @@ public class DruidSchemaInternRowSignatureBenchmark
   {
     public SegmentMetadataCacheForBenchmark(
         final QueryLifecycleFactory queryLifecycleFactory,
-        final TimelineServerView serverView,
+        final CoordinatorServerView serverView,
         final Escalator escalator,
         final InternalQueryConfig internalQueryConfig
     )
@@ -167,7 +167,7 @@ public class DruidSchemaInternRowSignatureBenchmark
   {
     cache = new SegmentMetadataCacheForBenchmark(
         EasyMock.mock(QueryLifecycleFactory.class),
-        EasyMock.mock(TimelineServerView.class),
+        EasyMock.mock(CoordinatorServerView.class),
         null,
         null
     );
