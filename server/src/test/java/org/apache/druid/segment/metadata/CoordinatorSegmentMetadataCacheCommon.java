@@ -29,6 +29,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,7 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
 
     serverView = new TestCoordinatorServerView(
         Lists.newArrayList(segment1, segment2, segment3, segment4, segment5),
-        Lists.newArrayList(realtimeSegment1)
+        Collections.singletonList(realtimeSegment1)
     );
 
     Map<SegmentDescriptor, Pair<QueryableIndex, DataSegment>> queryableIndexMap = new HashMap<>();

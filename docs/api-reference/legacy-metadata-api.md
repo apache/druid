@@ -126,7 +126,7 @@ Returns a list of all segments for one or more specific datasources with the ful
 
 `GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources={dataSourceName1}&datasources={dataSourceName2}`
 
-Additionally, returns the realtime segments for the speicified datasources, with the full segment metadata and extra fields `overshadwed`,`realtime` & `numRows`.
+Additionally, returns the realtime segments for the specified datasources, with the full segment metadata and extra fields `overshadwed`,`realtime` & `numRows`.
 
 `GET /druid/coordinator/v1/metadata/datasources`
 

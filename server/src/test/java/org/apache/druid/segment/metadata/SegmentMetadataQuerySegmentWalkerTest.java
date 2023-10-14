@@ -92,7 +92,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
   private Random random;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     warehouse = new MapQueryToolChestWarehouse(
         ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
