@@ -267,12 +267,12 @@ public class CachingClusteredClientTest
   private Cache cache;
   private DruidServer[] servers;
 
-  public CachingClusteredClientTest()
+  public CachingClusteredClientTest(int randomSeed)
   {
-    this.random = new Random(10);
+    this.random = new Random(randomSeed);
   }
 
-  //@Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Lists.transform(
