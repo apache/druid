@@ -21,74 +21,60 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
-
-import javax.annotation.Nullable;
 
 /**
- * Reads values written by {@link DoubleFieldWriter}.
+ * Reads the values produced by {@link DoubleFieldWriter}
  *
- * Values are sortable as bytes without decoding.
- *
- * Format:
- *
- * - 1 byte: {@link DoubleFieldWriter#NULL_BYTE} or {@link DoubleFieldWriter#NOT_NULL_BYTE}
- * - 8 bytes: encoded double, using {@link DoubleFieldWriter#transform}
+ * @see DoubleFieldWriter
+ * @see NumericFieldWriter for the details of the byte-format that it expects for reading
  */
-public class DoubleFieldReader implements FieldReader
+public class DoubleFieldReader extends NumericFieldReader
 {
-  DoubleFieldReader()
+
+  public static DoubleFieldReader forPrimitive()
   {
+    return new DoubleFieldReader(false);
+  }
+
+  public static DoubleFieldReader forArray()
+  {
+    return new DoubleFieldReader(true);
+  }
+
+  private DoubleFieldReader(final boolean forArray)
+  {
+    super(forArray);
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
+  public ValueType getValueType()
   {
-    return new Selector(memory, fieldPointer);
+    return ValueType.DOUBLE;
   }
 
   @Override
-  public DimensionSelector makeDimensionSelector(
-      Memory memory,
-      ReadableFieldPointer fieldPointer,
-      @Nullable ExtractionFn extractionFn
+  public ColumnValueSelector<?> getColumnValueSelector(
+      final Memory memory,
+      final ReadableFieldPointer fieldPointer,
+      final byte nullIndicatorByte
   )
   {
-    return ValueTypes.makeNumericWrappingDimensionSelector(
-        ValueType.DOUBLE,
-        makeColumnValueSelector(memory, fieldPointer),
-        extractionFn
-    );
+    return new DoubleFieldReader.DoubleFieldSelector(memory, fieldPointer, nullIndicatorByte);
   }
 
-  @Override
-  public boolean isNull(Memory memory, long position)
+  private static class DoubleFieldSelector extends NumericFieldReader.Selector implements DoubleColumnSelector
   {
-    return memory.getByte(position) == DoubleFieldWriter.NULL_BYTE;
-  }
 
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
+    final Memory dataRegion;
+    final ReadableFieldPointer fieldPointer;
 
-  /**
-   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
-   */
-  private static class Selector implements DoubleColumnSelector
-  {
-    private final Memory dataRegion;
-    private final ReadableFieldPointer fieldPointer;
-
-    private Selector(final Memory dataRegion, final ReadableFieldPointer fieldPointer)
+    public DoubleFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
     {
+      super(dataRegion, fieldPointer, nullIndicatorByte);
       this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
     }
@@ -98,19 +84,19 @@ public class DoubleFieldReader implements FieldReader
     {
       assert NullHandling.replaceWithDefault() || !isNull();
       final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
-      return DoubleFieldWriter.detransform(bits);
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      return dataRegion.getByte(fieldPointer.position()) == DoubleFieldWriter.NULL_BYTE;
+      return TransformUtils.detransformToDouble(bits);
     }
 
     @Override
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
-      // Do nothing.
+
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return super._isNull();
     }
   }
 }

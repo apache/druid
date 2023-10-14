@@ -22,6 +22,7 @@ package org.apache.druid.client.coordinator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -36,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -90,6 +92,37 @@ public class CoordinatorClientImpl implements CoordinatorClient
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), DataSegment.class)
     );
+  }
+
+  @Override
+  public Iterable<ImmutableSegmentLoadInfo> fetchServerViewSegments(String dataSource, List<Interval> intervals)
+  {
+    ArrayList<ImmutableSegmentLoadInfo> retVal = new ArrayList<>();
+    for (Interval interval : intervals) {
+      String intervalString = StringUtils.replace(interval.toString(), "/", "_");
+
+      final String path = StringUtils.format(
+          "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?full",
+          StringUtils.urlEncode(dataSource),
+          intervalString
+      );
+      ListenableFuture<Iterable<ImmutableSegmentLoadInfo>> segments = FutureUtils.transform(
+          client.asyncRequest(
+              new RequestBuilder(HttpMethod.GET, path),
+              new BytesFullResponseHandler()
+          ),
+          holder -> JacksonUtils.readValue(
+              jsonMapper,
+              holder.getContent(),
+              new TypeReference<Iterable<ImmutableSegmentLoadInfo>>()
+              {
+              }
+          )
+      );
+      FutureUtils.getUnchecked(segments, true).forEach(retVal::add);
+    }
+
+    return retVal;
   }
 
   @Override

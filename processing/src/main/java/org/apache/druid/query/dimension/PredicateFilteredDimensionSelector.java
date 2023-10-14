@@ -20,6 +20,7 @@
 package org.apache.druid.query.dimension;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -67,13 +68,16 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         final IndexedInts baseRow = selector.getRow();
         final int baseRowSize = baseRow.size();
         boolean nullRow = true;
         for (int i = 0; i < baseRowSize; i++) {
           String rowValue = lookupName(baseRow.get(i));
+          if (includeUnknown && rowValue == null) {
+            return true;
+          }
           if (predicate.apply(rowValue)) {
             if (Objects.equals(rowValue, value)) {
               return true;
@@ -82,7 +86,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
           }
         }
         // null should match empty rows in multi-value columns
-        return nullRow && value == null;
+        return nullRow && (includeUnknown || value == null);
       }
 
       @Override
@@ -95,19 +99,24 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final Predicate<String> matcherPredicate)
+  public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
   {
-    final boolean matchNull = matcherPredicate.apply(null);
+    final Predicate<String> matcherPredicate = predicateFactory.makeStringPredicate();
+    final boolean predicateMatchesNull = matcherPredicate.apply(null);
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
+        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
         final IndexedInts baseRow = selector.getRow();
         final int baseRowSize = baseRow.size();
         boolean nullRow = true;
         for (int i = 0; i < baseRowSize; ++i) {
           String rowValue = lookupName(baseRow.get(i));
+          if (matchNull && rowValue == null) {
+            return true;
+          }
           if (predicate.apply(rowValue)) {
             if (matcherPredicate.apply(rowValue)) {
               return true;
@@ -116,7 +125,7 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
           }
         }
         // null should match empty rows in multi-value columns
-        return nullRow && matchNull;
+        return nullRow && (includeUnknown || predicateMatchesNull);
       }
 
       @Override

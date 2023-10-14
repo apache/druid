@@ -30,6 +30,7 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -70,7 +71,7 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
   }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Long>, Long> makeProcessors(
+  public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -105,7 +106,7 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
     final Sequence<ReadableInput> readableInputs =
         Sequences.simple(inputSliceReader.attach(0, slice, counters, warningPublisher));
 
-    final Sequence<FrameProcessor<Long>> processors = readableInputs.map(
+    final Sequence<FrameProcessor<Object>> processors = readableInputs.map(
         readableInput -> {
           final OutputChannel outputChannel =
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
@@ -123,7 +124,7 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
     );
 
     return new ProcessorsAndChannels<>(
-        processors,
+        ProcessorManagers.of(processors),
         OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
     );
   }

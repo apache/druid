@@ -132,6 +132,7 @@ jobs:
           docker images
 
       - name: Run IT
+        id: run-it
         run: ${{ inputs.script }}
 
       - name: Collect docker logs on failure

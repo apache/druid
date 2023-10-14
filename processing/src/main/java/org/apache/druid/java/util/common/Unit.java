@@ -17,20 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.segment.filter;
+package org.apache.druid.java.util.common;
 
-import org.apache.druid.query.filter.ValueMatcher;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Collections;
+import java.util.Map;
 
 /**
-*/
-public final class BooleanValueMatcher
+ * A type that has exactly one value. (Not counting null.)
+ *
+ * Jackson-serializable.
+ */
+public final class Unit
 {
-  public static ValueMatcher of(boolean matches)
+  private static final Unit INSTANCE = new Unit();
+
+  private Unit()
   {
-    return matches ? TrueValueMatcher.instance() : FalseValueMatcher.instance();
+    // Singleton.
   }
 
-  private BooleanValueMatcher()
+  @JsonCreator
+  public static Unit instance()
   {
+    return INSTANCE;
+  }
+
+  @JsonValue
+  private Map<String, Object> asMap()
+  {
+    return Collections.emptyMap();
   }
 }

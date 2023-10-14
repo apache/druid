@@ -435,17 +435,17 @@ public class ExpressionSelectors
       if (row.size() == 1 && !coerceArray) {
         return selector.lookupName(row.get(0));
       } else {
+        final int size = row.size();
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (row.size() == 0 || (row.size() == 1 && selector.getObject() == null)) {
+        if (size == 0 || (size == 1 && selector.getObject() == null)) {
           if (homogenize) {
             return new Object[]{null};
           } else {
             return null;
           }
         }
-        final Object[] strings = new Object[row.size()];
-        // noinspection SSBasedInspection
-        for (int i = 0; i < row.size(); i++) {
+        final Object[] strings = new Object[size];
+        for (int i = 0; i < size; i++) {
           strings[i] = selector.lookupName(row.get(i));
         }
         return strings;

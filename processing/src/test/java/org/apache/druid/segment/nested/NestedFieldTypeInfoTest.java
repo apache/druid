@@ -57,6 +57,23 @@ public class NestedFieldTypeInfoTest
   }
 
   @Test
+  public void testSingleTypeWithEmptyArray() throws IOException
+  {
+    List<ColumnType> supportedTypes = ImmutableList.of(
+        ColumnType.STRING,
+        ColumnType.LONG,
+        ColumnType.DOUBLE,
+        ColumnType.STRING_ARRAY,
+        ColumnType.LONG_ARRAY,
+        ColumnType.DOUBLE_ARRAY
+    );
+
+    for (ColumnType type : supportedTypes) {
+      testSingleTypeWithEmptyArray(type);
+    }
+  }
+
+  @Test
   public void testMultiType() throws IOException
   {
     List<Set<ColumnType>> tests = ImmutableList.of(
@@ -135,6 +152,51 @@ public class NestedFieldTypeInfoTest
     FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
     Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
     Assert.assertEquals(1, BUFFER.position());
+  }
+
+  private void testSingleTypeWithEmptyArray(ColumnType columnType) throws IOException
+  {
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
+    typeSet.add(columnType);
+    typeSet.addUntypedArray();
+
+    if (columnType.isArray()) {
+      // arrays with empty arrays are still single type
+      Assert.assertEquals(columnType, typeSet.getSingleType());
+      Assert.assertEquals(ImmutableSet.of(columnType), FieldTypeInfo.convertToSet(typeSet.getByteValue()));
+
+      writeTypeSet(typeSet);
+      FieldTypeInfo info = new FieldTypeInfo(BUFFER);
+      Assert.assertEquals(0, BUFFER.position());
+
+      FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+      Assert.assertEquals(columnType, roundTrip.getSingleType());
+
+      FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
+      Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
+      Assert.assertEquals(1, BUFFER.position());
+    } else {
+      // scalar types become multi-type
+      Set<ColumnType> columnTypes = ImmutableSet.of(columnType, ColumnType.ofArray(columnType));
+      FieldTypeInfo.MutableTypeSet merge = new FieldTypeInfo.MutableTypeSet();
+      merge.merge(new FieldTypeInfo.MutableTypeSet().add(columnType).getByteValue(), true);
+
+      Assert.assertEquals(merge.getByteValue(), typeSet.getByteValue());
+      Assert.assertNull(typeSet.getSingleType());
+      Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(typeSet.getByteValue()));
+
+      writeTypeSet(typeSet);
+      FieldTypeInfo info = new FieldTypeInfo(BUFFER);
+      Assert.assertEquals(0, BUFFER.position());
+
+      FieldTypeInfo.TypeSet roundTrip = info.getTypes(0);
+      Assert.assertNull(roundTrip.getSingleType());
+      Assert.assertEquals(columnTypes, FieldTypeInfo.convertToSet(roundTrip.getByteValue()));
+
+      FieldTypeInfo info2 = FieldTypeInfo.read(BUFFER, 1);
+      Assert.assertEquals(info.getTypes(0), info2.getTypes(0));
+      Assert.assertEquals(1, BUFFER.position());
+    }
   }
 
   private static void writeTypeSet(FieldTypeInfo.MutableTypeSet typeSet) throws IOException

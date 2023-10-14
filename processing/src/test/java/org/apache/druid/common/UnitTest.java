@@ -17,33 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.segment.filter;
+package org.apache.druid.common;
 
-import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.Unit;
+import org.apache.druid.segment.TestHelper;
+import org.junit.Assert;
+import org.junit.Test;
 
-final class TrueValueMatcher implements ValueMatcher
+public class UnitTest
 {
-  private static final TrueValueMatcher INSTANCE = new TrueValueMatcher();
-
-  public static TrueValueMatcher instance()
+  @Test
+  public void testSerde() throws Exception
   {
-    return INSTANCE;
-  }
-
-  private TrueValueMatcher()
-  {
-  }
-
-  @Override
-  public boolean matches()
-  {
-    return true;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    Assert.assertSame(
+        Unit.instance(),
+        mapper.readValue(mapper.writeValueAsBytes(Unit.instance()), Unit.class)
+    );
   }
 }

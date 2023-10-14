@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -29,10 +28,13 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Assert;
@@ -44,10 +46,8 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
 
 @RunWith(Enclosed.class)
@@ -56,7 +56,7 @@ public class DruidLogicalValuesRuleTest
   private static final PlannerContext DEFAULT_CONTEXT = Mockito.mock(PlannerContext.class);
 
   @RunWith(Parameterized.class)
-  public static class GetValueFromLiteralSimpleTypesTest
+  public static class GetValueFromLiteralSimpleTypesTest extends InitializedNullHandlingTest
   {
     @Parameters(name = "{1}, {2}")
     public static Iterable<Object[]> constructorFeeder()
@@ -88,7 +88,7 @@ public class DruidLogicalValuesRuleTest
     @Test
     public void testGetValueFromLiteral()
     {
-      final RexLiteral literal = makeLiteral(val, sqlTypeName, javaType);
+      final RexLiteral literal = Mockito.spy(makeLiteral(val, sqlTypeName, javaType));
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
       Assert.assertSame(javaType, fromLiteral.getClass());
       Assert.assertEquals(val, fromLiteral);
@@ -97,20 +97,11 @@ public class DruidLogicalValuesRuleTest
 
     private static RexLiteral makeLiteral(Comparable<?> val, SqlTypeName typeName, Class<?> javaType)
     {
-      RelDataType dataType = Mockito.mock(RelDataType.class);
-      Mockito.when(dataType.getSqlTypeName()).thenReturn(typeName);
-      RexLiteral literal = Mockito.mock(RexLiteral.class);
-      try {
-        Field field = literal.getClass().getSuperclass().getDeclaredField("value");
-        field.setAccessible(true);
-        field.set(literal, val);
-      }
-      catch (Exception e) {
-        Assert.fail("Unable to mock the literal for test.\nException: " + e);
-      }
-      Mockito.when(literal.getType()).thenReturn(dataType);
-      Mockito.when(literal.getValueAs(ArgumentMatchers.any())).thenReturn(javaType.cast(val));
-      return literal;
+      return (RexLiteral) new RexBuilder(DruidTypeSystem.TYPE_FACTORY).makeLiteral(
+          typeName == SqlTypeName.DECIMAL && val != null ? new BigDecimal(String.valueOf(val)) : val,
+          DruidTypeSystem.TYPE_FACTORY.createSqlType(typeName),
+          false
+      );
     }
   }
 
@@ -148,6 +139,21 @@ public class DruidLogicalValuesRuleTest
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
       Assert.assertSame(Long.class, fromLiteral.getClass());
       Assert.assertEquals(0L, fromLiteral);
+    }
+
+    @Test
+    public void testGetValueFromNullBooleanLiteral()
+    {
+      RexLiteral literal = REX_BUILDER.makeLiteral(null, REX_BUILDER.getTypeFactory().createSqlType(SqlTypeName.BOOLEAN));
+
+      if (NullHandling.sqlCompatible() && ExpressionProcessing.useStrictBooleans()) {
+        final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+        Assert.assertNull(fromLiteral);
+      } else {
+        final Object fromLiteralNonStrict = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
+        Assert.assertSame(Long.class, fromLiteralNonStrict.getClass());
+        Assert.assertEquals(0L, fromLiteralNonStrict);
+      }
     }
 
     @Test

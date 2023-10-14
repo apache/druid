@@ -17,33 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.segment.filter;
+package org.apache.druid.frame.field;
 
-import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 
-final class FalseValueMatcher implements ValueMatcher
+import java.util.List;
+
+/**
+ * Stores the memory locations in an array, and spits out the value pointed to by the memory location by pointer,
+ * which is settable by the user
+ */
+public class IndexArrayFieldPointer implements ReadableFieldPointer
 {
-  private static final FalseValueMatcher INSTANCE = new FalseValueMatcher();
+  private final LongArrayList indices;
+  private int pointer = 0;
 
-  public static FalseValueMatcher instance()
+  public IndexArrayFieldPointer(final List<Long> indices)
   {
-    return INSTANCE;
+    this.indices = new LongArrayList(indices);
   }
 
-  private FalseValueMatcher()
+  private int numIndices()
   {
+    return indices.size();
+  }
+
+  public void setPointer(int newPointer)
+  {
+    assert newPointer >= 0 && newPointer < numIndices();
+    this.pointer = newPointer;
   }
 
   @Override
-  public boolean matches()
+  public long position()
   {
-    return false;
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
+    return indices.getLong(pointer);
   }
 }

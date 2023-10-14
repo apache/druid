@@ -217,7 +217,7 @@ public class SqlStatementResource
       return buildNonOkResponse(
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build(e.getMessage())
+                        .build("%s", e.getMessage())
       );
     }
     finally {
@@ -504,7 +504,7 @@ public class SqlStatementResource
   }
 
   @SuppressWarnings("ReassignedVariable")
-  private Optional<ResultSetInformation> getSampleResults(
+  private Optional<ResultSetInformation> getResultSetInformation(
       String queryId,
       String dataSource,
       SqlStatementState sqlStatementState,
@@ -617,7 +617,7 @@ public class SqlStatementResource
           taskResponse.getStatus().getCreatedTime(),
           signature.orElse(null),
           taskResponse.getStatus().getDuration(),
-          withResults ? getSampleResults(
+          withResults ? getResultSetInformation(
               queryId,
               msqControllerTask.getDataSource(),
               sqlStatementState,
@@ -782,11 +782,16 @@ public class SqlStatementResource
                                                            || selectedPageId.equals(pageInformation.getId()))
                                 .map(pageInformation -> {
                                   try {
+                                    if (pageInformation.getWorker() == null || pageInformation.getPartition() == null) {
+                                      throw DruidException.defensive(
+                                          "Worker or partition number is null for page id [%d]",
+                                          pageInformation.getId()
+                                      );
+                                    }
                                     return new FrameChannelSequence(standardImplementation.openChannel(
                                         finalStage.getId(),
-                                        (int) pageInformation.getId(),
-                                        (int) pageInformation.getId()
-                                        // we would always have partition number == worker number
+                                        pageInformation.getWorker(),
+                                        pageInformation.getPartition()
                                     ));
                                   }
                                   catch (Exception e) {

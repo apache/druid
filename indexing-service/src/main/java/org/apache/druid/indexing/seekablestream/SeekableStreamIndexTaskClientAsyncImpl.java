@@ -57,6 +57,7 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.SpecificTaskRetryPolicy;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -190,6 +191,23 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
         .handler(new BytesFullResponseHandler())
         .onSuccess(r -> deserializeOffsetsMap(r.getContent()))
         .onNotAvailable(e -> Either.value(Collections.emptyMap()))
+        .go();
+  }
+
+  @Override
+  public ListenableFuture<Boolean> registerNewVersionOfPendingSegmentAsync(
+      String taskId,
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newVersionOfSegment
+  )
+  {
+    final RequestBuilder requestBuilder
+        = new RequestBuilder(HttpMethod.POST, "/pendingSegmentVersion")
+        .jsonContent(jsonMapper, new PendingSegmentVersions(basePendingSegment, newVersionOfSegment));
+
+    return makeRequest(taskId, requestBuilder)
+        .handler(IgnoreHttpResponseHandler.INSTANCE)
+        .onSuccess(r -> true)
         .go();
   }
 
