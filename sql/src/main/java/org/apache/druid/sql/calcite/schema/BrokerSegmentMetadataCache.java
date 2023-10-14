@@ -207,7 +207,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
     try {
       emitter.emit(ServiceMetricEvent.builder().setMetric(
-          "metadatacache/schemaPoll/cout", 1));
+          "metadatacache/schemaPoll/count", 1));
       FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
                  .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
                      dataSourceInformation.getDataSource(),
