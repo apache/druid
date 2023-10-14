@@ -335,6 +335,17 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
             "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
           },
+          Object {
+            "adjustValue": [Function],
+            "defaultValue": undefined,
+            "info": <p>
+              Allows or forbids concurrent compactions.
+            </p>,
+            "label": "Allow concurrent compactions (experimental)",
+            "name": "taskContext.taskLockType",
+            "type": "boolean",
+            "valueAdjustment": [Function],
+          },
         ]
       }
       model={
@@ -716,6 +727,17 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
             "min": 1,
             "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
+          },
+          Object {
+            "adjustValue": [Function],
+            "defaultValue": undefined,
+            "info": <p>
+              Allows or forbids concurrent compactions.
+            </p>,
+            "label": "Allow concurrent compactions (experimental)",
+            "name": "taskContext.taskLockType",
+            "type": "boolean",
+            "valueAdjustment": [Function],
           },
         ]
       }
@@ -1099,6 +1121,17 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
             "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
           },
+          Object {
+            "adjustValue": [Function],
+            "defaultValue": undefined,
+            "info": <p>
+              Allows or forbids concurrent compactions.
+            </p>,
+            "label": "Allow concurrent compactions (experimental)",
+            "name": "taskContext.taskLockType",
+            "type": "boolean",
+            "valueAdjustment": [Function],
+          },
         ]
       }
       model={
@@ -1480,6 +1513,17 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
             "min": 1,
             "name": "tuningConfig.splitHintSpec.maxNumFiles",
             "type": "number",
+          },
+          Object {
+            "adjustValue": [Function],
+            "defaultValue": undefined,
+            "info": <p>
+              Allows or forbids concurrent compactions.
+            </p>,
+            "label": "Allow concurrent compactions (experimental)",
+            "name": "taskContext.taskLockType",
+            "type": "boolean",
+            "valueAdjustment": [Function],
           },
         ]
       }
