@@ -45,4 +45,10 @@ public class TestSeekableStreamDataSourceMetadata extends SeekableStreamDataSour
   {
     return null;
   }
+
+  @Override
+  public int compareTo(DataSourceMetadata o)
+  {
+    return 0;
+  }
 }

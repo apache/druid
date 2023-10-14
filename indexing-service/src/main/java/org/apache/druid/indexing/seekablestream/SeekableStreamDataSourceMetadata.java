@@ -60,22 +60,6 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
   }
 
   @Override
-  public int compareTo(DataSourceMetadata other)
-  {
-    if (!getClass().equals(other.getClass())) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          this.getClass().getName(),
-          other.getClass().getName()
-      );
-    }
-    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that =
-        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
-
-    return seekableStreamSequenceNumbers.compareTo(that.seekableStreamSequenceNumbers);
-  }
-
-  @Override
   public DataSourceMetadata plus(DataSourceMetadata other)
   {
     if (this.getClass() != other.getClass()) {

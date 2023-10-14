@@ -26,6 +26,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.java.util.common.IAE;
 
 public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>
 {
@@ -57,5 +58,20 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
   )
   {
     return new KafkaDataSourceMetadata(seekableStreamSequenceNumbers);
+  }
+
+  @Override
+  public int compareTo(DataSourceMetadata other)
+  {
+    if (!getClass().equals(other.getClass())) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getName(),
+          other.getClass().getName()
+      );
+    }
+    final  SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> that = (SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>) other;
+
+    return getSeekableStreamSequenceNumbers().compareTo(that.getSeekableStreamSequenceNumbers());
   }
 }

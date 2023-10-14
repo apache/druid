@@ -2445,6 +2445,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     {
       return new TestSeekableStreamDataSourceMetadata(seekableStreamSequenceNumbers);
     }
+
+    @Override
+    public int compareTo(DataSourceMetadata o)
+    {
+      return 0;
+    }
   }
 
   private static SeekableStreamIndexTaskIOConfig createTaskIoConfigExt(

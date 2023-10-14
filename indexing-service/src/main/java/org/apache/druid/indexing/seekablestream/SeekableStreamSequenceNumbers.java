@@ -35,7 +35,7 @@ import java.util.Map;
 /**
  * Comparable is used to compare this and the other sequence offsets.
  * Returns 1, if this sequence is ahead of the other.
- * otherwise, Return -1
+ * otherwise, Return 0
  */
 public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> extends Comparable<SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>>
 {
