@@ -59,6 +59,6 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
 
   @Override
   public int compareTo(DataSourceMetadata o) {
-    throw new UnsupportedOperationException("compareTo function is not implemented for Kinesis dataSource metadata");
+    return 0;
   }
 }

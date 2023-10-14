@@ -63,7 +63,7 @@ public final class ObjectMetadata implements DataSourceMetadata
   @Override
   public int compareTo(DataSourceMetadata o)
   {
-    throw new UnsupportedOperationException("compareTo function is not implemented for ObjectMetadata");
+    return 0;
   }
 
   @Override
