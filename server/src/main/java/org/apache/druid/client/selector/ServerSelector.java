@@ -21,7 +21,6 @@ package org.apache.druid.client.selector;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
-import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -215,23 +214,5 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   public boolean hasData()
   {
     return segment.get().hasData();
-  }
-
-  /**
-   * This conversion, allows {@link org.apache.druid.client.QueryableCoordinatorServerView}
-   * to implement methods from {@link org.apache.druid.client.CoordinatorTimeline}.
-   *
-   * @return {@link SegmentLoadInfo}
-   */
-  public SegmentLoadInfo toSegmentLoadInfo()
-  {
-    List<DruidServerMetadata> allServers = getAllServers();
-    SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(segment.get());
-
-    for (DruidServerMetadata druidServerMetadata : allServers) {
-      segmentLoadInfo.addServer(druidServerMetadata);
-    }
-
-    return segmentLoadInfo;
   }
 }

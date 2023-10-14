@@ -24,6 +24,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
@@ -34,8 +35,10 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
@@ -80,7 +83,6 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   {
     super(
         queryLifecycleFactory,
-        serverView,
         config,
         escalator,
         internalQueryConfig,
@@ -88,6 +90,52 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     );
     this.dataSourceMetadataFactory = dataSourceMetadataFactory;
     this.coordinatorClient = coordinatorClient;
+
+    initServerViewTimelineCallback(serverView);
+  }
+
+  private void initServerViewTimelineCallback(final TimelineServerView serverView)
+  {
+    serverView.registerTimelineCallback(
+        callbackExec,
+        new TimelineServerView.TimelineCallback()
+        {
+          @Override
+          public ServerView.CallbackAction timelineInitialized()
+          {
+            synchronized (lock) {
+              isServerViewInitialized = true;
+              lock.notifyAll();
+            }
+
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
+          {
+            addSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
+          {
+            removeSegment(segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction serverSegmentRemoved(
+              final DruidServerMetadata server,
+              final DataSegment segment
+          )
+          {
+            removeServerSegment(server, segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
   }
 
   /**
@@ -159,7 +207,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
     try {
       emitter.emit(ServiceMetricEvent.builder().setMetric(
-          "metadatacache/schemaPoll/count", 1));
+          "metadatacache/schemaPoll/cout", 1));
       FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
                  .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
                      dataSourceInformation.getDataSource(),

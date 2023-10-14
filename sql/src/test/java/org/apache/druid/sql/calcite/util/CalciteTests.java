@@ -49,7 +49,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.segment.metadata.TestTimelineServerView;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;

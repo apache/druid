@@ -33,8 +33,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.InternalQueryConfig;
-import org.apache.druid.client.ServerView;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -118,7 +116,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   private final Escalator escalator;
 
   private final ExecutorService cacheExec;
-  private final ExecutorService callbackExec;
+
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
   /**
@@ -181,15 +179,17 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @GuardedBy("lock")
   private boolean refreshImmediately = false;
 
-  @GuardedBy("lock")
-  private boolean isServerViewInitialized = false;
-
   /**
    * Counts the total number of known segments. This variable is used only for the segments table in the system schema
    * to initialize a map with a more proper size when it creates a snapshot. As a result, it doesn't have to be exact,
    * and thus there is no concurrency control for this variable.
    */
   private int totalSegments = 0;
+
+  protected final ExecutorService callbackExec;
+
+  @GuardedBy("lock")
+  protected boolean isServerViewInitialized = false;
 
   protected final ServiceEmitter emitter;
 
@@ -219,7 +219,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
   public AbstractSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final TimelineServerView serverView,
       final SegmentMetadataCacheConfig config,
       final Escalator escalator,
       final InternalQueryConfig internalQueryConfig,
@@ -227,7 +226,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
-    Preconditions.checkNotNull(serverView, "serverView");
     this.config = Preconditions.checkNotNull(config, "config");
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
@@ -235,52 +233,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     this.escalator = escalator;
     this.internalQueryConfig = internalQueryConfig;
     this.emitter = emitter;
-
-    initServerViewTimelineCallback(serverView);
-  }
-
-  private void initServerViewTimelineCallback(final TimelineServerView serverView)
-  {
-    serverView.registerTimelineCallback(
-        callbackExec,
-        new TimelineServerView.TimelineCallback()
-        {
-          @Override
-          public ServerView.CallbackAction timelineInitialized()
-          {
-            synchronized (lock) {
-              isServerViewInitialized = true;
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
-          {
-            addSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
-          {
-            removeSegment(segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction serverSegmentRemoved(
-              final DruidServerMetadata server,
-              final DataSegment segment
-          )
-          {
-            removeServerSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-        }
-    );
   }
 
   private void startCacheExec()
@@ -977,7 +929,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * This method is not thread-safe and must be used only in unit tests.
    */
   @VisibleForTesting
-  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
+  public void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
   {
     final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo
         .computeIfAbsent(
@@ -994,7 +946,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * It must be used only in unit tests.
    */
   @VisibleForTesting
-  void doInLock(Runnable runnable)
+  protected void doInLock(Runnable runnable)
   {
     synchronized (lock) {
       runnable.run();

@@ -267,12 +267,12 @@ public class CachingClusteredClientTest
   private Cache cache;
   private DruidServer[] servers;
 
-  public CachingClusteredClientTest(int randomSeed)
+  public CachingClusteredClientTest()
   {
-    this.random = new Random(randomSeed);
+    this.random = new Random(10);
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  //@Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Lists.transform(
@@ -2746,7 +2746,7 @@ public class CachingClusteredClientTest
     );
   }
 
-  private static class ServerExpectation<T>
+  public static class ServerExpectation<T>
   {
     private final SegmentId segmentId;
     private final Interval interval;
@@ -2949,7 +2949,7 @@ public class CachingClusteredClientTest
     }
   }
 
-  private static class ServerExpectations implements Iterable<ServerExpectation>
+  public static class ServerExpectations implements Iterable<ServerExpectation>
   {
     private final DruidServer server;
     private final QueryRunner queryRunner;

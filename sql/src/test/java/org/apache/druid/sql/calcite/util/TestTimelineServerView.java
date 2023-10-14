@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.metadata;
+package org.apache.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

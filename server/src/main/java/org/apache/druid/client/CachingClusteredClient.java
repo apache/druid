@@ -79,6 +79,7 @@ import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -844,23 +845,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
   }
 
-  private static class TimelineConverter implements UnaryOperator<TimelineLookup<String, ServerSelector>>
+  public static class TimelineConverter<ObjectType extends Overshadowable<ObjectType>> implements UnaryOperator<TimelineLookup<String, ObjectType>>
   {
     private final Iterable<SegmentDescriptor> specs;
 
-    TimelineConverter(final Iterable<SegmentDescriptor> specs)
+    public TimelineConverter(final Iterable<SegmentDescriptor> specs)
     {
       this.specs = specs;
     }
 
     @Override
-    public TimelineLookup<String, ServerSelector> apply(TimelineLookup<String, ServerSelector> timeline)
+    public TimelineLookup<String, ObjectType> apply(TimelineLookup<String, ObjectType> timeline)
     {
-      final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
+      final VersionedIntervalTimeline<String, ObjectType> timeline2 =
           new VersionedIntervalTimeline<>(Ordering.natural(), true);
-      Iterator<PartitionChunkEntry<String, ServerSelector>> unfilteredIterator =
+      Iterator<PartitionChunkEntry<String, ObjectType>> unfilteredIterator =
           Iterators.transform(specs.iterator(), spec -> toChunkEntry(timeline, spec));
-      Iterator<PartitionChunkEntry<String, ServerSelector>> iterator = Iterators.filter(
+      Iterator<PartitionChunkEntry<String, ObjectType>> iterator = Iterators.filter(
           unfilteredIterator,
           Objects::nonNull
       );
@@ -871,12 +872,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     @Nullable
-    private PartitionChunkEntry<String, ServerSelector> toChunkEntry(
-        TimelineLookup<String, ServerSelector> timeline,
+    private PartitionChunkEntry<String, ObjectType> toChunkEntry(
+        TimelineLookup<String, ObjectType> timeline,
         SegmentDescriptor spec
     )
     {
-      PartitionChunk<ServerSelector> chunk = timeline.findChunk(
+      PartitionChunk<ObjectType> chunk = timeline.findChunk(
           spec.getInterval(),
           spec.getVersion(),
           spec.getPartitionNumber()

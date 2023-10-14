@@ -116,9 +116,17 @@ Returns a list of all segments for one or more specific datasources enabled in t
 
 Returns a list of all segments for each datasource with the full segment metadata and an extra field `overshadowed`.
 
+`GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments`
+
+Additionally, returns the realtime segments for all datasources, with the full segment metadata and extra fields `overshadwed`,`realtime` & `numRows`.
+
 `GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName1}&datasources={dataSourceName2}`
 
 Returns a list of all segments for one or more specific datasources with the full segment metadata and an extra field `overshadowed`.
+
+`GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources={dataSourceName1}&datasources={dataSourceName2}`
+
+Additionally, returns the realtime segments for the speicified datasources, with the full segment metadata and extra fields `overshadwed`,`realtime` & `numRows`.
 
 `GET /druid/coordinator/v1/metadata/datasources`
 
@@ -165,6 +173,10 @@ Returns a list of all segments, overlapping with any of given intervals,  for a 
 `GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
 
 Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string ISO 8601 intervals like `[interval1, interval2,...]`&mdash;for example, `["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]`.
+
+`POST /druid/coordinator/v1/metadata/dataSourceInformation`
+
+Returns information about the specified datasources, including the datasource schema.  
 
 <a name="coordinator-datasources"></a>
 

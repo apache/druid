@@ -25,20 +25,31 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -49,6 +60,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,7 +70,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCommon
+public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheCommon
 {
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
@@ -68,10 +80,10 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
 
   @Before
-  public void setup() throws Exception
+  @Override
+  public void setUp() throws Exception
   {
-    setUpCommon();
-    setupData();
+    super.setUp();
   }
 
   @After
@@ -82,7 +94,6 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
     if (runningSchema != null) {
       runningSchema.stop();
     }
-    walker.close();
   }
 
   public CoordinatorSegmentMetadataCache buildSchemaMarkAndTableLatch() throws InterruptedException
@@ -277,21 +288,101 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
   public void testAvailableSegmentMetadataNumRows() throws InterruptedException
   {
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    checkAvailableSegmentMetadataNumRows(schema);
+
+    Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    final List<DataSegment> segments = segmentsMetadata.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(6, segments.size());
+    // find the only segment with datasource "foo2"
+    final DataSegment existingSegment = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(existingSegment);
+    final AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
+    // update AvailableSegmentMetadata of existingSegment with numRows=5
+    AvailableSegmentMetadata updatedMetadata = AvailableSegmentMetadata.from(existingMetadata).withNumRows(5).build();
+    schema.setAvailableSegmentMetadata(existingSegment.getId(), updatedMetadata);
+
+    // find a druidServer holding existingSegment
+    final Pair<DruidServer, DataSegment> pair = druidServers
+        .stream()
+        .flatMap(druidServer ->
+                     serverView.getSegmentsOfServer(druidServer).stream()
+                               .filter(segment -> segment.getId().equals(existingSegment.getId()))
+                               .map(segment -> Pair.of(druidServer, segment))
+        )
+        .findAny()
+        .orElse(null);
+
+    Assert.assertNotNull(pair);
+    final DruidServer server = pair.lhs;
+    Assert.assertNotNull(server);
+    final DruidServerMetadata druidServerMetadata = server.getMetadata();
+    // invoke SegmentMetadataCache#addSegment on existingSegment
+    schema.addSegment(druidServerMetadata, existingSegment);
+    segmentsMetadata = schema.getSegmentMetadataSnapshot();
+    // get the only segment with datasource "foo2"
+    final DataSegment currentSegment = segments.stream()
+                                               .filter(segment -> segment.getDataSource().equals("foo2"))
+                                               .findFirst()
+                                               .orElse(null);
+    final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
+    Assert.assertEquals(updatedMetadata.getSegment().getId(), currentMetadata.getSegment().getId());
+    Assert.assertEquals(updatedMetadata.getNumRows(), currentMetadata.getNumRows());
+    // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
+    Assert.assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
   @Test
   public void testNullDatasource() throws IOException, InterruptedException
   {
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    checkNullDatasource(schema);
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
+    final List<DataSegment> segments = segmentMetadatas.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(6, segments.size());
+    // segments contains two segments with datasource "foo" and one with datasource "foo2"
+    // let's remove the only segment with datasource "foo2"
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(segmentToRemove);
+    schema.removeSegment(segmentToRemove);
+
+    // The following line can cause NPE without segmentMetadata null check in
+    // SegmentMetadataCache#refreshSegmentsForDataSource
+    schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
+    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
   public void testNullAvailableSegmentMetadata() throws IOException, InterruptedException
   {
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    checkNullAvailableSegmentMetadata(schema);
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
+    final List<DataSegment> segments = segmentMetadatas.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(6, segments.size());
+    // remove one of the segments with datasource "foo"
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(segmentToRemove);
+    schema.removeSegment(segmentToRemove);
+
+    // The following line can cause NPE without segmentMetadata null check in
+    // SegmentMetadataCache#refreshSegmentsForDataSource
+    schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
+    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
@@ -312,7 +403,7 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
     final AvailableSegmentMetadata metadata = segmentsMetadata.get(existingSegment.getId());
     Assert.assertEquals(1L, metadata.isRealtime());
     // get the historical server
-    final ImmutableDruidServer historicalServer = druidServers.stream()
+    final DruidServer historicalServer = druidServers.stream()
                                                               .filter(s -> s.getType().equals(ServerType.HISTORICAL))
                                                               .findAny()
                                                               .orElse(null);
@@ -332,7 +423,7 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
     AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
     Assert.assertEquals(0L, currentMetadata.isRealtime());
 
-    ImmutableDruidServer realtimeServer = druidServers.stream()
+    DruidServer realtimeServer = druidServers.stream()
                                                       .filter(s -> s.getType().equals(ServerType.REALTIME))
                                                       .findAny()
                                                       .orElse(null);
@@ -785,7 +876,7 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
     QueryLifecycle lifecycleMock = EasyMock.createMock(QueryLifecycle.class);
 
     // Need to create schema for this test because the available schemas don't mock the QueryLifecycleFactory, which I need for this test.
-    CoordinatorSegmentMetadataCache mySchema = new CoordinatorSegmentMetadataCache(
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         factoryMock,
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -794,7 +885,39 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
         new NoopServiceEmitter()
     );
 
-    checkRunSegmentMetadataQueryWithContext(mySchema, factoryMock, lifecycleMock);
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    );
+
+    DataSegment segment = newSegment("test", 0);
+    List<SegmentId> segmentIterable = ImmutableList.of(segment.getId());
+
+    // This is the query that we expect this method to create. We will be testing that it matches the query generated by the method under test.
+    SegmentMetadataQuery expectedMetadataQuery = new SegmentMetadataQuery(
+        new TableDataSource(segment.getDataSource()),
+        new MultipleSpecificSegmentSpec(
+            segmentIterable.stream()
+                           .map(SegmentId::toDescriptor).collect(Collectors.toList())),
+        new AllColumnIncluderator(),
+        false,
+        queryContext,
+        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        null,
+        null
+    );
+
+    EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
+    // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
+    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+            .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
+
+    EasyMock.replay(factoryMock, lifecycleMock);
+
+    schema.runSegmentMetadataQuery(segmentIterable);
+
+    EasyMock.verify(factoryMock, lifecycleMock);
   }
 
   @Test
@@ -945,6 +1068,16 @@ public class CoordinatorSegmentMetadataCacheTest extends SegmentMetadataCacheCom
       }
     };
 
-    checkRefreshShouldEmitMetrics(schema, dataSource, emitter, addSegmentLatch);
+    List<DataSegment> segments = ImmutableList.of(
+        newSegment(dataSource, 1),
+        newSegment(dataSource, 2)
+    );
+    serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
+    serverView.addSegment(segments.get(1), ServerType.REALTIME);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
+
+    emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
+    emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
   }
 }

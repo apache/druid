@@ -30,7 +30,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
-import org.apache.druid.client.CoordinatorTimeline;
+import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -102,7 +102,7 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
   private static final long DEFAULT_LOADSTATUS_INTERVAL_OFFSET = 14 * 24 * 60 * 60 * 1000;
 
-  private final CoordinatorTimeline serverInventoryView;
+  private final CoordinatorServerView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
   private final OverlordClient overlordClient;
@@ -111,7 +111,7 @@ public class DataSourcesResource
 
   @Inject
   public DataSourcesResource(
-      CoordinatorTimeline coordinatorTimeline,
+      CoordinatorServerView serverInventoryView,
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
@@ -119,7 +119,7 @@ public class DataSourcesResource
       DruidCoordinator coordinator
   )
   {
-    this.serverInventoryView = coordinatorTimeline;
+    this.serverInventoryView = serverInventoryView;
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataRuleManager = metadataRuleManager;
     this.overlordClient = overlordClient;
