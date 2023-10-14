@@ -63,24 +63,18 @@ public class BrokerServerView implements TimelineServerView
 {
   private static final Logger log = new Logger(BrokerServerView.class);
 
+  private final Object lock = new Object();
   private final ConcurrentMap<String, QueryableDruidServer> clients = new ConcurrentHashMap<>();
+  private final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
+  private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
-
   private final DirectDruidClientFactory druidClientFactory;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
   private final CountDownLatch initialized = new CountDownLatch(1);
-  protected final FilteredServerInventoryView baseView;
-
-  protected final Object lock = new Object();
-
-  // Map of segmentIds and the set of server where the segment is present
-  protected final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
-
-  // Map of datasource and segment timeline
-  protected final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
+  private final FilteredServerInventoryView baseView;
 
   @Inject
   public BrokerServerView(

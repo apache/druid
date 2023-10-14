@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -77,7 +78,7 @@ public class TestSegmentMetadataQueryWalker extends SegmentMetadataQuerySegmentW
   }
 
   @Override
-  <T> Sequence<T> getServerResults(
+  <T> Sequence getServerResults(
       QueryRunner serverRunner,
       QueryPlus<T> queryPlus,
       ResponseContext responseContext,
@@ -91,7 +92,7 @@ public class TestSegmentMetadataQueryWalker extends SegmentMetadataQuerySegmentW
     return new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(
-                Execs.directExecutor(),
+                DirectQueryProcessingPool.INSTANCE,
                 FunctionalIterable
                     .create(segmentDescriptors)
                     .transform(
