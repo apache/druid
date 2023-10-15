@@ -22,13 +22,11 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * This aggregator merges existing sketches.
@@ -64,10 +62,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
       return;
     }
 
-    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN)
-                                             .writableRegion(position, helper.getSize());
-
-    final Union union = Union.writableWrap(mem);
+    final Union union = helper.getOrCreateUnion(buf, position);
     union.update(sketch.getSketch());
   }
 
@@ -80,7 +75,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-    // nothing to close
+    helper.close();
   }
 
   @Override
@@ -103,5 +98,11 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
     // See https://github.com/apache/druid/pull/6893#discussion_r250726028
     inspector.visit("lgK", helper.getLgK());
+  }
+
+  @Override
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+    helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
   }
 }

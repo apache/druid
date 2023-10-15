@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
@@ -26,15 +28,18 @@ import org.apache.datasketches.memory.WritableMemory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.IdentityHashMap;
 
 public class HllSketchMergeBufferAggregatorHelper
 {
   private final int lgK;
   private final TgtHllType tgtHllType;
   private final int size;
+  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
 
   /**
-   * Used by {@link #init(ByteBuffer, int)}. We initialize by copying a prebuilt empty Union image.
+   * Used by {@link #initializeEmptyUnion(ByteBuffer, int)}. We initialize by copying a prebuilt empty Union image.
    * {@link HllSketchBuildBufferAggregator} does something similar, but different enough that we don't share code. The
    * "build" flavor uses {@link HllSketch} objects and the "merge" flavor uses {@link Union} objects.
    */
@@ -57,20 +62,7 @@ public class HllSketchMergeBufferAggregatorHelper
    */
   public void init(final ByteBuffer buf, final int position)
   {
-    // Copy prebuilt empty union object.
-    // Not necessary to cache a Union wrapper around the initialized memory, because:
-    //  - It is cheap to reconstruct by re-wrapping the memory in "aggregate" and "get".
-    //  - Unlike the HllSketch objects used by HllSketchBuildBufferAggregator, our Union objects never exceed the
-    //    max size and therefore do not need to be potentially moved in-heap.
-
-    final int oldPosition = buf.position();
-    try {
-      buf.position(position);
-      buf.put(emptyUnion);
-    }
-    finally {
-      buf.position(oldPosition);
-    }
+    createNewUnion(buf, position, false);
   }
 
   /**
@@ -92,5 +84,77 @@ public class HllSketchMergeBufferAggregatorHelper
   public int getSize()
   {
     return size;
+  }
+
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+    createNewUnion(newBuffer, newPosition, true);
+    Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
+    if (unionMap != null) {
+      unionMap.remove(oldPosition);
+      if (unionMap.isEmpty()) {
+        unions.remove(oldBuffer);
+        memCache.remove(oldBuffer);
+      }
+    }
+  }
+
+  public Union getOrCreateUnion(ByteBuffer buf, int position)
+  {
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    Union union = unionMap != null ? unionMap.get(position) : null;
+    if (union != null) {
+      return union;
+    }
+    return createNewUnion(buf, position, true);
+  }
+
+  private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
+  {
+    if (!isWrapped) {
+      initializeEmptyUnion(buf, position);
+    }
+
+    final WritableMemory mem = getMemory(buf).writableRegion(position, size);
+    Union union = Union.writableWrap(mem);
+
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    if (unionMap == null) {
+      unionMap = new Int2ObjectOpenHashMap<>();
+      unions.put(buf, unionMap);
+    }
+    unionMap.put(position, union);
+    return union;
+  }
+
+  /**
+   * Copy prebuilt empty union object into the specified buffer and position
+   */
+  private void initializeEmptyUnion(ByteBuffer buf, int position)
+  {
+    final int oldPosition = buf.position();
+    try {
+      buf.position(position);
+      buf.put(emptyUnion);
+    }
+    finally {
+      buf.position(oldPosition);
+    }
+  }
+
+  public void close()
+  {
+    unions.clear();
+    memCache.clear();
+  }
+
+  private WritableMemory getMemory(ByteBuffer buffer)
+  {
+    WritableMemory mem = memCache.get(buffer);
+    if (mem == null) {
+      mem = WritableMemory.writableWrap(buffer, ByteOrder.LITTLE_ENDIAN);
+      memCache.put(buffer, mem);
+    }
+    return mem;
   }
 }
