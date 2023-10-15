@@ -22,7 +22,6 @@ package org.apache.druid.segment.metadata;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
