@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.google.common.base.Preconditions;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.segment.data.ObjectStrategy;
@@ -48,7 +49,7 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
   @Override
   public HllSketchHolder fromByteBuffer(final ByteBuffer buf, final int size)
   {
-    if (size == 0) {
+    if (size == 0 || isSafeToConvertToNullSketch(buf)) {
       return HllSketchHolder.of((HllSketch) null);
     }
     return HllSketchHolder.of(HllSketch.wrap(Memory.wrap(buf, ByteOrder.LITTLE_ENDIAN).region(buf.position(), size)));
@@ -57,7 +58,7 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
   @Override
   public byte[] toBytes(final HllSketchHolder sketch)
   {
-    if (sketch == null || sketch.getSketch() == null || sketch.getSketch().isEmpty()) {
+    if (sketch.getSketch() == null || sketch.getSketch().isEmpty()) {
       return new byte[] {};
     }
     return sketch.getSketch().toCompactByteArray();
@@ -72,5 +73,33 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
             SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
         )
     );
+  }
+
+  private boolean isSafeToConvertToNullSketch(ByteBuffer buf)
+  {
+    // TODO: Might need a sanity check here, to ensure that position and offset makes sense.
+
+    // Get org.apache.datasketches.hll.CurMode. This indicates the type of data structure.
+    final int position = buf.position();
+    final int preInts = buf.get(position) & 0X3F; // get(PREAMBLE_INTS_BYTE) & 0X3F
+    final int curMode = buf.get(position + 7) & 3;    // get(MODE_BYTE) & CUR_MODE_MASK
+
+    switch (curMode) {
+      case 0:          // LIST
+        Preconditions.checkArgument(preInts == 2);  // preInts == LIST_PREINTS, Sanity
+        int listCount = buf.get(position + 6) & 0XFF; // get(LIST_COUNT_BYTE) & 0XFF
+        return listCount == 0;
+      case 1:          // SET
+        Preconditions.checkArgument(preInts == 3);  // preInts == HASH_SET_PREINTS, Sanity
+        int setCount = buf.get(position + 8);  // get(HASH_SET_COUNT_INT)
+        return setCount == 0;
+      case 2:          // HLL
+        Preconditions.checkArgument(preInts == 10);  // preInts == HLL_PREINTS, Sanity
+        final int flags = buf.get(position + 5);      // get(FLAGS_BYTE)
+        return (flags & 4) > 0;                       // (flags & EMPTY_FLAG_MASK) > 0
+      default:         // UNKNOWN
+        // Can't say for sure, so return "false".
+        return false;
+    }
   }
 }
