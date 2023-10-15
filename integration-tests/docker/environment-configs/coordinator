@@ -43,3 +43,6 @@ druid_coordinator_period_indexingPeriod=PT180000S
 # 2x indexing period so that kill period is valid
 druid_coordinator_kill_period=PT360000S
 druid_coordinator_period=PT1S
+
+# temp change to test table schema building on coordinator, to be reverted
+druid_coordinator_centralizedSchemaManagement_enabled=true
