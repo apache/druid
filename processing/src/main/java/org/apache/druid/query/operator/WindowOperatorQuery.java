@@ -95,7 +95,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                 null,
                 scan.getFilter(),
                 (int) scan.getScanRowsLimit(),
-                ImmutableList.<String> builder()
+                ImmutableList.<String>builder()
                     .addAll(scan.getColumns())
                     .addAll(virtualColumns.getColumnNames())
                     .build(),
