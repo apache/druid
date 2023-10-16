@@ -176,12 +176,66 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval)
   {
-
-    final String queryString = StringUtils.format(
+    StringBuilder queryBuilder = new StringBuilder(
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
-        + StringUtils.format(" AND start < :end AND %1$send%1$s > :start", connector.getQuoteString()),
-        dbTables.getSegmentsTable()
     );
+
+    final boolean intervalStartIsEternityStart = Intervals.ETERNITY.getStart().equals(interval.getStart());
+    final boolean intervalEndIsEternityEnd = Intervals.ETERNITY.getEnd().equals(interval.getEnd());
+
+    if (!intervalStartIsEternityStart || !intervalEndIsEternityEnd) {
+
+      queryBuilder.append(" AND (");
+
+      if (intervalStartIsEternityStart) {
+        queryBuilder.append(StringUtils.format(
+            "(start < :end)"
+        ));
+      } else if (intervalEndIsEternityEnd) {
+        queryBuilder.append(StringUtils.format(
+            "(%1$send%1$s > :start)",
+            connector.getQuoteString()
+        ));
+      } else {
+        queryBuilder.append(StringUtils.format(
+            "(start < :end AND %1$send%1$s > :start)",
+            connector.getQuoteString()
+        ));
+      }
+
+      if (!intervalStartIsEternityStart) {
+        queryBuilder.append(StringUtils.format(
+            " OR (start = '%1$s' AND %3$send%3$s != '%2$s' AND %3$send%3$s > :start)",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), connector.getQuoteString()
+        ));
+      } else {
+        queryBuilder.append(StringUtils.format(
+            " OR (start = '%1$s' AND %3$send%3$s != '%2$s')",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), connector.getQuoteString()
+        ));
+      }
+
+      if (!intervalEndIsEternityEnd) {
+        queryBuilder.append(StringUtils.format(
+            " OR (start != '%1$s' AND %3$send%3$s = '%2$s' AND start < :end)",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), connector.getQuoteString()
+        ));
+      } else {
+        queryBuilder.append(StringUtils.format(
+            " OR (start != '%1$s' AND %3$send%3$s = '%2$s')",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), connector.getQuoteString()
+        ));
+      }
+
+      queryBuilder.append(StringUtils.format(
+          " OR (start = '%1$s' AND %3$send%3$s = '%2$s')",
+          Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), connector.getQuoteString()
+      ));
+
+      queryBuilder.append(")");
+    }
+
+    final String queryString = StringUtils.format(queryBuilder.toString(), dbTables.getSegmentsTable());
     return connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle
