@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.rel;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -32,9 +33,10 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -359,19 +361,20 @@ public class VirtualColumnRegistry
     }
   }
 
-  public Set<VirtualColumn> build(Set<String> exclude)
+  public VirtualColumns build(Set<String> exclude)
   {
-    Set<VirtualColumn> ret = new HashSet<>();
+    List<VirtualColumn> columns = new ArrayList<>();
     if (virtualColumnsByName == null) {
-      return ret;
+      return VirtualColumns.EMPTY;
     }
 
     for (Entry<String, ExpressionAndTypeHint> entry : virtualColumnsByName.entrySet()) {
       if (exclude.contains(entry.getKey())) {
         continue;
       }
-      ret.add(getVirtualColumn(entry.getKey()));
+      columns.add(getVirtualColumn(entry.getKey()));
     }
-    return ret;
+    columns.sort(Comparator.comparing(VirtualColumn::getOutputName));
+    return VirtualColumns.create(columns);
   }
 }
