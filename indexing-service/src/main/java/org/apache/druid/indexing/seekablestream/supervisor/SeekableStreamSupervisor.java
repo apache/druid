@@ -2108,6 +2108,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     List<Either<Throwable, Boolean>> results = coalesceAndAwait(futures);
+    
     final List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     for (int i = 0; i < results.size(); i++) {
       String taskId = futureTaskIds.get(i);
