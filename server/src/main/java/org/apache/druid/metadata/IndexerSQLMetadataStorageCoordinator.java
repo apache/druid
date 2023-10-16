@@ -176,25 +176,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval)
   {
-    StringBuilder rawQuery = new StringBuilder(
+
+    final String queryString = StringUtils.format(
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
+        + StringUtils.format( " AND start < :end AND %1$send%1$s > :start", connector.getQuoteString()),
+        dbTables.getSegmentsTable()
     );
-
-    if (interval != null) {
-      rawQuery.append(StringUtils.format(" AND start < :end AND %1$send%1$s > :start", connector.getQuoteString()));
-    }
-
-    final String queryString = StringUtils.format(rawQuery.toString(), dbTables.getSegmentsTable());
     return connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle
               .createQuery(queryString)
-              .bind("dataSource", dataSource);
-
-          if (interval != null) {
-            query.bind("start", interval.getStart().toString());
-            query.bind("end", interval.getEnd().toString());
-          }
+              .bind("dataSource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString());
 
           return query
               .map((int index, ResultSet r, StatementContext ctx) ->

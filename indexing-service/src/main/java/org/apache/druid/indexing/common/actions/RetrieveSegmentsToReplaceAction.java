@@ -151,10 +151,7 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
     if (!dataSource.equals(that.dataSource)) {
       return false;
     }
-    if (!interval.equals(that.interval)) {
-      return false;
-    }
-    return true;
+    return interval.equals(that.interval);
   }
 
   @Override
