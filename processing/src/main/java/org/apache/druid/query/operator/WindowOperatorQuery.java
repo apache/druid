@@ -22,6 +22,7 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -91,28 +92,17 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                 null,
                 scan.getFilter(),
                 (int) scan.getScanRowsLimit(),
-                scan.getColumns(),
-                scan.getVirtualColumns(),
-//                ImmutableList.<String> builder()
-//                .addAll(scan.getColumns())
-//                .addAll(virtualColumns.getColumnNames())
-//                .build(),
-//                vc_union(scan.getVirtualColumns(), virtualColumns),
+                ImmutableList.<String> builder()
+                    .addAll(scan.getColumns())
+                    .addAll(virtualColumns.getColumnNames())
+                    .build(),
+                vc_union(scan.getVirtualColumns(), virtualColumns),
                 ordering));
       }
     } else if (dataSource instanceof InlineDataSource) {
       // ok
     } else {
       throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
-    }
-    if(!virtualColumns.isEmpty()) {
-      leafOperators.add(new ScanOperatorFactory(
-          null,
-          null,
-          null,
-          null,
-          virtualColumns,
-          null));
     }
 
     return new WindowOperatorQuery(dataSource, intervals, context, rowSignature, operators, leafOperators);
