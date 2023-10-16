@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
@@ -219,13 +220,15 @@ public class OverlordClientImplTest
   @Test
   public void test_findLockedIntervals() throws Exception
   {
-    final Map<String, Integer> priorityMap = ImmutableMap.of("foo", 3);
     final Map<String, List<Interval>> lockMap =
         ImmutableMap.of("foo", Collections.singletonList(Intervals.of("2000/2001")));
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null)
+    );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
-            .jsonContent(jsonMapper, priorityMap),
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
+            .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(lockMap)
@@ -233,18 +236,20 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         lockMap,
-        overlordClient.findLockedIntervals(priorityMap).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
   @Test
   public void test_findLockedIntervals_nullReturn() throws Exception
   {
-    final Map<String, Integer> priorityMap = ImmutableMap.of("foo", 3);
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null)
+    );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
-            .jsonContent(jsonMapper, priorityMap),
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
+            .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(null)
@@ -252,7 +257,7 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         Collections.emptyMap(),
-        overlordClient.findLockedIntervals(priorityMap).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
