@@ -24,6 +24,10 @@ import org.apache.druid.frame.segment.row.ReadableFrameRowPointer;
 
 /**
  * A {@link ReadableFieldPointer} that is derived from a row-based frame.
+ *
+ * Returns the position and the length of a field at a particular position for the row that the rowPointer is pointing
+ * to at the time. It caches the values of the position and the length based on position of the rowPointer.
+ * This method is not thread-safe
  */
 public class RowMemoryFieldPointer implements ReadableFieldPointer
 {
@@ -31,6 +35,16 @@ public class RowMemoryFieldPointer implements ReadableFieldPointer
   private final ReadableFrameRowPointer rowPointer;
   private final int fieldNumber;
   private final int fieldCount;
+
+  // Caching of position() calls
+  private long rowWithPositionCached = -1L;
+  private long cachedPosition = -1L;
+
+  // Caching of length() calls
+  // We cache the length() calls separately, because not all field types call length(), therefore it's wasteful to
+  // read length() if we are not reading it
+  private long rowWithLengthCached = -1L;
+  private long cachedLength = -1L;
 
   public RowMemoryFieldPointer(
       final Memory memory,
@@ -47,6 +61,56 @@ public class RowMemoryFieldPointer implements ReadableFieldPointer
 
   @Override
   public long position()
+  {
+    updatePosition();
+    return cachedPosition;
+  }
+
+  @Override
+  public long length()
+  {
+    updatePositionAndLength();
+    return cachedLength;
+  }
+
+  private void updatePosition()
+  {
+    long rowPointerPosition = rowPointer.position();
+    if (rowPointerPosition == rowWithPositionCached) {
+      return;
+    }
+    // Update the cached position for position()
+    rowWithPositionCached = rowPointerPosition;
+
+    // Update the start position
+    cachedPosition = startPosition(fieldNumber);
+  }
+
+  // Not all field types call length(), and therefore there's no need to cache the length of the field
+  private void updatePositionAndLength()
+  {
+    updatePosition();
+
+    long rowPointerPosition = rowPointer.position();
+    if (rowPointerPosition == rowWithLengthCached) {
+      return;
+    }
+    // Update the cached position for length()
+    rowWithLengthCached = rowPointerPosition;
+
+    if (fieldNumber == fieldCount - 1) {
+      // If the field is the last field in the row, then the length of the field would be the length of the row minus the
+      // start position of the row
+      cachedLength = (rowPointerPosition + rowPointer.length()) - cachedPosition;
+    } else {
+      // Else the length of the field would be the difference between the start position of the given field and
+      // the subsequent field
+      cachedLength = startPosition(fieldNumber + 1) - cachedPosition;
+    }
+  }
+
+
+  private long startPosition(int fieldNumber)
   {
     if (fieldNumber == 0) {
       // First field starts after the field end pointers -- one integer per field.
