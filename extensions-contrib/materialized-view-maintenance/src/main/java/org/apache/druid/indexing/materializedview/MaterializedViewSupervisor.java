@@ -296,6 +296,12 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
+  public Set<String> getActiveBaseSequenceNames()
+  {
+    throw new UnsupportedOperationException("Get Active sequence names is not supported in MaterializedViewSupervisor");
+  }
+
+  @Override
   public int getActiveTaskGroupsCount()
   {
     throw new UnsupportedOperationException("Get Active Task Groups Count is not supported in MaterializedViewSupervisor");

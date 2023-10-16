@@ -1093,6 +1093,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
+  @Override
+  public Set<String> getActiveBaseSequenceNames()
+  {
+    final Set<String> activeBaseSequences = new HashSet<>();
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      activeBaseSequences.add(taskGroup.baseSequenceName);
+    }
+    for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
+      for (TaskGroup taskGroup : taskGroupList) {
+        activeBaseSequences.add(taskGroup.baseSequenceName);
+      }
+    }
+    return activeBaseSequences;
+  }
+
   public void registerNewVersionOfPendingSegment(
       SegmentIdWithShardSpec basePendingSegment,
       SegmentIdWithShardSpec newSegmentVersion

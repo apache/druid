@@ -35,6 +35,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -85,6 +86,14 @@ public class SupervisorManager
     }
 
     return Optional.absent();
+  }
+
+  public Set<String> getActiveBaseSequenceNames(String activeSupervisorId)
+  {
+    if (!supervisors.containsKey(activeSupervisorId)) {
+      return Collections.emptySet();
+    }
+    return supervisors.get(activeSupervisorId).lhs.getActiveBaseSequenceNames();
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)

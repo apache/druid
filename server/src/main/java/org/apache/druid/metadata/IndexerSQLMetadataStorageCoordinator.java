@@ -601,7 +601,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @Override
   public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments
+      Set<DataSegment> replaceSegments,
+      Set<String> activeBaseSequenceNames
   )
   {
     if (replaceSegments.isEmpty()) {
@@ -620,7 +621,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final String datasource = replaceSegments.iterator().next().getDataSource();
     return connector.retryWithHandle(
-        handle -> upgradePendingSegments(handle, datasource, replaceIntervalToMaxId)
+        handle -> upgradePendingSegments(handle, datasource, replaceIntervalToMaxId, activeBaseSequenceNames)
     );
   }
 
@@ -639,7 +640,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(
       Handle handle,
       String datasource,
-      Map<Interval, DataSegment> replaceIntervalToMaxId
+      Map<Interval, DataSegment> replaceIntervalToMaxId,
+      Set<String> activeBaseSequenceNames
   ) throws IOException
   {
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> newPendingSegmentVersions = new HashMap<>();
@@ -660,6 +662,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           : overlappingPendingSegments.entrySet()) {
         final SegmentIdWithShardSpec pendingSegmentId = overlappingPendingSegment.getKey();
         final String pendingSegmentSequence = overlappingPendingSegment.getValue();
+
+        boolean considerSequence = false;
+        for (String baseSequence : activeBaseSequenceNames) {
+          if (pendingSegmentSequence.startsWith(baseSequence)) {
+            considerSequence = true;
+            break;
+          }
+        }
+        if (!considerSequence) {
+          continue;
+        }
+
         if (shouldUpgradePendingSegment(pendingSegmentId, pendingSegmentSequence, replaceInterval, replaceVersion)) {
           // Ensure unique sequence_name_prev_id_sha1 by setting
           // sequence_prev_id -> pendingSegmentId
