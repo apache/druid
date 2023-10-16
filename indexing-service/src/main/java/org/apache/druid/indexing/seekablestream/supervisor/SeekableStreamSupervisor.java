@@ -1978,7 +1978,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       final Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = pair.rhs;
 
                       try {
-                        log.debug("Task [%s], status [%s]", taskId, status);
+                        log.info("Task [%s], status [%s]", taskId, status);
                         if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
                           seekableStreamIndexTask.getIOConfig()
                                                  .getStartSequenceNumbers()
@@ -2108,12 +2108,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     List<Either<Throwable, Boolean>> results = coalesceAndAwait(futures);
-
     final List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     for (int i = 0; i < results.size(); i++) {
       String taskId = futureTaskIds.get(i);
       if (results.get(i).isError() || results.get(i).valueOrThrow() == null) {
-        killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
+        log.info("Task [%s] failed to respond, might need to kill it.", taskId);
+        Optional<TaskStatus> killTaskStatus = taskStorage.getStatus(taskId);
+        if (killTaskStatus.isPresent() && !killTaskStatus.get().isComplete()) {
+          // If the task completed while we were failing to chat with it, don't do anything.
+          log.info("Task [%s] failed to return status, killing task", taskId);
+          killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
+        }
       } else if (Boolean.valueOf(false).equals(results.get(i).valueOrThrow())) {
         // "return false" above means that we want to stop the task.
         stopFutures.add(stopTask(taskId, false));
