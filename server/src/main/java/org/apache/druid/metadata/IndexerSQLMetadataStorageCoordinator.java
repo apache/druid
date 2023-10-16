@@ -179,7 +179,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final String queryString = StringUtils.format(
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
-        + StringUtils.format( " AND start < :end AND %1$send%1$s > :start", connector.getQuoteString()),
+        + StringUtils.format(" AND start < :end AND %1$send%1$s > :start", connector.getQuoteString()),
         dbTables.getSegmentsTable()
     );
     return connector.retryWithHandle(
