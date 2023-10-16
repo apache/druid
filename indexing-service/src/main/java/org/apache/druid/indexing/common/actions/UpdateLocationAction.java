@@ -26,6 +26,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.Task;
 
+/* This class was added for mm-less ingestion in order to let the peon manage its own location lifecycle by submitting
+actions to the overlord. https://github.com/apache/druid/pull/15133 moved this location logic to the overlord itself
+so this Action is no longer needed. For backwards compatibility with old peons, this class was left in but can be deprecated
+for a later druid release.
+*/
 @Deprecated
 public class UpdateLocationAction implements TaskAction<Void>
 {

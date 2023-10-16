@@ -203,12 +203,14 @@ public class KubernetesPeonLifecycle
     finally {
       try {
         saveLogs();
+        shutdown();
       }
       catch (Exception e) {
-        log.warn(e, "Log processing failed for task [%s]", taskId);
+        log.warn(e, "Cleanup failed for task [%s]", taskId);
       }
-      shutdown();
-      stopTask();
+      finally {
+        stopTask();
+      }
     }
   }
 
