@@ -43,7 +43,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -326,7 +326,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       );
       // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
       maxRowIndex = index.getLastRowIndex();
-      filterMatcher = filter == null ? BooleanValueMatcher.of(true) : filter.makeMatcher(columnSelectorFactory);
+      filterMatcher = filter == null ? ValueMatchers.allTrue() : filter.makeMatcher(columnSelectorFactory);
       numAdvanced = -1;
       final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
       cursorIterable = index.getFacts().timeRangeIterable(
@@ -370,7 +370,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
         currEntry.set(entry);
 
-        if (filterMatcher.matches()) {
+        if (filterMatcher.matches(false)) {
           return;
         }
       }
@@ -398,7 +398,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
         currEntry.set(entry);
 
-        if (filterMatcher.matches()) {
+        if (filterMatcher.matches(false)) {
           return;
         }
       }
@@ -439,7 +439,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           continue;
         }
         currEntry.set(entry);
-        if (filterMatcher.matches()) {
+        if (filterMatcher.matches(false)) {
           foundMatched = true;
           break;
         }

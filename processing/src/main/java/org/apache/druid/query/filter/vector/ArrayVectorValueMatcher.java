@@ -62,13 +62,12 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
   public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
     final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnType);
-
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final Object[] vector = selector.getObjectVector();
         final int[] selection = match.getSelection();
@@ -78,7 +77,9 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           Object o = vector[rowNum];
-          if (o == null || o instanceof Object[]) {
+          if (includeUnknown && o == null && predicateFactory.isNullInputUnknown()) {
+            selection[numRows++] = rowNum;
+          } else if (o == null || o instanceof Object[]) {
             if (predicate.apply((Object[]) o)) {
               selection[numRows++] = rowNum;
             }

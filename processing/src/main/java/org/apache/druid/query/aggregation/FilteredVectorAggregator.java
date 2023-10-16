@@ -75,7 +75,7 @@ public class FilteredVectorAggregator implements VectorAggregator
       mask = maskScratch;
     }
 
-    final ReadableVectorMatch match = matcher.match(mask);
+    final ReadableVectorMatch match = matcher.match(mask, false);
 
     if (match.isAllTrue(matcher.getCurrentVectorSize())) {
       delegate.aggregate(buf, position, startRow, endRow);
@@ -102,7 +102,7 @@ public class FilteredVectorAggregator implements VectorAggregator
       match0 = VectorMatch.wrap(rows).setSelectionSize(numRows);
     }
 
-    final ReadableVectorMatch match = matcher.match(match0);
+    final ReadableVectorMatch match = matcher.match(match0, false);
     final int[] selection = match.getSelection();
 
     if (rows == null) {
