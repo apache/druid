@@ -489,6 +489,12 @@ public class DruidOperatorTable implements SqlOperatorTable
     if (opName == null || opName.names.size() != 1) {
       return;
     }
+    if(syntax == SqlSyntax.POSTFIX) {
+      int asd=1;
+      operatorList.add(
+      SqlStdOperatorTable.DESC);
+//      throw new RuntimeException("POPP");
+    }
 
     final OperatorKey operatorKey = OperatorKey.of(opName.getSimple(), syntax);
 
