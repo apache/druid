@@ -605,6 +605,22 @@ Do not use:
 SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
 ```
 
+### Dynamic parameters
+
+As part of the Calcite upgrade, you are now required to provide the type of the dynamic parameter using the `CAST` keyword.
+
+For example, use:
+
+```sql
+SELECT (1 * CAST (? as DOUBLE))/2 as tmp
+```
+
+Do not use:
+
+```sql
+SELECT (1 * ?)/2 as tmp
+```
+
 ### Renamed setting for maxSubqueryBytes
 
 The `unlimited` setting for `maxSubqueryBytes` has changed from `unlimited` to `disabled` to better describe the functionality. The functionality has not changed: when you set `'maxSubqueryBytes'='disabled`, the guard rail around subquery row bytes is not applied.
