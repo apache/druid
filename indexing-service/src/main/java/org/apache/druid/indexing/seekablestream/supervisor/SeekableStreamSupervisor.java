@@ -1978,7 +1978,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                       final Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = pair.rhs;
 
                       try {
-                        log.info("Task [%s], status [%s]", taskId, status);
+                        log.debug("Task [%s], status [%s]", taskId, status);
                         if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
                           seekableStreamIndexTask.getIOConfig()
                                                  .getStartSequenceNumbers()
