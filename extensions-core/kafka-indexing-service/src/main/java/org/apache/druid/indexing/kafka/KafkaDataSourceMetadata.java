@@ -70,7 +70,7 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
           other.getClass().getName()
       );
     }
-    final  SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> that = (SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>) other;
+    final SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> that = (SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>) other;
 
     return getSeekableStreamSequenceNumbers().compareTo(that.getSeekableStreamSequenceNumbers());
   }
