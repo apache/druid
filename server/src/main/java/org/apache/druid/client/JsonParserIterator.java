@@ -185,6 +185,12 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
         } else if (nextToken == JsonToken.START_OBJECT) {
           throw convertException(jp.getCodec().readValue(jp, QueryException.class));
         } else {
+          if (nextToken == JsonToken.VALUE_STRING) {
+            LOG.error(
+                "Next Token value is of type VALUE_STRING with content [%s], not as expected START_ARRAY",
+                jp.getText()
+            );
+          }
           throw convertException(
               new IAE("Next token wasn't a START_ARRAY, was[%s] from url[%s]", jp.getCurrentToken(), url)
           );
