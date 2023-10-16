@@ -91,9 +91,11 @@ public class VirtualColumnRegistry
     );
   }
 
-  public boolean isEmpty() {
+  public boolean isEmpty()
+  {
     return virtualColumnsByExpression.isEmpty();
   }
+
   /**
    * Check if a {@link VirtualColumn} is defined by column name
    */
@@ -360,12 +362,12 @@ public class VirtualColumnRegistry
   public Set<VirtualColumn> build(Set<String> exclude)
   {
     Set<VirtualColumn> ret = new HashSet<>();
-    if(virtualColumnsByName == null        ) {
+    if (virtualColumnsByName == null) {
       return ret;
     }
 
     for (Entry<String, ExpressionAndTypeHint> entry : virtualColumnsByName.entrySet()) {
-      if(exclude.contains(entry.getKey())) {
+      if (exclude.contains(entry.getKey())) {
         continue;
       }
       ret.add(getVirtualColumn(entry.getKey()));
