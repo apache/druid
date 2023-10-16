@@ -474,9 +474,9 @@ public class CliCoordinator extends ServerRunnable
     @Override
     public void configure(Binder binder)
     {
-      JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
-      JsonConfigProvider.bind(binder, "druid.query.default", DefaultQueryConfig.class);
-      JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.query.scheduler", QuerySchedulerProvider.class, Global.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.query.default", DefaultQueryConfig.class);
+      JsonConfigProvider.bind(binder, "druid.coordinator.query.segmentMetadata", SegmentMetadataQueryConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.internal.query.config", InternalQueryConfig.class);
       JsonConfigProvider.bind(binder, "druid.coordinator.query.retryPolicy", RetryQueryRunnerConfig.class);
 
