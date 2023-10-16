@@ -13724,7 +13724,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     skipVectorize();
     testQuery(
-        "SELECT 'A', dim1 from foo WHERE m1 = 6 AND dim1 = 'abc' GROUP BY dim1",
+        "SELECT 'A', dim1 from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY dim1",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -13732,15 +13732,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(
                       and(
                           NullHandling.replaceWithDefault()
-                          ? selector("m1", "6")
-                          : equality("m1", 6.0, ColumnType.FLOAT),
-                          equality("dim1", "abc", ColumnType.STRING)
+                          ? selector("m1", "50")
+                          : equality("m1", 50.0, ColumnType.FLOAT),
+                          equality("dim1", "wat", ColumnType.STRING)
                       )
                   )
                   .granularity(Granularities.ALL)
                   .postAggregators(
                       new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil()),
-                      new ExpressionPostAggregator("p1", "'abc'", null, ExprMacroTable.nil())
+                      new ExpressionPostAggregator("p1", "'wat'", null, ExprMacroTable.nil())
                   )
                   .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
                   .build()
