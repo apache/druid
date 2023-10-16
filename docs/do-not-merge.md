@@ -570,6 +570,27 @@ In the example commands below:
 - The `--password` parameter corresponds to the value of `druid.metadata.storage.connector.password`.
 - The `--action` parameter corresponds to the update action you are executing. In this case, it is `add-last-used-to-segments`
 
+#### Upgrade step for MySQL
+
+```bash
+cd ${DRUID_ROOT}
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-update --connectURI="<mysql-uri>" --user USER --password PASSWORD --base druid --action add-used-flag-last-updated-to-segments
+```
+
+#### Upgrade step for PostgreSQL
+
+```bash
+cd ${DRUID_ROOT}
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools metadata-update --connectURI="<postgresql-uri>" --user  USER --password PASSWORD --base druid --action add-used-flag-last-updated-to-segments
+```
+
+#### Manual upgrade step
+
+```SQL
+ALTER TABLE druid_segments
+ADD used_flag_last_updated varchar(255);
+```
+
 ### New syntax for SQL UNNEST
 
 As part of the Calcite upgrade, the recommended syntax for SQL UNNEST has changed. We recommend using CROSS JOIN instead of commas for most queries to prevent issues with precedence. For example, use
@@ -670,27 +691,6 @@ Use `aggregatorMergeStrategy` instead. `aggregatorMergeStrategy` also supports t
 The paths for `druid.processing.merge.pool.*` and `druid.processing.merge.task.*` have been flattened to use `druid.processing.merge.*` instead. The legacy paths for the configs are now deprecated and will be removed in a future release. Migrate your settings to use the new paths because the old paths will be ignored in the future.
 
 [#14695](https://github.com/apache/druid/pull/14695)
-
-### Upgrade step for MySQL
-
-```bash
-cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"mysql-metadata-storage\"] -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-update --connectURI="<mysql-uri>" --user USER --password PASSWORD --base druid --action add-used-flag-last-updated-to-segments
-```
-
-### Upgrade step for PostgreSQL
-
-```bash
-cd ${DRUID_ROOT}
-java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[\"postgresql-metadata-storage\"] -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools metadata-update --connectURI="<postgresql-uri>" --user  USER --password PASSWORD --base druid --action add-used-flag-last-updated-to-segments
-```
-
-### Manual upgrade step
-
-```SQL
-ALTER TABLE druid_segments
-ADD used_flag_last_updated varchar(255);
-```
 
 ## Incompatible changes
 
