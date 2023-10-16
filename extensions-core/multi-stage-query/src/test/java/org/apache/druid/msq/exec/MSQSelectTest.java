@@ -89,7 +89,6 @@ import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -2534,7 +2533,6 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2553,7 +2551,6 @@ public class MSQSelectTest extends MSQTestBase
     return expected;
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
