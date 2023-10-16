@@ -869,9 +869,24 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segment2 = asSegment(pendingSegmentV02);
     appendTask.commitAppendSegments(segment2);
 
+    // Despite segment2 existing, it is not chosen to be replaced because it was created after the tasklock was acquired
     verifyInputSegments(replaceTask, JAN_23, segment1);
 
     replaceTask.releaseLock(JAN_23);
+    replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23);
+
+    final SegmentIdWithShardSpec pendingSegmentV03
+        = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
+    Assert.assertNotEquals(pendingSegmentV01.asSegmentId(), pendingSegmentV03.asSegmentId());
+    Assert.assertNotEquals(pendingSegmentV02.asSegmentId(), pendingSegmentV03.asSegmentId());
+    Assert.assertEquals(SEGMENT_V0, pendingSegmentV03.getVersion());
+    Assert.assertEquals(JAN_23, pendingSegmentV03.getInterval());
+    final DataSegment segment3 = asSegment(pendingSegmentV03);
+    appendTask.commitAppendSegments(segment3);
+
+    // The new lock was acquired before segment3 was created but it doesn't contain the month's interval
+    // So, all three segments are chosen
+    verifyInputSegments(replaceTask, JAN_23, segment1, segment2, segment3);
   }
 
   @Nullable
