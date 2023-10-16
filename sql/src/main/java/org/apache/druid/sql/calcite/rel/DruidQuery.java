@@ -1443,6 +1443,7 @@ public class DruidQuery
       return null;
     }
 
+    // all virtual cols are needed - these columns are only referenced from the aggregates
     VirtualColumns vcs = virtualColumnRegistry.build(Collections.emptySet());
     return new WindowOperatorQuery(
         dataSource,
