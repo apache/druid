@@ -86,11 +86,11 @@ public class HllSketchHolder
 
   public HllSketch getSketch(TgtHllType type)
   {
-    if (sketch == null) {
+    if (sketch == null && union != null) {
       sketch = union.getResult(type);
     }
 
-    if (sketch.getTgtHllType() != type) {
+    if (sketch != null && sketch.getTgtHllType() != type) {
       sketch = sketch.copyAs(type);
     }
 
