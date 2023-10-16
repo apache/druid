@@ -55,36 +55,11 @@ import java.util.Objects;
  */
 public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 {
-  // FIXME: zip together buildLeafOperatos & rewriteDataSource; they are 2 sides of the same steps
-  private static DataSource rewriteDataSource(DataSource dataSource)
-  {
-    // We can re-write scan-style sub queries into an operator instead of doing the actual Scan query.  So, we
-    // check for that and, if we are going to do the rewrite, then we return the sub datasource such that the
-    // parent constructor in BaseQuery stores the actual data source that we want to be distributed to.
-
-    // At this point, we could also reach into a QueryDataSource and validate that the ordering expected by the
-    // partitioning at least aligns with the ordering coming from the underlying query.  We unfortunately don't
-    // have enough information to validate that the underlying ordering aligns with expectations for the actual
-    // window operator queries, but maybe we could get that and validate it here too.
-    if (dataSource instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
-      if (subQuery instanceof ScanQuery) {
-        return subQuery.getDataSource();
-      }
-      return dataSource;
-    } else if (dataSource instanceof InlineDataSource) {
-      return dataSource;
-    } else {
-      throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
-    }
-  }
-
   private final RowSignature rowSignature;
   private final List<OperatorFactory> operators;
   private final List<OperatorFactory> leafOperators;
 
-
-  public WindowOperatorQuery(
+  public static WindowOperatorQuery build(
       DataSource dataSource,
       QuerySegmentSpec intervals,
       Map<String, Object> context,
@@ -93,20 +68,14 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       VirtualColumns virtualColumns
   )
   {
-    this(rewriteDataSource(dataSource), intervals, context, rowSignature, operators, buildLeafOperatos(dataSource, virtualColumns));
-  }
-
-  private static List<OperatorFactory> buildLeafOperatos(DataSource dataSource, VirtualColumns virtualColumns)
-  {
-    List<OperatorFactory> leafOperators = new ArrayList<>();
-    // We have to double check again because this was validated in a static
-    // context before passing to the `super()`
-    // and we cannot save state from that... Ah well.
+    List<OperatorFactory> leafOperators = new ArrayList<OperatorFactory>();
 
     if (dataSource instanceof QueryDataSource) {
       final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
       if (subQuery instanceof ScanQuery) {
+        // transform the scan query into a leaf operator
         ScanQuery scan = (ScanQuery) subQuery;
+        dataSource = subQuery.getDataSource();
 
         ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
         for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
@@ -123,15 +92,20 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                 null,
                 scan.getFilter(),
                 (int) scan.getScanRowsLimit(),
-                ImmutableList.<String>builder()
+                ImmutableList.<String> builder()
                     .addAll(scan.getColumns())
                     .addAll(virtualColumns.getColumnNames())
                     .build(),
                 vc_union(scan.getVirtualColumns(), virtualColumns),
                 ordering));
       }
+    } else if (dataSource instanceof InlineDataSource) {
+      // ok
+    } else {
+      throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
     }
-    return leafOperators;
+
+    return new WindowOperatorQuery(dataSource, intervals, context, rowSignature, operators, leafOperators);
   }
 
   private static VirtualColumns vc_union(VirtualColumns virtualColumns, VirtualColumns virtualColumns2)

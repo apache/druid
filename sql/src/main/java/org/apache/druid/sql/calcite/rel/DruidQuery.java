@@ -1445,7 +1445,7 @@ public class DruidQuery
 
     // all virtual cols are needed - these columns are only referenced from the aggregates
     VirtualColumns vcs = virtualColumnRegistry.build(Collections.emptySet());
-    return new WindowOperatorQuery(
+    return WindowOperatorQuery.build(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
