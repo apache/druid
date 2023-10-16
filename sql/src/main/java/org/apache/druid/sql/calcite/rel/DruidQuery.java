@@ -1443,13 +1443,14 @@ public class DruidQuery
       return null;
     }
 
+    VirtualColumns vcs=getVirtualColumns(false);
     return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         windowing.getOperators(),
-        null
+        vcs
     );
   }
 

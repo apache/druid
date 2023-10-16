@@ -21,6 +21,7 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -31,6 +32,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -51,12 +53,9 @@ import java.util.Objects;
  */
 public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 {
-  private static DataSource validateMaybeRewriteDataSource(DataSource dataSource, boolean hasLeafs)
+  // FIXME: zip together buildLeafOperatos & rewriteDataSource; they are 2 sides of the same steps
+  private static DataSource rewriteDataSource(DataSource dataSource)
   {
-    if (hasLeafs) {
-      return dataSource;
-    }
-
     // We can re-write scan-style sub queries into an operator instead of doing the actual Scan query.  So, we
     // check for that and, if we are going to do the rewrite, then we return the sub datasource such that the
     // parent constructor in BaseQuery stores the actual data source that we want to be distributed to.
@@ -88,49 +87,54 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       QuerySegmentSpec intervals,
       Map<String, Object> context,
       RowSignature rowSignature,
-      List<OperatorFactory> operators
+      List<OperatorFactory> operators,
+      VirtualColumns virtualColumns
   ) {
-    this(dataSource,intervals,context,rowSignature,operators,buildLeafOperatos(dataSource));
+    this(rewriteDataSource(dataSource), intervals, context, rowSignature, operators, buildLeafOperatos(dataSource,virtualColumns));
   }
 
-  private static List<OperatorFactory> buildLeafOperatos(DataSource dataSource)
+  private static List<OperatorFactory> buildLeafOperatos(DataSource dataSource, VirtualColumns virtualColumns)
   {
-      List<OperatorFactory> leafOperators = new ArrayList<>();
-      // We have to double check again because this was validated in a static context before passing to the `super()`
-      // and we cannot save state from that...  Ah well.
+    List<OperatorFactory> leafOperators = new ArrayList<>();
+    // We have to double check again because this was validated in a static
+    // context before passing to the `super()`
+    // and we cannot save state from that... Ah well.
 
-      if (dataSource instanceof QueryDataSource) {
-        final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
-        if (subQuery instanceof ScanQuery) {
-          ScanQuery scan = (ScanQuery) subQuery;
+    if (dataSource instanceof QueryDataSource) {
+      final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+      if (subQuery instanceof ScanQuery) {
+        ScanQuery scan = (ScanQuery) subQuery;
 
-          ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
-            ordering.add(
-                new ColumnWithDirection(
-                    orderBy.getColumnName(),
-                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
-                    ? ColumnWithDirection.Direction.DESC
-                    : ColumnWithDirection.Direction.ASC
-                )
-            );
-          }
-
-          leafOperators.add(
-              new ScanOperatorFactory(
-                  null,
-                  scan.getFilter(),
-                  (int) scan.getScanRowsLimit(),
-                  scan.getColumns(),
-                  scan.getVirtualColumns(),
-//                  vc_union(scan.getVirtualColumns(),virtualColumns),
-                  ordering
-              )
-          );
+        ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+        for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
+          ordering.add(
+              new ColumnWithDirection(
+                  orderBy.getColumnName(),
+                  ScanQuery.Order.DESCENDING == orderBy.getOrder()
+                      ? ColumnWithDirection.Direction.DESC
+                      : ColumnWithDirection.Direction.ASC));
         }
-      }
 
-      return leafOperators;
+        leafOperators.add(
+            new ScanOperatorFactory(
+                null,
+                scan.getFilter(),
+                (int) scan.getScanRowsLimit(),
+                scan.getColumns(),
+//                scan.getVirtualColumns(),
+                 vc_union(scan.getVirtualColumns(),virtualColumns),
+                ordering));
+      }
+    }
+    return leafOperators;
+  }
+
+  private static VirtualColumns vc_union(VirtualColumns virtualColumns, VirtualColumns virtualColumns2)
+  {
+    if (virtualColumns2.isEmpty()) {
+      return virtualColumns;
+    }
+    throw new RuntimeException("Unimplemented!");
   }
 
   @JsonCreator
@@ -144,14 +148,14 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   )
   {
     super(
-        validateMaybeRewriteDataSource(dataSource, leafOperators != null),
+        dataSource,
         intervals,
         false,
         context
     );
     this.rowSignature = rowSignature;
     this.operators = operators;
-    this.leafOperators = leafOperators;
+    this.leafOperators = Preconditions.checkNotNull(leafOperators, "leafOperators may not be null at this point!");
   }
 
   @JsonProperty("operatorDefinition")

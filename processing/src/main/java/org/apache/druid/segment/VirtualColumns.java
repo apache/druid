@@ -519,4 +519,9 @@ public class VirtualColumns implements Cacheable
              ((VirtualColumns) obj).virtualColumns.isEmpty();
     }
   }
+
+  public boolean isEmpty()
+  {
+    return virtualColumns.isEmpty();
+  }
 }

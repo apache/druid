@@ -25,6 +25,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,7 +56,7 @@ public class WindowOperatorQueryTest
         ImmutableMap.of("sally", "sue"),
         RowSignature.empty(),
         new ArrayList<>(),
-        null
+        (VirtualColumns)null
     );
   }
 
