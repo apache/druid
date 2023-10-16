@@ -3,59 +3,158 @@ id: dynamic-configuration-api
 title: Dynamic configuration API
 sidebar_label: Dynamic configuration
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
-  ~ or more contributor license agreements.  See the NOTICE file
+  ~ or more contributor license agreements. See the NOTICE file
   ~ distributed with this work for additional information
-  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ regarding copyright ownership. The ASF licenses this file
   ~ to you under the Apache License, Version 2.0 (the
   ~ "License"); you may not use this file except in compliance
-  ~ with the License.  You may obtain a copy of the License at
+  ~ with the License. You may obtain a copy of the License at
   ~
   ~   http://www.apache.org/licenses/LICENSE-2.0
   ~
   ~ Unless required by applicable law or agreed to in writing,
   ~ software distributed under the License is distributed on an
   ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  ~ KIND, either express or implied.  See the License for the
+  ~ KIND, either express or implied. See the License for the
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
 
-This document describes the API endpoints to retrieve and manage the dynamic configurations for the [Coordinator](../configuration/index.md#overlord-dynamic-configuration) and [Overlord](../configuration/index.md#dynamic-configuration) in Apache Druid.
+This document describes the API endpoints to retrieve and manage dynamic configurations for the [Coordinator](../design/coordinator.md) and [Overlord](../design/overlord.md) in Apache Druid.
+
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port.
+Replace it with the information for your deployment.
+For example, use `http://localhost:8888` for quickstart deployments.
 
 In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 
 ## Coordinator dynamic configuration
 
-The Coordinator has dynamic configurations to tune certain behavior on the fly, without requiring a service restart. For more information, see [Coordinator Dynamic Configuration](../configuration/index.md#dynamic-configuration).
+The Coordinator has dynamic configurations to tune certain behavior on the fly, without requiring a service restart.
+For information on the supported properties, see [Coordinator dynamic configuration](../configuration/index.md#dynamic-configuration).
 
-### Update Coordinator dynamic configuration
+### Get dynamic configuration
 
-Update Coordinator dynamic worker configuration. Pass the dynamic configuration spec as a JSON request body. For information on constructing a dynamic configuration spec, see [Dynamic configuration](../configuration/index.md#dynamic-configuration).
+Retrieves the current Coordinator dynamic configuration. Returns a JSON object with the dynamic configuration properties.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config</code>
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config</code>
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully updated dynamic configuration* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved dynamic configuration*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="2" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config"
+```
+
+</TabItem>
+<TabItem value="3" label="HTTP">
+
+
+```HTTP
+GET /druid/coordinator/v1/config HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+<summary>Click to show sample response</summary>
+
+```json
+{
+    "millisToWaitBeforeDeleting": 900000,
+    "mergeBytesLimit": 524288000,
+    "mergeSegmentsLimit": 100,
+    "maxSegmentsToMove": 100,
+    "replicantLifetime": 15,
+    "replicationThrottleLimit": 500,
+    "balancerComputeThreads": 1,
+    "killDataSourceWhitelist": [],
+    "killPendingSegmentsSkipList": [],
+    "maxSegmentsInNodeLoadingQueue": 500,
+    "decommissioningNodes": [],
+    "decommissioningMaxPercentOfMaxSegmentsToMove": 70,
+    "pauseCoordination": false,
+    "replicateAfterLoadTimeout": false,
+    "maxNonPrimaryReplicantsToLoad": 2147483647,
+    "useRoundRobinSegmentAssignment": true,
+    "smartSegmentLoading": true,
+    "debugDimensions": null
+}
+```
+
+</details>
+
+### Update dynamic configuration
+
+Submits a JSON-based dynamic configuration spec to the Coordinator.
+For information on the supported properties, see [Dynamic configuration](../configuration/index.md#dynamic-configuration).
+
+#### URL
+
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config</code>
+
+#### Header parameters
+
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the configuration history.
+
+* `X-Druid-Author`
+  * Type: String
+  * Author of the configuration change.
+* `X-Druid-Comment`
+  * Type: String
+  * Description for the update.
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="4" label="200 SUCCESS">
+
+
+*Successfully updated dynamic configuration*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="5" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config" \
@@ -83,7 +182,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config" \
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="6" label="HTTP">
+
 
 ```HTTP
 POST /druid/coordinator/v1/config HTTP/1.1
@@ -114,109 +215,45 @@ Content-Length: 683
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 A successful request returns an HTTP `200 OK` message code and an empty response body.
 
-### Get Coordinator dynamic configuration
-
-Retrieves current Coordinator dynamic configuration. Returns a JSON object with the dynamic configuration properties and values. For information on the response properties, see [Dynamic configuration](../configuration/index.md#dynamic-configuration).
-
-#### URL
-
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config</code>
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-*Successfully retrieved dynamic configuration* 
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
----
-
-#### Sample request
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config"
-```
-
-<!--HTTP-->
-
-```HTTP
-GET /druid/coordinator/v1/config HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample response
-
-<details>
-  <summary>Click to show sample response</summary>
-
-```json
-{
-    "millisToWaitBeforeDeleting": 900000,
-    "mergeBytesLimit": 524288000,
-    "mergeSegmentsLimit": 100,
-    "maxSegmentsToMove": 5,
-    "percentOfSegmentsToConsiderPerMove": 100.0,
-    "useBatchedSegmentSampler": true,
-    "replicantLifetime": 15,
-    "replicationThrottleLimit": 10,
-    "balancerComputeThreads": 1,
-    "emitBalancingStats": false,
-    "killDataSourceWhitelist": [],
-    "killPendingSegmentsSkipList": [],
-    "maxSegmentsInNodeLoadingQueue": 100,
-    "decommissioningNodes": [],
-    "decommissioningMaxPercentOfMaxSegmentsToMove": 70,
-    "pauseCoordination": false,
-    "replicateAfterLoadTimeout": false,
-    "maxNonPrimaryReplicantsToLoad": 2147483647,
-    "useRoundRobinSegmentAssignment": true
-}
-```
-</details>
-
-### Get Coordinator dynamic configuration history
+### Get dynamic configuration history
 
 Retrieves the history of changes to Coordinator dynamic configuration over an interval of time. Returns an empty array if there are no history records available.
 
-#### URL 
+#### URL
 
 <code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/history</code>
 
 #### Query parameters
 
-* `interval` (optional)
-  * Type: ISO 8601
-  * Limits the number of results to the specified time interval. Delimited with `/`. For example, `2023-07-13/2023-07-19`.
+The endpoint supports a set of optional query parameters to filter results.
 
-* `count` (optional)
-  * Type: Int
-  * Limits the number of results to the last `n` entries.
+* `interval`
+  * Type: String
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. The default interval is one week. You can change this period by setting `druid.audit.manager.auditHistoryMillis` in the `runtime.properties` file for the Coordinator.
+
+* `count`
+  * Type: Integer
+  * Limit the number of results to the last `n` entries.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
-
-*Successfully retrieved history* 
+<TabItem value="7" label="200 SUCCESS">
 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved history*
+
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -224,22 +261,26 @@ Retrieves the history of changes to Coordinator dynamic configuration over an in
 
 The following example retrieves the dynamic configuration history between `2022-07-13` and `2024-07-19`. The response is limited to 10 entries.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="8" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/history?interval=2022-07-13%2F2024-07-19&count=10"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="9" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/config/history?interval=2022-07-13/2024-07-19&count=10 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -252,12 +293,12 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "key": "coordinator.config",
         "type": "coordinator.config",
         "auditInfo": {
-            "author": "console",
-            "comment": "testing config change",
+            "author": "",
+            "comment": "",
             "ip": "127.0.0.1"
         },
-        "payload": "{\"millisToWaitBeforeDeleting\":900000,\"mergeBytesLimit\":524288000,\"mergeSegmentsLimit\":100,\"maxSegmentsToMove\":5,\"percentOfSegmentsToConsiderPerMove\":100.0,\"useBatchedSegmentSampler\":true,\"replicantLifetime\":15,\"replicationThrottleLimit\":10,\"balancerComputeThreads\":1,\"emitBalancingStats\":false,\"killDataSourceWhitelist\":[],\"killPendingSegmentsSkipList\":[],\"maxSegmentsInNodeLoadingQueue\":100,\"decommissioningNodes\":[],\"decommissioningMaxPercentOfMaxSegmentsToMove\":70,\"pauseCoordination\":false,\"replicateAfterLoadTimeout\":false,\"maxNonPrimaryReplicantsToLoad\":2147483647,\"useRoundRobinSegmentAssignment\":true}",
-        "auditTime": "2023-08-12T07:51:36.306Z"
+        "payload": "{\"millisToWaitBeforeDeleting\":900000,\"mergeBytesLimit\":524288000,\"mergeSegmentsLimit\":100,\"maxSegmentsToMove\":5,\"replicantLifetime\":15,\"replicationThrottleLimit\":10,\"balancerComputeThreads\":1,\"killDataSourceWhitelist\":[],\"killPendingSegmentsSkipList\":[],\"maxSegmentsInNodeLoadingQueue\":100,\"decommissioningNodes\":[],\"decommissioningMaxPercentOfMaxSegmentsToMove\":70,\"pauseCoordination\":false,\"replicateAfterLoadTimeout\":false,\"maxNonPrimaryReplicantsToLoad\":2147483647,\"useRoundRobinSegmentAssignment\":true,\"smartSegmentLoading\":true,\"debugDimensions\":null}",
+        "auditTime": "2023-10-03T20:59:51.622Z"
     }
 ]
 ```
@@ -265,11 +306,79 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ## Overlord dynamic configuration
 
-The Overlord can be dynamically configured to specify how tasks are assigned to workers. For more information, see [Overlord dynamic configuration](../configuration/index.md#overlord-dynamic-configuration).
+The Overlord has dynamic configurations to tune how Druid assigns tasks to workers.
+For information on the supported properties, see [Overlord dynamic configuration](../configuration/index.md#overlord-dynamic-configuration).
 
-### Update Overlord dynamic configuration.
+### Get dynamic configuration
 
-Updates overlord dynamic worker configuration. Pass the dynamic configuration spec as a JSON request body. For information on constructing an Overlord dynamic configuration spec, see [Overlord dynamic configuration](../configuration/index.md#overlord-dynamic-configuration).
+Retrieves the current Overlord dynamic configuration.
+Returns a JSON object with the dynamic configuration properties.
+Returns an empty response body if there is no current Overlord dynamic configuration.
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/worker</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="10" label="200 SUCCESS">
+
+
+*Successfully retrieved dynamic configuration*
+
+</TabItem>
+</Tabs>
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="11" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker"
+```
+
+</TabItem>
+<TabItem value="12" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/worker HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+```json
+{
+    "type": "default",
+    "selectStrategy": {
+        "type": "fillCapacityWithCategorySpec",
+        "workerCategorySpec": {
+            "categoryMap": {},
+            "strong": true
+        }
+    },
+    "autoScaler": null
+}
+```
+
+</details>
+
+### Update dynamic configuration
+
+Submits a JSON-based dynamic configuration spec to the Overlord.
+For information on the supported properties, see [Overlord dynamic configuration](../configuration/index.md#overlord-dynamic-configuration).
 
 #### URL
 
@@ -277,32 +386,35 @@ Updates overlord dynamic worker configuration. Pass the dynamic configuration sp
 
 #### Header parameters
 
-The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the configuration history. 
+The endpoint supports a set of optional header parameters to populate the `author` and `comment` fields in the configuration history.
 
-* `X-Druid-Author` (optional)
+* `X-Druid-Author`
   * Type: String
-  * A string representing the author making the configuration change.
-* `X-Druid-Comment` (optional)
+  * Author of the configuration change.
+* `X-Druid-Comment`
   * Type: String
-  * A string describing the update.
+  * Description for the update.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="13" label="200 SUCCESS">
 
-*Successfully updated dynamic configuration* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully updated dynamic configuration*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="14" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker" \
@@ -320,7 +432,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker" \
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="15" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/worker HTTP/1.1
@@ -341,98 +455,45 @@ Content-Length: 196
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 A successful request returns an HTTP `200 OK` message code and an empty response body.
 
-### Get Overlord dynamic configuration
+### Get dynamic configuration history
 
-Returns current Overlord dynamic configuration. Returns an empty response body if there are no current Overlord dynamic configuration.
-
-#### URL 
-
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/worker</code>
-
-#### Responses
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--200 SUCCESS-->
-
-*Successfully retrieved dynamic configuration* 
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample request
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--cURL-->
-
-```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker"
-```
-
-<!--HTTP-->
-
-```HTTP
-GET /druid/indexer/v1/worker HTTP/1.1
-Host: http://ROUTER_IP:ROUTER_PORT
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-#### Sample response
-
-<details>
-  <summary>Click to show sample response</summary>
-
-```json
-{
-    "type": "default",
-    "selectStrategy": {
-        "type": "fillCapacityWithCategorySpec",
-        "workerCategorySpec": {
-            "categoryMap": {},
-            "strong": true
-        }
-    },
-    "autoScaler": null
-}
-```
-</details>
-
-
-### Get Overlord dynamic configuration history
-
-Retrieves history of changes to Overlord dynamic configuration. Returns an empty array if there are no history records available.
-
+Retrieves the history of changes to Overlord dynamic configuration over an interval of time. Returns an empty array if there are no history records available.
 
 #### URL
 
 <code class="getAPI">GET</code> <code>/druid/indexer/v1/worker/history</code>
 
+
 #### Query parameters
 
-* `interval` (optional)
-  * Type: ISO 8601
-  * Limits the number of results to the specified time interval. Delimited with `/`. For example, `2023-07-13/2023-07-19`.
+The endpoint supports a set of optional query parameters to filter results.
 
-* `count` (optional)
-  * Type: Int
-  * Limits the number of results to the last `n` entries.
+* `interval`
+  * Type: String
+  * Limit the results to the specified time interval in ISO 8601 format delimited with `/`. For example, `2023-07-13/2023-07-19`. The default interval is one week. You can change this period by setting `druid.audit.manager.auditHistoryMillis` in the `runtime.properties` file for the Overlord.
+
+* `count`
+  * Type: Integer
+  * Limit the number of results to the last `n` entries.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="16" label="200 SUCCESS">
 
-*Successfully retrieved history* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved history*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -440,22 +501,26 @@ Retrieves history of changes to Overlord dynamic configuration. Returns an empty
 
 The following example retrieves the dynamic configuration history between `2022-07-13` and `2024-07-19`. The response is limited to 10 entries.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="17" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/worker/history?interval=2022-07-13%2F2024-07-19&count=10"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="18" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/worker/history?interval=2022-07-13%2F2024-07-19&count=10 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -473,10 +538,11 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ip": "127.0.0.1"
         },
         "payload": "{\"type\":\"default\",\"selectStrategy\":{\"type\":\"fillCapacityWithCategorySpec\",\"workerCategorySpec\":{\"categoryMap\":{},\"strong\":true}},\"autoScaler\":null}",
-        "auditTime": "2023-08-15T20:32:06.899Z"
+        "auditTime": "2023-10-03T21:49:49.991Z"
     }
 ]
 ```
+
 </details>
 
 ### Get an array of worker nodes in the cluster
@@ -487,34 +553,40 @@ Returns an array of all the worker nodes in the cluster along with its correspon
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="19" label="200 SUCCESS">
 
-*Successfully retrieved worker nodes* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved worker nodes*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="20" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/workers"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="21" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/workers HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -527,7 +599,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "worker": {
             "scheme": "http",
             "host": "localhost:8091",
-            "ip": "192.168.1.4",
+            "ip": "198.51.100.0",
             "capacity": 2,
             "version": "0",
             "category": "_default_worker_category"
@@ -536,7 +608,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "currParallelIndexCapacityUsed": 0,
         "availabilityGroups": [],
         "runningTasks": [],
-        "lastCompletedTaskTime": "2023-08-15T18:19:37.254Z",
+        "lastCompletedTaskTime": "2023-09-29T19:13:05.505Z",
         "blacklistedUntil": null
     }
 ]
@@ -545,7 +617,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get scaling events
 
-Returns Overlord scaling events if auto-scaling runners are in use.
+Returns Overlord scaling events if autoscaling runners are in use.
+Returns an empty response body if there are no Overlord scaling events.
 
 #### URL
 
@@ -553,41 +626,41 @@ Returns Overlord scaling events if auto-scaling runners are in use.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="22" label="200 SUCCESS">
 
-*Successfully retrieved scaling events* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved scaling events*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="23" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/scaling"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="24" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/scaling HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
-<details>
-  <summary>Click to show sample response</summary>
-
-```json
-
-```
-</details>
+A successful request returns a `200 OK` response and an array of scaling events.

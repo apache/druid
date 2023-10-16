@@ -113,7 +113,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval, @Nullable Integer limit)
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit
+  )
   {
     synchronized (unusedSegments) {
       Stream<DataSegment> resultStream = unusedSegments.stream();
@@ -176,6 +180,17 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(appendSegments));
+  }
+
+  @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
@@ -220,6 +235,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         maxVersion,
         partialShardSpec.complete(objectMapper, 0, 0)
     );
+  }
+
+  @Override
+  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(Set<DataSegment> replaceSegments)
+  {
+    return Collections.emptyMap();
   }
 
   @Override

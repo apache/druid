@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -1994,8 +1995,11 @@ public class CompactSegmentsTest
       return Futures.immediateFuture(null);
     }
 
+
     @Override
-    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority)
+    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
+        List<LockFilterPolicy> lockFilterPolicies
+    )
     {
       return Futures.immediateFuture(lockedIntervals);
     }

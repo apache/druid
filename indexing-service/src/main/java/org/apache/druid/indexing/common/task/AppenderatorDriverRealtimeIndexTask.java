@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -696,7 +695,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     );
     pendingHandoffs.add(Futures.transformAsync(
         publishFuture,
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) driver::registerHandoff,
+        driver::registerHandoff,
         MoreExecutors.directExecutor()
     ));
   }

@@ -42,13 +42,13 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
     if (value == null) {
-      return makeNullValueMatcher(selector);
+      return VectorValueMatcher.nullMatcher(selector);
     }
 
     final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
 
     if (matchVal == null) {
-      return BooleanVectorValueMatcher.of(selector, false);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
 
     final long matchValLong = matchVal;
@@ -61,11 +61,8 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
   {
     final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
     final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
-    if (castForComparison == null) {
-      return BooleanVectorValueMatcher.of(selector, false);
-    }
-    if (castForComparison.isNumericNull()) {
-      return makeNullValueMatcher(selector);
+    if (castForComparison == null || castForComparison.isNumericNull()) {
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
     return makeLongMatcher(castForComparison.asLong());
   }
@@ -77,7 +74,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final long[] vector = selector.getLongVector();
         final int[] selection = match.getSelection();
@@ -89,9 +86,10 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            continue;
-          }
-          if (vector[rowNum] == matchValLong) {
+            if (includeUnknown) {
+              selection[numRows++] = rowNum;
+            }
+          } else if (vector[rowNum] == matchValLong) {
             selection[numRows++] = rowNum;
           }
         }
@@ -112,7 +110,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final long[] vector = selector.getLongVector();
         final int[] selection = match.getSelection();
@@ -124,7 +122,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            if (predicate.applyNull()) {
+            if ((includeUnknown && predicateFactory.isNullInputUnknown()) || predicate.applyNull()) {
               selection[numRows++] = rowNum;
             }
           } else if (predicate.applyLong(vector[rowNum])) {

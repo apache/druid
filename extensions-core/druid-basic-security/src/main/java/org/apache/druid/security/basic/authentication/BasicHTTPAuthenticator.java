@@ -182,15 +182,27 @@ public class BasicHTTPAuthenticator implements Authenticator
         return;
       }
 
-      String[] splits = decodedUserSecret.split(":");
-      if (splits.length != 2) {
+      /* From https://www.rfc-editor.org/rfc/rfc7617.html, we can assume that userid won't include a colon but password
+      can.
+
+       The user-id and password MUST NOT contain any control characters (see
+        "CTL" in Appendix B.1 of [RFC5234]).
+
+       Furthermore, a user-id containing a colon character is invalid, as
+       the first colon in a user-pass string separates user-id and password
+       from one another; text after the first colon is part of the password.
+       User-ids containing colons cannot be encoded in user-pass strings.
+
+       */
+      int split = decodedUserSecret.indexOf(':');
+      if (split < 0) {
         // The decoded user secret is not of the right format
         httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         return;
       }
 
-      String user = splits[0];
-      char[] password = splits[1].toCharArray();
+      String user = decodedUserSecret.substring(0, split);
+      char[] password = decodedUserSecret.substring(split + 1).toCharArray();
 
       // If any authentication error occurs we send a 401 response immediately and do not proceed further down the filter chain.
       // If the authentication result is null and skipOnFailure property is false, we send a 401 response and do not proceed

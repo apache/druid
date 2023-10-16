@@ -20,23 +20,28 @@
 package org.apache.druid.segment.index;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+
+import javax.annotation.Nullable;
 
 public class AllFalseBitmapColumnIndex implements BitmapColumnIndex
 {
   private final BitmapFactory bitmapFactory;
-
-  public AllFalseBitmapColumnIndex(ColumnIndexSelector indexSelector)
-  {
-    this(indexSelector.getBitmapFactory());
-  }
+  @Nullable
+  private final ImmutableBitmap unknownBitmap;
 
   public AllFalseBitmapColumnIndex(BitmapFactory bitmapFactory)
   {
+    this(bitmapFactory, null);
+  }
+
+  public AllFalseBitmapColumnIndex(BitmapFactory bitmapFactory, @Nullable ImmutableBitmap unknownBitmap)
+  {
     this.bitmapFactory = bitmapFactory;
+    this.unknownBitmap = unknownBitmap;
   }
 
   @Override
@@ -52,8 +57,11 @@ public class AllFalseBitmapColumnIndex implements BitmapColumnIndex
   }
 
   @Override
-  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
+    if (includeUnknown && unknownBitmap != null) {
+      return bitmapResultFactory.wrapDimensionValue(unknownBitmap);
+    }
     return bitmapResultFactory.wrapAllFalse(bitmapFactory.makeEmptyImmutableBitmap());
   }
 }

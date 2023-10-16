@@ -35,8 +35,8 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
@@ -79,7 +79,7 @@ public class LikeFilter implements Filter
       // Treat this as a column full of nulls
       return likeMatcher.matches(null)
              ? new AllTrueBitmapColumnIndex(selector)
-             : new AllFalseBitmapColumnIndex(selector);
+             : new AllUnknownBitmapColumnIndex(selector);
     }
     if (isSimpleEquals()) {
       StringValueSetIndexes valueIndexes = indexSupplier.as(StringValueSetIndexes.class);

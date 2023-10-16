@@ -34,6 +34,11 @@ import java.util.Set;
  */
 public class NotDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
+  public static NotDimFilter of(DimFilter field)
+  {
+    return new NotDimFilter(field);
+  }
+
 
   private final DimFilter field;
 

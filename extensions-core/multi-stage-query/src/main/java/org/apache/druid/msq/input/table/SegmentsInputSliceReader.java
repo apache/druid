@@ -23,10 +23,12 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
+import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.timeline.SegmentId;
 
@@ -40,11 +42,13 @@ import java.util.function.Consumer;
 public class SegmentsInputSliceReader implements InputSliceReader
 {
   private final DataSegmentProvider dataSegmentProvider;
+  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
   private final boolean isReindex;
 
-  public SegmentsInputSliceReader(final DataSegmentProvider dataSegmentProvider, final boolean isReindex)
+  public SegmentsInputSliceReader(final FrameContext frameContext, final boolean isReindex)
   {
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.dataSegmentProvider = frameContext.dataSegmentProvider();
+    this.loadedSegmentDataProviderFactory = frameContext.loadedSegmentDataProviderFactory();
     this.isReindex = isReindex;
   }
 
@@ -94,6 +98,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
 
           return new SegmentWithDescriptor(
               dataSegmentProvider.fetchSegment(segmentId, channelCounters, isReindex),
+              descriptor.isLoadedOnServer() ? loadedSegmentDataProviderFactory.createLoadedSegmentDataProvider(dataSource, channelCounters) : null,
               descriptor
           );
         }
