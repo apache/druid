@@ -721,15 +721,73 @@ public class DruidQuery
       }
     });
 
-    Set<String> exclude = new HashSet<>();
-    if (grouping != null) {
-      if (!includeDimensions) {
-        for (DimensionExpression expression : grouping.getDimensions()) {
-          exclude.add(expression.getVirtualColumn());
+    if(true) {
+    // we always want to add any virtual columns used by the query level DimFilter
+    if (filter != null) {
+      for (String columnName : filter.getRequiredColumns()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
         }
       }
     }
-    virtualColumns = virtualColumnRegistry.build(exclude);
+
+    if (selectProjection != null) {
+      for (String columnName : selectProjection.getVirtualColumns()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
+        }
+      }
+    }
+
+    if (grouping != null) {
+      if (includeDimensions) {
+        for (DimensionExpression expression : grouping.getDimensions()) {
+          if (virtualColumnRegistry.isVirtualColumnDefined(expression.getVirtualColumn())) {
+            virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression.getVirtualColumn()));
+          }
+        }
+      }
+
+      for (Aggregation aggregation : grouping.getAggregations()) {
+        virtualColumns.addAll(virtualColumnRegistry.getAllVirtualColumns(aggregation.getRequiredColumns()));
+      }
+    }
+
+    if (sorting != null && sorting.getProjection() != null && grouping == null) {
+      // Sorting without grouping means we might have some post-sort Projection virtual columns.
+
+      for (String columnName : sorting.getProjection().getVirtualColumns()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
+        }
+      }
+    }
+
+    if (dataSource instanceof JoinDataSource) {
+      for (String expression : ((JoinDataSource) dataSource).getVirtualColumnCandidates()) {
+        if (virtualColumnRegistry.isVirtualColumnDefined(expression)) {
+          virtualColumns.add(virtualColumnRegistry.getVirtualColumn(expression));
+        }
+      }
+    }
+
+    for (String columnName : specialized) {
+      if (virtualColumnRegistry.isVirtualColumnDefined(columnName)) {
+        virtualColumns.add(virtualColumnRegistry.getVirtualColumn(columnName));
+      }
+    }
+
+    }else {
+      Set<String> exclude=new HashSet<>();
+      if (grouping != null) {
+        if (!includeDimensions) {
+          for (DimensionExpression expression : grouping.getDimensions()) {
+            exclude.add(expression.getVirtualColumn());
+          }
+        }
+      }
+      virtualColumns = virtualColumnRegistry.build(exclude);
+    }
 
     // sort for predictable output
     List<VirtualColumn> columns = new ArrayList<>(virtualColumns);
@@ -1400,7 +1458,7 @@ public class DruidQuery
       return null;
     }
 
-    VirtualColumns vcs = getVirtualColumns(false);
+    VirtualColumns vcs=getVirtualColumns(false);
     return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
