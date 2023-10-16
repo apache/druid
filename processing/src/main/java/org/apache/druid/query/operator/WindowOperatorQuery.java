@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -230,13 +229,27 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   @Override
   public Query<RowsAndColumns> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    throw new ISE("Unsupported operation");
+    return new WindowOperatorQuery(
+        getDataSource(),
+        spec,
+        getContext(),
+        rowSignature,
+        operators,
+        leafOperators
+    );
   }
 
   @Override
   public Query<RowsAndColumns> withDataSource(DataSource dataSource)
   {
-    throw new ISE("Unsupported operation");
+    return new WindowOperatorQuery(
+        dataSource,
+        getQuerySegmentSpec(),
+        getContext(),
+        rowSignature,
+        operators,
+        leafOperators
+    );
   }
 
   @Override
