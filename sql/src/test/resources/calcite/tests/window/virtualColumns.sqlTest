@@ -18,9 +18,9 @@ expectedOperators:
         - { type: "longMin", name: "w1", fieldName: "v1" }
 
 expectedResults:
-  - ["_",null,11]
-  - ["_10.1",null,11]
-  - ["_2",null,11]
-  - ["_1",null,11]
-  - ["_def",null,11]
-  - ["_abc",null,11]
+  - ["_",42.0,11]
+  - ["_10.1",42.0,11]
+  - ["_2",42.0,11]
+  - ["_1",42.0,11]
+  - ["_def",42.0,11]
+  - ["_abc",42.0,11]

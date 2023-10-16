@@ -22,6 +22,7 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -32,6 +33,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -120,8 +122,11 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                 null,
                 scan.getFilter(),
                 (int) scan.getScanRowsLimit(),
-                scan.getColumns(),
-//                scan.getVirtualColumns(),
+                ImmutableList
+                    .<String> builder()
+                    .addAll(scan.getColumns())
+                    .addAll(virtualColumns.getColumnNames())
+                    .build(),
                  vc_union(scan.getVirtualColumns(),virtualColumns),
                 ordering));
       }
@@ -134,7 +139,19 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     if (virtualColumns2.isEmpty()) {
       return virtualColumns;
     }
-    throw new RuntimeException("Unimplemented!");
+
+    VirtualColumn[] aa = virtualColumns.getVirtualColumns();
+    VirtualColumn[] aa2 = virtualColumns2.getVirtualColumns();
+    List<VirtualColumn> vcs=new ArrayList<VirtualColumn>();
+    for (VirtualColumn virtualColumn : aa) {
+      vcs.add(virtualColumn);
+
+    }
+    for (VirtualColumn virtualColumn : aa2) {
+      vcs.add(virtualColumn);
+
+    }
+    return VirtualColumns.create(vcs);
   }
 
   @JsonCreator

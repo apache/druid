@@ -721,6 +721,7 @@ public class DruidQuery
       }
     });
 
+    if(false) {
     // we always want to add any virtual columns used by the query level DimFilter
     if (filter != null) {
       for (String columnName : filter.getRequiredColumns()) {
@@ -776,9 +777,23 @@ public class DruidQuery
       }
     }
 
+    }else {
+      Set<String> exclude=new HashSet<>();
+      if (grouping != null) {
+        if (!includeDimensions) {
+          for (DimensionExpression expression : grouping.getDimensions()) {
+            exclude.add(expression.getVirtualColumn());
+          }
+        }
+      }
+      virtualColumns = virtualColumnRegistry.build(exclude);
+    }
+
     // sort for predictable output
     List<VirtualColumn> columns = new ArrayList<>(virtualColumns);
     columns.sort(Comparator.comparing(VirtualColumn::getOutputName));
+
+
     return VirtualColumns.create(columns);
   }
 

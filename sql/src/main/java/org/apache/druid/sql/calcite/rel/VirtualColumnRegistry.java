@@ -34,11 +34,14 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -352,5 +355,21 @@ public class VirtualColumnRegistry
     {
       return Objects.hash(expression, typeHint);
     }
+  }
+
+  public Set<VirtualColumn> build(Set<String> exclude)
+  {
+    Set<VirtualColumn> ret = new HashSet<>();
+    if(virtualColumnsByName == null        ) {
+      return ret;
+    }
+
+    for (Entry<String, ExpressionAndTypeHint> entry : virtualColumnsByName.entrySet()) {
+      if(exclude.contains(entry.getKey())) {
+        continue;
+      }
+      ret.add(getVirtualColumn(entry.getKey()));
+    }
+    return ret;
   }
 }

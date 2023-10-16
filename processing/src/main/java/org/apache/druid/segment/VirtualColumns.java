@@ -52,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Class allowing lookup and usage of virtual columns.
@@ -523,5 +524,10 @@ public class VirtualColumns implements Cacheable
   public boolean isEmpty()
   {
     return virtualColumns.isEmpty();
+  }
+
+  public List<String> getColumnNames()
+  {
+    return virtualColumns.stream().map(v -> v.getOutputName()).collect(Collectors.toList());
   }
 }
