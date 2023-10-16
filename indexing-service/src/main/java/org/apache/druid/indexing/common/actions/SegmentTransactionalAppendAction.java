@@ -22,15 +22,20 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,24 +47,60 @@ import java.util.stream.Collectors;
 public class SegmentTransactionalAppendAction implements TaskAction<SegmentPublishResult>
 {
   private final Set<DataSegment> segments;
+  @Nullable
+  private final DataSourceMetadata startMetadata;
+  @Nullable
+  private final DataSourceMetadata endMetadata;
 
-  public static SegmentTransactionalAppendAction create(Set<DataSegment> segments)
+  public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments)
   {
-    return new SegmentTransactionalAppendAction(segments);
+    return new SegmentTransactionalAppendAction(segments, null, null);
+  }
+
+  public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
+      Set<DataSegment> segments,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  )
+  {
+    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
-      @JsonProperty("segments") Set<DataSegment> segments
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
+      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
   )
   {
     this.segments = segments;
+    this.startMetadata = startMetadata;
+    this.endMetadata = endMetadata;
+
+    if ((startMetadata == null && endMetadata != null)
+        || (startMetadata != null && endMetadata == null)) {
+      throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
+    }
   }
 
   @JsonProperty
   public Set<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  @Nullable
+  public DataSourceMetadata getStartMetadata()
+  {
+    return startMetadata;
+  }
+
+  @JsonProperty
+  @Nullable
+  public DataSourceMetadata getEndMetadata()
+  {
+    return endMetadata;
   }
 
   @Override
@@ -70,17 +111,40 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     };
   }
 
-  /**
-   * Performs some sanity checks and publishes the given segments.
-   */
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    // Verify that all the locks are of expected type
+    final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
+    for (TaskLock lock : locks) {
+      if (lock.getType() != TaskLockType.APPEND) {
+        throw InvalidInput.exception(
+            "Cannot use action[%s] for task[%s] as it is holding a lock of type[%s] instead of [APPEND].",
+            "SegmentTransactionalAppendAction", task.getId(), lock.getType()
+        );
+      }
+    }
+
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
     final String datasource = task.getDataSource();
     final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
         = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
+
+    final CriticalAction.Action<SegmentPublishResult> publishAction;
+    if (startMetadata == null) {
+      publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
+          segments,
+          segmentToReplaceLock
+      );
+    } else {
+      publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
+          segments,
+          segmentToReplaceLock,
+          startMetadata,
+          endMetadata
+      );
+    }
 
     final SegmentPublishResult retVal;
     try {
@@ -88,12 +152,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           task,
           segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
-              .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
-                      segments,
-                      segmentToReplaceLock
-                  )
-              )
+              .onValidLocks(publishAction)
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(
                       "Invalid task locks. Maybe they are revoked by a higher priority task."
@@ -107,20 +166,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       throw new RuntimeException(e);
     }
 
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-
-    if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
-      for (DataSegment segment : retVal.getSegments()) {
-        IndexTaskUtils.setSegmentDimensions(metricBuilder, segment);
-        toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
-      }
-    } else {
-      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
-    }
-
+    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
     return retVal;
   }
 

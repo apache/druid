@@ -89,7 +89,6 @@ import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1467,22 +1466,21 @@ public class MSQSelectTest extends MSQTestBase
         );
     // adding result stage counter checks
     if (isPageSizeLimited()) {
-      selectTester = selectTester.setExpectedCountersForStageWorkerChannel(
+      selectTester.setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2, 0, 2).frames(1, 0, 1),
+              .with().rows(2, 0, 2),
           1, 0, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2, 0, 2).frames(1, 0, 1),
+              .with().rows(2, 0, 2),
           1, 0, "output"
-      );
-      selectTester = selectTester.setExpectedCountersForStageWorkerChannel(
+      ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 2, 0, 4).frames(0, 1, 0, 1),
+              .with().rows(0, 2, 0, 4),
           1, 1, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 2, 0, 4).frames(0, 1, 0, 1),
+              .with().rows(0, 2, 0, 4),
           1, 1, "output"
       );
     }
@@ -2535,7 +2533,6 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2554,7 +2551,6 @@ public class MSQSelectTest extends MSQTestBase
     return expected;
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
