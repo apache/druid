@@ -69,6 +69,8 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   private final PhysicalDatasourceMetadataFactory dataSourceMetadataFactory;
   private final CoordinatorClient coordinatorClient;
 
+  private final BrokerSegmentMetadataCacheConfig config;
+
   @Inject
   public BrokerSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
@@ -90,7 +92,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     );
     this.dataSourceMetadataFactory = dataSourceMetadataFactory;
     this.coordinatorClient = coordinatorClient;
-
+    this.config = config;
     initServerViewTimelineCallback(serverView);
   }
 
@@ -169,8 +171,12 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
+    Set<SegmentId> refreshed = new HashSet<>();
+
     // Refresh the remaining segments.
-    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
+    if (!config.isDisableSegmentMetadataQueries()) {
+      refreshed = refreshSegments(segmentsToRefresh);
+    }
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.

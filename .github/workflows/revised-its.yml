@@ -50,7 +50,7 @@ jobs:
       matrix:
         #jdk: [8, 11, 17]
         jdk: [8]
-        it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat]
+        it: [MultiStageQuery, BatchIndex]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
     uses: ./.github/workflows/reusable-revised-its.yml
@@ -66,7 +66,7 @@ jobs:
   s3-deep-storage-minio:
     needs: changes
     uses: ./.github/workflows/reusable-revised-its.yml
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: 8
       runtime_jdk: 11

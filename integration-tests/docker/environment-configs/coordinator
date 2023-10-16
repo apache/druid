@@ -46,3 +46,4 @@ druid_coordinator_period=PT1S
 
 # temp change to test table schema building on coordinator, to be reverted
 druid_coordinator_centralizedSchemaManagement_enabled=true
+druid_query_segmentMetadata_metadataRefreshPeriod=PT15S
