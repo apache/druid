@@ -56,7 +56,7 @@ public class WindowOperatorQueryTest
         ImmutableMap.of("sally", "sue"),
         RowSignature.empty(),
         new ArrayList<>(),
-        (VirtualColumns)null
+        (VirtualColumns) null
     );
   }
 

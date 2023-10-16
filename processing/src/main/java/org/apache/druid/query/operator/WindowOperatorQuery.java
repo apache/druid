@@ -91,8 +91,9 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       RowSignature rowSignature,
       List<OperatorFactory> operators,
       VirtualColumns virtualColumns
-  ) {
-    this(rewriteDataSource(dataSource), intervals, context, rowSignature, operators, buildLeafOperatos(dataSource,virtualColumns));
+  )
+  {
+    this(rewriteDataSource(dataSource), intervals, context, rowSignature, operators, buildLeafOperatos(dataSource, virtualColumns));
   }
 
   private static List<OperatorFactory> buildLeafOperatos(DataSource dataSource, VirtualColumns virtualColumns)
@@ -122,12 +123,11 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                 null,
                 scan.getFilter(),
                 (int) scan.getScanRowsLimit(),
-                ImmutableList
-                    .<String> builder()
+                ImmutableList.<String>builder()
                     .addAll(scan.getColumns())
                     .addAll(virtualColumns.getColumnNames())
                     .build(),
-                 vc_union(scan.getVirtualColumns(),virtualColumns),
+                vc_union(scan.getVirtualColumns(), virtualColumns),
                 ordering));
       }
     }
@@ -142,7 +142,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 
     VirtualColumn[] aa = virtualColumns.getVirtualColumns();
     VirtualColumn[] aa2 = virtualColumns2.getVirtualColumns();
-    List<VirtualColumn> vcs=new ArrayList<VirtualColumn>();
+    List<VirtualColumn> vcs = new ArrayList<VirtualColumn>();
     for (VirtualColumn virtualColumn : aa) {
       vcs.add(virtualColumn);
 
