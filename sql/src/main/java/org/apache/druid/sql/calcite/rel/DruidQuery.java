@@ -277,6 +277,7 @@ public class DruidQuery
 
     if (partialQuery.getWindow() != null) {
       if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
+        assert (virtualColumnRegistry.isEmpty());
         windowing = Preconditions.checkNotNull(
             Windowing.fromCalciteStuff(
                 partialQuery,
