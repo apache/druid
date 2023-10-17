@@ -37,13 +37,13 @@ public class RowMemoryFieldPointer implements ReadableFieldPointer
   private final int fieldCount;
 
   // Caching of position() calls
-  private long rowWithPositionCached = -1L;
+  private long rowWithCachedPosition = -1L;
   private long cachedPosition = -1L;
 
   // Caching of length() calls
   // We cache the length() calls separately, because not all field types call length(), therefore it's wasteful to
-  // read length() if we are not reading it
-  private long rowWithLengthCached = -1L;
+  // compute and cache length() if we are not reading it
+  private long rowWithCachedLength = -1L;
   private long cachedLength = -1L;
 
   public RowMemoryFieldPointer(
@@ -76,31 +76,35 @@ public class RowMemoryFieldPointer implements ReadableFieldPointer
   private void updatePosition()
   {
     long rowPointerPosition = rowPointer.position();
-    if (rowPointerPosition == rowWithPositionCached) {
+    if (rowPointerPosition == rowWithCachedPosition) {
       return;
     }
     // Update the cached position for position()
-    rowWithPositionCached = rowPointerPosition;
+    rowWithCachedPosition = rowPointerPosition;
 
     // Update the start position
     cachedPosition = startPosition(fieldNumber);
   }
 
-  // Not all field types call length(), and therefore there's no need to cache the length of the field
+  // Not all field types call length(), and therefore there's no need to cache the length of the field. This method
+  // updates both the position and the length.
   private void updatePositionAndLength()
   {
     updatePosition();
 
-    long rowPointerPosition = rowPointer.position();
-    if (rowPointerPosition == rowWithLengthCached) {
+    // rowPointerPosition = rowPointer.position() = rowWithCachedPosition, since that was updated in the call to update
+    // position above
+    long rowPointerPosition = rowWithCachedPosition;
+
+    if (rowPointerPosition == rowWithCachedLength) {
       return;
     }
     // Update the cached position for length()
-    rowWithLengthCached = rowPointerPosition;
+    rowWithCachedLength = rowPointerPosition;
 
     if (fieldNumber == fieldCount - 1) {
-      // If the field is the last field in the row, then the length of the field would be the length of the row minus the
-      // start position of the row
+      // If the field is the last field in the row, then the length of the field would be the end of the row minus the
+      // start position of the field. End of the row is the start of the row plus the length of the row.
       cachedLength = (rowPointerPosition + rowPointer.length()) - cachedPosition;
     } else {
       // Else the length of the field would be the difference between the start position of the given field and
@@ -109,7 +113,10 @@ public class RowMemoryFieldPointer implements ReadableFieldPointer
     }
   }
 
-
+  /**
+   * Given a fieldNumber, computes the start position of the field. Requires a memory access to read the start position,
+   * therefore callers should cache the value for better efficiency.
+   */
   private long startPosition(int fieldNumber)
   {
     if (fieldNumber == 0) {
