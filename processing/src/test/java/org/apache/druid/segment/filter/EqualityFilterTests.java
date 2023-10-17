@@ -311,6 +311,7 @@ public class EqualityFilterTests
             ImmutableList.of("0", "1", "2", "3", "4", "5")
         );
 
+        // in default value mode, is true/is false are basically pointless since they have the same behavior as = and <>
         // "(s0 = 'a') is not true" equivalent to "s0 <> 'a'"
         assertFilterMatches(
             NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
@@ -326,7 +327,7 @@ public class EqualityFilterTests
             IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
             ImmutableList.of("0", "2", "3", "4")
         );
-        // "(s0 = 'a') is not false", same rows as "s0 = 'a'", but also with null rows
+        // "(s0 = 'a') is not false", equivalent to "s0 = 'a'"
         assertFilterMatches(
             NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
             ImmutableList.of("1", "5")
