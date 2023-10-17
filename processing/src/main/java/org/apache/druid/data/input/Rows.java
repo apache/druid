@@ -25,7 +25,6 @@ import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.math.expr.Evals;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
