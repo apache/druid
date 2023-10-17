@@ -34,7 +34,6 @@ public class DescOperatorConversion implements SqlOperatorConversion
   public DescOperatorConversion(SqlPostfixOperator desc)
   {
     this.desc = desc;
-
   }
 
   @Override

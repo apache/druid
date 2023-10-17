@@ -27,7 +27,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
-import org.apache.calcite.util.Static;
+import org.apache.druid.error.InvalidSqlInput;
 
 /**
  * Druid extended SQL validator. (At present, it doesn't actually
@@ -48,20 +48,17 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateCall(SqlCall call, SqlValidatorScope scope)
   {
-    if(call.getKind() == SqlKind.NULLS_FIRST) {
+    if (call.getKind() == SqlKind.NULLS_FIRST) {
       SqlNode op0 = call.getOperandList().get(0);
-      if(op0.getKind() == SqlKind.DESCENDING) {
-        throw newValidationError(call,
-            Static.RESOURCE.functionMatchRecognizeOnly("JADAJADA!"));
+      if (op0.getKind() == SqlKind.DESCENDING) {
+        throw InvalidSqlInput.exception("DESCENDING ordering with NULLS FIRST is not supported!");
       }
     }
-    if(call.getKind() == SqlKind.NULLS_LAST) {
+    if (call.getKind() == SqlKind.NULLS_LAST) {
       SqlNode op0 = call.getOperandList().get(0);
-      if(op0.getKind() != SqlKind.DESCENDING) {
-        throw newValidationError(call,
-            Static.RESOURCE.functionMatchRecognizeOnly("JADAJADA2!"));
+      if (op0.getKind() != SqlKind.DESCENDING) {
+        throw InvalidSqlInput.exception("ASCENDING ordering with NULLS LAST is not supported!");
       }
-
     }
 
     super.validateCall(call, scope);
