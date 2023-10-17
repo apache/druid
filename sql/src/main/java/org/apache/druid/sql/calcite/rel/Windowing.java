@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.rel;
 
 import com.google.api.client.util.Sets;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.RelCollation;
@@ -44,7 +43,6 @@ import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.window.ComposingProcessor;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.WindowFrame;
@@ -58,7 +56,10 @@ import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.operator.window.value.WindowFirstProcessor;
 import org.apache.druid.query.operator.window.value.WindowLastProcessor;
 import org.apache.druid.query.operator.window.value.WindowOffsetProcessor;
+import org.apache.druid.query.operator.window.value.WindowProjectProcessor;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -236,12 +237,33 @@ public class Windowing
       }
 
       if (!virtualColumnRegistry.isEmpty()) {
+        List<Processor> vcProcessors =new ArrayList<Processor>();
         VirtualColumns virtualColumns = virtualColumnRegistry.build(Sets.newHashSet());
-        ImmutableList<String> projectedColumns = ImmutableList.<String> builder()
-            .addAll(sourceRowSignature.getColumnNames())
-            .addAll(virtualColumns.getColumnNames())
-            .build();
-        ops.add(new ScanOperatorFactory(null, null, null, projectedColumns, virtualColumns, null));
+
+        VirtualColumn[] vcs = virtualColumns.getVirtualColumns();
+        for (VirtualColumn vc : vcs) {
+          // FIXME push in
+          ColumnType type = vc.capabilities(RowSignature.empty(), vc.getOutputName()).toColumnType();
+
+          vcProcessors.add(new WindowProjectProcessor(vc,type));
+        }
+
+
+        ops.add(new WindowOperatorFactory(
+            vcProcessors.size() == 1 ?
+            vcProcessors.get(0) : new ComposingProcessor(vcProcessors.toArray(new Processor[0]))
+        ));
+
+//        virtualColumns.getVirtualColumns()[0].capabilities(RowSignature.empty(), colName);
+//        virtualColumnRegistry.getFullRowSignature()
+
+//        ImmutableList<String> projectedColumns = ImmutableList.<String> builder()
+//            .addAll(sourceRowSignature.getColumnNames())
+//            .addAll(virtualColumns.getColumnNames())
+//            .build();
+//        ops.add(new ScanOperatorFactory(null, null, null, projectedColumns, virtualColumns, null));
+
+
       }
 
       ops.add(new WindowOperatorFactory(
