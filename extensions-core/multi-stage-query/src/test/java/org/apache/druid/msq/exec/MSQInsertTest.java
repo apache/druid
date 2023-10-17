@@ -28,6 +28,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -59,6 +61,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -67,6 +70,16 @@ import java.util.TreeSet;
 @RunWith(Parameterized.class)
 public class MSQInsertTest extends MSQTestBase
 {
+
+  private static final String WITH_APPEND_LOCK = "WITH_APPEND_LOCK";
+  private static final Map<String, Object> QUERY_CONTEXT_WITH_APPEND_LOCK =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      Tasks.TASK_LOCK_TYPE,
+                      TaskLockType.APPEND.name().toLowerCase(Locale.ENGLISH)
+                  )
+                  .build();
   private final HashFunction fn = Hashing.murmur3_128();
 
   @Parameterized.Parameters(name = "{index}:with context {0}")
@@ -76,7 +89,8 @@ public class MSQInsertTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
+        {WITH_APPEND_LOCK, QUERY_CONTEXT_WITH_APPEND_LOCK}
     };
     return Arrays.asList(data);
   }
