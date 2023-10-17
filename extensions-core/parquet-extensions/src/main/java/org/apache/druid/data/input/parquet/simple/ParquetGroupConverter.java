@@ -52,6 +52,47 @@ public class ParquetGroupConverter
   private static final long NANOS_PER_MILLISECOND = TimeUnit.MILLISECONDS.toNanos(1);
 
   /**
+   * https://github.com/apache/drill/blob/2ab46a9411a52f12a0f9acb1144a318059439bc4/exec/java-exec/src/main/java/org/apache/drill/exec/store/parquet/ParquetReaderUtility.java#L89
+   */
+  private static final long CORRECT_CORRUPT_DATE_SHIFT = 2 * JULIAN_EPOCH_OFFSET_DAYS;
+
+  private final boolean binaryAsString;
+  private final boolean convertCorruptDates;
+
+  public ParquetGroupConverter(boolean binaryAsString, boolean convertCorruptDates)
+  {
+    this.binaryAsString = binaryAsString;
+    this.convertCorruptDates = convertCorruptDates;
+  }
+
+  /**
+   * Recursively converts a group into native Java Map
+   *
+   * @param g the group
+   * @return the native Java object
+   */
+  public Object convertGroup(Group g)
+  {
+    Map<String, Object> retVal = new LinkedHashMap<>();
+
+    for (Type field : g.getType().getFields()) {
+      final String fieldName = field.getName();
+      retVal.put(fieldName, convertField(g, fieldName));
+    }
+
+    return retVal;
+  }
+
+  Object unwrapListElement(Object o)
+  {
+    if (o instanceof Group) {
+      Group g = (Group) o;
+      return convertListElement(g);
+    }
+    return o;
+  }
+
+  /**
    * Convert a parquet group field as though it were a map. Logical types of 'list' and 'map' will be transformed
    * into java lists and maps respectively ({@link ParquetGroupConverter#convertLogicalList} and
    * {@link ParquetGroupConverter#convertLogicalMap}), repeated fields will also be translated to lists, and
@@ -447,12 +488,6 @@ public class ParquetGroupConverter
     }
   }
 
-  /**
-   * https://github.com/apache/drill/blob/2ab46a9411a52f12a0f9acb1144a318059439bc4/exec/java-exec/src/main/java/org/apache/drill/exec/store/parquet/ParquetReaderUtility.java#L89
-   */
-  public static final long JULIAN_DAY_NUMBER_FOR_UNIX_EPOCH = 2440588;
-  public static final long CORRECT_CORRUPT_DATE_SHIFT = 2 * JULIAN_DAY_NUMBER_FOR_UNIX_EPOCH;
-
   private long convertDateToMillis(int value)
   {
     if (convertCorruptDates) {
@@ -507,41 +542,5 @@ public class ParquetGroupConverter
     } else {
       return new BigDecimal(new BigInteger(value.getBytes()), scale);
     }
-  }
-
-  private final boolean binaryAsString;
-  private final boolean convertCorruptDates;
-
-  public ParquetGroupConverter(boolean binaryAsString, boolean convertCorruptDates)
-  {
-    this.binaryAsString = binaryAsString;
-    this.convertCorruptDates = convertCorruptDates;
-  }
-
-  /**
-   * Recursively converts a group into native Java Map
-   *
-   * @param g the group
-   * @return the native Java object
-   */
-  public Object convertGroup(Group g)
-  {
-    Map<String, Object> retVal = new LinkedHashMap<>();
-
-    for (Type field : g.getType().getFields()) {
-      final String fieldName = field.getName();
-      retVal.put(fieldName, convertField(g, fieldName));
-    }
-
-    return retVal;
-  }
-
-  Object unwrapListElement(Object o)
-  {
-    if (o instanceof Group) {
-      Group g = (Group) o;
-      return convertListElement(g);
-    }
-    return o;
   }
 }
