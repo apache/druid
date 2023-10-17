@@ -356,6 +356,14 @@ public class MSQWorkerTaskLauncher
     String workerId;
     TaskState state;
     long duration;
+
+    /**
+     * For JSON deserialization only
+     */
+    public WorkerStats()
+    {
+    }
+
     public WorkerStats(String workerId, TaskState state, long duration)
     {
       this.workerId = workerId;
@@ -396,11 +404,11 @@ public class MSQWorkerTaskLauncher
                       : taskTracker.status.getDuration();
 
       workersStatsMap.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
-                        .add(new WorkerStats(
-                            task,
-                            taskTracker.status.getStatusCode(),
-                            duration
-                        ));
+                     .add(new WorkerStats(
+                         task,
+                         taskTracker.status.getStatusCode(),
+                         duration
+                     ));
     }
 
     for (Integer task : workersStatsMap.keySet()) {
@@ -480,8 +488,6 @@ public class MSQWorkerTaskLauncher
       taskIds.notifyAll();
     }
   }
-
-
 
   /**
    * Used by the main loop to launch new tasks up to {@link #desiredTaskCount}. Adds trackers to {@link #taskTrackers}

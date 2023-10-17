@@ -311,7 +311,8 @@ public class SqlStatementResourceTest extends MSQTestBase
               new ArrayDeque<>(),
               null,
               0,
-              null, 1,
+              new HashMap<>(),
+              1,
               2,
               null
           ),
