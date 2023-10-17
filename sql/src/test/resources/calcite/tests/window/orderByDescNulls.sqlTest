@@ -10,15 +10,36 @@ sql: |
     where page < '0' and channel like '#en%'
 
 expectedOperators:
-  - {type: "naiveSort", columns: [{column: "d0", direction: "ASC"}, {column: "d1", direction: "DESC"}]}
-  - { type: "naivePartition",  partitionColumns: [ "d0" ] }
+  - type: "naiveSort"
+    columns:
+      - column: "cityName"
+        direction: "DESC"
+      - column: "__time"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ ]
   - type: "window"
     processor:
-      type: "framedAgg"
-      frame: { peerType: "ROWS", lowUnbounded: false, lowOffset: 3, uppUnbounded: false, uppOffset: 2 }
-      aggregations:
-        - { type: "longSum", name: "w0", fieldName: "a0" }
-  - { type: "naiveSort", columns: [ { column: "d1", direction: "ASC" }, { column: "a0", direction: "DESC"} ]}
-  - { type: "naivePartition",  partitionColumns: [ "d1" ] }
+      type: "rowNumber"
+      outputColumn: "w0"
+  - type: "naiveSort"
+    columns:
+      - column: "cityName"
+        direction: "ASC"
+      - column: "__time"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ ]
   - type: "window"
-    processor: { type: "rowNumber", outputColumn: "w1"}
+    processor:
+      type: "rowNumber"
+      outputColumn: "w1"
+expectedResults:
+  - [null,1442019358364,3,1]
+  - [null,1442021099146,4,2]
+  - [null,1442033539153,5,3]
+  - [null,1442095704125,6,4]
+  - [null,1442096110867,7,5]
+  - [null,1442100368226,8,6]
+  - ["Crescent City",1442035449448,2,7]
+  - ["Vinnytsya",1442100940306,1,8]
