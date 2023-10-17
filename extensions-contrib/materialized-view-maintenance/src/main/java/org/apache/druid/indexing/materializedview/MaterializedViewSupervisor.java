@@ -296,7 +296,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public Set<String> getActiveBaseSequenceNames()
+  public Set<String> getActiveRealtimeSequencePrefixes()
   {
     throw new UnsupportedOperationException("Get Active sequence names is not supported in MaterializedViewSupervisor");
   }

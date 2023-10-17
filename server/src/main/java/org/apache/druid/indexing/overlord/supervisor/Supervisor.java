@@ -98,5 +98,5 @@ public interface Supervisor
   /**
    * @return active base sequence names for reading and pending completion task groups of a seekable stream supervisor
    */
-  Set<String> getActiveBaseSequenceNames();
+  Set<String> getActiveRealtimeSequencePrefixes();
 }

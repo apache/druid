@@ -145,10 +145,11 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
       return;
     }
 
-    final Set<String> activeBaseSequenceNames = supervisorManager.getActiveBaseSequenceNames(activeSupervisorId.get());
+    final Set<String> activeRealtimeSequencePrefixes
+        = supervisorManager.getActiveRealtimeSequencePrefixes(activeSupervisorId.get());
     Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
         toolbox.getIndexerMetadataStorageCoordinator()
-               .upgradePendingSegmentsOverlappingWith(segments, activeBaseSequenceNames);
+               .upgradePendingSegmentsOverlappingWith(segments, activeRealtimeSequencePrefixes);
     log.info(
         "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
         upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments

@@ -212,7 +212,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
+                                           .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -239,9 +239,73 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   /**
    * Fetches all the pending segments, whose interval overlaps with the given
-   * search interval from the metadata store. Returns a Map from the
-   * pending segment ID to the sequence name.
+   * search interval and has a sequence_name that begins with one of the prefixes in sequenceNamePrefixFilter
+   * from the metadata store. Returns a Map from the pending segment ID to the sequence name.
    */
+  @VisibleForTesting
+  Map<SegmentIdWithShardSpec, String> getPendingSegmentsForIntervalWithHandle(
+      final Handle handle,
+      final String dataSource,
+      final Interval interval,
+      final Set<String> sequenceNamePrefixFilter
+  ) throws IOException
+  {
+    if (sequenceNamePrefixFilter.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    final List<String> sequenceNamePrefixes = new ArrayList<>(sequenceNamePrefixFilter);
+    StringBuilder sql = new StringBuilder(
+        "SELECT sequence_name, payload FROM "
+        + dbTables.getPendingSegmentsTable()
+        + " WHERE dataSource = :dataSource AND start < :end AND "
+        + connector.getQuoteString() + "end" + connector.getQuoteString() + " > :start"
+    );
+
+    sql.append(" AND ( ");
+
+    for (int i = 1; i < sequenceNamePrefixes.size(); i++) {
+      sql.append("(sequence_name LIKE ")
+         .append(StringUtils.format(":prefix%d", i))
+         .append(")")
+         .append(" OR ");
+    }
+
+    sql.append("(sequence_name LIKE ")
+       .append(StringUtils.format(":prefix%d", sequenceNamePrefixes.size()))
+       .append(")");
+
+    sql.append(" )");
+
+    Query<Map<String, Object>> query =
+        handle.createQuery(sql.toString())
+              .bind("dataSource", dataSource)
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString());
+
+    for (int i = 1; i <= sequenceNamePrefixes.size(); i++) {
+      query.bind(StringUtils.format("prefix%d", i), sequenceNamePrefixes.get(i - 1) + "%");
+    }
+
+    final ResultIterator<PendingSegmentsRecord> dbSegments =
+        query.map((index, r, ctx) -> PendingSegmentsRecord.fromResultSet(r))
+             .iterator();
+
+    final Map<SegmentIdWithShardSpec, String> pendingSegmentToSequenceName = new HashMap<>();
+    while (dbSegments.hasNext()) {
+      PendingSegmentsRecord record = dbSegments.next();
+      final SegmentIdWithShardSpec identifier = jsonMapper.readValue(record.payload, SegmentIdWithShardSpec.class);
+
+      if (interval.overlaps(identifier.getInterval())) {
+        pendingSegmentToSequenceName.put(identifier, record.sequenceName);
+      }
+    }
+
+    dbSegments.close();
+
+    return pendingSegmentToSequenceName;
+  }
+
   private Map<SegmentIdWithShardSpec, String> getPendingSegmentsForIntervalWithHandle(
       final Handle handle,
       final String dataSource,
@@ -250,15 +314,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final ResultIterator<PendingSegmentsRecord> dbSegments =
         handle.createQuery(
-            StringUtils.format(
-                // This query might fail if the year has a different number of digits
-                // See https://github.com/apache/druid/pull/11582 for a similar issue
-                // Using long for these timestamps instead of varchar would give correct time comparisons
-                "SELECT sequence_name, payload FROM %1$s"
-                + " WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
-                dbTables.getPendingSegmentsTable(), connector.getQuoteString()
-            )
-        )
+                  StringUtils.format(
+                      // This query might fail if the year has a different number of digits
+                      // See https://github.com/apache/druid/pull/11582 for a similar issue
+                      // Using long for these timestamps instead of varchar would give correct time comparisons
+                      "SELECT sequence_name, payload FROM %1$s"
+                      + " WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
+                      dbTables.getPendingSegmentsTable(), connector.getQuoteString()
+                  )
+              )
               .bind("dataSource", dataSource)
               .bind("start", interval.getStart().toString())
               .bind("end", interval.getEnd().toString())
@@ -602,7 +666,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments,
-      Set<String> activeBaseSequenceNames
+      Set<String> activeRealtimeSequencePrefixes
   )
   {
     if (replaceSegments.isEmpty()) {
@@ -621,7 +685,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final String datasource = replaceSegments.iterator().next().getDataSource();
     return connector.retryWithHandle(
-        handle -> upgradePendingSegments(handle, datasource, replaceIntervalToMaxId, activeBaseSequenceNames)
+        handle -> upgradePendingSegments(handle, datasource, replaceIntervalToMaxId, activeRealtimeSequencePrefixes)
     );
   }
 
@@ -641,7 +705,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Handle handle,
       String datasource,
       Map<Interval, DataSegment> replaceIntervalToMaxId,
-      Set<String> activeBaseSequenceNames
+      Set<String> activeRealtimeSequencePrefixes
   ) throws IOException
   {
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> newPendingSegmentVersions = new HashMap<>();
@@ -656,23 +720,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       int currentPartitionNumber = maxSegmentId.getShardSpec().getPartitionNum();
 
       final Map<SegmentIdWithShardSpec, String> overlappingPendingSegments
-          = getPendingSegmentsForIntervalWithHandle(handle, datasource, replaceInterval);
+          = getPendingSegmentsForIntervalWithHandle(handle, datasource, replaceInterval, activeRealtimeSequencePrefixes);
 
       for (Map.Entry<SegmentIdWithShardSpec, String> overlappingPendingSegment
           : overlappingPendingSegments.entrySet()) {
         final SegmentIdWithShardSpec pendingSegmentId = overlappingPendingSegment.getKey();
         final String pendingSegmentSequence = overlappingPendingSegment.getValue();
-
-        boolean considerSequence = false;
-        for (String baseSequence : activeBaseSequenceNames) {
-          if (pendingSegmentSequence.startsWith(baseSequence)) {
-            considerSequence = true;
-            break;
-          }
-        }
-        if (!considerSequence) {
-          continue;
-        }
 
         if (shouldUpgradePendingSegment(pendingSegmentId, pendingSegmentSequence, replaceInterval, replaceVersion)) {
           // Ensure unique sequence_name_prev_id_sha1 by setting
@@ -1174,13 +1227,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final PreparedBatch insertBatch = handle.prepareBatch(
         StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
-        + "sequence_name_prev_id_sha1, payload) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
-        + ":sequence_name_prev_id_sha1, :payload)",
-        dbTables.getPendingSegmentsTable(),
-        connector.getQuoteString()
-    ));
+            "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
+            + "sequence_name_prev_id_sha1, payload) "
+            + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
+            + ":sequence_name_prev_id_sha1, :payload)",
+            dbTables.getPendingSegmentsTable(),
+            connector.getQuoteString()
+        ));
 
     // Deduplicate the segment ids by inverting the map
     Map<SegmentIdWithShardSpec, SegmentCreateRequest> segmentIdToRequest = new HashMap<>();
@@ -1220,15 +1273,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws JsonProcessingException
   {
     handle.createStatement(
-        StringUtils.format(
-            "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
-            + "sequence_name_prev_id_sha1, payload) "
-            + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
-            + ":sequence_name_prev_id_sha1, :payload)",
-            dbTables.getPendingSegmentsTable(),
-            connector.getQuoteString()
-        )
-    )
+              StringUtils.format(
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
+                  + "sequence_name_prev_id_sha1, payload) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
+                  + ":sequence_name_prev_id_sha1, :payload)",
+                  dbTables.getPendingSegmentsTable(),
+                  connector.getQuoteString()
+              )
+          )
           .bind("id", newIdentifier.toString())
           .bind("dataSource", dataSource)
           .bind("created_date", DateTimes.nowUtc().toString())
@@ -1276,9 +1329,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Map<Interval, Set<DataSegment>> overlappingIntervalToSegments = new HashMap<>();
     for (DataSegment segment : overlappingSegments) {
       overlappingVersionToIntervals.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
-                                 .add(segment.getInterval());
+                                   .add(segment.getInterval());
       overlappingIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
-                                 .add(segment);
+                                   .add(segment);
     }
 
     final Set<DataSegment> upgradedSegments = new HashSet<>();
@@ -1828,16 +1881,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         for (DataSegment segment : partition) {
           final String now = DateTimes.nowUtc().toString();
           preparedBatch.add()
-              .bind("id", segment.getId().toString())
-              .bind("dataSource", segment.getDataSource())
-              .bind("created_date", now)
-              .bind("start", segment.getInterval().getStart().toString())
-              .bind("end", segment.getInterval().getEnd().toString())
-              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-              .bind("version", segment.getVersion())
-              .bind("used", usedSegments.contains(segment))
-              .bind("payload", jsonMapper.writeValueAsBytes(segment))
-              .bind("used_status_last_updated", now);
+                       .bind("id", segment.getId().toString())
+                       .bind("dataSource", segment.getDataSource())
+                       .bind("created_date", now)
+                       .bind("start", segment.getInterval().getStart().toString())
+                       .bind("end", segment.getInterval().getEnd().toString())
+                       .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+                       .bind("version", segment.getVersion())
+                       .bind("used", usedSegments.contains(segment))
+                       .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                       .bind("used_status_last_updated", now);
         }
         final int[] affectedRows = preparedBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
@@ -1845,9 +1898,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           log.infoSegments(partition, "Published segments to DB");
         } else {
           final List<DataSegment> failedToPublish = IntStream.range(0, partition.size())
-              .filter(i -> affectedRows[i] != 1)
-              .mapToObj(partition::get)
-              .collect(Collectors.toList());
+                                                             .filter(i -> affectedRows[i] != 1)
+                                                             .mapToObj(partition::get)
+                                                             .collect(Collectors.toList());
           throw new ISE(
               "Failed to publish segments to DB: %s",
               SegmentUtils.commaSeparatedIdentifiers(failedToPublish)
@@ -2163,11 +2216,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE);
     for (List<DataSegment> segmentList : segmentsLists) {
       String segmentIds = segmentList.stream()
-          .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
-          .collect(Collectors.joining(","));
+                                     .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
+                                     .collect(Collectors.joining(","));
       List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
-          .mapTo(String.class)
-          .list();
+                                    .mapTo(String.class)
+                                    .list();
       existedSegments.addAll(existIds);
     }
     return existedSegments;
@@ -2270,7 +2323,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Not in the desired start state.
       return new DataStoreMetadataUpdateResult(true, false, StringUtils.format(
           "Inconsistent metadata state. This can happen if you update input topic in a spec without changing " +
-              "the supervisor name. Stored state: [%s], Target state: [%s].",
+          "the supervisor name. Stored state: [%s], Target state: [%s].",
           oldCommitMetadataFromDb,
           startMetadata
       ));
@@ -2289,12 +2342,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final int numRows = handle.createStatement(
-          StringUtils.format(
-              "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
-              + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
-              dbTables.getDataSourceTable()
-          )
-      )
+                                    StringUtils.format(
+                                        "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
+                                        + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+                                        dbTables.getDataSourceTable()
+                                    )
+                                )
                                 .bind("dataSource", dataSource)
                                 .bind("created_date", DateTimes.nowUtc().toString())
                                 .bind("commit_metadata_payload", newCommitMetadataBytes)
@@ -2302,23 +2355,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .execute();
 
       retVal = numRows == 1
-          ? DataStoreMetadataUpdateResult.SUCCESS
-          : new DataStoreMetadataUpdateResult(
-              true,
-          true,
-          "Failed to insert metadata for datasource [%s]",
-          dataSource);
+               ? DataStoreMetadataUpdateResult.SUCCESS
+               : new DataStoreMetadataUpdateResult(
+                   true,
+                   true,
+                   "Failed to insert metadata for datasource [%s]",
+                   dataSource);
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = handle.createStatement(
-          StringUtils.format(
-              "UPDATE %s SET "
-              + "commit_metadata_payload = :new_commit_metadata_payload, "
-              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
-              + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
-              dbTables.getDataSourceTable()
-          )
-      )
+                                    StringUtils.format(
+                                        "UPDATE %s SET "
+                                        + "commit_metadata_payload = :new_commit_metadata_payload, "
+                                        + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+                                        + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
+                                        dbTables.getDataSourceTable()
+                                    )
+                                )
                                 .bind("dataSource", dataSource)
                                 .bind("old_commit_metadata_sha1", oldCommitMetadataSha1FromDb)
                                 .bind("new_commit_metadata_payload", newCommitMetadataBytes)
@@ -2326,12 +2379,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .execute();
 
       retVal = numRows == 1
-          ? DataStoreMetadataUpdateResult.SUCCESS
-          : new DataStoreMetadataUpdateResult(
-          true,
-          true,
-          "Failed to update metadata for datasource [%s]",
-          dataSource);
+               ? DataStoreMetadataUpdateResult.SUCCESS
+               : new DataStoreMetadataUpdateResult(
+                   true,
+                   true,
+                   "Failed to update metadata for datasource [%s]",
+                   dataSource);
     }
 
     if (retVal.isSuccess()) {
@@ -2353,8 +2406,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           public Boolean withHandle(Handle handle)
           {
             int rows = handle.createStatement(
-                StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
-            )
+                                 StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
+                             )
                              .bind("dataSource", dataSource)
                              .execute();
 
@@ -2380,14 +2433,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           public Boolean withHandle(Handle handle)
           {
             final int numRows = handle.createStatement(
-                StringUtils.format(
-                    "UPDATE %s SET "
-                    + "commit_metadata_payload = :new_commit_metadata_payload, "
-                    + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
-                    + "WHERE dataSource = :dataSource",
-                    dbTables.getDataSourceTable()
-                )
-            )
+                                          StringUtils.format(
+                                              "UPDATE %s SET "
+                                              + "commit_metadata_payload = :new_commit_metadata_payload, "
+                                              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+                                              + "WHERE dataSource = :dataSource",
+                                              dbTables.getDataSourceTable()
+                                          )
+                                      )
                                       .bind("dataSource", dataSource)
                                       .bind("new_commit_metadata_payload", newCommitMetadataBytes)
                                       .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
@@ -2640,10 +2693,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     public String toString()
     {
       return "DataStoreMetadataUpdateResult{" +
-          "failed=" + failed +
-          ", canRetry=" + canRetry +
-          ", errorMsg='" + errorMsg + '\'' +
-          '}';
+             "failed=" + failed +
+             ", canRetry=" + canRetry +
+             ", errorMsg='" + errorMsg + '\'' +
+             '}';
     }
   }
 

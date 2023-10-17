@@ -1094,7 +1094,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public Set<String> getActiveBaseSequenceNames()
+  public Set<String> getActiveRealtimeSequencePrefixes()
   {
     final Set<String> activeBaseSequences = new HashSet<>();
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {

@@ -345,12 +345,13 @@ public interface IndexerMetadataStorageCoordinator
    * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @param activeBaseSequenceNames of base sequence names of active / pending completion task groups of the supervisor
+   * @param activeRealtimeSequencePrefixes Set of base sequence names of active and pending completion task groups
+   *                                       of the supervisor (if any) for this datasource
    * @return Map from originally allocated pending segment to its new upgraded ID.
    */
   Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments,
-      Set<String> activeBaseSequenceNames
+      Set<String> activeRealtimeSequencePrefixes
   );
 
   /**

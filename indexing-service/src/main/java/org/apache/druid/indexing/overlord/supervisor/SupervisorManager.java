@@ -88,12 +88,12 @@ public class SupervisorManager
     return Optional.absent();
   }
 
-  public Set<String> getActiveBaseSequenceNames(String activeSupervisorId)
+  public Set<String> getActiveRealtimeSequencePrefixes(String activeSupervisorId)
   {
     if (!supervisors.containsKey(activeSupervisorId)) {
       return Collections.emptySet();
     }
-    return supervisors.get(activeSupervisorId).lhs.getActiveBaseSequenceNames();
+    return supervisors.get(activeSupervisorId).lhs.getActiveRealtimeSequencePrefixes();
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)

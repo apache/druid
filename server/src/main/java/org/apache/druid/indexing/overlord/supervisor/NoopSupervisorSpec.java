@@ -188,7 +188,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
       }
 
       @Override
-      public Set<String> getActiveBaseSequenceNames()
+      public Set<String> getActiveRealtimeSequencePrefixes()
       {
         return Collections.emptySet();
       }
