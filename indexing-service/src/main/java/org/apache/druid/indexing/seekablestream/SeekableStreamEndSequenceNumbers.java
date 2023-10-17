@@ -167,7 +167,7 @@ public class SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetTyp
       AtomicReference<Boolean> res = new AtomicReference<>(false);
       partitionSequenceNumberMap.forEach(
           (partitionId, sequenceOffset) -> {
-            if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && (long) sequenceOffset > (long) otherStart.partitionSequenceNumberMap.get(partitionId)) {
+            if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && (Long) sequenceOffset > (Long) otherStart.partitionSequenceNumberMap.get(partitionId)) {
               res.set(true);
             }
           }
