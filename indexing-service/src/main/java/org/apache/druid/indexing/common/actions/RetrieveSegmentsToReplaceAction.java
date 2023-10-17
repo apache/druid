@@ -124,17 +124,18 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
     }
 
     Set<DataSegment> allSegmentsToBeReplaced = new HashSet<>();
-    for (final Interval segmentInterval : intervalToCreatedToSegments.keySet()) {
+    for (final Map.Entry<Interval, Map<String, Set<DataSegment>>> entry : intervalToCreatedToSegments.entrySet()) {
+      final Interval segmentInterval = entry.getKey();
       String lockVersion = null;
       for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
         if (replaceLock.getInterval().contains(segmentInterval)) {
           lockVersion = replaceLock.getVersion();
         }
       }
-      Map<String, Set<DataSegment>> createdToSegments = intervalToCreatedToSegments.get(segmentInterval);
-      for (String created : createdToSegments.keySet()) {
-        if (lockVersion == null || lockVersion.compareTo(created) > 0) {
-          allSegmentsToBeReplaced.addAll(createdToSegments.get(created));
+      final Map<String, Set<DataSegment>> createdToSegmentsMap = entry.getValue();
+      for (Map.Entry<String, Set<DataSegment>> createdAndSegments : createdToSegmentsMap.entrySet()) {
+        if (lockVersion == null || lockVersion.compareTo(createdAndSegments.getKey()) > 0) {
+          allSegmentsToBeReplaced.addAll(createdAndSegments.getValue());
         }
       }
     }
