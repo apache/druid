@@ -30,19 +30,17 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 public class WindowProjectProcessor implements Processor
 {
   private VirtualColumn virtualColumn;
-  private ColumnType type;
 
   @JsonCreator
   public WindowProjectProcessor(
-      @JsonProperty("virtualColumn") VirtualColumn virtualColumn,
-      @JsonProperty("columnType") ColumnType type)
+      @JsonProperty("virtualColumn") VirtualColumn virtualColumn)
   {
     this.virtualColumn = virtualColumn;
-    this.type = type;
   }
 
   @JsonProperty("virtualColumn")
@@ -51,10 +49,9 @@ public class WindowProjectProcessor implements Processor
     return virtualColumn;
   }
 
-  @JsonProperty("type")
   public ColumnType getType()
   {
-    return type;
+    return ((ExpressionVirtualColumn)virtualColumn).getOutputType();
   }
 
   @Override
@@ -67,7 +64,7 @@ public class WindowProjectProcessor implements Processor
     Column column = new ConstantObjectColumn(
         vv.getObject(),
         incomingPartition.numRows(),
-        type);
+        getType());
     retVal.addColumn(
         virtualColumn.getOutputName(),
         column);

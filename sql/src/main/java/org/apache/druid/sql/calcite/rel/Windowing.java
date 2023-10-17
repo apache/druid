@@ -59,7 +59,6 @@ import org.apache.druid.query.operator.window.value.WindowOffsetProcessor;
 import org.apache.druid.query.operator.window.value.WindowProjectProcessor;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -232,44 +231,19 @@ public class Windowing
         );
       }
 
-      if (processors.isEmpty()) {
-        throw new ISE("No processors from Window[%s], why was this code called?", window);
-      }
-
       if (!virtualColumnRegistry.isEmpty()) {
-        List<Processor> vcProcessors =new ArrayList<Processor>();
+        List<Processor> vcProcessors = new ArrayList<Processor>();
         VirtualColumns virtualColumns = virtualColumnRegistry.build(Sets.newHashSet());
 
-        VirtualColumn[] vcs = virtualColumns.getVirtualColumns();
-        for (VirtualColumn vc : vcs) {
-          // FIXME push in
-          ColumnType type = vc.capabilities(RowSignature.empty(), vc.getOutputName()).toColumnType();
-
-          vcProcessors.add(new WindowProjectProcessor(vc,type));
+        for (VirtualColumn vc : virtualColumns.getVirtualColumns()) {
+          vcProcessors.add(new WindowProjectProcessor(vc));
         }
 
-
-        ops.add(new WindowOperatorFactory(
-            vcProcessors.size() == 1 ?
-            vcProcessors.get(0) : new ComposingProcessor(vcProcessors.toArray(new Processor[0]))
-        ));
-
-//        virtualColumns.getVirtualColumns()[0].capabilities(RowSignature.empty(), colName);
-//        virtualColumnRegistry.getFullRowSignature()
-
-//        ImmutableList<String> projectedColumns = ImmutableList.<String> builder()
-//            .addAll(sourceRowSignature.getColumnNames())
-//            .addAll(virtualColumns.getColumnNames())
-//            .build();
-//        ops.add(new ScanOperatorFactory(null, null, null, projectedColumns, virtualColumns, null));
-
+        ops.add(new WindowOperatorFactory(buildProcessorFor(vcProcessors)));
 
       }
 
-      ops.add(new WindowOperatorFactory(
-          processors.size() == 1 ?
-          processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
-      ));
+      ops.add(new WindowOperatorFactory(buildProcessorFor(processors)));
     }
 
     // Apply windowProject, if present.
@@ -296,6 +270,19 @@ public class Windowing
           RowSignatures.fromRelDataType(windowOutputColumns, window.getRowType()),
           ops
       );
+    }
+  }
+
+  private static Processor buildProcessorFor(List<Processor> processors)
+  {
+    switch (processors.size())
+    {
+    case 0:
+      throw new ISE("No processors supplied, why was this code called?");
+    case 1:
+      return processors.get(0);
+    default:
+      return new ComposingProcessor(processors.toArray(new Processor[0]));
     }
   }
 
