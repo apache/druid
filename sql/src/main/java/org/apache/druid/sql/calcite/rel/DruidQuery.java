@@ -277,13 +277,13 @@ public class DruidQuery
 
     if (partialQuery.getWindow() != null) {
       if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
+        assert (virtualColumnRegistry.isEmpty());
         windowing = Preconditions.checkNotNull(
             Windowing.fromCalciteStuff(
                 partialQuery,
                 plannerContext,
                 sourceRowSignature, // Plans immediately after Scan, so safe to use the row signature from scan
-                rexBuilder,
-                virtualColumnRegistry
+                rexBuilder
             )
         );
       } else {
@@ -1444,14 +1444,12 @@ public class DruidQuery
     }
 
     // all virtual cols are needed - these columns are only referenced from the aggregates
-    VirtualColumns vcs = virtualColumnRegistry.build(Collections.emptySet());
     return WindowOperatorQuery.build(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
-        windowing.getOperators(),
-        vcs
+        windowing.getOperators()
     );
   }
 
