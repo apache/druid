@@ -203,9 +203,4 @@ public class IsBooleanFilter implements Filter
     // to return a different hash from baseFilter
     return Objects.hash(1, baseFilter, isTrue);
   }
-
-  public Filter getBaseFilter()
-  {
-    return baseFilter;
-  }
 }
