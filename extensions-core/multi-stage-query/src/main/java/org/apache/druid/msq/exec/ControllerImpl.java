@@ -1490,7 +1490,7 @@ public class ControllerImpl implements Controller
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
       return SegmentTransactionalInsertAction.appendAction(segments, null, null);
     } else {
-      throw DruidException.defensive("Invalid lock type %s received for append action", taskLockType);
+      throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
     }
   }
 
@@ -1504,7 +1504,7 @@ public class ControllerImpl implements Controller
     } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
       return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones);
     } else {
-      throw DruidException.defensive("Invalid lock type %s received for overwrite action", taskLockType);
+      throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
     }
   }
 
