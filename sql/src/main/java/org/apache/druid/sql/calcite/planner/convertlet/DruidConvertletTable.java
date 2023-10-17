@@ -29,7 +29,6 @@ import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 import org.apache.druid.sql.calcite.expression.builtin.NestedDataOperatorConversions;
-import org.apache.druid.sql.calcite.planner.DruidSqlPostfixOperator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.ArrayList;
@@ -69,8 +68,8 @@ public class DruidConvertletTable implements SqlRexConvertletTable
                    .add(SqlStdOperatorTable.COALESCE)
                    .add(SqlLibraryOperators.NVL)
                    .add(SqlStdOperatorTable.DESC)
-                   .add(DruidSqlPostfixOperator.DRUID_NULLS_FIRST)
-                   .add(DruidSqlPostfixOperator.DRUID_NULLS_LAST)
+                   .add(SqlStdOperatorTable.NULLS_FIRST)
+                   .add(SqlStdOperatorTable.NULLS_LAST)
                    .build();
 
   private final Map<SqlOperator, SqlRexConvertlet> table;
