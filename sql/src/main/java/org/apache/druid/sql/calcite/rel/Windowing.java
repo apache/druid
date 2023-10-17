@@ -19,7 +19,9 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.api.client.util.Sets;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.RelCollation;
@@ -42,6 +44,7 @@ import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.window.ComposingProcessor;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.WindowFrame;
@@ -55,6 +58,7 @@ import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.operator.window.value.WindowFirstProcessor;
 import org.apache.druid.query.operator.window.value.WindowLastProcessor;
 import org.apache.druid.query.operator.window.value.WindowOffsetProcessor;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -229,6 +233,15 @@ public class Windowing
 
       if (processors.isEmpty()) {
         throw new ISE("No processors from Window[%s], why was this code called?", window);
+      }
+
+      if (!virtualColumnRegistry.isEmpty()) {
+        VirtualColumns virtualColumns = virtualColumnRegistry.build(Sets.newHashSet());
+        ImmutableList<String> projectedColumns = ImmutableList.<String> builder()
+            .addAll(sourceRowSignature.getColumnNames())
+            .addAll(virtualColumns.getColumnNames())
+            .build();
+        ops.add(new ScanOperatorFactory(null, null, null, projectedColumns, virtualColumns, null));
       }
 
       ops.add(new WindowOperatorFactory(
