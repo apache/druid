@@ -32,7 +32,6 @@ import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TestExprMacroTable;
