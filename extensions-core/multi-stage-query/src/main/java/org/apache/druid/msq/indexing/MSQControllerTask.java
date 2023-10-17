@@ -207,7 +207,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     // If we're in replace mode, acquire locks for all intervals before declaring the task ready.
     if (isIngestion(querySpec) && ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()) {
       final TaskLockType taskLockType =
-          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(sqlQueryContext), true);
+          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(querySpec.getQuery().getContext()), true);
       final List<Interval> intervals =
           ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks();
       log.debug(

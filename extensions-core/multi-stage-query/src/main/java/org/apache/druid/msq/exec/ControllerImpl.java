@@ -970,7 +970,7 @@ public class ControllerImpl implements Controller
           destination,
           partitionBoundaries,
           keyReader,
-          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(task.getContext()), false));
+          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(task.getQuerySpec().getQuery().getContext()), false));
     }
   }
 
@@ -1409,7 +1409,7 @@ public class ControllerImpl implements Controller
     final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
     int numTombstones = 0;
     final TaskLockType taskLockType = MultiStageQueryContext.validateAndGetTaskLockType(
-        QueryContext.of(task.getContext()),
+        QueryContext.of(task.getQuerySpec().getQuery().getContext()),
         destination.isReplaceTimeChunks()
     );
 
