@@ -118,8 +118,7 @@ public class Windowing
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
       final RowSignature sourceRowSignature,
-      final RexBuilder rexBuilder,
-      final VirtualColumnRegistry virtualColumnRegistry
+      final RexBuilder rexBuilder
   )
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
@@ -143,6 +142,14 @@ public class Windowing
     }
 
     for (int i = 0; i < window.groups.size(); ++i) {
+
+      // FIXME: I think this should be recreated after every group
+      VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
+          sourceRowSignature,
+          plannerContext.getExpressionParser(),
+          plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
+      );
+
       final WindowGroup group = new WindowGroup(window, window.groups.get(i), sourceRowSignature);
 
       final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
