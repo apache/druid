@@ -2236,7 +2236,7 @@ public class ControllerImpl implements Controller
         errorReports,
         queryStartTime,
         queryDuration,
-        taskLauncher.getWorkersDurations(),
+        taskLauncher.getWorkersStats(),
         pendingTasks,
         runningTasks,
         status

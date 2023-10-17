@@ -374,16 +374,16 @@ public class MSQWorkerTaskLauncher
       return state;
     }
 
-    @JsonProperty()
+    @JsonProperty("durationMs")
     public long getDuration()
     {
       return duration;
     }
   }
 
-  public Map<Integer, List<WorkerDuration>> getWorkersDurations()
+  public Map<Integer, List<WorkerDuration>> getWorkersStats()
   {
-    final Map<Integer, List<WorkerDuration>> workerDurationsMap = new TreeMap<>();
+    final Map<Integer, List<WorkerDuration>> workersStatsMap = new TreeMap<>();
 
     for (String task : taskTrackers.keySet()) {
 
@@ -394,7 +394,7 @@ public class MSQWorkerTaskLauncher
                       ? System.currentTimeMillis() - taskTracker.startTimeMillis
                       : taskTracker.status.getDuration();
 
-      workerDurationsMap.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
+      workersStatsMap.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
                         .add(new WorkerDuration(
                             task,
                             taskTracker.status.getStatusCode(),
@@ -402,10 +402,10 @@ public class MSQWorkerTaskLauncher
                         ));
     }
 
-    for (Integer task : workerDurationsMap.keySet()) {
-      workerDurationsMap.get(task).sort(Comparator.comparing(WorkerDuration::getWorkerId));
+    for (Integer task : workersStatsMap.keySet()) {
+      workersStatsMap.get(task).sort(Comparator.comparing(WorkerDuration::getWorkerId));
     }
-    return workerDurationsMap;
+    return workersStatsMap;
   }
 
   private void mainLoop()
