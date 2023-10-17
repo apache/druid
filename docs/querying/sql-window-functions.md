@@ -31,7 +31,7 @@ Window functions are an [experimental](../development/experimental.md) feature. 
 
 There are known issues where ORDER BY only works on ascending order and certain options may cause errors.
 
-Set the context parameter `windowsAreForClosers: true` to use window functions.
+Set the context parameter `enableWindowing: true` to use window functions.
 
 :::
 
@@ -83,9 +83,7 @@ Window functions are similar to [aggregation functions](./aggregations.md).
 
 You can use the OVER clause to treat other Druid aggregation functions as window functions. For example, the sum of a value for rows within a window.
 
-When working with window functions, consider the following:
-- Window functions only work on GROUP BY queries.
-- Window functions support aliasing.
+Window functions support aliasing.
 
 ## Define a window with the OVER clause
 
@@ -95,7 +93,7 @@ The OVER clause defines the query windows for window functions as follows:
 
 :::note
 
-Sometimes windows are called partitions. However, the partitioning for window functions are a shuffle (partition) of the result set that happens at query time and is not to be confused with Druid's segment partitioning feature which partitions data at ingest time.
+Sometimes windows are called partitions. However, the partitioning for window functions are a shuffle (partition) of the result set created at query time and is not to be confused with Druid's segment partitioning feature which partitions data at ingest time.
 
 :::
 
@@ -111,15 +109,15 @@ RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 |Function|Notes|
 |--------|-----|
-| `ROW_NUMBER()`| Returns the number of the row within the window|
+| `ROW_NUMBER()`| Returns the number of the row within the window |
 |`RANK()`| Returns the rank for a row within a window | 
 |`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. |
 |`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` |
 |`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or higher than current row` / `total window rows` |
-|`NTILE(tiles)`| Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into  |None |
-|`LAG(expr, offset, default)`| Returns the value evaluated at the row that precedes the current row by the offset number within the window; if there is no such row, returns the given default value |
-|`LEAD(expr, offset, default)`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value |
-|`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window|
+|`NTILE(tiles)`| Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into | None |
+|`LAG(expr[, offset])`| Returns the value evaluated at the row that precedes the current row by the offset number within the window. `offset` defaults to 1 if not provided |
+|`LEAD(expr[, offset])`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value. `offset` defaults to 1 if not provided |
+|`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window |
 |`LAST_VALUE(expr)`| Returns the value for the expression for the last row within the window |
 
 ## Examples
