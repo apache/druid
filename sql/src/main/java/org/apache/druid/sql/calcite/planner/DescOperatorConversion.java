@@ -28,7 +28,6 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 
 public class DescOperatorConversion implements SqlOperatorConversion
 {
-
   private SqlPostfixOperator desc;
 
   public DescOperatorConversion(SqlPostfixOperator desc)
