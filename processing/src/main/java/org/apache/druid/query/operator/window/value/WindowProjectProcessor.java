@@ -21,6 +21,7 @@ package org.apache.druid.query.operator.window.value;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -41,6 +42,10 @@ public class WindowProjectProcessor implements Processor
       @JsonProperty("virtualColumn") VirtualColumn virtualColumn)
   {
     this.virtualColumn = virtualColumn;
+
+    if(!(virtualColumn instanceof ExpressionVirtualColumn)) {
+      DruidException.defensive("Only ExpressionVirtualColumn supported [%s]", virtualColumn);
+    }
   }
 
   @JsonProperty("virtualColumn")
@@ -51,7 +56,7 @@ public class WindowProjectProcessor implements Processor
 
   public ColumnType getType()
   {
-    return ((ExpressionVirtualColumn)virtualColumn).getOutputType();
+    return ((ExpressionVirtualColumn) virtualColumn).getOutputType();
   }
 
   @Override
@@ -74,7 +79,10 @@ public class WindowProjectProcessor implements Processor
   @Override
   public boolean validateEquivalent(Processor otherProcessor)
   {
-    throw new RuntimeException("Unimplemented!");
-
+    if (otherProcessor instanceof WindowProjectProcessor) {
+      WindowProjectProcessor o = (WindowProjectProcessor) otherProcessor;
+      return o.virtualColumn.equals(virtualColumn);
+    }
+    return false;
   }
 }
