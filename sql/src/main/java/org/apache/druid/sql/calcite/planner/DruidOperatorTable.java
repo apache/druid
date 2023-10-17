@@ -495,6 +495,14 @@ public class DruidOperatorTable implements SqlOperatorTable
         operatorList.add(
             SqlStdOperatorTable.DESC);
       }
+      if (opName.names.contains("NULLS FIRST")) {
+        operatorList.add(
+            SqlStdOperatorTable.NULLS_FIRST);
+      }
+      if (opName.names.contains("NULLS_LAST")) {
+        operatorList.add(
+            SqlStdOperatorTable.NULLS_LAST);
+      }
     }
 
     final OperatorKey operatorKey = OperatorKey.of(opName.getSimple(), syntax);
