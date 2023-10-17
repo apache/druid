@@ -107,6 +107,8 @@ The default mode is for MVDs, which is unchanged from previous releases.
 
 You can now use UNNEST with MSQ queries. This lets you flatten and explode data during batch ingestion. For more information, see the [UNNEST tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/) and [UNNEST documentation](https://druid.apache.org/docs/latest/querying/sql/#unnest).
 
+You no longer need to include the context parameter `"enableUnnest": true` to run queries involving UNNEST.
+
 [#14886](https://github.com/apache/druid/pull/14886)
 
 ### Ingestion status
@@ -171,14 +173,16 @@ You can now provide compressed task payloads larger than 128KB.
 The LOOKUP function now accepts an optional constant string as a third argument. This string is used to replace missing values in results. For example, the query `LOOKUP(store, 'store_to_country', 'NA')`, returns `NA` if the `store_to_country` value is missing for a given `store`.
 
 [#14956](https://github.com/apache/druid/pull/14956)
+
 ### Numeric array type support
 
 Row-based frames and, by extension, the MSQ task engine now support numeric array types. This means that all queries consuming or producing arrays work with the MSQ task engine. Numeric arrays can also be ingested using SQL-based ingestion with MSQ. For example, queries like `SELECT [1, 2]` are valid now since they consume a numeric array instead of failing with an unsupported column type exception.
 
 [#14900](https://github.com/apache/druid/pull/14900)
+
 ### New context parameter for segment loading
 
-If the new `waitTillSegmentsLoad`  query context parameter is set to `true`, the MSQ controller queries the Broker and waits till the segments created (if any) have been loaded by the load rules. The controller also provides this information in the live reports and task reports. If `false`, the controller exits immediately after finishing a query.
+If the new `waitTillSegmentsLoad` query context parameter is set to `true`, the MSQ controller queries the Broker and waits until the segments created (if any) have been loaded by the load rules. The controller also provides this information in the live reports and task reports. If `false`, the controller exits immediately after finishing a query.
 
 Waiting ensures that any future queries made after the ingestion exits will include results from the ingestion. The drawback is that the controller task waits till the segments are loaded, which can take some time depending on the number of segments.
 
@@ -464,6 +468,30 @@ You can now use multiple console appenders in Peon logging.
 * `IndexerSQLMetadataStorageCoordinator` now uses the JDBI `PreparedBatch` instead of issuing single update statements inside a transaction to mitigate scaling challenges [#14639](https://github.com/apache/druid/pull/14639)
 
 ## Web console
+
+### Added UI support for segment loading query context parameter
+
+The web console now supports the new **Wait until segments have loaded** query context parameter.
+
+![UI for waitTillSegmentsLoad context parameter](image.png)
+
+For more information on the `waitTillSegmentsLoad` query context parameter, see [New context parameter for segment loading](#new-context-parameter-for-segment-loading).
+
+[#15110](https://github.com/apache/druid/pull/15110)
+
+### Added concurrent compaction switches
+
+The web console now includes concurrent compaction switches.
+
+The following screenshot shows the concurrent compaction switch in the classic batch ingestion wizard:
+![UI for waitTillSegmentsLoad context parameter](image-1.png)
+
+The following screenshot shows the concurrent compaction switch in the compaction configuration UI:
+![UI for waitTillSegmentsLoad context parameter](image-2.png)
+
+[#15114](https://github.com/apache/druid/pull/15114)
+
+### Other web console improvements
 
 * You can select to allow concurrent append tasks in the web console [#15114](https://github.com/apache/druid/pull/15114)
 * You can now copy query results from the web console directly to the clipboard [#14889](https://github.com/apache/druid/pull/14889)
