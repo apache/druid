@@ -35,7 +35,9 @@ import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -46,10 +48,6 @@ import java.util.stream.Collectors;
  *
  * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
  * the collection only once.
- *
- * @implNote This action doesn't produce a {@link Set} because it's implemented via {@link
- * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#retrieveUsedSegmentsForIntervals} which returns
- * a collection. Producing a {@link Set} would require an unnecessary copy of segments collection.
  */
 public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<DataSegment>>
 {
@@ -90,9 +88,10 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
   @Override
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
+    // The DruidInputSource can be used to read from one datasource and write to another.
+    // In such a case, the action can simply fetch all visible segments for the datasource and interval
     if (!task.getDataSource().equals(dataSource)) {
-      return toolbox.getIndexerMetadataStorageCoordinator()
-                    .retrieveUsedSegmentsForInterval(dataSource, interval, Segments.ONLY_VISIBLE);
+      return retrieveAllVisibleSegments(toolbox);
     }
 
     final String supervisorId;
@@ -109,25 +108,45 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
         .filter(lock -> supervisorId.equals(lock.getSupervisorTaskId()))
         .collect(Collectors.toSet());
 
-    Collection<Pair<DataSegment, String>> segmentsAndCreatedDates =
-        toolbox.getIndexerMetadataStorageCoordinator().retrieveUsedSegmentsAndCreatedDates(dataSource, interval);
+    // If there are no replace locks for the task, simply fetch all visible segments for the interval
+    if (replaceLocksForTask.isEmpty()) {
+      return retrieveAllVisibleSegments(toolbox);
+    }
+
+    Map<Interval, Map<String, Set<DataSegment>>> intervalToCreatedToSegments = new HashMap<>();
+    for (Pair<DataSegment, String> segmentAndCreatedDate :
+        toolbox.getIndexerMetadataStorageCoordinator().retrieveUsedSegmentsAndCreatedDates(dataSource, interval)) {
+      final DataSegment segment = segmentAndCreatedDate.lhs;
+      final String created = segmentAndCreatedDate.rhs;
+      intervalToCreatedToSegments.computeIfAbsent(segment.getInterval(), s -> new HashMap<>())
+                                 .computeIfAbsent(created, c -> new HashSet<>())
+                                 .add(segment);
+    }
 
     Set<DataSegment> allSegmentsToBeReplaced = new HashSet<>();
-    segmentsAndCreatedDates.forEach(segmentAndCreatedDate -> allSegmentsToBeReplaced.add(segmentAndCreatedDate.lhs));
-    for (Pair<DataSegment, String> segmentAndCreatedDate : segmentsAndCreatedDates) {
-      final DataSegment segment = segmentAndCreatedDate.lhs;
-      final String createdDate = segmentAndCreatedDate.rhs;
+    for (final Interval segmentInterval : intervalToCreatedToSegments.keySet()) {
+      String lockVersion = null;
       for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
-        if (replaceLock.getInterval().contains(segment.getInterval())
-            && replaceLock.getVersion().compareTo(createdDate) < 0) {
-          // If a REPLACE lock covers a segment but has a version less than the segment's created date, remove it
-          allSegmentsToBeReplaced.remove(segment);
+        if (replaceLock.getInterval().contains(segmentInterval)) {
+          lockVersion = replaceLock.getVersion();
+        }
+      }
+      Map<String, Set<DataSegment>> createdToSegments = intervalToCreatedToSegments.get(segmentInterval);
+      for (String created : createdToSegments.keySet()) {
+        if (lockVersion == null || lockVersion.compareTo(created) > 0) {
+          allSegmentsToBeReplaced.addAll(createdToSegments.get(created));
         }
       }
     }
 
     return SegmentTimeline.forSegments(allSegmentsToBeReplaced)
                           .findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
+  }
+
+  private Collection<DataSegment> retrieveAllVisibleSegments(TaskActionToolbox toolbox)
+  {
+    return toolbox.getIndexerMetadataStorageCoordinator()
+                  .retrieveUsedSegmentsForInterval(dataSource, interval, Segments.ONLY_VISIBLE);
   }
 
   @Override

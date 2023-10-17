@@ -53,7 +53,7 @@ public abstract class AbstractBatchSubtask extends AbstractBatchIndexTask
   public abstract String getSubtaskSpecId();
 
   /**
-   * @return the id of the subtask's supervisor
+   * @return Task ID of the {@code ParallelIndexSupervisorTask} which launched this sub-task.
    */
   @JsonProperty
   public String getSupervisorTaskId()

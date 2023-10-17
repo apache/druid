@@ -873,7 +873,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     verifyInputSegments(replaceTask, JAN_23, segment1);
 
     replaceTask.releaseLock(JAN_23);
-    replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23);
 
     final SegmentIdWithShardSpec pendingSegmentV03
         = appendTask.allocateSegmentForTimestamp(JAN_23.getStart(), Granularities.MONTH);
@@ -883,9 +882,15 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     Assert.assertEquals(JAN_23, pendingSegmentV03.getInterval());
     final DataSegment segment3 = asSegment(pendingSegmentV03);
     appendTask.commitAppendSegments(segment3);
+    appendTask.releaseLock(JAN_23);
 
+    replaceTask.acquireReplaceLockOn(FIRST_OF_JAN_23);
     // The new lock was acquired before segment3 was created but it doesn't contain the month's interval
     // So, all three segments are chosen
+    verifyInputSegments(replaceTask, JAN_23, segment1, segment2, segment3);
+
+    replaceTask.releaseLock(FIRST_OF_JAN_23);
+    // All the segments are chosen when there's no lock
     verifyInputSegments(replaceTask, JAN_23, segment1, segment2, segment3);
   }
 
