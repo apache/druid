@@ -22,7 +22,12 @@ package org.apache.druid.sql.calcite.planner;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.util.Static;
 
 /**
  * Druid extended SQL validator. (At present, it doesn't actually
@@ -38,5 +43,27 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   )
   {
     super(opTab, catalogReader, typeFactory, validatorConfig);
+  }
+
+  @Override
+  public void validateCall(SqlCall call, SqlValidatorScope scope)
+  {
+    if(call.getKind() == SqlKind.NULLS_FIRST) {
+      SqlNode op0 = call.getOperandList().get(0);
+      if(op0.getKind() == SqlKind.DESCENDING) {
+        throw newValidationError(call,
+            Static.RESOURCE.functionMatchRecognizeOnly("JADAJADA!"));
+      }
+    }
+    if(call.getKind() == SqlKind.NULLS_LAST) {
+      SqlNode op0 = call.getOperandList().get(0);
+      if(op0.getKind() != SqlKind.DESCENDING) {
+        throw newValidationError(call,
+            Static.RESOURCE.functionMatchRecognizeOnly("JADAJADA2!"));
+      }
+
+    }
+
+    super.validateCall(call, scope);
   }
 }

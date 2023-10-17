@@ -5462,7 +5462,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_10")
   @Test
   public void test_lag_func_lag_Fn_10()
@@ -5470,7 +5469,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_11")
   @Test
   public void test_lag_func_lag_Fn_11()
@@ -5478,7 +5476,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_12")
   @Test
   public void test_lag_func_lag_Fn_12()
@@ -5486,7 +5483,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_13")
   @Test
   public void test_lag_func_lag_Fn_13()
@@ -5494,7 +5490,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_14")
   @Test
   public void test_lag_func_lag_Fn_14()
@@ -5502,7 +5497,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_15")
   @Test
   public void test_lag_func_lag_Fn_15()
@@ -5510,7 +5504,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_16")
   @Test
   public void test_lag_func_lag_Fn_16()
@@ -5518,7 +5511,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_17")
   @Test
   public void test_lag_func_lag_Fn_17()
@@ -5526,7 +5518,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NULLS_FIRST_LAST)
   @DrillTest("lag_func/lag_Fn_18")
   @Test
   public void test_lag_func_lag_Fn_18()
