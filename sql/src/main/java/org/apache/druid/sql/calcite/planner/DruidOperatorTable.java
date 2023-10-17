@@ -350,9 +350,6 @@ public class DruidOperatorTable implements SqlOperatorTable
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
                    .add(new CaseOperatorConversion())
-                   .add(new DescOperatorConversion(SqlStdOperatorTable.DESC))
-                   .add(new DescOperatorConversion(SqlStdOperatorTable.NULLS_FIRST))
-                   .add(new DescOperatorConversion(SqlStdOperatorTable.NULLS_LAST))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CHAR_LENGTH, "strlen"))
                    .add(CHARACTER_LENGTH_CONVERSION)
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "LENGTH"))
@@ -491,18 +488,6 @@ public class DruidOperatorTable implements SqlOperatorTable
   {
     if (opName == null || opName.names.size() != 1) {
       return;
-    }
-    if(syntax == SqlSyntax.POSTFIX) {
-      int asd = 1;
-//      if (opName.names.contains("DESC")) {
-//        operatorList.add(SqlStdOperatorTable.DESC);
-//      }
-//      if (opName.names.contains("NULLS FIRST")) {
-//        operatorList.add(SqlStdOperatorTable.NULLS_FIRST);
-//      }
-//      if (opName.names.contains("NULLS_LAST")) {
-//        operatorList.add(SqlStdOperatorTable.NULLS_LAST);
-//      }
     }
 
     final OperatorKey operatorKey = OperatorKey.of(opName.getSimple(), syntax);

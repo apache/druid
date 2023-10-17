@@ -29,7 +29,7 @@ import org.apache.druid.error.InvalidSqlInput;
 
 public abstract class DruidSqlPostfixOperator extends SqlPostfixOperator {
 
-  static final SqlPostfixOperator DRUID_NULLS_FIRST = new DruidSqlPostfixOperator(SqlStdOperatorTable.NULLS_FIRST) {
+  public static final SqlPostfixOperator DRUID_NULLS_FIRST = new DruidSqlPostfixOperator(SqlStdOperatorTable.NULLS_FIRST) {
     @Override
     void validateCall(SqlCall call)
     {
@@ -39,7 +39,7 @@ public abstract class DruidSqlPostfixOperator extends SqlPostfixOperator {
     }
   };
 
-  static final SqlPostfixOperator DRUID_NULLS_LAST = new DruidSqlPostfixOperator(SqlStdOperatorTable.NULLS_FIRST) {
+  public static final SqlPostfixOperator DRUID_NULLS_LAST = new DruidSqlPostfixOperator(SqlStdOperatorTable.NULLS_LAST) {
     @Override
     void validateCall(SqlCall call)
     {
