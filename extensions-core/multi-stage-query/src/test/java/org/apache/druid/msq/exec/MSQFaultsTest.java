@@ -385,8 +385,8 @@ public class MSQFaultsTest extends MSQTestBase
     for (TaskLockType taskLockType : new TaskLockType[]{TaskLockType.EXCLUSIVE, TaskLockType.REPLACE}) {
       testLockTypes(
           taskLockType,
-          "insert into foo1 select * from foo partitioned by day",
-          "TaskLock must be of type SHARED or APPEND for an insert query"
+          "INSERT INTO foo1 select * from foo partitioned by day",
+          "TaskLock must be of type [SHARED] or [APPEND] for an INSERT query"
       );
     }
   }
@@ -397,8 +397,8 @@ public class MSQFaultsTest extends MSQTestBase
     for (TaskLockType taskLockType : new TaskLockType[]{TaskLockType.APPEND, TaskLockType.SHARED}) {
       testLockTypes(
           taskLockType,
-          "replace into foo1 overwrite ALL select * from foo partitioned by day",
-          "TaskLock must be of type EXCLUSIVE or REPLACE for a replace query"
+          "REPLACE INTO foo1 overwrite ALL select * from foo partitioned by day",
+          "TaskLock must be of type [EXCLUSIVE] or [REPLACE] for a REPLACE query"
       );
     }
   }

@@ -377,18 +377,18 @@ public class MultiStageQueryContext
       if (isReplaceQuery) {
         return TaskLockType.EXCLUSIVE;
       } else {
-        return TaskLockType.APPEND;
+        return TaskLockType.SHARED;
       }
     }
     final String appendErrorMessage = StringUtils.format(
-        "Please use context parameter with key %s to set the taskLockType or "
+        " Please use [%s] key in the context parameter and use one of the TaskLock types as mentioned earlier or "
         + "remove this key for automatic lock type selection", Tasks.TASK_LOCK_TYPE);
 
     if (isReplaceQuery && !(taskLockType.equals(TaskLockType.EXCLUSIVE) || taskLockType.equals(TaskLockType.REPLACE))) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
-                              "TaskLock must be of type %s or %s for a replace query. Found type %s set."
+                              "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
                               + appendErrorMessage,
                               TaskLockType.EXCLUSIVE,
                               TaskLockType.REPLACE,
@@ -399,7 +399,7 @@ public class MultiStageQueryContext
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
-                              "TaskLock must be of type %s or %s for an insert query. Found type %s set."
+                              "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
                               + appendErrorMessage,
                               TaskLockType.SHARED,
                               TaskLockType.APPEND,
