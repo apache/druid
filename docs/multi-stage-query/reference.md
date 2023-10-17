@@ -390,7 +390,7 @@ Use the following configurations to control the cleaner:
 |Parameter          |Default                                 | Description          |
 |-------------------|----------------------------------------|----------------------|
 |`druid.msq.intermediate.storage.cleaner.enabled`| false | Optional. Whether durable storage cleaner should be enabled for the cluster.  |
-|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | Optional. The delay (in seconds) after the last run posts before the durable storage cleaner cleans up files.  |
+|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | Optional. The delay (in seconds) after the latest run post which the durable storage cleaner cleans the up files.  |
 
 
 ## Limits
