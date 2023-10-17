@@ -292,14 +292,6 @@
      <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
   </suppress>
   <suppress>
-    <notes><![CDATA[
-    Druid is not a native app, so the vulnerability flagged is a false positive.
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.google\.oauth-client/google\-oauth\-client@.*$</packageUrl>
-    <cve>CVE-2020-7692</cve>
-    <cve>CVE-2021-22573</cve>
-  </suppress>
-  <suppress>
     <!--
       ~ TODO: Fix when Apache Ranger 2.1 is released
       -->
@@ -359,6 +351,9 @@
     ]]></notes>
     <cve>CVE-2022-45855</cve>
     <cve>CVE-2022-42009</cve>
+    <!-- Suppress hadoop CVEs that not applicable to hadoop-annotations -->
+    <cve>CVE-2022-25168</cve> <!-- Affected FileUtil.unTar(File, File) API isn't present in hadoop-annotations -->
+    <cve>CVE-2021-33036</cve> <!-- Only applicable to hadoop-yarn-server -->
   </suppress>
   <suppress>
     <!--
@@ -759,6 +754,11 @@
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
     <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
+    <!-- CVE from shaded dependency nimbus-jose-jwt, fixed in upcoming Hadoop release version -
+    https://github.com/apache/hadoop/commit/ad49ddda0e1d9632c8c9fcdc78fca8244e1248c9 -->
+    <cve>CVE-2023-1370</cve>
+    <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
+    <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
@@ -788,15 +788,27 @@
 
   <suppress>
     <notes><![CDATA[
-      file name: guava-16.0.1.jar
+      file name: okio-1.17.2.jar, okio-1.15.0.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.google\.guava/guava@16.0.1$</packageUrl>
-    <!--
-      ~ We don't either use AtomicDoubleArray (when serialized with Java serialization) or
-      ~ CompoundOrdering (when serialized with GWT serialization) nor do we use Java or GWT serialization. https://nvd.nist.gov/vuln/detail/cve-2018-10237
-    -->
-    <cve>CVE-2018-10237</cve>
-    <cve>CVE-2020-8908</cve> <!-- We do not use com.google.common.io.Files.createTempDir() https://nvd.nist.gov/vuln/detail/CVE-2020-8908 -->
-    <cve>CVE-2023-2976</cve> <!-- We do not use com.google.common.io.FileBackedOutputStream https://nvd.nist.gov/vuln/detail/CVE-2023-2976 -->
+    <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@1..*$</packageUrl>
+    <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: grpc-context-1.27.2.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
+    <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
+    <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
+  </suppress>
+
+  <!-- CVE-2022-4244 is affecting plexus-utils package, plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
+  <suppress base="true">
+    <notes><![CDATA[
+   FP per issue #5973
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-interpolation@.*$</packageUrl>
+    <cve>CVE-2022-4244</cve>
   </suppress>
 </suppressions>

@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -42,6 +43,7 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
@@ -172,10 +174,11 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   @Test
   public void testExtensionCalciteRule()
   {
+    ObjectMapper mapper = new DefaultObjectMapper();
     PlannerToolbox toolbox = new PlannerToolbox(
         injector.getInstance(DruidOperatorTable.class),
         macroTable,
-        new DefaultObjectMapper(),
+        mapper,
         injector.getInstance(PlannerConfig.class),
         rootSchema,
         joinableFactoryWrapper,
@@ -185,13 +188,15 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         AuthConfig.newBuilder().build()
     );
+
     PlannerContext context = PlannerContext.create(
         toolbox,
         "SELECT 1",
-        null,
+        new NativeSqlEngine(queryLifecycleFactory, mapper),
         Collections.emptyMap(),
         null
     );
+
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)
                                          .contains(customRule);

@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -40,8 +41,8 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
@@ -141,18 +142,19 @@ public class Filters
     // missing column -> match all rows if the predicate matches null; match no rows otherwise
     return predicateFactory.makeStringPredicate().apply(null)
            ? new AllTrueBitmapColumnIndex(selector)
-           : new AllFalseBitmapColumnIndex(selector);
+           : new AllUnknownBitmapColumnIndex(selector);
   }
 
   public static BitmapColumnIndex makeMissingColumnNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
   {
-    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
+    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllUnknownBitmapColumnIndex(selector);
   }
 
   public static ImmutableBitmap computeDefaultBitmapResults(Filter filter, ColumnIndexSelector selector)
   {
     return filter.getBitmapColumnIndex(selector).computeBitmapResult(
-        new DefaultBitmapResultFactory(selector.getBitmapFactory())
+        new DefaultBitmapResultFactory(selector.getBitmapFactory()),
+        false
     );
   }
 
@@ -370,7 +372,7 @@ public class Filters
   public static boolean filterMatchesNull(Filter filter)
   {
     ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
-    return valueMatcher.matches();
+    return valueMatcher.matches(false);
   }
 
 
@@ -421,5 +423,20 @@ public class Filters
     }
 
     return retVal;
+  }
+
+  public static int countNumberOfFilters(@Nullable Filter filter)
+  {
+    if (filter == null) {
+      return 0;
+    }
+    if (filter instanceof BooleanFilter) {
+      return ((BooleanFilter) filter).getFilters()
+                                     .stream()
+                                     .map(f -> countNumberOfFilters(f))
+                                     .mapToInt(Integer::intValue)
+                                     .sum();
+    }
+    return 1;
   }
 }

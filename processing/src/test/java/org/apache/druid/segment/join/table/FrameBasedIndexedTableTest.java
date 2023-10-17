@@ -33,6 +33,7 @@ import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.FrameBasedInlineDataSource;
@@ -42,10 +43,12 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -207,11 +210,13 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
 
   private FrameBasedInlineDataSource dataSource;
   private FrameBasedIndexedTable frameBasedIndexedTable;
+  private Pair<Cursor, Closeable> cursorCloseablePair;
 
   @Before
   public void setup()
   {
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(DATASOURCE_ROWS, ROW_SIGNATURE);
+    cursorCloseablePair = IterableRowsCursorHelper.getCursorFromIterable(DATASOURCE_ROWS, ROW_SIGNATURE);
+    Cursor cursor = cursorCloseablePair.lhs;
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
@@ -226,7 +231,12 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
     );
 
     frameBasedIndexedTable = new FrameBasedIndexedTable(dataSource, KEY_COLUMNS, "test");
+  }
 
+  @After
+  public void tearDown() throws IOException
+  {
+    cursorCloseablePair.rhs.close();
   }
 
   @Test
@@ -325,14 +335,10 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
 
       for (Object val : vals) {
         final IntSortedSet valIndex = valueIndex.find(val);
-        if (val == null) {
-          Assert.assertEquals(0, valIndex.size());
-        } else {
-          Assert.assertTrue(valIndex.size() > 0);
-          final IntBidirectionalIterator rowIterator = valIndex.iterator();
-          while (rowIterator.hasNext()) {
-            Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
-          }
+        Assert.assertTrue(valIndex.size() > 0);
+        final IntBidirectionalIterator rowIterator = valIndex.iterator();
+        while (rowIterator.hasNext()) {
+          Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
         }
       }
       for (Object val : nonmatchingVals) {

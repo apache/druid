@@ -44,7 +44,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Before
   public void setup()
   {
-    task = NoopTask.create("id", 0);
+    task = NoopTask.create();
     workItem = new KubernetesWorkItem(task, null);
   }
 
@@ -53,6 +53,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -66,6 +67,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             null
         ))
     );
@@ -75,12 +77,13 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   public void test_shutdown_withoutKubernetesPeonLifecycle()
   {
     workItem.shutdown();
-    Assert.assertTrue(workItem.isShutdownRequested());
   }
 
   @Test
   public void test_shutdown_withKubernetesPeonLifecycle()
   {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task);
+
     kubernetesPeonLifecycle.shutdown();
     EasyMock.expectLastCall();
     kubernetesPeonLifecycle.startWatchingLogs();
@@ -88,10 +91,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
 
     replayAll();
     workItem.setKubernetesPeonLifecycle(kubernetesPeonLifecycle);
-
     workItem.shutdown();
     verifyAll();
-    Assert.assertTrue(workItem.isShutdownRequested());
   }
 
   @Test
@@ -160,6 +161,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
 
@@ -171,6 +173,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -196,6 +199,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ) {
       @Override
@@ -215,6 +219,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -246,6 +251,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
     Assert.assertFalse(workItem.streamTaskLogs().isPresent());
@@ -262,6 +268,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,

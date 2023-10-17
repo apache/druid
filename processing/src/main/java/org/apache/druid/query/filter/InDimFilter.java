@@ -564,6 +564,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+    private final boolean hasNull;
 
     public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
@@ -572,6 +573,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     {
       this.extractionFn = extractionFn;
       this.values = values;
+      this.hasNull = values.contains(null);
 
       // As the set of filtered values can be large, parsing them as numbers should be done only if needed, and
       // only once. Pass in a common long predicate supplier to all filters created by .toFilter(), so that we only
@@ -628,6 +630,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
+    public boolean isNullInputUnknown()
+    {
+      return !hasNull;
+    }
+
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {
@@ -659,9 +667,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     /**
      * Create a ValuesSet from another Collection. The Collection will be reused if it is a {@link SortedSet} with
-     * an appropriate comparator.
+     * the {@link Comparators#naturalNullsFirst()} comparator.
      */
-    public ValuesSet(final Collection<String> values)
+    private ValuesSet(final Collection<String> values)
     {
       if (values instanceof SortedSet && Comparators.naturalNullsFirst()
                                                     .equals(((SortedSet<String>) values).comparator())) {
@@ -670,6 +678,36 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         this.values = new TreeSet<>(Comparators.naturalNullsFirst());
         this.values.addAll(values);
       }
+    }
+
+    /**
+     * Creates an empty ValuesSet.
+     */
+    public static ValuesSet create()
+    {
+      return new ValuesSet(new TreeSet<>(Comparators.naturalNullsFirst()));
+    }
+
+    /**
+     * Creates a ValuesSet wrapping the provided single value.
+     *
+     * @throws IllegalStateException if the provided collection cannot be wrapped since it has the wrong comparator
+     */
+    public static ValuesSet of(@Nullable final String value)
+    {
+      final ValuesSet retVal = ValuesSet.create();
+      retVal.add(value);
+      return retVal;
+    }
+
+    /**
+     * Creates a ValuesSet copying the provided collection.
+     */
+    public static ValuesSet copyOf(final Collection<String> values)
+    {
+      final TreeSet<String> copyOfValues = new TreeSet<>(Comparators.naturalNullsFirst());
+      copyOfValues.addAll(values);
+      return new ValuesSet(copyOfValues);
     }
 
     public SortedSet<ByteBuffer> toUtf8()

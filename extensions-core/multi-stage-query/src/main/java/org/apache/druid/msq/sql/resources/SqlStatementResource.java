@@ -75,10 +75,13 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlRowTransformer;
@@ -120,26 +123,26 @@ public class SqlStatementResource
   public static final String RESULT_FORMAT = "__resultFormat";
   private static final Logger log = new Logger(SqlStatementResource.class);
   private final SqlStatementFactory msqSqlStatementFactory;
-  private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper jsonMapper;
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
+  private final AuthorizerMapper authorizerMapper;
 
 
   @Inject
   public SqlStatementResource(
       final @MSQ SqlStatementFactory msqSqlStatementFactory,
-      final AuthorizerMapper authorizerMapper,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
-      final @MultiStageQuery StorageConnector storageConnector
+      final @MultiStageQuery StorageConnector storageConnector,
+      final AuthorizerMapper authorizerMapper
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
-    this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnector;
+    this.authorizerMapper = authorizerMapper;
   }
 
   /**
@@ -151,16 +154,8 @@ public class SqlStatementResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response isEnabled(@Context final HttpServletRequest request)
   {
-    // All authenticated users are authorized for this API: check an empty resource list.
-    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-        request,
-        Collections.emptyList(),
-        authorizerMapper
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
-    }
+    // All authenticated users are authorized for this API.
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
 
     return Response.ok(ImmutableMap.of("enabled", true)).build();
   }
@@ -192,7 +187,7 @@ public class SqlStatementResource
       final boolean isTaskStruct = MSQTaskSqlEngine.TASK_STRUCT_FIELD_NAMES.equals(rowTransformer.getFieldList());
 
       if (isTaskStruct) {
-        return buildTaskResponse(sequence, stmt.query().authResult().getIdentity());
+        return buildTaskResponse(sequence, stmt.query().authResult());
       } else {
         // Used for EXPLAIN
         return buildStandardResponse(sequence, modifiedQuery, sqlQueryId, rowTransformer);
@@ -222,7 +217,7 @@ public class SqlStatementResource
       return buildNonOkResponse(
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build(e.getMessage())
+                        .build("%s", e.getMessage())
       );
     }
     finally {
@@ -240,20 +235,14 @@ public class SqlStatementResource
   )
   {
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
           queryId,
-          authenticationResult.getIdentity(),
-          true
+          authenticationResult,
+          true,
+          Action.READ
       );
 
       if (sqlStatementResult.isPresent()) {
@@ -288,14 +277,7 @@ public class SqlStatementResource
   )
   {
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       if (page != null && page < 0) {
@@ -316,7 +298,11 @@ public class SqlStatementResource
         throw queryNotFoundException(queryId);
       }
 
-      MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
+      MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(
+          queryId,
+          authenticationResult,
+          Action.READ
+      );
       throwIfQueryIsNotSuccessful(queryId, statusPlus);
 
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
@@ -376,20 +362,14 @@ public class SqlStatementResource
   {
 
     try {
-      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-          req,
-          Collections.emptyList(),
-          authorizerMapper
-      );
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
-      }
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
           queryId,
-          authenticationResult.getIdentity(),
-          false
+          authenticationResult,
+          false,
+          Action.WRITE
       );
       if (sqlStatementResult.isPresent()) {
         switch (sqlStatementResult.get().getState()) {
@@ -483,7 +463,7 @@ public class SqlStatementResource
     }
   }
 
-  private Response buildTaskResponse(Sequence<Object[]> sequence, String user)
+  private Response buildTaskResponse(Sequence<Object[]> sequence, AuthenticationResult authenticationResult)
   {
     List<Object[]> rows = sequence.toList();
     int numRows = rows.size();
@@ -499,7 +479,7 @@ public class SqlStatementResource
     }
     String taskId = String.valueOf(firstRow[0]);
 
-    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, user, true);
+    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ);
 
     if (statementResult.isPresent()) {
       return Response.status(Response.Status.OK).entity(statementResult.get()).build();
@@ -524,7 +504,7 @@ public class SqlStatementResource
   }
 
   @SuppressWarnings("ReassignedVariable")
-  private Optional<ResultSetInformation> getSampleResults(
+  private Optional<ResultSetInformation> getResultSetInformation(
       String queryId,
       String dataSource,
       SqlStatementState sqlStatementState,
@@ -600,8 +580,12 @@ public class SqlStatementResource
   }
 
 
-  private Optional<SqlStatementResult> getStatementStatus(String queryId, String currentUser, boolean withResults)
-      throws DruidException
+  private Optional<SqlStatementResult> getStatementStatus(
+      String queryId,
+      AuthenticationResult authenticationResult,
+      boolean withResults,
+      Action forAction
+  ) throws DruidException
   {
     TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
     if (taskResponse == null) {
@@ -614,7 +598,7 @@ public class SqlStatementResource
     }
 
     // since we need the controller payload for auth checks.
-    MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, currentUser);
+    MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
     if (SqlStatementState.FAILED == sqlStatementState) {
@@ -633,7 +617,7 @@ public class SqlStatementResource
           taskResponse.getStatus().getCreatedTime(),
           signature.orElse(null),
           taskResponse.getStatus().getDuration(),
-          withResults ? getSampleResults(
+          withResults ? getResultSetInformation(
               queryId,
               msqControllerTask.getDataSource(),
               sqlStatementState,
@@ -645,7 +629,20 @@ public class SqlStatementResource
   }
 
 
-  private MSQControllerTask getMSQControllerTaskOrThrow(String queryId, String currentUser)
+  /**
+   * This method contacts the overlord for the controller task and checks if the requested user has the
+   * necessary permissions. A user has the necessary permissions if one of the following criteria is satisfied:
+   * 1. The user is the one who submitted the query
+   * 2. The user belongs to a role containing the READ or WRITE permissions over the STATE resource. For endpoints like GET,
+   *   the user should have READ permission for the STATE resource, while for endpoints like DELETE, the user should
+   *   have WRITE permission for the STATE resource. (Note: POST API does not need to check the state permissions since
+   *   the currentUser always equal to the queryUser)
+   */
+  private MSQControllerTask getMSQControllerTaskAndCheckPermission(
+      String queryId,
+      AuthenticationResult authenticationResult,
+      Action forAction
+  ) throws ForbiddenException
   {
     TaskPayloadResponse taskPayloadResponse = contactOverlord(overlordClient.taskPayload(queryId), queryId);
     SqlStatementResourceHelper.isMSQPayload(taskPayloadResponse, queryId);
@@ -655,15 +652,28 @@ public class SqlStatementResource
                                                        .getQuery()
                                                        .getContext()
                                                        .get(MSQTaskQueryMaker.USER_KEY));
-    if (currentUser == null || !currentUser.equals(queryUser)) {
-      throw new ForbiddenException(StringUtils.format(
-          "The current user[%s] cannot view query id[%s] since the query is owned by user[%s]",
-          currentUser,
-          queryId,
-          queryUser
-      ));
+
+    String currentUser = authenticationResult.getIdentity();
+
+    if (currentUser != null && currentUser.equals(queryUser)) {
+      return msqControllerTask;
     }
-    return msqControllerTask;
+
+    Access access = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, forAction)),
+        authorizerMapper
+    );
+
+    if (access.isAllowed()) {
+      return msqControllerTask;
+    }
+
+    throw new ForbiddenException(StringUtils.format(
+        "The current user[%s] cannot view query id[%s] since the query is owned by another user",
+        currentUser,
+        queryId
+    ));
   }
 
   /**
@@ -772,11 +782,16 @@ public class SqlStatementResource
                                                            || selectedPageId.equals(pageInformation.getId()))
                                 .map(pageInformation -> {
                                   try {
+                                    if (pageInformation.getWorker() == null || pageInformation.getPartition() == null) {
+                                      throw DruidException.defensive(
+                                          "Worker or partition number is null for page id [%d]",
+                                          pageInformation.getId()
+                                      );
+                                    }
                                     return new FrameChannelSequence(standardImplementation.openChannel(
                                         finalStage.getId(),
-                                        (int) pageInformation.getId(),
-                                        (int) pageInformation.getId()
-// we would always have partition number == worker number
+                                        pageInformation.getWorker(),
+                                        pageInformation.getPartition()
                                     ));
                                   }
                                   catch (Exception e) {

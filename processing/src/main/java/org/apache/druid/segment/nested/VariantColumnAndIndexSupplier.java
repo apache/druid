@@ -20,10 +20,10 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -35,15 +35,13 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
-import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
@@ -92,8 +90,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final GenericIndexed<ByteBuffer> stringDictionary;
-        final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
+        final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier;
         final Supplier<FixedIndexed<Long>> longDictionarySupplier;
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
@@ -105,34 +102,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
             NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
         );
 
-        final int dictionaryStartPosition = stringDictionaryBuffer.position();
-        final byte dictionaryVersion = stringDictionaryBuffer.get();
-
-        if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
-          final byte encodingId = stringDictionaryBuffer.get();
-          if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
-            frontCodedStringDictionarySupplier = FrontCodedIndexed.read(
-                stringDictionaryBuffer,
-                byteOrder
-            );
-            stringDictionary = null;
-          } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
-            // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
-            // this provides backwards compatibility should we switch at some point in the future to always
-            // writing dictionaryVersion
-            stringDictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
-            frontCodedStringDictionarySupplier = null;
-          } else {
-            throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
-          }
-        } else {
-          // legacy format that only supports plain utf8 enoding stored in GenericIndexed and the byte we are reading
-          // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
-          // GenericIndexed version can be correctly read
-          stringDictionaryBuffer.position(dictionaryStartPosition);
-          stringDictionary = GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper);
-          frontCodedStringDictionarySupplier = null;
-        }
+        stringDictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+            mapper,
+            stringDictionaryBuffer,
+            byteOrder
+        );
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
@@ -213,8 +187,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         return new VariantColumnAndIndexSupplier(
             logicalType,
             variantTypeByte,
-            stringDictionary,
-            frontCodedStringDictionarySupplier,
+            stringDictionarySupplier,
             longDictionarySupplier,
             doubleDictionarySupplier,
             arrayDictionarySupplier,
@@ -255,8 +228,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   public VariantColumnAndIndexSupplier(
       ColumnType logicalType,
       @Nullable Byte variantTypeSetByte,
-      GenericIndexed<ByteBuffer> stringDictionary,
-      Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier,
+      Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
       Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
@@ -271,9 +243,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
   {
     this.logicalType = logicalType;
     this.variantTypeSetByte = variantTypeSetByte;
-    stringDictionarySupplier = frontCodedStringDictionarySupplier != null
-                               ? frontCodedStringDictionarySupplier
-                               : stringDictionary::singleThreaded;
+    this.stringDictionarySupplier = stringDictionarySupplier;
     this.longDictionarySupplier = longDictionarySupplier;
     this.doubleDictionarySupplier = doubleDictionarySupplier;
     this.arrayDictionarySupplier = arrayDictionarySupplier;
@@ -356,7 +326,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
           ExpressionType.fromColumnTypeStrict(logicalType)
       );
       if (castForComparison == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       final Object[] arrayToMatch = castForComparison.asArray();
       Indexed elements;
@@ -393,7 +363,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         }
         if (ids[i] < 0) {
           if (value == null) {
-            return new AllFalseBitmapColumnIndex(bitmapFactory);
+            return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
           }
         }
       }
@@ -412,9 +382,17 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int id = dictionary.indexOf(ids) + arrayOffset;
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -437,7 +415,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
           ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
       );
       if (castForComparison == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       Indexed elements;
       final int elementOffset;
@@ -474,10 +452,17 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int elementId = getElementId();
-
+          if (includeUnknown) {
+            if (elementId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getElementBitmap(elementId), nullValueBitmap)
+            );
+          }
           if (elementId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }

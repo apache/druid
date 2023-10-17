@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.inject.Inject;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -29,7 +28,6 @@ public class KillRules extends MetadataCleanupDuty
 {
   private final MetadataRuleManager metadataRuleManager;
 
-  @Inject
   public KillRules(
       DruidCoordinatorConfig config,
       MetadataRuleManager metadataRuleManager
@@ -38,6 +36,7 @@ public class KillRules extends MetadataCleanupDuty
     super(
         "rules",
         "druid.coordinator.kill.rule",
+        config.isRuleKillEnabled(),
         config.getCoordinatorRuleKillPeriod(),
         config.getCoordinatorRuleKillDurationToRetain(),
         Stats.Kill.RULES,

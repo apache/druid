@@ -19,9 +19,10 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -30,18 +31,24 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.InputStream;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
   private final Task task;
-
-  private final AtomicBoolean shutdownRequested = new AtomicBoolean(false);
   private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
 
-  public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
+  private final SettableFuture<TaskStatus> result;
+
+  public KubernetesWorkItem(Task task)
   {
-    super(task.getId(), statusFuture);
+    this(task, SettableFuture.create());
+  }
+
+  @VisibleForTesting
+  public KubernetesWorkItem(Task task, SettableFuture<TaskStatus> result)
+  {
+    super(task.getId(), result);
+    this.result = result;
     this.task = task;
   }
 
@@ -53,17 +60,11 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected synchronized void shutdown()
   {
-    this.shutdownRequested.set(true);
 
-    if (this.kubernetesPeonLifecycle != null) {
+    if (this.kubernetesPeonLifecycle != null && !result.isDone()) {
       this.kubernetesPeonLifecycle.startWatchingLogs();
       this.kubernetesPeonLifecycle.shutdown();
     }
-  }
-
-  protected boolean isShutdownRequested()
-  {
-    return shutdownRequested.get();
   }
 
   protected boolean isPending()
@@ -127,5 +128,10 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   public Task getTask()
   {
     return task;
+  }
+
+  public void setResult(TaskStatus status)
+  {
+    result.set(status);
   }
 }

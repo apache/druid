@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -75,6 +76,8 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
+import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.CompactionState;
@@ -1772,7 +1775,7 @@ public class CompactSegmentsTest
   {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
-        .withSnapshotOfDataSourcesWithAllUsedSegments(dataSources)
+        .withDataSourcesSnapshot(dataSources)
         .withCompactionConfig(
             new CoordinatorCompactionConfig(
                 compactionConfigs,
@@ -1992,8 +1995,11 @@ public class CompactSegmentsTest
       return Futures.immediateFuture(null);
     }
 
+
     @Override
-    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority)
+    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
+        List<LockFilterPolicy> lockFilterPolicies
+    )
     {
       return Futures.immediateFuture(lockedIntervals);
     }

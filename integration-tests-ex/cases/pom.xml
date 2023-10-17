@@ -31,7 +31,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>28.0.0-SNAPSHOT</version>
+        <version>29.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -188,13 +188,13 @@
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client</artifactId>
-            <version>${com.google.apis.client.version}</version>
+            <version>${com.google.http.client.apis.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client-jackson2</artifactId>
-            <version>${com.google.apis.client.version}</version>
+            <version>${com.google.http.client.apis.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Tests can choose either the MySQL or MariaDB driver. -->

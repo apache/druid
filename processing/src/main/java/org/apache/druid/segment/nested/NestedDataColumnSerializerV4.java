@@ -67,10 +67,8 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
   public static final String STRING_DICTIONARY_FILE_NAME = "__stringDictionary";
   public static final String LONG_DICTIONARY_FILE_NAME = "__longDictionary";
   public static final String DOUBLE_DICTIONARY_FILE_NAME = "__doubleDictionary";
-  public static final String ARRAY_DICTIONARY_FILE_NAME = "__arrayDictionary";
   public static final String RAW_FILE_NAME = "__raw";
   public static final String NULL_BITMAP_FILE_NAME = "__nullIndex";
-
   public static final String NESTED_FIELD_PREFIX = "__field_";
 
   private final String name;
@@ -146,7 +144,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
-    this.globalDictionaryIdLookup = new DictionaryIdLookup();
   }
 
   @Override
@@ -197,6 +194,16 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     nullBitmapWriter.open();
 
     nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+
+    globalDictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            dictionaryWriter,
+            longDictionaryWriter,
+            doubleDictionaryWriter,
+            null
+        )
+    );
   }
 
   public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
@@ -265,7 +272,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
 
     // null is always 0
     dictionaryWriter.write(null);
-    globalDictionaryIdLookup.addString(null);
     for (String value : strings) {
       value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
@@ -273,7 +279,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
       }
 
       dictionaryWriter.write(value);
-      globalDictionaryIdLookup.addString(value);
     }
     dictionarySerialized = true;
 
@@ -282,7 +287,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
         continue;
       }
       longDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addLong(value);
     }
 
     for (Double value : doubles) {
@@ -290,7 +294,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
         continue;
       }
       doubleDictionaryWriter.write(value);
-      globalDictionaryIdLookup.addDouble(value);
     }
     dictionarySerialized = true;
   }
@@ -395,5 +398,4 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
   {
     return StringUtils.format("%s.%s", fileNameBase, field);
   }
-
 }

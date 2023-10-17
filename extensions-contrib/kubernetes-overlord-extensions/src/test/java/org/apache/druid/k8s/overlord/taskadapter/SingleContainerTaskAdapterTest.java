@@ -39,6 +39,8 @@ import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.tasklogs.TaskLogs;
+import org.easymock.Mock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,8 @@ class SingleContainerTaskAdapterTest
   private TaskConfig taskConfig;
   private DruidNode druidNode;
   private ObjectMapper jsonMapper;
+
+  @Mock private TaskLogs taskLogs;
 
   @BeforeEach
   public void setup()
@@ -96,9 +100,10 @@ class SingleContainerTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         druidNode,
-        jsonMapper
+        jsonMapper,
+        taskLogs
     );
-    NoopTask task = NoopTask.create("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
         task,

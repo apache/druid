@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.JvmCpuMonitor;
 import org.apache.druid.java.util.metrics.JvmMonitor;
 import org.apache.druid.java.util.metrics.JvmThreadsMonitor;

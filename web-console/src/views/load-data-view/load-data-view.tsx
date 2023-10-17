@@ -226,6 +226,7 @@ function showKafkaLine(line: SampleEntry): string {
   if (!input) return 'Invalid kafka row';
   return compact([
     `[ Kafka timestamp: ${input['kafka.timestamp']}`,
+    `  Topic: ${input['kafka.topic']}`,
     ...filterMap(Object.entries(input), ([k, v]) => {
       if (!k.startsWith('kafka.header.')) return;
       return `  Header: ${k.slice(13)}=${v}`;
@@ -3133,6 +3134,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec } = this.state;
     const parallel = deepGet(spec, 'spec.tuningConfig.maxNumConcurrentSubTasks') > 1;
 
+    const appendToExisting = spec.spec?.ioConfig.appendToExisting;
+
     return (
       <>
         <div className="main">
@@ -3167,6 +3170,17 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     appending to the segment set instead of replacing it.
                   </>
                 ),
+              },
+              {
+                name: 'context.taskLockType',
+                type: 'boolean',
+                label: `Allow concurrent ${
+                  appendToExisting ? 'append' : 'replace'
+                } tasks (experimental)`,
+                defaultValue: undefined,
+                valueAdjustment: v => (v ? (appendToExisting ? 'APPEND' : 'REPLACE') : undefined),
+                adjustValue: v => v === (appendToExisting ? 'APPEND' : 'REPLACE'),
+                info: <p>Allows or forbids concurrent tasks.</p>,
               },
             ]}
             model={spec}

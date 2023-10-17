@@ -23,11 +23,12 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -36,13 +37,24 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Reperesents a UNION ALL of two or more datasources.
+ *
+ * Native engine can only work with table datasources that are scans or simple mappings (column rename without any
+ * expression applied on top). Therefore, it uses methods like {@link #getTableNames()} and
+ * {@link #getDataSourcesAsTableDataSources()} to assert that the children were TableDataSources.
+ *
+ * MSQ should be able to plan and work with arbitrary datasources.  It also needs to replace the datasource with the
+ * InputNumberDataSource while preparing the query plan.
+ */
 public class UnionDataSource implements DataSource
 {
-  @JsonProperty
-  private final List<TableDataSource> dataSources;
+
+  @JsonProperty("dataSources")
+  private final List<DataSource> dataSources;
 
   @JsonCreator
-  public UnionDataSource(@JsonProperty("dataSources") List<TableDataSource> dataSources)
+  public UnionDataSource(@JsonProperty("dataSources") List<DataSource> dataSources)
   {
     if (dataSources == null || dataSources.isEmpty()) {
       throw new ISE("'dataSources' must be non-null and non-empty for 'union'");
@@ -51,18 +63,45 @@ public class UnionDataSource implements DataSource
     this.dataSources = dataSources;
   }
 
+  public List<DataSource> getDataSources()
+  {
+    return dataSources;
+  }
+
+
+  /**
+   * Asserts that the children of the union are all table data sources before returning the table names
+   */
   @Override
   public Set<String> getTableNames()
   {
-    return dataSources.stream()
-                      .map(input -> Iterables.getOnlyElement(input.getTableNames()))
-                      .collect(Collectors.toSet());
+    return dataSources
+        .stream()
+        .map(input -> {
+          if (!(input instanceof TableDataSource)) {
+            throw DruidException.defensive("should be table");
+          }
+          return CollectionUtils.getOnlyElement(
+              input.getTableNames(),
+              xs -> DruidException.defensive("Expected only single table name in TableDataSource")
+          );
+        })
+        .collect(Collectors.toSet());
   }
 
-  @JsonProperty
-  public List<TableDataSource> getDataSources()
+  /**
+   * Asserts that the children of the union are all table data sources
+   */
+  public List<TableDataSource> getDataSourcesAsTableDataSources()
   {
-    return dataSources;
+    return dataSources.stream()
+                      .map(input -> {
+                        if (!(input instanceof TableDataSource)) {
+                          throw DruidException.defensive("should be table");
+                        }
+                        return (TableDataSource) input;
+                      })
+                      .collect(Collectors.toList());
   }
 
   @Override
@@ -78,13 +117,7 @@ public class UnionDataSource implements DataSource
       throw new IAE("Expected [%d] children, got [%d]", dataSources.size(), children.size());
     }
 
-    if (!children.stream().allMatch(dataSource -> dataSource instanceof TableDataSource)) {
-      throw new IAE("All children must be tables");
-    }
-
-    return new UnionDataSource(
-        children.stream().map(dataSource -> (TableDataSource) dataSource).collect(Collectors.toList())
-    );
+    return new UnionDataSource(children);
   }
 
   @Override
@@ -149,11 +182,7 @@ public class UnionDataSource implements DataSource
 
     UnionDataSource that = (UnionDataSource) o;
 
-    if (!dataSources.equals(that.dataSources)) {
-      return false;
-    }
-
-    return true;
+    return dataSources.equals(that.dataSources);
   }
 
   @Override

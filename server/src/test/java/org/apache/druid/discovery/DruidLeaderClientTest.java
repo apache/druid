@@ -75,6 +75,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  */
+@SuppressWarnings("DoNotMock")
 public class DruidLeaderClientTest extends BaseJettyTest
 {
   @Rule
@@ -280,7 +281,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     Assert.assertEquals("http://localhost:1234/", druidLeaderClient.findCurrentLeader());
   }
 
-  private static class TestJettyServerInitializer implements JettyServerInitializer
+  static class TestJettyServerInitializer implements JettyServerInitializer
   {
     @Override
     public void initialize(Server server, Injector injector)

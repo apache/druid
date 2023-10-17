@@ -119,7 +119,8 @@
                 }
             ],
             "context": {
-                "useCache": "true",
+                "useCache": "true", 
+                "vectorize": "false",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -270,7 +271,8 @@
                 }
             ],
             "context": {
-                "useCache": "true",
+                "useCache": "true", 
+                "vectorize": "false",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -514,7 +516,8 @@
             "metric": "unique_users",
             "threshold": 3,
             "context": {
-                "useCache": "true",
+                "useCache": "true", 
+                "vectorize": "false",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -693,7 +696,8 @@
             "metric": "count",
             "threshold": 3,
             "context": {
-                "useCache": "true",
+                "useCache": "true", 
+                "vectorize": "false",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -878,7 +882,8 @@
             "metric": "count",
             "threshold": 3,
             "context": {
-                "useCache": "true",
+                "useCache": "true", 
+                "vectorize": "false",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1243,7 +1248,8 @@
                 "orderBy": ["robot", "namespace"]
             },
             "context": {
-                "useCache": "true",
+                "useCache": "true", 
+                "vectorize": "false",
                 "populateCache": "true",
                 "timeout": 360000
             }
@@ -1410,7 +1416,7 @@
                         "minValue":"",
                         "maxValue":"mmx._unknown",
                         "errorMessage":null,
-                        "hasNulls":true
+                        "hasNulls":false
                     },
                     "language":{
                         "typeSignature": "STRING",

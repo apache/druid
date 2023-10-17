@@ -25,13 +25,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.actions.UpdateLocationAction;
 import org.apache.druid.indexing.common.actions.UpdateStatusAction;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -42,19 +40,19 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.BatchIOConfig;
-import org.apache.druid.server.DruidNode;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractTask implements Task
 {
@@ -100,6 +98,8 @@ public abstract class AbstractTask implements Task
   private File statusFile;
 
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
+  private volatile CountDownLatch cleanupCompletionLatch;
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
@@ -151,11 +151,6 @@ public abstract class AbstractTask implements Task
       FileUtils.mkdirp(attemptDir);
       reportsFile = new File(attemptDir, "report.json");
       statusFile = new File(attemptDir, "status.json");
-      InetAddress hostName = InetAddress.getLocalHost();
-      DruidNode node = toolbox.getTaskExecutorNode();
-      toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.create(
-          hostName.getHostAddress(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort()
-      )));
     }
     log.debug("Task setup complete");
     return null;
@@ -166,6 +161,7 @@ public abstract class AbstractTask implements Task
   {
     TaskStatus taskStatus = TaskStatus.running(getId());
     try {
+      cleanupCompletionLatch = new CountDownLatch(1);
       String errorMessage = setup(taskToolbox);
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
         return TaskStatus.failure(getId(), errorMessage);
@@ -178,14 +174,23 @@ public abstract class AbstractTask implements Task
       throw e;
     }
     finally {
-      cleanUp(taskToolbox, taskStatus);
+      try {
+        cleanUp(taskToolbox, taskStatus);
+      }
+      finally {
+        cleanupCompletionLatch.countDown();
+      }
     }
   }
 
   public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
 
+  @Override
   public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
   {
+    // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
+    Thread.interrupted();
+
     if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
       return;
@@ -197,7 +202,6 @@ public abstract class AbstractTask implements Task
       status = new UpdateStatusAction("failure");
     }
     toolbox.getTaskActionClient().submit(status);
-    toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
 
     if (reportsFile != null && reportsFile.exists()) {
       toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
@@ -213,6 +217,24 @@ public abstract class AbstractTask implements Task
       log.debug("Pushed task status");
     } else {
       log.debug("No task status file exists to push");
+    }
+  }
+
+  @Override
+  public boolean waitForCleanupToFinish()
+  {
+    try {
+      if (cleanupCompletionLatch != null) {
+        // block until the cleanup process completes
+        return cleanupCompletionLatch.await(300, TimeUnit.SECONDS);
+      }
+
+      return true;
+    }
+    catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for task cleanUp to finish!");
+      Thread.currentThread().interrupt();
+      return false;
     }
   }
 
@@ -412,7 +434,7 @@ public abstract class AbstractTask implements Task
     if (emitter == null || metric == null || value == null) {
       return;
     }
-    emitter.emit(getMetricBuilder().build(metric, value));
+    emitter.emit(getMetricBuilder().setMetric(metric, value));
   }
 
 

@@ -22,42 +22,45 @@ package org.apache.druid.server.coordinator.balancer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 public class BalancerStrategyFactoryTest
 {
   private final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
-  private ListeningExecutorService executorService;
-
-  @Before
-  public void setup()
-  {
-    executorService = MoreExecutors.listeningDecorator(
-        new BlockingExecutorService("StrategyFactoryTest-%s")
-    );
-  }
-
-  @After
-  public void tearDown()
-  {
-    executorService.shutdownNow();
-  }
-
   @Test
   public void testCachingCostStrategyFallsBackToCost() throws JsonProcessingException
   {
     final String json = "{\"strategy\":\"cachingCost\"}";
     BalancerStrategyFactory factory = MAPPER.readValue(json, BalancerStrategyFactory.class);
-    BalancerStrategy strategy = factory.createBalancerStrategy(executorService);
+    BalancerStrategy strategy = factory.createBalancerStrategy(1);
 
     Assert.assertTrue(strategy instanceof CostBalancerStrategy);
     Assert.assertFalse(strategy instanceof CachingCostBalancerStrategy);
+
+    factory.stopExecutor();
+  }
+
+  @Test
+  public void testBalancerFactoryCreatesNewExecutorIfNumThreadsChanges()
+  {
+    BalancerStrategyFactory factory = new CostBalancerStrategyFactory();
+    ListeningExecutorService exec1 = factory.getOrCreateBalancerExecutor(1);
+    ListeningExecutorService exec2 = factory.getOrCreateBalancerExecutor(2);
+
+    Assert.assertTrue(exec1.isShutdown());
+    Assert.assertNotSame(exec1, exec2);
+
+    ListeningExecutorService exec3 = factory.getOrCreateBalancerExecutor(3);
+    Assert.assertTrue(exec2.isShutdown());
+    Assert.assertNotSame(exec2, exec3);
+
+    ListeningExecutorService exec4 = factory.getOrCreateBalancerExecutor(3);
+    Assert.assertFalse(exec3.isShutdown());
+    Assert.assertSame(exec3, exec4);
+
+    factory.stopExecutor();
   }
 }

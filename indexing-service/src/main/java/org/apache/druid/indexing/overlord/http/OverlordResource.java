@@ -32,8 +32,6 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
-import org.apache.druid.client.indexing.IndexingWorker;
-import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.common.exception.DruidException;
@@ -65,6 +63,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
@@ -262,6 +261,7 @@ public class OverlordResource
     }
   }
 
+  @Deprecated
   @POST
   @Path("/lockedIntervals")
   @Produces(MediaType.APPLICATION_JSON)
@@ -274,6 +274,20 @@ public class OverlordResource
 
     // Build the response
     return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
+  }
+
+  @POST
+  @Path("/lockedIntervals/v2")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getDatasourceLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    if (lockFilterPolicies == null || lockFilterPolicies.isEmpty()) {
+      return Response.status(Status.BAD_REQUEST).entity("No filter provided").build();
+    }
+
+    // Build the response
+    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(lockFilterPolicies)).build();
   }
 
   @GET
@@ -469,27 +483,17 @@ public class OverlordResource
   public Response getTotalWorkerCapacity()
   {
     // Calculate current cluster capacity
-    int currentCapacity;
     Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (!taskRunnerOptional.isPresent()) {
       // Cannot serve call as not leader
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
     TaskRunner taskRunner = taskRunnerOptional.get();
-    Collection<ImmutableWorkerInfo> workers;
-    if (taskRunner instanceof WorkerTaskRunner) {
-      workers = ((WorkerTaskRunner) taskRunner).getWorkers();
-      currentCapacity = workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
-    } else {
-      log.debug(
-          "Cannot calculate capacity as task runner [%s] of type [%s] does not support listing workers",
-          taskRunner,
-          taskRunner.getClass().getName()
-      );
-      workers = ImmutableList.of();
-      currentCapacity = -1;
-    }
+    Collection<ImmutableWorkerInfo> workers = taskRunner instanceof WorkerTaskRunner ?
+        ((WorkerTaskRunner) taskRunner).getWorkers() : ImmutableList.of();
 
+    int currentCapacity = taskRunner.getTotalCapacity();
+    int usedCapacity = taskRunner.getUsedCapacity();
     // Calculate maximum capacity with auto scale
     int maximumCapacity;
     if (workerConfigRef == null) {
@@ -520,7 +524,7 @@ public class OverlordResource
       );
       maximumCapacity = -1;
     }
-    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity)).build();
+    return Response.ok(new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity, usedCapacity)).build();
   }
 
   // default value is used for backwards compatibility
@@ -939,24 +943,6 @@ public class OverlordResource
           {
             if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
-            } else if (taskRunner.isK8sTaskRunner()) {
-              // required because kubernetes task runner has no concept of a worker, so returning a dummy worker.
-              return Response.ok(ImmutableList.of(
-                  new IndexingWorkerInfo(
-                      new IndexingWorker(
-                          "http",
-                          "host",
-                          "8100",
-                          taskRunner.getTotalTaskSlotCount().getOrDefault("taskQueue", 0L).intValue(),
-                          "version"
-                      ),
-                      0,
-                      Collections.emptySet(),
-                      Collections.emptyList(),
-                      DateTimes.EPOCH,
-                      null
-                  )
-              )).build();
             } else {
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",

@@ -581,7 +581,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     );
     for (WindowedSegmentId windowedSegmentId : Preconditions.checkNotNull(segmentIds, "segmentIds")) {
       final DataSegment segment = FutureUtils.getUnchecked(
-          coordinatorClient.fetchUsedSegment(dataSource, windowedSegmentId.getSegmentId()),
+          coordinatorClient.fetchSegment(dataSource, windowedSegmentId.getSegmentId(), false),
           true
       );
       for (Interval interval : windowedSegmentId.getIntervals()) {

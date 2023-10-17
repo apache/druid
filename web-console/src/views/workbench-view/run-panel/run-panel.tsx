@@ -45,6 +45,7 @@ import {
   changeUseApproximateCountDistinct,
   changeUseApproximateTopN,
   changeUseCache,
+  changeWaitTillSegmentsLoad,
   getDurableShuffleStorage,
   getFinalizeAggregations,
   getGroupByEnableMultiValueUnnesting,
@@ -53,10 +54,12 @@ import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
   getUseCache,
+  getWaitTillSegmentsLoad,
   summarizeIndexSpec,
 } from '../../../druid-models';
 import { deepGet, deepSet, pluralIfNeeded, tickIcon } from '../../../utils';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
+import { QueryParametersDialog } from '../query-parameters-dialog/query-parameters-dialog';
 
 import './run-panel.scss';
 
@@ -85,7 +88,7 @@ const NAMED_TIMEZONES: string[] = [
 export interface RunPanelProps {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
-  loading: boolean;
+  running: boolean;
   small?: boolean;
   onRun(preview: boolean): void | Promise<void>;
   queryEngines: DruidEngine[];
@@ -94,9 +97,10 @@ export interface RunPanelProps {
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines, clusterCapacity } =
+  const { query, onQueryChange, onRun, moreMenu, running, small, queryEngines, clusterCapacity } =
     props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
+  const [editParametersDialogOpen, setEditParametersDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
   const [indexSpecDialogSpec, setIndexSpecDialogSpec] = useState<IndexSpec | undefined>();
 
@@ -104,9 +108,11 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const ingestMode = query.isIngestQuery();
   const queryContext = query.queryContext;
   const numContextKeys = Object.keys(queryContext).length;
+  const queryParameters = query.queryParameters;
 
   const maxParseExceptions = getMaxParseExceptions(queryContext);
   const finalizeAggregations = getFinalizeAggregations(queryContext);
+  const waitTillSegmentsLoad = getWaitTillSegmentsLoad(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
   const selectDestination = queryContext.selectDestination ?? 'taskReport';
@@ -201,7 +207,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     <div className="run-panel">
       <Button
         className={effectiveEngine === 'native' ? 'rune-button' : undefined}
-        disabled={loading}
+        disabled={running}
         icon={IconNames.CARET_RIGHT}
         onClick={() => void onRun(false)}
         text="Run"
@@ -211,7 +217,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       />
       {ingestMode && (
         <Button
-          disabled={loading}
+          disabled={running}
           icon={IconNames.EYE_OPEN}
           onClick={() => void onRun(true)}
           text="Preview"
@@ -237,6 +243,12 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   text="Edit context"
                   onClick={() => setEditContextDialogOpen(true)}
                   label={pluralIfNeeded(numContextKeys, 'key')}
+                />
+                <MenuItem
+                  icon={IconNames.HELP}
+                  text="Define parameters"
+                  onClick={() => setEditParametersDialogOpen(true)}
+                  label={queryParameters ? pluralIfNeeded(queryParameters.length, 'parameter') : ''}
                 />
                 {effectiveEngine !== 'native' && (
                   <MenuItem
@@ -300,6 +312,15 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={v =>
                         changeQueryContext(changeFinalizeAggregations(queryContext, v))
+                      }
+                    />
+                    <MenuTristate
+                      icon={IconNames.STOPWATCH}
+                      text="Wait until segments have loaded"
+                      value={waitTillSegmentsLoad}
+                      undefinedEffectiveValue /* ={true} */
+                      onValueChange={v =>
+                        changeQueryContext(changeWaitTillSegmentsLoad(queryContext, v))
                       }
                     />
                     <MenuTristate
@@ -452,6 +473,15 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
           onQueryContextChange={changeQueryContext}
           onClose={() => {
             setEditContextDialogOpen(false);
+          }}
+        />
+      )}
+      {editParametersDialogOpen && (
+        <QueryParametersDialog
+          queryParameters={queryParameters}
+          onQueryParametersChange={p => onQueryChange(query.changeQueryParameters(p))}
+          onClose={() => {
+            setEditParametersDialogOpen(false);
           }}
         />
       )}

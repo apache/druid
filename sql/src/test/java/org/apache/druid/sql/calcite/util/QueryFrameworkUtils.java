@@ -26,10 +26,8 @@ import com.google.inject.Injector;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerInternalQueryConfig;
-import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -38,7 +36,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -75,10 +72,7 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
-
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -247,17 +241,6 @@ public class QueryFrameworkUtils
         ImmutableSet.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE),
         ImmutableMap.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)
     );
-  }
-
-  public static ExprMacroTable createExprMacroTable(final Injector injector)
-  {
-    final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
-    for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
-      exprMacros.add(injector.getInstance(clazz));
-    }
-    exprMacros.add(injector.getInstance(LookupExprMacro.class));
-
-    return new ExprMacroTable(exprMacros);
   }
 
   public static DruidOperatorTable createOperatorTable(final Injector injector)

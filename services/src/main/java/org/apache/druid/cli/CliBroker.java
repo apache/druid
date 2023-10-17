@@ -45,6 +45,7 @@ import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -68,6 +69,7 @@ import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
+import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.PruneLoadSpec;
@@ -108,6 +110,7 @@ public class CliBroker extends ServerRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
+        new LegacyBrokerParallelMergeConfigModule(),
         new BrokerProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -144,6 +147,7 @@ public class CliBroker extends ServerRunnable
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
           Jerseys.addResource(binder, BrokerQueryResource.class);
           binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
+          binder.bind(SubqueryCountStatsProvider.class).toInstance(new SubqueryCountStatsProvider());
           Jerseys.addResource(binder, BrokerResource.class);
           Jerseys.addResource(binder, ClientInfoResource.class);
 

@@ -43,8 +43,14 @@ import java.util.stream.Collectors;
  */
 public class ExprMacroTable
 {
+  private static final BuiltInExprMacros.ComplexDecodeBase64ExprMacro COMPLEX_DECODE_BASE_64_EXPR_MACRO = new BuiltInExprMacros.ComplexDecodeBase64ExprMacro();
   private static final List<ExprMacro> BUILT_IN = ImmutableList.of(
-      new BuiltInExprMacros.ComplexDecodeBase64ExprMacro()
+      COMPLEX_DECODE_BASE_64_EXPR_MACRO,
+      new AliasExprMacro(
+          COMPLEX_DECODE_BASE_64_EXPR_MACRO,
+          BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS
+      ),
+      new BuiltInExprMacros.StringDecodeBase64UTFExprMacro()
   );
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
 
@@ -244,6 +250,34 @@ public class ExprMacroTable
     public String toString()
     {
       return StringUtils.format("(%s %s)", name, getArgs());
+    }
+  }
+
+  /***
+   * Alias Expression macro to create an alias and delegate operations to the same base macro.
+   * The Expr spit out by the apply method should use name() in all the places instead of an internal constant so that things like error messages behave correctly.
+   */
+  static class AliasExprMacro implements ExprMacroTable.ExprMacro
+  {
+    private final ExprMacroTable.ExprMacro exprMacro;
+    private final String alias;
+
+    public AliasExprMacro(final ExprMacroTable.ExprMacro baseExprMacro, final String alias)
+    {
+      this.exprMacro = baseExprMacro;
+      this.alias = alias;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      return exprMacro.apply(args);
+    }
+
+    @Override
+    public String name()
+    {
+      return alias;
     }
   }
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.rule;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -32,6 +31,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -58,7 +58,7 @@ public class GroupByRules
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
-      final Project project,
+      final InputAccessor inputAccessor,
       final List<Aggregation> existingAggregations,
       final String name,
       final AggregateCall call,
@@ -73,12 +73,9 @@ public class GroupByRules
 
     if (call.filterArg >= 0) {
       // AGG(xxx) FILTER(WHERE yyy)
-      if (project == null) {
-        // We need some kind of projection to support filtered aggregations.
-        return null;
-      }
 
-      final RexNode expression = project.getProjects().get(call.filterArg);
+      final RexNode expression = inputAccessor.getField(call.filterArg);
+
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
           rowSignature,
@@ -135,12 +132,10 @@ public class GroupByRules
 
     final Aggregation retVal = sqlAggregator.toDruidAggregation(
         plannerContext,
-        rowSignature,
         virtualColumnRegistry,
-        rexBuilder,
         name,
         call,
-        project,
+        inputAccessor,
         existingAggregationsWithSameFilter,
         finalizeAggregations
     );

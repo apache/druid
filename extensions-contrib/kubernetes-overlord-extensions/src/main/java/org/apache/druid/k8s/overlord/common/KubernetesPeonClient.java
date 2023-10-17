@@ -101,13 +101,13 @@ public class KubernetesPeonClient
                       );
       if (job == null) {
         log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
-        return new JobResponse(null, PeonPhase.FAILED);
+        return new JobResponse(null);
       }
       if (job.getStatus().getSucceeded() != null) {
-        return new JobResponse(job, PeonPhase.SUCCEEDED);
+        return new JobResponse(job);
       }
       log.warn("Task %s failed with status %s", taskId, job.getStatus());
-      return new JobResponse(job, PeonPhase.FAILED);
+      return new JobResponse(job);
     });
   }
 
@@ -121,13 +121,13 @@ public class KubernetesPeonClient
                                                                  .withName(taskId.getK8sJobName())
                                                                  .delete().isEmpty());
       if (result) {
-        log.info("Cleaned up k8s task: %s", taskId);
+        log.info("Cleaned up k8s job: %s", taskId);
       } else {
-        log.info("K8s task does not exist: %s", taskId);
+        log.info("K8s job does not exist: %s", taskId);
       }
       return result;
     } else {
-      log.info("Not cleaning up task %s due to flag: debugJobs=true", taskId);
+      log.info("Not cleaning up job %s due to flag: debugJobs=true", taskId);
       return true;
     }
   }
@@ -271,6 +271,6 @@ public class KubernetesPeonClient
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    emitter.emit(metricBuilder.build(metric, durationMs));
+    emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }

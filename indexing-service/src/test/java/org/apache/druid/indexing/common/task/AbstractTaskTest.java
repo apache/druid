@@ -90,7 +90,7 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
     {
       @Nullable
       @Override
@@ -109,7 +109,7 @@ public class AbstractTaskTest
     task.run(toolbox);
 
     // call it 3 times, once to update location in setup, then one for status and location in cleanup
-    Mockito.verify(taskActionClient, times(3)).submit(any());
+    Mockito.verify(taskActionClient, times(1)).submit(any());
     verify(pusher, times(1)).pushTaskReports(eq("myID"), any());
     verify(pusher, times(1)).pushTaskStatus(eq("myID"), any());
   }
@@ -138,7 +138,7 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
     {
       @Nullable
       @Override
@@ -182,7 +182,7 @@ public class AbstractTaskTest
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)

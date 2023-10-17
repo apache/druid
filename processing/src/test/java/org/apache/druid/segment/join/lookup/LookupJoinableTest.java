@@ -22,6 +22,7 @@ package org.apache.druid.segment.join.lookup;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -36,6 +37,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -129,7 +131,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColummnValuesMissingSearchColumnShouldReturnEmptySet()
   {
-    Optional<Set<String>> correlatedValues =
+    Optional<InDimFilter.ValuesSet> correlatedValues =
         target.getCorrelatedColumnValues(
             UNKNOWN_COLUMN,
             SEARCH_KEY_VALUE,
@@ -144,7 +146,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColummnValuesMissingRetrievalColumnShouldReturnEmptySet()
   {
-    Optional<Set<String>> correlatedValues =
+    Optional<InDimFilter.ValuesSet> correlatedValues =
         target.getCorrelatedColumnValues(
             LookupColumnSelectorFactory.KEY_COLUMN,
             SEARCH_KEY_VALUE,
@@ -159,7 +161,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnShouldReturnSearchValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         SEARCH_KEY_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
@@ -172,7 +174,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         SEARCH_KEY_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
@@ -185,7 +187,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColumnValuesForSearchKeyMissingAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         SEARCH_KEY_NULL_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
@@ -198,7 +200,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnAndNonKeyColumnSearchDisabledShouldReturnSearchValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
@@ -219,7 +221,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnShouldReturnSearchValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
@@ -232,7 +234,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnShouldReturnUnAppliedValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
@@ -250,7 +252,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
    */
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnWithMaxLimitSetShouldHonorMaxLimit()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
@@ -263,7 +265,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   @Test
   public void getCorrelatedColumnValuesForSearchUnknownValueAndRetrieveKeyColumnShouldReturnNoCorrelatedValues()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_UNKNOWN,
         LookupColumnSelectorFactory.KEY_COLUMN,
@@ -274,10 +276,11 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnEmpty()
+  public void getMatchableColumnValuesIfAllUniqueForValueColumnShouldReturnEmpty()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getMatchableColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
+        false,
         Integer.MAX_VALUE
     );
 
@@ -285,24 +288,41 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
+  public void getMatchableColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getMatchableColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
+        false,
         Integer.MAX_VALUE
     );
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? ImmutableSet.of("foo", "bar") : ImmutableSet.of("foo", "bar", ""),
+        NullHandling.sqlCompatible() ? ImmutableSet.of("foo", "bar", "") : ImmutableSet.of("foo", "bar"),
         values.getColumnValues()
     );
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
+  public void getMatchableColumnValuesWithIncludeNullIfAllUniqueForKeyColumnShouldReturnValues()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getMatchableColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
+        true,
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        InDimFilter.ValuesSet.copyOf(Arrays.asList("foo", "bar", "", null)),
+        values.getColumnValues()
+    );
+  }
+
+  @Test
+  public void getMatchableColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
+  {
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getMatchableColumnValues(
+        LookupColumnSelectorFactory.KEY_COLUMN,
+        false,
         1
     );
 

@@ -84,7 +84,7 @@ public class SqlExpressionBenchmark
 
   static {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
+    ExpressionProcessing.initializeForTests();
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -106,13 +106,6 @@ public class SqlExpressionBenchmark
     {
       return 1;
     }
-
-    @Override
-    public boolean useParallelMergePoolConfigured()
-    {
-      return true;
-    }
-
     @Override
     public String getFormatString()
     {
@@ -204,7 +197,7 @@ public class SqlExpressionBenchmark
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long4), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
       // 37: time shift + expr agg (group by), uniform distribution high cardinality
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long5), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
-      // 38: LATEST aggregator
+      // 38: LATEST aggregator long
       "SELECT LATEST(long1) FROM foo",
       // 39: LATEST aggregator double
       "SELECT LATEST(double4) FROM foo",
@@ -214,7 +207,13 @@ public class SqlExpressionBenchmark
       "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
       // 42,43: filter numeric nulls
       "SELECT SUM(long5) FROM foo WHERE long5 IS NOT NULL",
-      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1"
+      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1",
+      // 44: EARLIEST aggregator long
+      "SELECT EARLIEST(long1) FROM foo",
+      // 45: EARLIEST aggregator double
+      "SELECT EARLIEST(double4) FROM foo",
+      // 46: EARLIEST aggregator float
+      "SELECT EARLIEST(float3) FROM foo"
   );
 
   @Param({"5000000"})
@@ -272,7 +271,11 @@ public class SqlExpressionBenchmark
       "40",
       "41",
       "42",
-      "43"
+      "43",
+      "44",
+      "45",
+      "46",
+      "47"
   })
   private String query;
 

@@ -552,6 +552,8 @@ public class Expressions
       return kind == SqlKind.IS_NOT_NULL ? new NotDimFilter(equalFilter) : equalFilter;
     } else if (kind == SqlKind.EQUALS
                || kind == SqlKind.NOT_EQUALS
+               || kind == SqlKind.IS_NOT_DISTINCT_FROM
+               || kind == SqlKind.IS_DISTINCT_FROM
                || kind == SqlKind.GREATER_THAN
                || kind == SqlKind.GREATER_THAN_OR_EQUAL
                || kind == SqlKind.LESS_THAN
@@ -577,6 +579,8 @@ public class Expressions
         switch (kind) {
           case EQUALS:
           case NOT_EQUALS:
+          case IS_NOT_DISTINCT_FROM:
+          case IS_DISTINCT_FROM:
             flippedKind = kind;
             break;
           case GREATER_THAN:
@@ -688,9 +692,13 @@ public class Expressions
         // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
         switch (flippedKind) {
           case EQUALS:
+          case IS_NOT_DISTINCT_FROM:
+            // OK to treat EQUALS, IS_NOT_DISTINCT_FROM the same since we know stringVal is nonnull.
             filter = Bounds.equalTo(boundRefKey, stringVal);
             break;
           case NOT_EQUALS:
+          case IS_DISTINCT_FROM:
+            // OK to treat NOT_EQUALS, IS_DISTINCT_FROM the same since we know stringVal is nonnull.
             filter = new NotDimFilter(Bounds.equalTo(boundRefKey, stringVal));
             break;
           case GREATER_THAN:
@@ -724,9 +732,11 @@ public class Expressions
         // Always use RangeFilter, to simplify filter optimization later
         switch (flippedKind) {
           case EQUALS:
+          case IS_NOT_DISTINCT_FROM:
             filter = Ranges.equalTo(rangeRefKey, val);
             break;
           case NOT_EQUALS:
+          case IS_DISTINCT_FROM:
             filter = new NotDimFilter(Ranges.equalTo(rangeRefKey, val));
             break;
           case GREATER_THAN:

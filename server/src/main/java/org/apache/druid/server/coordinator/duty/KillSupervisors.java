@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.inject.Inject;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -32,7 +31,6 @@ public class KillSupervisors extends MetadataCleanupDuty
 {
   private final MetadataSupervisorManager metadataSupervisorManager;
 
-  @Inject
   public KillSupervisors(
       DruidCoordinatorConfig config,
       MetadataSupervisorManager metadataSupervisorManager
@@ -41,6 +39,7 @@ public class KillSupervisors extends MetadataCleanupDuty
     super(
         "supervisors",
         "druid.coordinator.kill.supervisor",
+        config.isSupervisorKillEnabled(),
         config.getCoordinatorSupervisorKillPeriod(),
         config.getCoordinatorSupervisorKillDurationToRetain(),
         Stats.Kill.SUPERVISOR_SPECS,

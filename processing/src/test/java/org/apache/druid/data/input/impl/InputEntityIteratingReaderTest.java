@@ -125,12 +125,23 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
         ),
         ImmutableList.of(
             new HttpEntity(new URI("testscheme://some/path"), null, null)
+            {
+              @Override
+              protected int getMaxRetries()
+              {
+                // override so this test does not take like 4 minutes to run
+                return 2;
+              }
+            }
+
         ).iterator(),
         temporaryFolder.newFolder()
     );
-    String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
-    Exception exception = Assert.assertThrows(RuntimeException.class, firehose::read);
 
-    Assert.assertTrue(exception.getMessage().contains(expectedMessage));
+    try (CloseableIterator<InputRow> readIterator = firehose.read()) {
+      String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
+      Exception exception = Assert.assertThrows(RuntimeException.class, readIterator::hasNext);
+      Assert.assertTrue(exception.getMessage().contains(expectedMessage));
+    }
   }
 }
