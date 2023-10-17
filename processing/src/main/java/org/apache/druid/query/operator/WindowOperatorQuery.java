@@ -22,8 +22,6 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -65,12 +63,10 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       QuerySegmentSpec intervals,
       Map<String, Object> context,
       RowSignature rowSignature,
-      List<OperatorFactory> operators,
-      VirtualColumns virtualColumns
+      List<OperatorFactory> operators
   )
   {
     List<OperatorFactory> leafOperators = new ArrayList<OperatorFactory>();
-    boolean virtualColumnsHandled = false;
 
     if (dataSource instanceof QueryDataSource) {
       final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
@@ -89,27 +85,19 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                       : ColumnWithDirection.Direction.ASC));
         }
 
-        virtualColumnsHandled = true;
         leafOperators.add(
             new ScanOperatorFactory(
                 null,
                 scan.getFilter(),
                 (int) scan.getScanRowsLimit(),
-                ImmutableList.<String>builder()
-                    .addAll(scan.getColumns())
-                    .addAll(virtualColumns.getColumnNames())
-                    .build(),
-                vc_union(scan.getVirtualColumns(), virtualColumns),
+                scan.getColumns(),
+                scan.getVirtualColumns(),
                 ordering));
       }
     } else if (dataSource instanceof InlineDataSource) {
       // ok
     } else {
       throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
-    }
-
-    if (!virtualColumns.isEmpty() && !virtualColumnsHandled) {
-      throw DruidException.defensive("Not-yet able to handle virtualColumns without a scanQuery!");
     }
 
     return new WindowOperatorQuery(dataSource, intervals, context, rowSignature, operators, leafOperators);
