@@ -401,21 +401,21 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   /**
    * Builds a TaskAction to publish segments based on the type of locks that this
-   * task acquires (determined by context property {@link Tasks#TASK_LOCK_TYPE}).
+   * task acquires.
+   *
+   * @see #determineLockType
    */
   protected TaskAction<SegmentPublishResult> buildPublishAction(
       Set<DataSegment> segmentsToBeOverwritten,
-      Set<DataSegment> segmentsToPublish
+      Set<DataSegment> segmentsToPublish,
+      TaskLockType lockType
   )
   {
-    TaskLockType lockType = TaskLockType.valueOf(
-        getContextValue(Tasks.TASK_LOCK_TYPE, Tasks.DEFAULT_TASK_LOCK_TYPE.name())
-    );
     switch (lockType) {
       case REPLACE:
         return SegmentTransactionalReplaceAction.create(segmentsToPublish);
       case APPEND:
-        return SegmentTransactionalAppendAction.create(segmentsToPublish);
+        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish);
       default:
         return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish);
     }

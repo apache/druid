@@ -40,7 +40,6 @@ import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
@@ -208,12 +207,18 @@ public class Calcites
            SqlTypeName.INT_TYPES.contains(sqlTypeName);
   }
 
+  /**
+   * Returns the natural StringComparator associated with the RelDataType
+   */
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
   {
     final ColumnType valueType = getColumnTypeForRelDataType(dataType);
     return getStringComparatorForValueType(valueType);
   }
 
+  /**
+   * Returns the natural StringComparator associated with the given ColumnType
+   */
   public static StringComparator getStringComparatorForValueType(ColumnType valueType)
   {
     if (valueType.isNumeric()) {
@@ -221,7 +226,7 @@ public class Calcites
     } else if (valueType.is(ValueType.STRING)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
-      throw new ISE("Unrecognized valueType[%s]", valueType);
+      return StringComparators.NATURAL;
     }
   }
 

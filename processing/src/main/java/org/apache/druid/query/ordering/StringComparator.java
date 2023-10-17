@@ -41,6 +41,8 @@ public abstract class StringComparator implements Comparator<String>
         return StringComparators.NUMERIC;
       case StringComparators.VERSION_NAME:
         return StringComparators.VERSION;
+      case StringComparators.NATURAL_NAME:
+        return StringComparators.NATURAL;
       default:
         throw new IAE("Unknown string comparator[%s]", type);
     }
