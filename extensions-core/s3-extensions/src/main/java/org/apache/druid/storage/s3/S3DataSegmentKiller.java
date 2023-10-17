@@ -225,6 +225,18 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
+  public void killQuietly(List<DataSegment> segments)
+  {
+    try {
+      kill(segments);
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to kill segment {%s}", segments);
+    }
+  }
+
+
+  @Override
   public void killAll() throws IOException
   {
     if (segmentPusherConfig.getBucket() == null || segmentPusherConfig.getBaseKey() == null) {

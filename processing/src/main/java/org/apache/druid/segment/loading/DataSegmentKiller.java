@@ -93,6 +93,10 @@ public interface DataSegmentKiller
     }
   }
 
+  default void killQuietly(List<DataSegment> segments) {
+    segments.forEach(this::killQuietly);
+  }
+
   /**
    * Like a nuke. Use wisely. Used by the 'reset-cluster' command, and of the built-in deep storage implementations, it
    * is only implemented by local and HDFS.
