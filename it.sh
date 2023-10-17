@@ -224,6 +224,8 @@ MAVEN_IGNORE="-P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclo
 TEST_OPTIONS="verify -P skip-static-checks,docker-tests \
             -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -DskipUTs=true"
 
+mvn dependency:purge-local-repository;
+
 case $CMD in
   "help" )
     usage
