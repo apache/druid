@@ -67,6 +67,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
+        new HashMap<>(),
         1,
         2,
         null
@@ -105,7 +106,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
-        1,
+        null, 1,
         2,
         null
     ), MSQStagesReport.create(
@@ -144,7 +145,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
-        1,
+        null, 1,
         2,
         null
     ), MSQStagesReport.create(
@@ -181,7 +182,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
-        1,
+        null, 1,
         2,
         null
     ), MSQStagesReport.create(
@@ -220,7 +221,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
-        1,
+        null, 1,
         2,
         null
     ), MSQStagesReport.create(

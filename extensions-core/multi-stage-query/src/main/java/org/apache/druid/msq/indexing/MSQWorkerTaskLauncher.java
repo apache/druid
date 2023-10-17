@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -47,6 +48,7 @@ import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -55,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -348,6 +351,63 @@ public class MSQWorkerTaskLauncher
     }
   }
 
+  public static class WorkerDuration{
+    String workerId;
+    TaskState state;
+    long duration;
+    public WorkerDuration(String workerId, TaskState state, long duration)
+    {
+      this.workerId = workerId;
+      this.state = state;
+      this.duration = duration;
+    }
+
+    @JsonProperty()
+    public String getWorkerId()
+    {
+      return workerId;
+    }
+
+    @JsonProperty()
+    public TaskState getState()
+    {
+      return state;
+    }
+
+    @JsonProperty()
+    public long getDuration()
+    {
+      return duration;
+    }
+  }
+
+  public Map<Integer, List<WorkerDuration>> getWorkersDurations()
+  {
+    final Map<Integer, List<WorkerDuration>> workerDurationsMap = new TreeMap<>();
+
+    for (String task : taskTrackers.keySet()) {
+
+      TaskTracker taskTracker = taskTrackers.get(task);
+
+      long duration = (taskTracker.status.getDuration() == -1
+                       && taskTracker.status.getStatusCode() == TaskState.RUNNING)
+                      ? System.currentTimeMillis() - taskTracker.startTimeMillis
+                      : taskTracker.status.getDuration();
+
+      workerDurationsMap.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
+                        .add(new WorkerDuration(
+                            task,
+                            taskTracker.status.getStatusCode(),
+                            duration
+                        ));
+    }
+
+    for (Integer task : workerDurationsMap.keySet()) {
+      workerDurationsMap.get(task).sort(Comparator.comparing(WorkerDuration::getWorkerId));
+    }
+    return workerDurationsMap;
+  }
+
   private void mainLoop()
   {
     try {
@@ -419,6 +479,8 @@ public class MSQWorkerTaskLauncher
       taskIds.notifyAll();
     }
   }
+
+
 
   /**
    * Used by the main loop to launch new tasks up to {@link #desiredTaskCount}. Adds trackers to {@link #taskTrackers}
@@ -823,5 +885,6 @@ public class MSQWorkerTaskLauncher
     {
       return isRetrying;
     }
+
   }
 }
