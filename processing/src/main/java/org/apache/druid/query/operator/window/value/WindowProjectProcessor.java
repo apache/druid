@@ -43,7 +43,7 @@ public class WindowProjectProcessor implements Processor
   {
     this.virtualColumn = virtualColumn;
 
-    if(!(virtualColumn instanceof ExpressionVirtualColumn)) {
+    if (!(virtualColumn instanceof ExpressionVirtualColumn)) {
       DruidException.defensive("Only ExpressionVirtualColumn supported [%s]", virtualColumn);
     }
   }

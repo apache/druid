@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.google.api.client.util.Sets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -233,14 +232,11 @@ public class Windowing
 
       if (!virtualColumnRegistry.isEmpty()) {
         List<Processor> vcProcessors = new ArrayList<Processor>();
-        VirtualColumns virtualColumns = virtualColumnRegistry.build(Sets.newHashSet());
-
+        VirtualColumns virtualColumns = virtualColumnRegistry.build(Collections.emptySet());
         for (VirtualColumn vc : virtualColumns.getVirtualColumns()) {
           vcProcessors.add(new WindowProjectProcessor(vc));
         }
-
         ops.add(new WindowOperatorFactory(buildProcessorFor(vcProcessors)));
-
       }
 
       ops.add(new WindowOperatorFactory(buildProcessorFor(processors)));
@@ -275,14 +271,13 @@ public class Windowing
 
   private static Processor buildProcessorFor(List<Processor> processors)
   {
-    switch (processors.size())
-    {
-    case 0:
-      throw new ISE("No processors supplied, why was this code called?");
-    case 1:
-      return processors.get(0);
-    default:
-      return new ComposingProcessor(processors.toArray(new Processor[0]));
+    switch (processors.size()) {
+      case 0:
+        throw new ISE("No processors supplied, why was this code called?");
+      case 1:
+        return processors.get(0);
+      default:
+        return new ComposingProcessor(processors.toArray(new Processor[0]));
     }
   }
 
