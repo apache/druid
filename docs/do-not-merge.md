@@ -484,10 +484,10 @@ For more information on the `waitTillSegmentsLoad` query context parameter, see 
 The web console now includes concurrent compaction switches.
 
 The following screenshot shows the concurrent compaction switch in the classic batch ingestion wizard:
-![UI for waitTillSegmentsLoad context parameter](image-1.png)
+![Classic batch ingestion wizard](image-1.png)
 
 The following screenshot shows the concurrent compaction switch in the compaction configuration UI:
-![UI for waitTillSegmentsLoad context parameter](image-2.png)
+![Compaction configuration UI](image-2.png)
 
 [#15114](https://github.com/apache/druid/pull/15114)
 
