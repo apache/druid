@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
@@ -50,7 +51,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -65,7 +65,7 @@ public class MSQReplaceTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       Tasks.TASK_LOCK_TYPE,
-                      TaskLockType.REPLACE.name().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(TaskLockType.REPLACE.name())
                   )
                   .build();
 
