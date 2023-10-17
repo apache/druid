@@ -351,11 +351,12 @@ public class MSQWorkerTaskLauncher
     }
   }
 
-  public static class WorkerDuration{
+  public static class WorkerStats
+  {
     String workerId;
     TaskState state;
     long duration;
-    public WorkerDuration(String workerId, TaskState state, long duration)
+    public WorkerStats(String workerId, TaskState state, long duration)
     {
       this.workerId = workerId;
       this.state = state;
@@ -381,9 +382,9 @@ public class MSQWorkerTaskLauncher
     }
   }
 
-  public Map<Integer, List<WorkerDuration>> getWorkersStats()
+  public Map<Integer, List<WorkerStats>> getWorkersStats()
   {
-    final Map<Integer, List<WorkerDuration>> workersStatsMap = new TreeMap<>();
+    final Map<Integer, List<WorkerStats>> workersStatsMap = new TreeMap<>();
 
     for (String task : taskTrackers.keySet()) {
 
@@ -395,7 +396,7 @@ public class MSQWorkerTaskLauncher
                       : taskTracker.status.getDuration();
 
       workersStatsMap.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
-                        .add(new WorkerDuration(
+                        .add(new WorkerStats(
                             task,
                             taskTracker.status.getStatusCode(),
                             duration
@@ -403,7 +404,7 @@ public class MSQWorkerTaskLauncher
     }
 
     for (Integer task : workersStatsMap.keySet()) {
-      workersStatsMap.get(task).sort(Comparator.comparing(WorkerDuration::getWorkerId));
+      workersStatsMap.get(task).sort(Comparator.comparing(WorkerStats::getWorkerId));
     }
     return workersStatsMap;
   }

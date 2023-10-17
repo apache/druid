@@ -50,7 +50,7 @@ public class MSQStatusReport
 
   private final long durationMs;
 
-  private final Map<Integer, List<MSQWorkerTaskLauncher.WorkerDuration>> workersDurationsMap;
+  private final Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workersDurationsMap;
 
   private final int pendingTasks;
 
@@ -66,7 +66,7 @@ public class MSQStatusReport
       @JsonProperty("warnings") Collection<MSQErrorReport> warningReports,
       @JsonProperty("startTime") @Nullable DateTime startTime,
       @JsonProperty("durationMs") long durationMs,
-      @JsonProperty("workersDurationsMs") Map<Integer, List<MSQWorkerTaskLauncher.WorkerDuration>> workersDurationsMap,
+      @JsonProperty("workersDurationsMs") Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workersDurationsMap,
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
       @JsonProperty("segmentLoadWaiterStatus") @Nullable SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus
@@ -131,7 +131,7 @@ public class MSQStatusReport
   }
 
   @JsonProperty("workers")
-  public Map<Integer, List<MSQWorkerTaskLauncher.WorkerDuration>> getWorkersDurationsMs()
+  public Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> getWorkersDurationsMs()
   {
     return workersDurationsMap;
   }
