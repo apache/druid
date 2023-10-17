@@ -60,7 +60,11 @@ public final class Rows
   }
 
   /**
-   * Convert an object to a list of strings.
+   * Convert an object to a list of strings. This function translates single value nulls into an empty list, and any
+   * nulls inside of a list or array into the string "null". Do not use this method if you don't want this behavior,
+   * but note that many implementations of {@link InputRow#getDimension(String)} do use this method, so it is
+   * recommended to use {@link InputRow#getRaw(String)} if you want the actual value without this coercion. For legacy
+   * reasons, some stuff counts on this incorrect behavior, (such as {@link Rows#toGroupKey(long, InputRow)}).
    */
   public static List<String> objectToStrings(final Object inputValue)
   {
