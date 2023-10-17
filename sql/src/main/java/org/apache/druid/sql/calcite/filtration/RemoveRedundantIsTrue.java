@@ -20,30 +20,30 @@
 package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.IsFalseDimFilter;
 import org.apache.druid.query.filter.IsTrueDimFilter;
-import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class BottomUpTransform implements Function<Filtration, Filtration>
+/**
+ * Similar to {@link BottomUpTransform} except only removes redundant IS TRUE filters that are not inside of a NOT
+ * filter. The planner leaves behind stuff like `(x == y) IS TRUE` which is a pointless delegate when not living inside
+ * of a not filter to enforce proper three-value logic
+ */
+public class RemoveRedundantIsTrue implements Function<Filtration, Filtration>
 {
-  protected abstract DimFilter process(DimFilter filter);
+  private static final RemoveRedundantIsTrue INSTANCE = new RemoveRedundantIsTrue();
 
-  private DimFilter checkedProcess(final DimFilter filter)
+  public static RemoveRedundantIsTrue instance()
   {
-    final DimFilter retVal = process(Preconditions.checkNotNull(filter, "filter"));
-    assert retVal != null;
-    return retVal;
+    return INSTANCE;
   }
 
   @Override
-  public Filtration apply(final Filtration filtration)
+  public Filtration apply(Filtration filtration)
   {
     if (filtration.getDimFilter() != null) {
       final Filtration retVal = Filtration.create(apply0(filtration.getDimFilter()), filtration.getIntervals());
@@ -55,6 +55,8 @@ public abstract class BottomUpTransform implements Function<Filtration, Filtrati
 
   private DimFilter apply0(final DimFilter filter)
   {
+    // check for AND, OR to process their children, and unwrap any IS TRUE not living under a NOT, anything else we
+    // leave alone
     if (filter instanceof AndDimFilter) {
       final List<DimFilter> oldFilters = ((AndDimFilter) filter).getFields();
       final List<DimFilter> newFilters = new ArrayList<>();
@@ -65,9 +67,9 @@ public abstract class BottomUpTransform implements Function<Filtration, Filtrati
         }
       }
       if (!newFilters.equals(oldFilters)) {
-        return checkedProcess(new AndDimFilter(newFilters));
+        return new AndDimFilter(newFilters);
       } else {
-        return checkedProcess(filter);
+        return filter;
       }
     } else if (filter instanceof OrDimFilter) {
       final List<DimFilter> oldFilters = ((OrDimFilter) filter).getFields();
@@ -79,36 +81,20 @@ public abstract class BottomUpTransform implements Function<Filtration, Filtrati
         }
       }
       if (!newFilters.equals(oldFilters)) {
-        return checkedProcess(new OrDimFilter(newFilters));
+        return new OrDimFilter(newFilters);
       } else {
-        return checkedProcess(filter);
-      }
-    } else if (filter instanceof NotDimFilter) {
-      final DimFilter oldFilter = ((NotDimFilter) filter).getField();
-      final DimFilter newFilter = apply0(oldFilter);
-      if (!oldFilter.equals(newFilter)) {
-        return checkedProcess(new NotDimFilter(newFilter));
-      } else {
-        return checkedProcess(filter);
+        return filter;
       }
     } else if (filter instanceof IsTrueDimFilter) {
       final DimFilter oldFilter = ((IsTrueDimFilter) filter).getField();
       final DimFilter newFilter = apply0(oldFilter);
       if (!oldFilter.equals(newFilter)) {
-        return checkedProcess(new IsTrueDimFilter(newFilter));
+        return newFilter;
       } else {
-        return checkedProcess(filter);
-      }
-    } else if (filter instanceof IsFalseDimFilter) {
-      final DimFilter oldFilter = ((IsFalseDimFilter) filter).getField();
-      final DimFilter newFilter = apply0(oldFilter);
-      if (!oldFilter.equals(newFilter)) {
-        return checkedProcess(new IsFalseDimFilter(newFilter));
-      } else {
-        return checkedProcess(filter);
+        return oldFilter;
       }
     } else {
-      return checkedProcess(filter);
+      return filter;
     }
   }
 }

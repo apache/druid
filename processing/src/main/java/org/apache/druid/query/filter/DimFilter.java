@@ -51,7 +51,9 @@ import java.util.Set;
     @JsonSubTypes.Type(name = "false", value = FalseDimFilter.class),
     @JsonSubTypes.Type(name = "null", value = NullFilter.class),
     @JsonSubTypes.Type(name = "equals", value = EqualityFilter.class),
-    @JsonSubTypes.Type(name = "range", value = RangeFilter.class)
+    @JsonSubTypes.Type(name = "range", value = RangeFilter.class),
+    @JsonSubTypes.Type(name = "isfilterfalse", value = IsFalseDimFilter.class),
+    @JsonSubTypes.Type(name = "isfiltertrue", value = IsTrueDimFilter.class)
 })
 public interface DimFilter extends Cacheable
 {
