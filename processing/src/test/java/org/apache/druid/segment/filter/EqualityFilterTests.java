@@ -310,6 +310,27 @@ public class EqualityFilterTests
             NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "noexist", null)),
             ImmutableList.of("0", "1", "2", "3", "4", "5")
         );
+
+        // "(s0 = 'a') is not true" equivalent to "s0 <> 'a'"
+        assertFilterMatches(
+            NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+            ImmutableList.of("0", "2", "3", "4")
+        );
+        // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
+        assertFilterMatches(
+            IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+            ImmutableList.of("1", "5")
+        );
+        // "(s0 = 'a') is false" equivalent to "s0 <> 'a'"
+        assertFilterMatches(
+            IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+            ImmutableList.of("0", "2", "3", "4")
+        );
+        // "(s0 = 'a') is not false", same rows as "s0 = 'a'", but also with null rows
+        assertFilterMatches(
+            NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+            ImmutableList.of("1", "5")
+        );
       }
     }
 

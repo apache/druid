@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -71,6 +72,7 @@ public class IsBooleanFilter implements Filter
     if (baseIndex != null && (isTrue || baseIndex.getIndexCapabilities().isInvertible())) {
       return new BitmapColumnIndex()
       {
+        private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
         @Override
         public ColumnIndexCapabilities getIndexCapabilities()
         {
@@ -90,7 +92,7 @@ public class IsBooleanFilter implements Filter
             return baseIndex.computeBitmapResult(bitmapResultFactory, false);
           }
           return bitmapResultFactory.complement(
-              baseIndex.computeBitmapResult(bitmapResultFactory, true),
+              baseIndex.computeBitmapResult(bitmapResultFactory, useThreeValueLogic),
               selector.getNumRows()
           );
         }
@@ -106,13 +108,14 @@ public class IsBooleanFilter implements Filter
 
     return new ValueMatcher()
     {
+      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
       @Override
       public boolean matches(boolean includeUnknown)
       {
         if (isTrue) {
           return baseMatcher.matches(false);
         }
-        return !baseMatcher.matches(true);
+        return !baseMatcher.matches(useThreeValueLogic);
       }
 
       @Override
@@ -131,6 +134,7 @@ public class IsBooleanFilter implements Filter
     return new BaseVectorValueMatcher(baseMatcher)
     {
       private final VectorMatch scratch = VectorMatch.wrap(new int[factory.getMaxVectorSize()]);
+      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
 
       @Override
       public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
@@ -138,7 +142,7 @@ public class IsBooleanFilter implements Filter
         if (isTrue) {
           return baseMatcher.match(mask, false);
         }
-        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, true);
+        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, useThreeValueLogic);
 
         scratch.copyFrom(mask);
         scratch.removeAll(baseMatch);
