@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -30,9 +31,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.any.NumericNilVectorAggregator;
+import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -43,14 +43,13 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -139,15 +138,13 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       VectorColumnSelectorFactory columnSelectorFactory
   )
   {
-    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-    VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-    //time is always long
-    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) columnSelectorFactory.makeValueSelector(
-        timeColumn);
-    if (capabilities == null || capabilities.isNumeric()) {
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+      VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
       return new FloatLastVectorAggregator(timeSelector, valueSelector);
     } else {
-      return NumericNilVectorAggregator.floatNilVectorAggregator();
+      return NilVectorAggregator.of(new SerializablePair<>(0L, NullHandling.defaultFloatValue()));
     }
   }
 
@@ -245,12 +242,6 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
         };
       }
     };
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new LongFirstAggregatorFactory(fieldName, fieldName, timeColumn));
   }
 
   @Override

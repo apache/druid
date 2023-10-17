@@ -33,13 +33,8 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -66,12 +61,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
    * Set of segments to be inserted into metadata storage
    */
   private final Set<DataSegment> segments;
-  /**
-   * Set of segments to be dropped (mark unused) when new segments, {@link SegmentTransactionalInsertAction#segments},
-   * are inserted into metadata storage.
-   */
-  @Nullable
-  private final Set<DataSegment> segmentsToBeDropped;
 
   @Nullable
   private final DataSourceMetadata startMetadata;
@@ -82,11 +71,10 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      @Nullable Set<DataSegment> segmentsToBeDropped,
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, null, null, null);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null);
   }
 
   public static SegmentTransactionalInsertAction appendAction(
@@ -95,7 +83,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @Nullable DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, null, segments, startMetadata, endMetadata, null);
+    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null);
   }
 
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
@@ -104,13 +92,12 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, null, null, startMetadata, endMetadata, dataSource);
+    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource);
   }
 
   @JsonCreator
   private SegmentTransactionalInsertAction(
       @JsonProperty("segmentsToBeOverwritten") @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      @JsonProperty("segmentsToBeDropped") @Nullable Set<DataSegment> segmentsToBeDropped,
       @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
@@ -118,7 +105,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
-    this.segmentsToBeDropped = segmentsToBeDropped;
     this.segments = segments == null ? ImmutableSet.of() : ImmutableSet.copyOf(segments);
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
@@ -130,13 +116,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public Set<DataSegment> getSegmentsToBeOverwritten()
   {
     return segmentsToBeOverwritten;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Set<DataSegment> getSegmentsToBeDropped()
-  {
-    return segmentsToBeDropped;
   }
 
   @JsonProperty
@@ -202,9 +181,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     if (segmentsToBeOverwritten != null) {
       allSegments.addAll(segmentsToBeOverwritten);
     }
-    if (segmentsToBeDropped != null) {
-      allSegments.addAll(segmentsToBeDropped);
-    }
 
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), allSegments);
 
@@ -219,12 +195,11 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegmentsAndMetadata(
                       segments,
-                      segmentsToBeDropped,
                       startMetadata,
                       endMetadata
                   )
@@ -242,45 +217,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       throw new RuntimeException(e);
     }
 
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-
-    if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
-    } else {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
-    }
-
-    // getSegments() should return an empty set if announceHistoricalSegments() failed
-    for (DataSegment segment : retVal.getSegments()) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      metricBuilder.setDimension(
-          DruidMetrics.PARTITIONING_TYPE,
-          segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
-      );
-      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
-      // Emit the segment related metadata using the configured emitters.
-      // There is a possibility that some segments' metadata event might get missed if the
-      // server crashes after commiting segment but before emitting the event.
-      this.emitSegmentMetadata(segment, toolbox);
-    }
-
+    IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
     return retVal;
-  }
-
-  private void emitSegmentMetadata(DataSegment segment, TaskActionToolbox toolbox)
-  {
-    SegmentMetadataEvent event = new SegmentMetadataEvent(
-        segment.getDataSource(),
-        DateTime.now(DateTimeZone.UTC),
-        segment.getInterval().getStart(),
-        segment.getInterval().getEnd(),
-        segment.getVersion(),
-        segment.getLastCompactionState() != null
-    );
-
-    toolbox.getEmitter().emit(event);
   }
 
   private void checkWithSegmentLock()
@@ -359,7 +297,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
            ", dataSource='" + dataSource + '\'' +
-           ", segmentsToBeDropped=" + SegmentUtils.commaSeparatedIdentifiers(segmentsToBeDropped) +
            '}';
   }
 }

@@ -56,22 +56,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '8', '11', '17' ]
+        jdk: [ '8', '11', '17', '21' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: setup jdk${{ matrix.jdk }}
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_${{ matrix.jdk }}_X64" >> $GITHUB_ENV
+      # skip the "cache: maven" step from setup-java. We explicitly use a
+      # different cache key since we cannot reuse it across commits.
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ matrix.jdk }}
 
+      # the build step produces SNAPSHOT artifacts into the local maven repository,
+      # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Cache Maven m2 repository
         id: maven
         uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
+          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
 
       - name: Cache targets
         id: target
@@ -111,10 +117,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ 11, 17 ]
+        jdk: [ 11, 17, 21 ]
     name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     with:
       jdk: ${{ matrix.jdk }}
       sql_compatibility: true

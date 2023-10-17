@@ -40,9 +40,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ThreadSafe
 public class CoordinatorRunStats
 {
+  private static final CoordinatorRunStats EMPTY_INSTANCE = new CoordinatorRunStats()
+  {
+    @Override
+    public void add(CoordinatorStat stat, RowKey rowKey, long value)
+    {
+      throw new UnsupportedOperationException("Cannot add stats to empty CoordinatorRunStats instance");
+    }
+
+    @Override
+    public void updateMax(CoordinatorStat stat, RowKey rowKey, long value)
+    {
+      throw new UnsupportedOperationException("Cannot add stats to empty CoordinatorRunStats instance");
+    }
+  };
+
   private final ConcurrentHashMap<RowKey, Object2LongOpenHashMap<CoordinatorStat>>
       allStats = new ConcurrentHashMap<>();
   private final Map<Dimension, String> debugDimensions = new HashMap<>();
+
+  public static CoordinatorRunStats empty()
+  {
+    return EMPTY_INSTANCE;
+  }
 
   public CoordinatorRunStats()
   {
@@ -235,6 +255,8 @@ public class CoordinatorRunStats
   {
     if (debugDimensions.isEmpty()) {
       return false;
+    } else if (rowKey.getValues().isEmpty()) {
+      return true;
     }
 
     for (Map.Entry<Dimension, String> entry : rowKey.getValues().entrySet()) {

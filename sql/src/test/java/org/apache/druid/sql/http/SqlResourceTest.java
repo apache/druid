@@ -759,15 +759,12 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals("yes", response.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class)
     );
 
@@ -779,14 +776,11 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoSqlTypesHeader.getStatus());
     Assert.assertEquals("yes", responseNoSqlTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoSqlTypesHeader.baos.toByteArray(), Object.class)
     );
 
@@ -798,14 +792,11 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoTypesHeader.getStatus());
     Assert.assertEquals("yes", responseNoTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoTypesHeader.baos.toByteArray(), Object.class)
     );
 
@@ -817,13 +808,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoTypes.getStatus());
     Assert.assertEquals("yes", responseNoTypes.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoTypes.baos.toByteArray(), Object.class)
     );
 
@@ -1366,7 +1354,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     validateInvalidSqlError(
         errorResponse,
-        "Received an unexpected token [FROM] (line [1], column [1]), acceptable options: [\"INSERT\", \"UPSERT\", "
+        "Incorrect syntax near the keyword 'FROM' at line 1, column 1"
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
@@ -1402,7 +1390,7 @@ public class SqlResourceTest extends CalciteTestBase
         "general",
         DruidException.Persona.ADMIN,
         DruidException.Category.INVALID_INPUT,
-        "Query planning failed for unknown reason, our best guess is this "
+        "Query could not be planned. A possible reason is "
         + "[SQL query requires order by non-time column [[dim1 ASC]], which is not supported.]"
     );
     checkSqlRequestLog(false);

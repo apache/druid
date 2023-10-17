@@ -20,9 +20,10 @@
 package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.SegmentWrangler;
@@ -38,11 +39,12 @@ public interface FrameContext
 {
   SegmentWrangler segmentWrangler();
 
-  GroupByStrategySelector groupByStrategySelector();
+  GroupingEngine groupingEngine();
 
   RowIngestionMeters rowIngestionMeters();
 
   DataSegmentProvider dataSegmentProvider();
+  LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory();
 
   File tempDir();
 

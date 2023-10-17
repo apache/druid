@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputFormat;
@@ -75,8 +76,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.query.CachingEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
@@ -116,7 +119,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -476,7 +478,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           (Function<TaskStatus, TaskStatus>) status -> {
             shutdownTask(task);
             return status;
-          }
+          },
+          MoreExecutors.directExecutor()
       );
       return cleanupFuture;
     }
@@ -708,6 +711,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
         .taskLogPusher(null)
         .attemptId("1")
+        .emitter(new ServiceEmitter("service", "host", new CachingEmitter()))
         .build();
   }
 
@@ -1012,34 +1016,30 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  class LocalCoordinatorClient extends CoordinatorClient
+  class LocalCoordinatorClient extends NoopCoordinatorClient
   {
-    private final ExecutorService exec;
+    private final ListeningExecutorService exec;
 
     LocalCoordinatorClient(ExecutorService exec)
     {
-      super(null, null);
-      this.exec = exec;
+      this.exec = MoreExecutors.listeningDecorator(exec);
     }
 
     @Override
-    public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+    public ListenableFuture<List<DataSegment>> fetchUsedSegments(
         String dataSource,
         List<Interval> intervals
     )
     {
-      try {
-        return exec.submit(
-            () -> getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
-        ).get();
-      }
-      catch (InterruptedException | ExecutionException e) {
-        throw new RuntimeException(e);
-      }
+      return exec.submit(
+          () -> ImmutableList.copyOf(
+              getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
+          )
+      );
     }
 
     @Override
-    public DataSegment fetchUsedSegment(String dataSource, String segmentId)
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       ImmutableDruidDataSource druidDataSource;
       try {
@@ -1057,7 +1057,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSource, segmentId)) {
         DataSegment segment = druidDataSource.getSegment(possibleSegmentId);
         if (segment != null) {
-          return segment;
+          return Futures.immediateFuture(segment);
         }
       }
       throw new ISE("Can't find segment for id[%s]", segmentId);

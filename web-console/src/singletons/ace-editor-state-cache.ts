@@ -40,9 +40,7 @@ export class AceEditorStateCache {
     session.setUndoManager(state.undoManager);
   }
 
-  static deleteStates(ids: string[]): void {
-    for (const id of ids) {
-      delete AceEditorStateCache.states[id];
-    }
+  static deleteState(id: string): void {
+    delete AceEditorStateCache.states[id];
   }
 }

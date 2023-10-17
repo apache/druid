@@ -93,11 +93,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [8, 11]
+        jdk: [8, 17]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: 8
+      build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
       testing_groups: -Dgroups=query
       use_indexer: middleManager
@@ -153,12 +153,15 @@ jobs:
       - name: Setup java
         run: export JAVA_HOME=$JAVA_HOME_8_X64
 
+      # the build step produces SNAPSHOT artifacts into the local maven repository,
+      # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Restore Maven repository
         id: maven-restore
         uses: actions/cache/restore@v3
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-8-${{ github.sha }}
+          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
 
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true'
@@ -177,7 +180,7 @@ jobs:
         run: |
           for v in broker middlemanager router coordinator historical ; do
           echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
-          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0;
+          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0 ||:;
           done
 
   integration-other-tests:

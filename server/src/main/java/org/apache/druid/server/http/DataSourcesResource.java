@@ -36,7 +36,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
-import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -50,6 +50,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
@@ -60,6 +61,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -104,7 +106,7 @@ public class DataSourcesResource
   private final CoordinatorServerView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
-  private final IndexingServiceClient indexingServiceClient;
+  private final OverlordClient overlordClient;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
 
@@ -113,7 +115,7 @@ public class DataSourcesResource
       CoordinatorServerView serverInventoryView,
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
-      @Nullable IndexingServiceClient indexingServiceClient,
+      @Nullable OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator
   )
@@ -121,7 +123,7 @@ public class DataSourcesResource
     this.serverInventoryView = serverInventoryView;
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataRuleManager = metadataRuleManager;
-    this.indexingServiceClient = indexingServiceClient;
+    this.overlordClient = overlordClient;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
   }
@@ -311,7 +313,7 @@ public class DataSourcesResource
       @QueryParam("interval") final String interval
   )
   {
-    if (indexingServiceClient == null) {
+    if (overlordClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
 
@@ -333,7 +335,7 @@ public class DataSourcesResource
       @PathParam("interval") final String interval
   )
   {
-    if (indexingServiceClient == null) {
+    if (overlordClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
     if (StringUtils.contains(interval, '_')) {
@@ -341,7 +343,7 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      indexingServiceClient.killUnusedSegments("api-issued", dataSourceName, theInterval);
+      FutureUtils.getUnchecked(overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null), true);
       return Response.ok().build();
     }
     catch (Exception e) {
@@ -869,27 +871,35 @@ public class DataSourcesResource
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
-      // dropped means a segment will never be handed off, i.e it completed hand off
-      // init to true, reset to false only if this segment can be loaded by rules
-      boolean dropped = true;
+
+      // A segment that is not eligible for load will never be handed off
+      boolean notEligibleForLoad = true;
       for (Rule rule : rules) {
         if (rule.appliesTo(theInterval, now)) {
           if (rule instanceof LoadRule) {
-            dropped = false;
+            notEligibleForLoad = false;
           }
           break;
         }
       }
-      if (dropped) {
+      if (notEligibleForLoad) {
         return Response.ok(true).build();
       }
 
-      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+      VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
           new TableDataSource(dataSourceName)
       );
       if (timeline == null) {
-        log.debug("No timeline found for datasource[%s]", dataSourceName);
+        log.error("No timeline found for datasource[%s]", dataSourceName);
         return Response.ok(false).build();
+      }
+
+      // A segment with version lower than that of the latest chunk might never get handed off
+      // If there are multiple versions of this segment (due to a concurrent replace task),
+      // only the latest version would get handed off
+      List<TimelineObjectHolder<String, SegmentLoadInfo>> timelineObjects = timeline.lookup(Intervals.of(interval));
+      if (!timelineObjects.isEmpty() && timelineObjects.get(0).getVersion().compareTo(version) > 0) {
+        return Response.ok(true).build();
       }
 
       Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,17 +33,17 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -161,7 +162,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
-                        .setDimFilter(selector("v0", "bfoo", null))
+                        .setDimFilter(equality("v0", "bfoo", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(new DefaultLimitSpec(
                             ImmutableList.of(new OrderByColumnSpec(
@@ -248,7 +249,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
                 .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ColumnType.STRING))
-                .filters(selector("v0", "bfoo", null))
+                .filters(equality("v0", "bfoo", ColumnType.STRING))
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -316,9 +317,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
                 .filters(
-                    new AndDimFilter(
-                        new SelectorDimFilter("dim3", "a", null),
-                        new SelectorDimFilter("dim3", "b", null)
+                    and(
+                        equality("dim3", "a", ColumnType.STRING),
+                        equality("dim3", "b", ColumnType.STRING)
                     )
                 )
                 .columns("dim3")
@@ -342,7 +343,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
-                .filters(new SelectorDimFilter("dim3", "a", null))
+                .filters(equality("dim3", "a", ColumnType.STRING))
                 .columns("dim3")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -1028,7 +1029,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                                 ColumnType.STRING
                             )
                         )
-                        .setDimFilter(bound("v0", "0", null, true, false, null, StringComparators.NUMERIC))
+                        .setDimFilter(range("v0", ColumnType.LONG, 0L, null, true, false))
                         .setDimensions(dimensions(new DefaultDimensionSpec("v1", "_d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(new DefaultLimitSpec(
@@ -1209,7 +1210,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                               ExpressionLambdaAggregatorFactory.DEFAULT_MAX_SIZE_BYTES,
                               TestExprMacroTable.INSTANCE
                           ),
-                          not(selector("dim1", null, null))
+                          notNull("dim1")
                       ),
                       new CountAggregatorFactory("a1")
                   )
@@ -1691,7 +1692,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                                 true
                             )
                         )
-                        .setDimFilter(selector("v0", "a", null))
+                        .setDimFilter(equality("v0", "a", ColumnType.STRING))
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim3", "_d0", ColumnType.STRING)
@@ -1734,7 +1735,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                                 true
                             )
                         )
-                        .setDimFilter(selector("v0", "b", null))
+                        .setDimFilter(equality("v0", "b", ColumnType.STRING))
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim3", "_d0", ColumnType.STRING)
@@ -2105,9 +2106,9 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .filters(
-                    new OrDimFilter(
-                        new InDimFilter("dim3", ImmutableSet.of("a", "b", "other")),
-                        new SelectorDimFilter("dim3", null, null)
+                    or(
+                        in("dim3", ImmutableSet.of("a", "b", "other"), null),
+                        isNull("dim3")
                     )
                 )
                 .columns("v0")
@@ -2152,11 +2153,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .filters(
-                    new OrDimFilter(
-                        new InDimFilter("dim3", ImmutableSet.of("a", "b", "other")),
-                        new AndDimFilter(
-                            new InDimFilter("dim2", ImmutableSet.of("a", "b", "other")),
-                            new SelectorDimFilter("dim3", null, null)
+                    or(
+                        in("dim3", ImmutableSet.of("a", "b", "other"), null),
+                        and(
+                            in("dim2", ImmutableSet.of("a", "b", "other"), null),
+                            isNull("dim3")
                         )
                     )
                 )
@@ -2191,4 +2192,46 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
     );
   }
+
+  @Test
+  public void testMultiValuedFilterOnlyWhenLookupPullsInDuplicates()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT \n"
+            + "  MV_FILTER_ONLY(LOOKUP(dim3,'lookyloo'),ARRAY[null]),count(1) \n"
+            + "FROM druid.foo AS t group by 1\n")
+        .expectedQuery(
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    new ListFilteredVirtualColumn(
+                        "v0",
+                        new ExtractionDimensionSpec(
+                            "dim3",
+                            "dim3",
+                            ColumnType.STRING,
+                            new RegisteredLookupExtractionFn(
+                                null,
+                                "lookyloo",
+                                false,
+                                null,
+                                null,
+                                true)),
+                        Sets.newHashSet((String) null),
+                        true))
+                .setDimensions(
+                    dimensions(
+                        new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build())
+        .expectedResults(
+            ImmutableList.of(new Object[] {NullHandling.defaultStringValue(), 7L}))
+        .run();
+
+  }
+
 }

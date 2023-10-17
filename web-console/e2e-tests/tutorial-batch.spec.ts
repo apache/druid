@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { T } from 'druid-query-toolkit';
+import { T } from '@druid-toolkit/query';
 import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
@@ -36,7 +36,7 @@ import { waitTillWebConsoleReady } from './util/setup';
 
 jest.setTimeout(5 * 60 * 1000);
 
-const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Россия 한국 中国!?~';
+const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Україна 한국 中国!?~';
 
 describe('Tutorial: Loading a file', () => {
   let browser: playwright.Browser;

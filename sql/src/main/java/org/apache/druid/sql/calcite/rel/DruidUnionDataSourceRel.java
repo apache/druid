@@ -118,7 +118,7 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
-    final List<TableDataSource> dataSources = new ArrayList<>();
+    final List<DataSource> dataSources = new ArrayList<>();
     RowSignature signature = null;
 
     for (final RelNode relNode : unionRel.getInputs()) {

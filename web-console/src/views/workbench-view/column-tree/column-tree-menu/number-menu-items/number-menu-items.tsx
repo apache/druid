@@ -18,8 +18,9 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlQuery } from 'druid-query-toolkit';
-import { C, F, L } from 'druid-query-toolkit';
+import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, F, L } from '@druid-toolkit/query';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { prettyPrintSql } from '../../../../../utils';
@@ -35,9 +36,10 @@ export interface NumberMenuItemsProps {
 }
 
 export const NumberMenuItems = React.memo(function NumberMenuItems(props: NumberMenuItemsProps) {
-  function renderFilterMenu(): JSX.Element {
-    const { columnName, parsedQuery, onQueryChange } = props;
+  const { columnName, parsedQuery, onQueryChange } = props;
+  const column = C(columnName);
 
+  function renderFilterMenu(): JSX.Element {
     function filterMenuItem(clause: SqlExpression) {
       return (
         <MenuItem
@@ -49,7 +51,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
       );
     }
 
-    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(column.greaterThan(NINE_THOUSAND))}
@@ -59,7 +60,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
   }
 
   function renderRemoveFilter(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.getEffectiveWhereExpression().containsColumnName(columnName)) return;
 
     return (
@@ -74,7 +74,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
   }
 
   function renderGroupByMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     function groupByMenuItem(ex: SqlExpression, alias?: string) {
@@ -94,7 +93,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
       );
     }
 
-    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
         {groupByMenuItem(column)}
@@ -104,7 +102,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
   }
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     const groupedSelectIndexes = parsedQuery.getGroupedSelectIndexesForColumn(columnName);
     if (!groupedSelectIndexes.length) return;
 
@@ -120,7 +117,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
   }
 
   function renderAggregateMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     function aggregateMenuItem(ex: SqlExpression, alias: string) {
@@ -134,7 +130,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
       );
     }
 
-    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(F('SUM', column), `sum_${columnName}`)}

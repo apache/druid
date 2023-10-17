@@ -20,10 +20,11 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,9 +51,11 @@ public class WindowOperatorQueryTest
   {
     query = new WindowOperatorQuery(
         InlineDataSource.fromIterable(new ArrayList<>(), RowSignature.empty()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
         ImmutableMap.of("sally", "sue"),
         RowSignature.empty(),
-        new ArrayList<>()
+        new ArrayList<>(),
+        null
     );
   }
 
@@ -100,15 +103,8 @@ public class WindowOperatorQueryTest
     final Set<String> tableNames = query.getDataSource().getTableNames();
     Assert.assertEquals(0, tableNames.size());
 
-    boolean exceptionThrown = false;
-    try {
-      query.withDataSource(new TableDataSource("bob"));
-    }
-    catch (IAE e) {
-      // should fail trying to set a TableDataSource as TableDataSource is not currently allowed.
-      exceptionThrown = true;
-    }
-    Assert.assertTrue(exceptionThrown);
+    final TableDataSource newDs = new TableDataSource("bob");
+    Assert.assertSame(newDs, query.withDataSource(newDs).getDataSource());
   }
 
   @Test

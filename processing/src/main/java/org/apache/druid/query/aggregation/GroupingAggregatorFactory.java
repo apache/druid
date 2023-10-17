@@ -181,12 +181,6 @@ public class GroupingAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new GroupingAggregatorFactory(name, groupings, keyDimensions));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     return object;

@@ -59,8 +59,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -102,7 +104,11 @@ public class FrameTestUtil
       final File file
   ) throws IOException
   {
-    try (final FrameFileWriter writer = FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null, ByteTracker.unboundedTracker())) {
+    try (final FrameFileWriter writer = FrameFileWriter.open(
+        Channels.newChannel(new FileOutputStream(file)),
+        null,
+        ByteTracker.unboundedTracker()
+    )) {
       framesWithPartitions.forEach(
           frameWithPartition -> {
             try {
@@ -126,7 +132,51 @@ public class FrameTestUtil
     Assert.assertEquals("number of rows", expectedRows.size(), actualRows.size());
 
     for (int i = 0; i < expectedRows.size(); i++) {
-      Assert.assertEquals("row #" + i, expectedRows.get(i), actualRows.get(i));
+      assertRowEqual("row #" + i, expectedRows.get(i), actualRows.get(i));
+    }
+  }
+
+  /**
+   * Asserts that two rows are equal, using {@link Objects#deepEquals} to work properly on {@code Object[]}.
+   */
+  public static void assertRowEqual(final List<Object> expected, final List<Object> actual)
+  {
+    assertRowEqual(null, expected, actual);
+  }
+
+  /**
+   * Asserts that two rows are equal, using {@link Objects#deepEquals} to work properly on {@code Object[]}.
+   */
+  public static void assertRowEqual(final String message, final List<Object> expected, final List<Object> actual)
+  {
+    boolean ok;
+
+    if (expected.size() == actual.size()) {
+      ok = true;
+
+      for (int i = 0; i < expected.size(); i++) {
+        final Object expectedValue = expected.get(i);
+        final Object actualValue = actual.get(i);
+
+        if (!Objects.deepEquals(expectedValue, actualValue)) {
+          ok = false;
+          break;
+        }
+      }
+    } else {
+      ok = false;
+    }
+
+    if (!ok) {
+      // Call Assert.assertEquals, which we expect to fail, to get a nice failure message
+      Assert.assertEquals(
+          message,
+          Arrays.deepToString(expected.toArray()),
+          Arrays.deepToString(actual.toArray())
+      );
+
+      // Just in case it doesn't fail for some reason, fail anyway.
+      Assert.fail(message);
     }
   }
 
@@ -321,7 +371,7 @@ public class FrameTestUtil
   private static Supplier<Object> dimensionSelectorReader(final DimensionSelector selector)
   {
     return () -> {
-      // Different from selector.getObject(): allows us to differentiate [null] from []
+      // Different from selector.getObject(): allows us to differentiate null, [null], and []
       final IndexedInts row = selector.getRow();
       final int sz = row.size();
 

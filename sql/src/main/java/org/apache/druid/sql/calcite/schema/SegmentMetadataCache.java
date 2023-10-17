@@ -396,8 +396,8 @@ public class SegmentMetadataCache
       awaitInitialization();
       final long endMillis = System.currentTimeMillis();
       log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
-      emitter.emit(ServiceMetricEvent.builder().build(
-          "init/metadatacache/time",
+      emitter.emit(ServiceMetricEvent.builder().setMetric(
+          "metadatacache/init/time",
           endMillis - startMillis
       ));
     }
@@ -722,7 +722,7 @@ public class SegmentMetadataCache
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
 
-    emitter.emit(builder.build("segment/metadatacache/refresh/count", segments.size()));
+    emitter.emit(builder.setMetric("metadatacache/refresh/count", segments.size()));
 
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
@@ -793,7 +793,7 @@ public class SegmentMetadataCache
 
     long refreshDurationMillis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
-    emitter.emit(builder.build("segment/metadatacache/refresh/time", refreshDurationMillis));
+    emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
 
     log.debug(
         "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
@@ -932,7 +932,8 @@ public class SegmentMetadataCache
         ),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null // we don't care about merging strategy because merge is false
     );
 
     return queryLifecycleFactory
@@ -960,6 +961,9 @@ public class SegmentMetadataCache
         // likelyhood of upgrading from some version lower than 0.23 is low
         try {
           valueType = ColumnType.fromString(entry.getValue().getType());
+          if (valueType == null) {
+            valueType = ColumnType.ofComplex(entry.getValue().getType());
+          }
         }
         catch (IllegalArgumentException ignored) {
           valueType = ColumnType.UNKNOWN_COMPLEX;

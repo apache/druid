@@ -24,24 +24,26 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.IndexedStringDictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.IndexedStringDruidPredicateIndex;
-import org.apache.druid.segment.column.IndexedUtf8LexicographicalRangeIndex;
-import org.apache.druid.segment.column.IndexedUtf8ValueSetIndex;
-import org.apache.druid.segment.column.LexicographicalRangeIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
-import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.StringEncodingStrategies;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.IndexedStringDictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.IndexedStringDruidPredicateIndexes;
+import org.apache.druid.segment.index.IndexedUtf8LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.IndexedUtf8ValueIndexes;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.SpatialIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -113,22 +115,26 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
         }
         return (T) (NullValueIndex) () -> nullIndex;
-      } else if (clazz.equals(StringValueSetIndex.class)) {
-        return (T) new IndexedUtf8ValueSetIndex<>(
+      } else if (
+          clazz.equals(StringValueSetIndexes.class) ||
+          clazz.equals(Utf8ValueSetIndexes.class) ||
+          clazz.equals(ValueIndexes.class)
+      ) {
+        return (T) new IndexedUtf8ValueIndexes<>(
             bitmapFactory,
             dict,
             singleThreadedBitmaps
         );
-      } else if (clazz.equals(DruidPredicateIndex.class)) {
-        return (T) new IndexedStringDruidPredicateIndex<>(
+      } else if (clazz.equals(DruidPredicateIndexes.class)) {
+        return (T) new IndexedStringDruidPredicateIndexes<>(
             bitmapFactory,
             new StringEncodingStrategies.Utf8ToStringIndexed(dict),
             singleThreadedBitmaps,
             columnConfig,
             numRows
         );
-      } else if (clazz.equals(LexicographicalRangeIndex.class)) {
-        return (T) new IndexedUtf8LexicographicalRangeIndex<>(
+      } else if (clazz.equals(LexicographicalRangeIndexes.class)) {
+        return (T) new IndexedUtf8LexicographicalRangeIndexes<>(
             bitmapFactory,
             dict,
             singleThreadedBitmaps,
@@ -136,8 +142,10 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
             columnConfig,
             numRows
         );
-      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
-                 || clazz.equals(DictionaryEncodedValueIndex.class)) {
+      } else if (
+          clazz.equals(DictionaryEncodedStringValueIndex.class) ||
+          clazz.equals(DictionaryEncodedValueIndex.class)
+      ) {
         // Need string dictionary instead of UTF8 dictionary
         return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
             bitmapFactory,

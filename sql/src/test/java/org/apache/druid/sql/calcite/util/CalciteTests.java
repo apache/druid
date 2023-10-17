@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -31,19 +32,28 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -77,9 +87,13 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -204,18 +218,18 @@ public class CalciteTests
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
       AuthConfig.ALLOW_ALL_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null, null
+      null,
+      null
   );
 
   public static final AuthenticationResult SUPER_USER_AUTH_RESULT = new AuthenticationResult(
       TEST_SUPERUSER_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null, null
+      null,
+      null
   );
 
-  public static final Injector INJECTOR = new CalciteTestInjectorBuilder()
-      .withDefaultMacroTable()
-      .build();
+  public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
 
   private CalciteTests()
   {
@@ -311,7 +325,7 @@ public class CalciteTests
 
   public static ExprMacroTable createExprMacroTable()
   {
-    return QueryFrameworkUtils.createExprMacroTable(INJECTOR);
+    return INJECTOR.getInstance(ExprMacroTable.class);
   }
 
   public static JoinableFactoryWrapper createJoinableFactoryWrapper()
@@ -330,7 +344,6 @@ public class CalciteTests
       final AuthorizerMapper authorizerMapper
   )
   {
-
     final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
     FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
         ImmutableMap.of(
@@ -339,11 +352,6 @@ public class CalciteTests
     );
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
-    FakeDruidNodeDiscoveryProvider overlordProvider = new FakeDruidNodeDiscoveryProvider(
-        ImmutableMap.of(
-            NodeRole.OVERLORD, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.OVERLORD, coordinatorNode))
-        )
-    );
 
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         new FakeHttpClient(),
@@ -358,16 +366,48 @@ public class CalciteTests
       }
     };
 
-    final DruidLeaderClient overlordLeaderClient = new DruidLeaderClient(
-        new FakeHttpClient(),
-        overlordProvider,
-        NodeRole.OVERLORD,
-        "/simple/leader"
-    ) {
+    final OverlordClient overlordClient = new NoopOverlordClient() {
       @Override
-      public String findCurrentLeader()
+      public ListenableFuture<URI> findCurrentLeader()
       {
-        return overlordNode.getHostAndPortToUse();
+        try {
+          return Futures.immediateFuture(new URI(overlordNode.getHostAndPortToUse()));
+        }
+        catch (URISyntaxException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+          @Nullable String state,
+          @Nullable String dataSource,
+          @Nullable Integer maxCompletedTasks
+      )
+      {
+        List<TaskStatusPlus> tasks = new ArrayList<TaskStatusPlus>();
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 10L));
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 1L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 20L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 2L));
+        return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(tasks.iterator()));
+      }
+
+      private TaskStatusPlus createTaskStatus(String id, String datasource, Long duration)
+      {
+        return new TaskStatusPlus(
+            id,
+            "testGroupId",
+            "testType",
+            DateTimes.nowUtc(),
+            DateTimes.nowUtc(),
+            TaskState.RUNNING,
+            RunnerTaskState.RUNNING,
+            duration,
+            TaskLocation.create("testHost", 1010, -1),
+            datasource,
+            null
+        );
       }
     };
 
@@ -383,7 +423,7 @@ public class CalciteTests
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
-        overlordLeaderClient,
+        overlordClient,
         provider,
         getJsonMapper()
     );

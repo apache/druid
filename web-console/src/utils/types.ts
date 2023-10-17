@@ -18,7 +18,7 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column } from 'druid-query-toolkit';
+import type { Column } from '@druid-toolkit/query';
 
 export function columnToSummary(column: Column): string {
   const lines: string[] = [column.name];
@@ -88,6 +88,9 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'COMPLEX<IPADDRESS>':
     case 'COMPLEX<IPPREFIX>':
       return IconNames.IP_ADDRESS;
+
+    case 'COMPLEX<SERIALIZABLEPAIRLONGSTRING>':
+      return IconNames.DOUBLE_CHEVRON_RIGHT;
 
     case 'NULL':
       return IconNames.CIRCLE;

@@ -51,47 +51,8 @@ jobs:
           days-before-close: 28
           stale-issue-label: stale
           stale-pr-label: stale
-          exempt-issue-labels: |
-            Security
-            Bug
-            Proposal
-            Design Review
-            Improvement
-            Performance
-            Refactoring
-            Apache
-            Area - Automation/Static Analysis
-            Area - Batch Indexing
-            Area - Cache
-            Area - Deep Storage
-            Area - Dependencies
-            Area - Dependency Injection
-            Area - Dev
-            Area - Documentation
-            Area - Extension
-            Area - Kafka/Kinesis Indexing
-            Area - Lookups
-            Area - Metadata
-            Area - Metrics/Event Emitting
-            Area - Null Handling
-            Area - Operations
-            Area - Query UI
-            Area - Querying
-            Area - Router
-            Area - Segment Balancing/Coordination
-            Area - Segment Format and Ser/De
-            Area - SQL
-            Area - Testing
-            Area - Web Console
-            Area - Zookeeper/Curator
-            Compatibility
-            Contributions Welcome
-            Development Blocker
-            Ease of Use
-            Error handling
-            HTTP
-            Incompatible
-            Stable API
+          exempt-issue-labels: 'Evergreen,Security,Bug,Proposal,Design Review,Improvement,Performance,Refactoring,Apache,Area - Automation/Static Analysis,Area - Batch Indexing,Area - Cache,Area - Deep Storage,Area - Dependencies,Area - Dependency Injection,Area - Dev,Area - Documentation,Area - Extension,Area - Kafka/Kinesis Indexing,Area - Lookups,Area - Metadata,Area - Metrics/Event Emitting,Area - Null Handling,Area - Operations,Area - Query UI,Area - Querying,Area - Router,Area - Segment Balancing/Coordination,Area - Segment Format and Ser/De,Area - SQL,Area - Testing,Area - Web Console,Area - Zookeeper/Curator,Compatibility,Contributions Welcome,Development Blocker,Ease of Use,Error handling,HTTP,Incompatible,Stable API'
+          exempt-pr-labels: 'Evergreen'
           exempt-milestones: true
           exempt-assignees: true
           ascending: true

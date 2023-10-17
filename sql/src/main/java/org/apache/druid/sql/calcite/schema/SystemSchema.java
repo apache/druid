@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
@@ -50,8 +49,8 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -66,6 +65,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.DruidNode;
@@ -86,6 +86,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -215,7 +216,7 @@ public class SystemSchema extends AbstractSchema
       final FilteredServerInventoryView serverInventoryView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
-      final @IndexingService DruidLeaderClient overlordDruidLeaderClient,
+      final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper
   )
@@ -223,10 +224,10 @@ public class SystemSchema extends AbstractSchema
     Preconditions.checkNotNull(serverView, "serverView");
     this.tableMap = ImmutableMap.of(
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordDruidLeaderClient, coordinatorDruidLeaderClient),
+        SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper),
-        SUPERVISOR_TABLE, new SupervisorsTable(overlordDruidLeaderClient, jsonMapper, authorizerMapper)
+        TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper),
+        SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper)
     );
   }
 
@@ -496,21 +497,21 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final FilteredServerInventoryView serverInventoryView;
-    private final DruidLeaderClient overlordLeaderClient;
+    private final OverlordClient overlordClient;
     private final DruidLeaderClient coordinatorLeaderClient;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
         FilteredServerInventoryView serverInventoryView,
         AuthorizerMapper authorizerMapper,
-        DruidLeaderClient overlordLeaderClient,
+        OverlordClient overlordClient,
         DruidLeaderClient coordinatorLeaderClient
     )
     {
       this.authorizerMapper = authorizerMapper;
       this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
       this.serverInventoryView = serverInventoryView;
-      this.overlordLeaderClient = overlordLeaderClient;
+      this.overlordClient = overlordClient;
       this.coordinatorLeaderClient = coordinatorLeaderClient;
     }
 
@@ -538,13 +539,21 @@ public class SystemSchema extends AbstractSchema
 
       String tmpCoordinatorLeader = "";
       String tmpOverlordLeader = "";
+
       try {
         tmpCoordinatorLeader = coordinatorLeaderClient.findCurrentLeader();
-        tmpOverlordLeader = overlordLeaderClient.findCurrentLeader();
       }
-      catch (ISE ignored) {
+      catch (Exception ignored) {
         // no reason to kill the results if something is sad and there are no leaders
       }
+
+      try {
+        tmpOverlordLeader = FutureUtils.getUnchecked(overlordClient.findCurrentLeader(), true).toString();
+      }
+      catch (Exception ignored) {
+        // no reason to kill the results if something is sad and there are no leaders
+      }
+
       final String coordinatorLeader = tmpCoordinatorLeader;
       final String overlordLeader = tmpOverlordLeader;
 
@@ -761,18 +770,15 @@ public class SystemSchema extends AbstractSchema
    */
   static class TasksTable extends AbstractTable implements ScannableTable
   {
-    private final DruidLeaderClient druidLeaderClient;
-    private final ObjectMapper jsonMapper;
+    private final OverlordClient overlordClient;
     private final AuthorizerMapper authorizerMapper;
 
     public TasksTable(
-        DruidLeaderClient druidLeaderClient,
-        ObjectMapper jsonMapper,
+        OverlordClient overlordClient,
         AuthorizerMapper authorizerMapper
     )
     {
-      this.druidLeaderClient = druidLeaderClient;
-      this.jsonMapper = jsonMapper;
+      this.overlordClient = overlordClient;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -795,7 +801,7 @@ public class SystemSchema extends AbstractSchema
       {
         private final CloseableIterator<TaskStatusPlus> it;
 
-        public TasksEnumerable(JsonParserIterator<TaskStatusPlus> tasks)
+        public TasksEnumerable(CloseableIterator<TaskStatusPlus> tasks)
         {
           this.it = getAuthorizedTasks(tasks, root);
         }
@@ -815,21 +821,7 @@ public class SystemSchema extends AbstractSchema
             public Object[] current()
             {
               final TaskStatusPlus task = it.next();
-              @Nullable final String host = task.getLocation().getHost();
-              @Nullable final String hostAndPort;
 
-              if (host == null) {
-                hostAndPort = null;
-              } else {
-                final int port;
-                if (task.getLocation().getTlsPort() >= 0) {
-                  port = task.getLocation().getTlsPort();
-                } else {
-                  port = task.getLocation().getPort();
-                }
-
-                hostAndPort = HostAndPort.fromParts(host, port).toString();
-              }
               return new Object[]{
                   task.getId(),
                   task.getGroupId(),
@@ -840,8 +832,8 @@ public class SystemSchema extends AbstractSchema
                   toStringOrNull(task.getStatusCode()),
                   toStringOrNull(task.getRunnerStatusCode()),
                   task.getDuration() == null ? 0L : task.getDuration(),
-                  hostAndPort,
-                  host,
+                  task.getLocation().getLocation(),
+                  task.getLocation().getHost(),
                   (long) task.getLocation().getPort(),
                   (long) task.getLocation().getTlsPort(),
                   task.getErrorMsg()
@@ -874,11 +866,11 @@ public class SystemSchema extends AbstractSchema
         }
       }
 
-      return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper));
+      return new TasksEnumerable(FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, null), true));
     }
 
     private CloseableIterator<TaskStatusPlus> getAuthorizedTasks(
-        JsonParserIterator<TaskStatusPlus> it,
+        CloseableIterator<TaskStatusPlus> it,
         DataContext root
     )
     {
@@ -902,39 +894,20 @@ public class SystemSchema extends AbstractSchema
 
   }
 
-  //Note that overlord must be up to get tasks
-  private static JsonParserIterator<TaskStatusPlus> getTasks(
-      DruidLeaderClient indexingServiceClient,
-      ObjectMapper jsonMapper
-  )
-  {
-    return getThingsFromLeaderNode(
-        "/druid/indexer/v1/tasks",
-        new TypeReference<TaskStatusPlus>()
-        {
-        },
-        indexingServiceClient,
-        jsonMapper
-    );
-  }
-
   /**
    * This table contains a row per supervisor task.
    */
   static class SupervisorsTable extends AbstractTable implements ScannableTable
   {
-    private final DruidLeaderClient druidLeaderClient;
-    private final ObjectMapper jsonMapper;
+    private final OverlordClient overlordClient;
     private final AuthorizerMapper authorizerMapper;
 
     public SupervisorsTable(
-        DruidLeaderClient druidLeaderClient,
-        ObjectMapper jsonMapper,
+        OverlordClient overlordClient,
         AuthorizerMapper authorizerMapper
     )
     {
-      this.druidLeaderClient = druidLeaderClient;
-      this.jsonMapper = jsonMapper;
+      this.overlordClient = overlordClient;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -958,7 +931,7 @@ public class SystemSchema extends AbstractSchema
       {
         private final CloseableIterator<SupervisorStatus> it;
 
-        public SupervisorsEnumerable(JsonParserIterator<SupervisorStatus> tasks)
+        public SupervisorsEnumerable(CloseableIterator<SupervisorStatus> tasks)
         {
           this.it = getAuthorizedSupervisors(tasks, root);
         }
@@ -1016,11 +989,11 @@ public class SystemSchema extends AbstractSchema
         }
       }
 
-      return new SupervisorsEnumerable(getSupervisors(druidLeaderClient, jsonMapper));
+      return new SupervisorsEnumerable(FutureUtils.getUnchecked(overlordClient.supervisorStatuses(), true));
     }
 
     private CloseableIterator<SupervisorStatus> getAuthorizedSupervisors(
-        JsonParserIterator<SupervisorStatus> it,
+        CloseableIterator<SupervisorStatus> it,
         DataContext root
     )
     {
@@ -1041,23 +1014,6 @@ public class SystemSchema extends AbstractSchema
 
       return wrap(authorizedSupervisors.iterator(), it);
     }
-  }
-
-  // Note that overlord must be up to get supervisor tasks, otherwise queries to sys.supervisors table
-  // will fail with internal server error (HTTP 500)
-  private static JsonParserIterator<SupervisorStatus> getSupervisors(
-      DruidLeaderClient indexingServiceClient,
-      ObjectMapper jsonMapper
-  )
-  {
-    return getThingsFromLeaderNode(
-        "/druid/indexer/v1/supervisor?system",
-        new TypeReference<SupervisorStatus>()
-        {
-        },
-        indexingServiceClient,
-        jsonMapper
-    );
   }
 
   public static <T> JsonParserIterator<T> getThingsFromLeaderNode(
@@ -1104,7 +1060,7 @@ public class SystemSchema extends AbstractSchema
     );
   }
 
-  private static <T> CloseableIterator<T> wrap(Iterator<T> iterator, JsonParserIterator<T> it)
+  private static <T> CloseableIterator<T> wrap(Iterator<T> iterator, Closeable closer)
   {
     return new CloseableIterator<T>()
     {
@@ -1114,7 +1070,7 @@ public class SystemSchema extends AbstractSchema
         final boolean hasNext = iterator.hasNext();
         if (!hasNext) {
           try {
-            it.close();
+            closer.close();
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -1132,7 +1088,7 @@ public class SystemSchema extends AbstractSchema
       @Override
       public void close() throws IOException
       {
-        it.close();
+        closer.close();
       }
     };
   }

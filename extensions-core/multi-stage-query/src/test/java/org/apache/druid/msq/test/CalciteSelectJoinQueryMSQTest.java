@@ -20,10 +20,10 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
@@ -129,7 +129,8 @@ public class CalciteSelectJoinQueryMSQTest
           queryJsonMapper,
           injector,
           new MSQTestTaskActionClient(queryJsonMapper),
-          workerMemoryParameters
+          workerMemoryParameters,
+          ImmutableList.of()
       );
       return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper)
       {
@@ -142,7 +143,6 @@ public class CalciteSelectJoinQueryMSQTest
 
         @Override
         public QueryMaker buildQueryMakerForSelect(RelRoot relRoot, PlannerContext plannerContext)
-            throws ValidationException
         {
           plannerContext.queryContextMap().put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString());
           return super.buildQueryMakerForSelect(relRoot, plannerContext);

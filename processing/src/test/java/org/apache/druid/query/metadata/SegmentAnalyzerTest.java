@@ -249,7 +249,15 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
-        new TableDataSource("test"), new LegacySegmentSpec("2011/2012"), null, null, null, analyses, false, false
+        new TableDataSource("test"),
+        new LegacySegmentSpec("2011/2012"),
+        null,
+        null,
+        null,
+        analyses,
+        false,
+        null,
+        null
     );
     return runner.run(QueryPlus.wrap(query)).toList();
   }
@@ -534,12 +542,6 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     @Override
     public AggregatorFactory getCombiningFactory()
-    {
-      return null;
-    }
-
-    @Override
-    public List<AggregatorFactory> getRequiredColumns()
     {
       return null;
     }

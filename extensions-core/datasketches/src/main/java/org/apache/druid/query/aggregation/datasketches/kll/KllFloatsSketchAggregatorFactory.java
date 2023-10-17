@@ -38,9 +38,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory<KllFloatsSketch, Float>
 {
@@ -79,19 +77,6 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
   public Comparator<KllFloatsSketch> getComparator()
   {
     return COMPARATOR;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new KllFloatsSketchAggregatorFactory(
-            getFieldName(),
-            getFieldName(),
-            getK(),
-            getMaxStreamLength()
-        )
-    );
   }
 
   @Override
@@ -179,7 +164,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
               SingleValueDimensionVectorSelector selector
           )
           {
-            return new KllSketchNoOpBufferAggregator<KllFloatsSketch>(getEmptySketch());
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override
@@ -188,7 +173,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
               MultiValueDimensionVectorSelector selector
           )
           {
-            return new KllSketchNoOpBufferAggregator<KllFloatsSketch>(getEmptySketch());
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override
@@ -207,6 +192,12 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
           public VectorAggregator makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
           {
             return new KllFloatsSketchBuildVectorAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
+          }
+
+          @Override
+          public VectorAggregator makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+          {
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override

@@ -57,6 +57,7 @@ public class KubernetesOverlordModule implements DruidModule
   {
     // druid.indexer.runner.type=k8s
     JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
+    JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8sAndWorker", KubernetesAndWorkerTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
     PolyBind.createChoice(
         binder,
@@ -72,7 +73,11 @@ public class KubernetesOverlordModule implements DruidModule
     biddy.addBinding(KubernetesTaskRunnerFactory.TYPE_NAME)
          .to(KubernetesTaskRunnerFactory.class)
          .in(LazySingleton.class);
+    biddy.addBinding(KubernetesAndWorkerTaskRunnerFactory.TYPE_NAME)
+        .to(KubernetesAndWorkerTaskRunnerFactory.class)
+        .in(LazySingleton.class);
     binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
+    binder.bind(KubernetesAndWorkerTaskRunnerFactory.class).in(LazySingleton.class);
     configureTaskLogs(binder);
   }
 

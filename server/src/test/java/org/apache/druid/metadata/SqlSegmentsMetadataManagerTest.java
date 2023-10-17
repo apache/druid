@@ -37,6 +37,8 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -44,8 +46,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -102,7 +109,17 @@ public class SqlSegmentsMetadataManagerTest
 
   private void publish(DataSegment segment, boolean used) throws IOException
   {
+    publish(segment, used, DateTimes.nowUtc());
+  }
+
+  private void publish(DataSegment segment, boolean used, DateTime usedFlagLastUpdated) throws IOException
+  {
     boolean partitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
+
+    String usedFlagLastUpdatedStr = null;
+    if (null != usedFlagLastUpdated) {
+      usedFlagLastUpdatedStr = usedFlagLastUpdated.toString();
+    }
     publisher.publishSegment(
         segment.getId().toString(),
         segment.getDataSource(),
@@ -112,7 +129,8 @@ public class SqlSegmentsMetadataManagerTest
         partitioned,
         segment.getVersion(),
         used,
-        jsonMapper.writeValueAsBytes(segment)
+        jsonMapper.writeValueAsBytes(segment),
+        usedFlagLastUpdatedStr
     );
   }
 
@@ -265,7 +283,7 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
     dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
     Assert.assertEquals(
-        ImmutableList.of("wikipedia2", "wikipedia3", "wikipedia"),
+        ImmutableList.of("wikipedia3", "wikipedia", "wikipedia2"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
                            .stream()
                            .map(ImmutableDruidDataSource::getName)
@@ -350,7 +368,8 @@ public class SqlSegmentsMetadataManagerTest
         true,
         "corrupt-version",
         true,
-        StringUtils.toUtf8("corrupt-payload")
+        StringUtils.toUtf8("corrupt-payload"),
+        "corrupt-last-used-date"
     );
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
@@ -364,28 +383,84 @@ public class SqlSegmentsMetadataManagerTest
   }
 
   @Test
-  public void testGetUnusedSegmentIntervals()
+  public void testGetUnusedSegmentIntervals() throws IOException
   {
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     sqlSegmentsMetadataManager.poll();
+
+    // We alter the segment table to allow nullable used_status_last_updated in order to test compatibility during druid upgrade from version without used_status_last_updated.
+    derbyConnectorRule.allowUsedFlagLastUpdatedToBeNullable();
+
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource("wikipedia");
     Assert.assertEquals(2, numChangedSegments);
 
+    String newDs = "newDataSource";
+    final DataSegment newSegment = createSegment(
+        newDs,
+        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment, false, DateTimes.nowUtc().minus(Duration.parse("PT7200S").getMillis()));
+
+    final DataSegment newSegment2 = createSegment(
+        newDs,
+        "2017-10-16T00:00:00.000/2017-10-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment2, false, DateTimes.nowUtc().minus(Duration.parse("PT172800S").getMillis()));
+
+    final DataSegment newSegment3 = createSegment(
+        newDs,
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment3, false, null);
+
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", null, DateTimes.of("3000"), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
     );
 
     // Test the DateTime maxEndTime argument of getUnusedSegmentIntervals
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of(2012, 1, 7, 0, 0), 1)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", null, DateTimes.of(2012, 1, 7, 0, 0), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+    );
+    Assert.assertEquals(
+        ImmutableList.of(segment1.getInterval()),
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of(2012, 1, 7, 0, 0), DateTimes.of(2012, 4, 7, 0, 0), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+    );
+    Assert.assertEquals(
+        ImmutableList.of(),
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of(2012, 1, 7, 0, 0), DateTimes.of(2012, 1, 7, 0, 0), 1, DateTimes.COMPARE_DATE_AS_STRING_MAX)
     );
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5)
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", null, DateTimes.of("3000"), 5, DateTimes.COMPARE_DATE_AS_STRING_MAX)
+    );
+
+    // Test a buffer period that should exclude some segments
+
+    // The wikipedia datasource has segments generated with last used time equal to roughly the time of test run. None of these segments should be selected with a bufer period of 1 day
+    Assert.assertEquals(
+        ImmutableList.of(),
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals("wikipedia", DateTimes.COMPARE_DATE_AS_STRING_MIN, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
+    );
+
+    // One of the 3 segments in newDs has a null used_status_last_updated which should mean getUnusedSegmentIntervals never returns it
+    // One of the 3 segments in newDs has a used_status_last_updated older than 1 day which means it should also be returned
+    // The last of the 3 segemns in newDs has a used_status_last_updated date less than one day and should not be returned
+    Assert.assertEquals(
+        ImmutableList.of(newSegment2.getInterval()),
+        sqlSegmentsMetadataManager.getUnusedSegmentIntervals(newDs, DateTimes.COMPARE_DATE_AS_STRING_MIN, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
     );
   }
 
@@ -870,4 +945,43 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertTrue(dataSegmentSet.contains(newSegment2));
   }
 
+  @Test
+  public void testPopulateUsedFlagLastUpdated() throws IOException
+  {
+    derbyConnectorRule.allowUsedFlagLastUpdatedToBeNullable();
+    final DataSegment newSegment = createSegment(
+        "dummyDS",
+        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publish(newSegment, false, null);
+    Assert.assertTrue(getCountOfRowsWithLastUsedNull() > 0);
+    sqlSegmentsMetadataManager.populateUsedFlagLastUpdated();
+    Assert.assertTrue(getCountOfRowsWithLastUsedNull() == 0);
+  }
+
+  private int getCountOfRowsWithLastUsedNull()
+  {
+    return derbyConnectorRule.getConnector().retryWithHandle(
+        new HandleCallback<Integer>()
+        {
+          @Override
+          public Integer withHandle(Handle handle)
+          {
+            List<Map<String, Object>> lst = handle.select(
+                StringUtils.format(
+                    "SELECT * FROM %1$s WHERE USED_STATUS_LAST_UPDATED IS NULL",
+                    derbyConnectorRule.metadataTablesConfigSupplier()
+                                      .get()
+                                      .getSegmentsTable()
+                                      .toUpperCase(Locale.ENGLISH)
+                )
+            );
+            return lst.size();
+          }
+        }
+    );
+  }
 }

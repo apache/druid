@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -45,7 +46,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -79,6 +79,7 @@ import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -100,6 +101,9 @@ public class QueryStackTests
       NoQueryLaningStrategy.INSTANCE,
       new ServerConfig()
   );
+
+  public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
+
   private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
@@ -113,7 +117,8 @@ public class QueryStackTests
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactory joinableFactory,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final LookupExtractorFactoryContainerProvider lookupManager
   )
   {
     return new ClientQuerySegmentWalker(
@@ -158,7 +163,9 @@ public class QueryStackTests
           {
             return false;
           }
-        }
+        },
+        lookupManager,
+        new SubqueryCountStatsProvider()
     );
   }
 
@@ -187,10 +194,19 @@ public class QueryStackTests
     );
   }
 
-  public static DruidProcessingConfig getProcessingConfig(
-      boolean useParallelMergePoolConfigured,
-      final int mergeBuffers
+  public static BrokerParallelMergeConfig getParallelMergeConfig(
+      boolean useParallelMergePoolConfigured
   )
+  {
+    return new BrokerParallelMergeConfig() {
+      @Override
+      public boolean useParallelMergePool()
+      {
+        return useParallelMergePoolConfigured;
+      }
+    };
+  }
+  public static DruidProcessingConfig getProcessingConfig(final int mergeBuffers)
   {
     return new DruidProcessingConfig()
     {
@@ -221,12 +237,6 @@ public class QueryStackTests
         }
         return mergeBuffers;
       }
-
-      @Override
-      public boolean useParallelMergePoolConfigured()
-      {
-        return useParallelMergePoolConfigured;
-      }
     };
   }
 
@@ -235,28 +245,18 @@ public class QueryStackTests
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
   {
-    return createQueryRunnerFactoryConglomerate(closer, true, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
+    return createQueryRunnerFactoryConglomerate(closer, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
-      final Supplier<Integer> minTopNThresholdSupplier
-  )
-  {
-    return createQueryRunnerFactoryConglomerate(closer, true, minTopNThresholdSupplier);
-  }
-
-  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
-      final Closer closer,
-      final boolean useParallelMergePoolConfigured,
       final Supplier<Integer> minTopNThresholdSupplier
   )
   {
     return createQueryRunnerFactoryConglomerate(
         closer,
         getProcessingConfig(
-            useParallelMergePoolConfigured,
-            DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS
+            DEFAULT_NUM_MERGE_BUFFERS
         ),
         minTopNThresholdSupplier
     );
@@ -294,11 +294,6 @@ public class QueryStackTests
             GroupByQueryRunnerTest.DEFAULT_MAPPER,
             new GroupByQueryConfig()
             {
-              @Override
-              public String getDefaultStrategy()
-              {
-                return GroupByStrategySelector.STRATEGY_V2;
-              }
             },
             groupByBuffers,
             processingConfig

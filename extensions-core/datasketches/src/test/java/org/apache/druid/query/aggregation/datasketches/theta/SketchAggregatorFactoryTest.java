@@ -71,6 +71,7 @@ public class SketchAggregatorFactoryTest
     ColumnSelectorFactory colSelectorFactory = EasyMock.mock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(EasyMock.anyString()))
             .andReturn(EasyMock.createMock(ColumnValueSelector.class)).anyTimes();
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("x")).andReturn(null).anyTimes();
     EasyMock.replay(colSelectorFactory);
 
     AggregatorAndSize aggregatorAndSize = AGGREGATOR_16384.factorizeWithSize(colSelectorFactory);

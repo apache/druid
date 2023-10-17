@@ -57,8 +57,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryHelper;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
@@ -1440,7 +1439,8 @@ public class ClientQuerySegmentWalkerTest
         ),
         conglomerate,
         joinableFactory,
-        serverConfig
+        serverConfig,
+        null
     );
   }
 
@@ -1492,12 +1492,10 @@ public class ClientQuerySegmentWalkerTest
               .put(QueryContexts.FINALIZE_KEY, true)
               .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0L)
               .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
-              .put(GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false)
               .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
-              .put(GroupByQueryConfig.CTX_KEY_STRATEGY, "X")
               .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
-              .put(GroupByStrategyV2.CTX_KEY_OUTERMOST, true)
-              .put(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, "1979")
+              .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
+              .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
               .build()
       );
 

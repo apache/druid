@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
 
 public abstract class Granularity implements Cacheable
 {
-  public static Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
+  public static final Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
   {
     @Override
     /**
@@ -213,6 +213,16 @@ public abstract class Granularity implements Cacheable
     }
 
     return vals;
+  }
+
+  /**
+   * Decides whether this granularity is finer than the other granularity
+   *
+   * @return true if this {@link Granularity} is finer than the passed one
+   */
+  public boolean isFinerThan(Granularity g)
+  {
+    return IS_FINER_THAN.compare(this, g) < 0;
   }
 
   /**

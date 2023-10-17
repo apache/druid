@@ -22,14 +22,14 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.DefaultBitmapResultFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -73,8 +73,8 @@ public class ColumnSelectorColumnIndexSelectorTest
     ).anyTimes();
     EasyMock.expect(holder.getColumn()).andReturn(stringColumn).anyTimes();
     EasyMock.expect(holder.getIndexSupplier()).andReturn(indexSupplier).anyTimes();
-    StringValueSetIndex someIndex = EasyMock.createMock(StringValueSetIndex.class);
-    EasyMock.expect(indexSupplier.as(StringValueSetIndex.class)).andReturn(someIndex).anyTimes();
+    StringValueSetIndexes someIndex = EasyMock.createMock(StringValueSetIndexes.class);
+    EasyMock.expect(indexSupplier.as(StringValueSetIndexes.class)).andReturn(someIndex).anyTimes();
     DictionaryEncodedStringValueIndex valueIndex = EasyMock.createMock(DictionaryEncodedStringValueIndex.class);
     EasyMock.expect(indexSupplier.as(DictionaryEncodedStringValueIndex.class)).andReturn(valueIndex).anyTimes();
     BitmapColumnIndex columnIndex = EasyMock.createMock(BitmapColumnIndex.class);
@@ -82,7 +82,7 @@ public class ColumnSelectorColumnIndexSelectorTest
     EasyMock.expect(valueIndex.getBitmap(0)).andReturn(someBitmap).anyTimes();
 
     EasyMock.expect(someIndex.forValue("foo")).andReturn(columnIndex).anyTimes();
-    EasyMock.expect(columnIndex.computeBitmapResult(EasyMock.anyObject())).andReturn(someBitmap).anyTimes();
+    EasyMock.expect(columnIndex.computeBitmapResult(EasyMock.anyObject(), EasyMock.eq(false))).andReturn(someBitmap).anyTimes();
 
     ColumnHolder nonStringHolder = EasyMock.createMock(ColumnHolder.class);
     EasyMock.expect(index.getColumnHolder(NON_STRING_DICTIONARY_COLUMN_NAME)).andReturn(nonStringHolder).anyTimes();
@@ -94,7 +94,6 @@ public class ColumnSelectorColumnIndexSelectorTest
                               .setDictionaryValuesUnique(true)
                               .setDictionaryValuesSorted(true)
                               .setHasBitmapIndexes(true)
-                              .setFilterable(true)
     ).anyTimes();
 
     EasyMock.replay(bitmapFactory, virtualColumns, index, indexSupplier, holder, stringColumn, nonStringHolder, someIndex, columnIndex, valueIndex, someBitmap);
@@ -109,11 +108,12 @@ public class ColumnSelectorColumnIndexSelectorTest
     );
     Assert.assertNotNull(bitmapIndex);
 
-    StringValueSetIndex valueIndex = supplier.as(StringValueSetIndex.class);
+    StringValueSetIndexes valueIndex = supplier.as(StringValueSetIndexes.class);
     Assert.assertNotNull(valueIndex);
     ImmutableBitmap valueBitmap = valueIndex.forValue("foo")
                                             .computeBitmapResult(
-                                                new DefaultBitmapResultFactory(indexSelector.getBitmapFactory())
+                                                new DefaultBitmapResultFactory(indexSelector.getBitmapFactory()),
+                                                false
                                             );
     Assert.assertNotNull(valueBitmap);
     EasyMock.verify(bitmapFactory, virtualColumns, index, indexSupplier);
@@ -128,7 +128,7 @@ public class ColumnSelectorColumnIndexSelectorTest
     );
     Assert.assertNull(bitmapIndex);
 
-    StringValueSetIndex valueIndex = supplier.as(StringValueSetIndex.class);
+    StringValueSetIndexes valueIndex = supplier.as(StringValueSetIndexes.class);
     Assert.assertNull(valueIndex);
     EasyMock.verify(bitmapFactory, virtualColumns, index, indexSupplier);
   }

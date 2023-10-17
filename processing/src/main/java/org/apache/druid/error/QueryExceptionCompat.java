@@ -47,7 +47,7 @@ public class QueryExceptionCompat extends DruidException.Failure
   {
     return bob.forPersona(DruidException.Persona.OPERATOR)
               .ofCategory(convertFailType(exception.getFailType()))
-              .build(exception.getMessage())
+              .build(exception, "%s", exception.getMessage())
               .withContext("host", exception.getHost())
               .withContext("errorClass", exception.getErrorClass())
               .withContext("legacyErrorCode", exception.getErrorCode());
@@ -66,12 +66,11 @@ public class QueryExceptionCompat extends DruidException.Failure
         return DruidException.Category.RUNTIME_FAILURE;
       case CANCELED:
         return DruidException.Category.CANCELED;
-      case UNKNOWN:
-        return DruidException.Category.UNCATEGORIZED;
       case UNSUPPORTED:
         return DruidException.Category.UNSUPPORTED;
       case TIMEOUT:
         return DruidException.Category.TIMEOUT;
+      case UNKNOWN:
       default:
         return DruidException.Category.UNCATEGORIZED;
     }

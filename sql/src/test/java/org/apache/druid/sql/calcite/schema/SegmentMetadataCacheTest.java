@@ -1309,7 +1309,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         queryContext,
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
-        false
+        null,
+        null
     );
 
     QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);
@@ -1416,9 +1417,21 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
                         false,
                         true,
                         1234,
-                        26,
-                        "a",
-                        "z",
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    "distinct",
+                    new ColumnAnalysis(
+                        null,
+                        "hyperUnique",
+                        false,
+                        true,
+                        1234,
+                        null,
+                        null,
+                        null,
                         null
                     )
                 )
@@ -1432,7 +1445,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         )
     );
     Assert.assertEquals(
-        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
+        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).add("distinct", ColumnType.ofComplex("hyperUnique")).build(),
         signature
     );
   }
@@ -1491,8 +1504,8 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
 
-    emitter.verifyEmitted("segment/metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
-    emitter.verifyEmitted("segment/metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
+    emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
+    emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)

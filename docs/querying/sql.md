@@ -23,8 +23,10 @@ sidebar_label: "Overview and syntax"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 You can query data in Druid datasources using Druid SQL. Druid translates SQL queries into its [native query language](querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](sql-translation.md).
 
@@ -55,7 +57,7 @@ Druid SQL supports SELECT queries with the following structure:
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
-[, UNNEST(source_expression) as table_alias_name(column_alias_name) ]
+[ CROSS JOIN UNNEST(source_expression) as table_alias_name(column_alias_name) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
 [ HAVING expr ]
@@ -85,15 +87,12 @@ documentation.
 
 ## UNNEST
 
-> The UNNEST SQL function is [experimental](../development/experimental.md). Its API and behavior are subject
-> to change in future releases. It is not recommended to use this feature in production at this time.
-
 The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
 
 The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
 
 ```sql
-SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2) ...
 ```
 
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
@@ -106,9 +105,8 @@ SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_al
 
 Keep the following things in mind when writing your query:
 
-- You must include the context parameter `"enableUnnest": true`.
 - You can unnest multiple source expressions in a single query.
-- Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
+- Notice the CROSS JOIN between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
 - If you view the native explanation of a SQL UNNEST, you'll notice that Druid uses `j0.unnest` as a virtual column to perform the unnest. An underscore is added for each unnest, so you may notice virtual columns named `_j0.unnest` or `__j0.unnest`.
 - UNNEST preserves the ordering of the source array that is being unnested.
 
@@ -220,7 +218,9 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-> With top-level queries, you can't apply GROUP BY, ORDER BY, or any other operator to the results of a UNION ALL.
+:::info
+ With top-level queries, you can't apply GROUP BY, ORDER BY, or any other operator to the results of a UNION ALL.
+:::
 
 ### Table-level
 
@@ -250,8 +250,10 @@ Add "EXPLAIN PLAN FOR" to the beginning of any query to get information about ho
 the query will not actually be executed. Refer to the [Query translation](sql-translation.md#interpreting-explain-plan-output)
 documentation for more information on the output of EXPLAIN PLAN.
 
-> For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
+:::info
+ For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
 Request logs show the exact native query that will be run. Alternatively, to see the native query plan, set `useNativeQueryExplain` to true in the query context.
+:::
 
 ## Identifiers and literals
 

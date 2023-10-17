@@ -19,9 +19,9 @@
 import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlQuery } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import type { SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
@@ -64,10 +64,10 @@ import { WorkbenchHistoryDialog } from './workbench-history-dialog/workbench-his
 import './workbench-view.scss';
 
 function cleanupTabEntry(tabEntry: TabEntry): void {
-  const discardedIds = tabEntry.query.getIds();
-  WorkbenchRunningPromises.deletePromises(discardedIds);
-  ExecutionStateCache.deleteStates(discardedIds);
-  AceEditorStateCache.deleteStates(discardedIds);
+  const discardedId = tabEntry.id;
+  WorkbenchRunningPromises.deletePromise(discardedId);
+  ExecutionStateCache.deleteState(discardedId);
+  AceEditorStateCache.deleteState(discardedId);
 }
 
 function externalDataTabId(tabId: string | undefined): boolean {
@@ -496,7 +496,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                           const newTabEntry: TabEntry = {
                             id,
                             tabName: tabEntry.tabName + ' (copy)',
-                            query: tabEntry.query.duplicate(),
+                            query: tabEntry.query,
                           };
                           this.handleQueriesChange(
                             tabEntries.slice(0, i + 1).concat(newTabEntry, tabEntries.slice(i + 1)),
@@ -639,6 +639,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         <QueryTab
           key={currentTabEntry.id}
           query={currentTabEntry.query}
+          id={currentTabEntry.id}
           mandatoryQueryContext={mandatoryQueryContext}
           columnMetadata={columnMetadataState.getSomeData()}
           onQueryChange={this.handleQueryChange}
@@ -756,7 +757,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     });
   };
 
-  render(): JSX.Element {
+  render() {
     const { queryEngines } = this.props;
     const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
     const query = this.getCurrentQuery();

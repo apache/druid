@@ -130,7 +130,7 @@ public class StageDefinition
     this.shuffleCheckHasMultipleValues = shuffleCheckHasMultipleValues;
     this.frameReader = Suppliers.memoize(() -> FrameReader.create(signature))::get;
 
-    if (mustGatherResultKeyStatistics() && shuffleSpec.clusterBy().getColumns().isEmpty()) {
+    if (mustGatherResultKeyStatistics() && shuffleSpec.clusterBy().isEmpty()) {
       throw new IAE("Cannot shuffle with spec [%s] and nil clusterBy", shuffleSpec);
     }
 
@@ -277,7 +277,7 @@ public class StageDefinition
 
   @JsonProperty("shuffleCheckHasMultipleValues")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  boolean getShuffleCheckHasMultipleValues()
+  public boolean getShuffleCheckHasMultipleValues()
   {
     return shuffleCheckHasMultipleValues;
   }

@@ -33,11 +33,14 @@ You can run the following combination of applications:
 * [Jupyter only](#start-only-the-jupyter-container)
 * [Jupyter and Druid](#start-jupyter-and-druid)
 * [Jupyter, Druid, and Kafka](#start-jupyter-druid-and-kafka)
+* [Kafka and Jupyter](#start-kafka-and-jupyter)
 
 ## Prerequisites
 
 Jupyter in Docker requires that you have **Docker** and **Docker Compose**.
 We recommend installing these through [Docker Desktop](https://docs.docker.com/desktop/).
+
+For ARM-based devices, see [Tutorial setup for ARM-based devices](#tutorial-setup-for-arm-based-devices).
 
 ## Launch the Docker containers
 
@@ -53,7 +56,7 @@ access the files in `druid/examples/quickstart/jupyter-notebooks/docker-jupyter`
 
 ### Start only the Jupyter container
 
-If you already have Druid running locally, you can run only the Jupyter container to complete the tutorials.
+If you already have Druid running locally or on another machine, you can run the Docker containers for Jupyter only.
 In the same directory as `docker-compose.yaml`, start the application:
 
 ```bash
@@ -62,6 +65,11 @@ docker compose --profile jupyter up -d
 
 The Docker Compose file assigns `8889` for the Jupyter port.
 You can override the port number by setting the `JUPYTER_PORT` environment variable before starting the Docker application.
+
+If Druid is running local to the same machine as Jupyter, open the tutorial and set the `host` variable to `host.docker.internal` before starting. For example:
+```python
+host = "host.docker.internal"
+```
 
 ### Start Jupyter and Druid
 
@@ -84,6 +92,26 @@ In the same directory as `docker-compose.yaml` and `environment`, start the appl
 ```bash
 DRUID_VERSION={{DRUIDVERSION}} docker compose --profile all-services up -d
 ```
+
+### Start Kafka and Jupyter
+
+If you already have Druid running externally, such as an existing cluster or a dedicated infrastructure for Druid, you can run the Docker containers for Kafka and Jupyter only.
+
+In the same directory as `docker-compose.yaml` and `environment`, start the application:
+
+```bash
+DRUID_VERSION={{DRUIDVERSION}} docker compose --profile kafka-jupyter up -d
+```
+
+If you have an external Druid instance running on a different machine than the one hosting the Docker Compose environment, change the `host` variable in the notebook tutorial to the hostname or address of the machine where Druid is running.
+
+If Druid is running local to the same machine as Jupyter, open the tutorial and set the `host` variable to `host.docker.internal` before starting. For example:
+
+```python
+host = "host.docker.internal"
+```
+
+To enable Druid to ingest data from Kafka within the Docker Compose environment, update the `bootstrap.servers` property in the Kafka ingestion spec to `localhost:9094` before ingesting. For reference, see [Consumer properties](../development/extensions-core/kafka-supervisor-reference.md#consumer-properties).
 
 ### Update image from Docker Hub
 
@@ -112,7 +140,9 @@ At startup, Docker creates and mounts a volume to persist data from the containe
 This way you can save your work completed within the Docker container.
 
 1. Navigate to the notebooks at http://localhost:8889.
-   > If you set `JUPYTER_PORT` to another port number, replace `8889` with the value of the Jupyter port.
+:::info
+ If you set `JUPYTER_PORT` to another port number, replace `8889` with the value of the Jupyter port.
+:::
 
 2. Select a tutorial. If you don't plan to save your changes, you can use the notebook directly as is. Otherwise, continue to the next step.
 
@@ -193,9 +223,30 @@ as well as the [Python client for Druid](tutorial-jupyter-index.md#python-api-fo
 
 You should now be able to access and complete the tutorials.
 
+## Tutorial setup for ARM-based devices
+
+For ARM-based devices, follow this setup to start Druid externally, while keeping Kafka and Jupyter within the Docker Compose environment:
+
+1. Start Druid using the `start-druid` script. You can follow [Quickstart (local)](./index.md) instructions. The tutorials
+   assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
+2. Start either Jupyter only or Jupyter and Kafka using the following commands in the same directory as `docker-compose.yaml` and `environment`:
+   
+   ```bash
+   # Start only Jupyter
+   docker compose --profile jupyter up -d
+   
+   # Start Kafka and Jupyter
+   DRUID_VERSION={{DRUIDVERSION}} docker compose --profile kafka-jupyter up -d
+   ```
+
+3. If Druid is running local to the same machine as Jupyter, open the tutorial and set the `host` variable to `host.docker.internal` before starting. For example:
+   ```python
+   host = "host.docker.internal"
+   ```
+4. If using Kafka to handle the data stream that will be ingested into Druid and Druid is running local to the same machine, update the consumer property `bootstrap.servers` to `localhost:9094`.
+
 ## Learn more
 
 See the following topics for more information:
 * [Jupyter Notebook tutorials](tutorial-jupyter-index.md) for the available Jupyter Notebook-based tutorials for Druid
 * [Tutorial: Run with Docker](docker.md) for running Druid from a Docker container
-

@@ -32,6 +32,13 @@ import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.util.Objects;
 
+
+@SuppressWarnings("unused")
+final class UnaryOperatorExpr
+{
+  // phony class to enable maven to track the compilation of this class
+}
+
 /**
  * Base type for all single argument operators, with a single {@link Expr} child for the operand.
  */

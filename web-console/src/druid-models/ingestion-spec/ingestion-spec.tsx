@@ -18,6 +18,8 @@
 
 import { Code } from '@blueprintjs/core';
 import { range } from 'd3-array';
+import { csvParseRows, tsvParseRows } from 'd3-dsv';
+import type { JSX } from 'react';
 import React from 'react';
 
 import type { Field } from '../../components';
@@ -37,8 +39,9 @@ import {
   findMap,
   isSimpleArray,
   oneOf,
+  oneOfKnown,
   parseCsvLine,
-  typeIs,
+  typeIsKnown,
 } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
 import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
@@ -69,6 +72,7 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 export interface IngestionSpec {
   readonly type: IngestionType;
   readonly spec: IngestionSpecInner;
+  readonly context?: { taskLockType?: 'APPEND' | 'REPLACE' };
 }
 
 export interface IngestionSpecInner {
@@ -82,6 +86,7 @@ export function isEmptyIngestionSpec(spec: Partial<IngestionSpec>) {
 }
 
 export type IngestionType = 'kafka' | 'kinesis' | 'index_parallel';
+const KNOWN_TYPES = ['kafka', 'kinesis', 'index_parallel'];
 
 // A combination of IngestionType and inputSourceType
 export type IngestionComboType =
@@ -340,6 +345,11 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   spec = deepSetIfUnset(spec, 'type', specType);
   spec = deepSetIfUnset(spec, 'spec.ioConfig.type', specType);
   spec = deepSetIfUnset(spec, 'spec.tuningConfig.type', specType);
+
+  if (spec.context?.taskLockType !== undefined) {
+    spec.context.taskLockType = spec.spec?.ioConfig.appendToExisting ? 'APPEND' : 'REPLACE';
+  }
+
   return spec as IngestionSpec;
 }
 
@@ -424,6 +434,7 @@ export interface IoConfig {
   inputFormat?: InputFormat;
   appendToExisting?: boolean;
   topic?: string;
+  topicPattern?: string;
   consumerProperties?: any;
   replicas?: number;
   taskCount?: number;
@@ -906,7 +917,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
               >
                 consumerProperties
               </ExternalLink>
@@ -921,8 +932,31 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'topic',
           type: 'string',
           required: true,
-          defined: typeIs('kafka'),
-          placeholder: 'topic_name',
+          defined: ioConfig =>
+            oneOfKnown(ioConfig.type, KNOWN_TYPES, 'kafka') && !ioConfig.topicPattern,
+          placeholder: 'your_kafka_topic',
+          info: 'The name of the Kafka topic to ingest from.',
+        },
+        {
+          name: 'topicPattern',
+          type: 'string',
+          required: true,
+          defined: ioConfig => oneOfKnown(ioConfig.type, KNOWN_TYPES, 'kafka') && !ioConfig.topic,
+          placeholder: 'topic1|topic2',
+          info: (
+            <>
+              <p>
+                A regular expression that represents all topics to be ingested from. For example, to
+                ingest data from <Code>clicks</Code> and <Code>impressions</Code>, you can set this
+                to <Code>clicks|impressions</Code>. Alternatively, to ingest from all topics
+                starting with <Code>metrics-</Code> set this to <Code>metrics-.*</Code>.
+              </p>
+              <p>
+                If new topics are added to the cluster that match the regex, Druid will
+                automatically start ingesting from those new topics.
+              </p>
+            </>
+          ),
         },
         {
           name: 'consumerProperties',
@@ -933,7 +967,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
               >
                 consumerProperties
               </ExternalLink>
@@ -1025,7 +1059,7 @@ export function issueWithIoConfig(
       break;
 
     case 'kafka':
-      if (!ioConfig.topic) return 'must have a topic';
+      if (!ioConfig.topic && !ioConfig.topicPattern) return 'must have a topic or topicPattern';
       break;
 
     case 'kinesis':
@@ -1102,7 +1136,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestOffset',
           type: 'boolean',
-          defined: typeIs('kafka'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           required: true,
           info: (
             <>
@@ -1118,7 +1152,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestSequenceNumber',
           type: 'boolean',
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           required: true,
           info: (
             <>
@@ -1189,14 +1223,14 @@ export function getIoConfigTuningFormFields(
           name: 'recordsPerFetch',
           type: 'number',
           defaultValue: 4000,
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>The number of records to request per GetRecords call to Kinesis.</>,
         },
         {
           name: 'pollTimeout',
           type: 'number',
           defaultValue: 100,
-          defined: typeIs('kafka'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
             <>
               <p>
@@ -1209,14 +1243,14 @@ export function getIoConfigTuningFormFields(
           name: 'fetchDelayMillis',
           type: 'number',
           defaultValue: 0,
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
         },
         {
           name: 'deaggregate',
           type: 'boolean',
           defaultValue: false,
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
         {
@@ -1284,7 +1318,7 @@ export function getIoConfigTuningFormFields(
           name: 'skipOffsetGaps',
           type: 'boolean',
           defaultValue: false,
-          defined: typeIs('kafka'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
             <>
               <p>
@@ -1371,7 +1405,7 @@ export function guessDataSourceName(spec: Partial<IngestionSpec>): string | unde
     }
 
     case 'kafka':
-      return ioConfig.topic;
+      return ioConfig.topic || ioConfig.topicPattern;
 
     case 'kinesis':
       return ioConfig.stream;
@@ -1400,7 +1434,6 @@ export interface TuningConfig {
   handoffConditionTimeout?: number;
   resetOffsetAutomatically?: boolean;
   workerThreads?: number;
-  chatThreads?: number;
   chatRetries?: number;
   httpTimeout?: string;
   shutdownTimeout?: string;
@@ -1457,7 +1490,7 @@ export const PRIMARY_PARTITION_RELATED_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.dataSchema.granularitySpec.segmentGranularity',
     label: 'Segment granularity',
     type: 'string',
-    suggestions: ['hour', 'day', 'week', 'month', 'year', 'all'],
+    suggestions: ['hour', 'day', 'month', 'year', 'all'],
     required: true,
     info: (
       <>
@@ -1722,7 +1755,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 1,
     min: 1,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
@@ -1737,7 +1770,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.maxRetry',
     type: 'number',
     defaultValue: 3,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Maximum number of retries on task failures.</>,
   },
@@ -1745,7 +1778,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.taskStatusCheckPeriodMs',
     type: 'number',
     defaultValue: 1000,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
   },
@@ -1806,7 +1839,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -1818,7 +1851,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.skipSequenceNumberAvailabilityCheck',
     type: 'boolean',
     defaultValue: false,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
         Whether to enable checking if the current sequence number is still available in a particular
@@ -1831,14 +1864,14 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
     name: 'spec.tuningConfig.intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -1875,7 +1908,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
@@ -1921,7 +1954,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defined: s =>
       s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputSource.type') !== 'http',
     hideInMore: true,
-    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    adjustment: s => deepSet(s, 'spec.tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of bytes of input files to process in a single subtask. If a single file is
@@ -1935,9 +1968,9 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 1000,
     min: 1,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
-    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    adjustment: s => deepSet(s, 'spec.tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of input files to process in a single subtask. This limit is to avoid task
@@ -1953,7 +1986,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
@@ -1961,7 +1994,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
@@ -1969,24 +2002,16 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
   },
   {
-    name: 'spec.tuningConfig.chatThreads',
-    type: 'number',
-    placeholder: 'min(10, taskCount * replicas)',
-    defined: typeIs('kafka', 'kinesis'),
-    hideInMore: true,
-    info: <>The number of threads that will be used for communicating with indexing tasks.</>,
-  },
-  {
     name: 'spec.tuningConfig.chatRetries',
     type: 'number',
     defaultValue: 8,
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -1999,14 +2024,14 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
     name: 'spec.tuningConfig.shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2018,7 +2043,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.offsetFetchPeriod',
     type: 'duration',
     defaultValue: 'PT30S',
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     info: (
       <>
         How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and
@@ -2030,7 +2055,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.recordBufferSize',
     type: 'number',
     defaultValue: 10000,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
         Size of the buffer (number of events) used between the Kinesis fetch threads and the main
@@ -2042,7 +2067,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.recordBufferOfferTimeout',
     type: 'number',
     defaultValue: 5000,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2056,7 +2081,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     hideInMore: true,
     type: 'number',
     defaultValue: 5000,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
@@ -2068,7 +2093,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2081,7 +2106,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.maxRecordsPerPoll',
     type: 'number',
     defaultValue: 100,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2094,7 +2119,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.repartitionTransitionDuration',
     type: 'duration',
     defaultValue: 'PT2M',
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2142,33 +2167,53 @@ export function updateIngestionType(
   return newSpec;
 }
 
+function findValueWithNewline(rows: string[][]): string | undefined {
+  return findMap(rows, row => findMap(row, value => (value.includes('\n') ? value : undefined)));
+}
+
 export function issueWithSampleData(
-  sampleData: SampleResponse,
-  spec: Partial<IngestionSpec>,
+  sampleLines: string[],
+  isStreaming: boolean,
 ): JSX.Element | undefined {
-  if (isStreamingSpec(spec)) return;
+  if (!sampleLines.length) return;
 
-  const firstData: string = findMap(sampleData.data, l => l.input?.raw);
-  if (firstData) return;
+  const firstLine = sampleLines[0];
+  if (!isStreaming) {
+    if (firstLine === '{') {
+      return (
+        <>
+          This data looks like a multi-line formatted JSON object. For Druid to parse a text file,
+          it must have one row per event. Consider reformatting your data as{' '}
+          <ExternalLink href="https://jsonlines.org">JSON Lines</ExternalLink>.
+        </>
+      );
+    }
 
-  if (firstData === '{') {
-    return (
-      <>
-        This data looks like multi-line formatted JSON object. For Druid to parse a text file it
-        must have one row per event. Consider reformatting your data as{' '}
-        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
-      </>
-    );
+    if (oneOf(firstLine, '[', '[]')) {
+      return (
+        <>
+          This data looks like a multi-line JSON array. For Druid to parse a text file, it must have
+          one row per event. Consider reformatting your data as{' '}
+          <ExternalLink href="https://jsonlines.org">JSON Lines</ExternalLink>.
+        </>
+      );
+    }
   }
 
-  if (oneOf(firstData, '[', '[]')) {
-    return (
-      <>
-        This data looks like a multi-line JSON array. For Druid to parse a text file it must have
-        one row per event. Consider reformatting your data as{' '}
-        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
-      </>
+  const format = guessSimpleInputFormat(sampleLines, isStreaming);
+  const text = sampleLines.join('\n');
+  if (oneOf(format.type, 'csv', 'tsv')) {
+    const valueWithNewline = findValueWithNewline(
+      format.type === 'csv' ? csvParseRows(text) : tsvParseRows(text),
     );
+    if (valueWithNewline) {
+      const formatLabel = format.type.toUpperCase();
+      return (
+        <>
+          {`This ${formatLabel} data has values that contain new lines. Druid requires ${formatLabel} files to have one event per line, so ${formatLabel} values can not contain new lines. Consider encoding new lines in the values of your ${formatLabel} with some special delimiter.`}
+        </>
+      );
+    }
   }
 
   return;

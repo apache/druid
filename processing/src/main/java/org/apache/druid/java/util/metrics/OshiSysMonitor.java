@@ -203,7 +203,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         final ServiceMetricEvent.Builder builder = builder();
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
     }
@@ -231,7 +231,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         final ServiceMetricEvent.Builder builder = builder();
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
 
         this.prevPageIn = currPageIn;
@@ -258,7 +258,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
             .setDimension("fsDirName", fs.getMount());
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
     }
@@ -292,7 +292,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
               .setDimension("diskName", disk.getName());
           MonitorUtils.addDimensionsToBuilder(builder, dimensions);
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
-            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+            emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
           }
         }
       }
@@ -334,7 +334,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
                   .setDimension("netHwaddr", net.getMacaddr());
               MonitorUtils.addDimensionsToBuilder(builder, dimensions);
               for (Map.Entry<String, Long> entry : stats.entrySet()) {
-                emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+                emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
               }
             }
           }
@@ -387,7 +387,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
             MonitorUtils.addDimensionsToBuilder(builder, dimensions);
             if (total != 0) {
               // prevent divide by 0 exception and don't emit such events
-              emitter.emit(builder.build("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
+              emitter.emit(builder.setMetric("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
 
           }
@@ -410,7 +410,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
           "sys/uptime", uptime
       );
       for (Map.Entry<String, Number> entry : stats.entrySet()) {
-        emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+        emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
       }
       CentralProcessor processor = hal.getProcessor();
       double[] la = processor.getSystemLoadAverage(3);
@@ -422,7 +422,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
             "sys/la/15", la[2]
         );
         for (Map.Entry<String, Number> entry : statsCpuLoadAverage.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
     }
@@ -456,7 +456,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         );
         if (stats != null) {
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
-            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+            emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
           }
         }
       }

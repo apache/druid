@@ -57,11 +57,11 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.StringValueSetIndex;
-import org.apache.druid.segment.column.Utf8ValueSetIndex;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -292,20 +292,20 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
       if (indexSupplier == null) {
         // column doesn't exist, match against null
-        return Filters.makeNullIndex(
+        return Filters.makeMissingColumnNullIndex(
             predicateFactory.makeStringPredicate().apply(null),
             selector
         );
       }
 
-      final Utf8ValueSetIndex utf8ValueSetIndex = indexSupplier.as(Utf8ValueSetIndex.class);
-      if (utf8ValueSetIndex != null) {
-        return utf8ValueSetIndex.forSortedValuesUtf8(valuesUtf8);
+      final Utf8ValueSetIndexes utf8ValueSetIndexes = indexSupplier.as(Utf8ValueSetIndexes.class);
+      if (utf8ValueSetIndexes != null) {
+        return utf8ValueSetIndexes.forSortedValuesUtf8(valuesUtf8);
       }
 
-      final StringValueSetIndex stringValueSetIndex = indexSupplier.as(StringValueSetIndex.class);
-      if (stringValueSetIndex != null) {
-        return stringValueSetIndex.forSortedValues(values);
+      final StringValueSetIndexes stringValueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
+      if (stringValueSetIndexes != null) {
+        return stringValueSetIndexes.forSortedValues(values);
       }
     }
     return Filters.makePredicateIndex(
@@ -564,6 +564,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+    private final boolean hasNull;
 
     public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
@@ -572,6 +573,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     {
       this.extractionFn = extractionFn;
       this.values = values;
+      this.hasNull = values.contains(null);
 
       // As the set of filtered values can be large, parsing them as numbers should be done only if needed, and
       // only once. Pass in a common long predicate supplier to all filters created by .toFilter(), so that we only
@@ -628,6 +630,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
+    public boolean isNullInputUnknown()
+    {
+      return !hasNull;
+    }
+
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {
@@ -659,9 +667,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     /**
      * Create a ValuesSet from another Collection. The Collection will be reused if it is a {@link SortedSet} with
-     * an appropriate comparator.
+     * the {@link Comparators#naturalNullsFirst()} comparator.
      */
-    public ValuesSet(final Collection<String> values)
+    private ValuesSet(final Collection<String> values)
     {
       if (values instanceof SortedSet && Comparators.naturalNullsFirst()
                                                     .equals(((SortedSet<String>) values).comparator())) {
@@ -670,6 +678,36 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         this.values = new TreeSet<>(Comparators.naturalNullsFirst());
         this.values.addAll(values);
       }
+    }
+
+    /**
+     * Creates an empty ValuesSet.
+     */
+    public static ValuesSet create()
+    {
+      return new ValuesSet(new TreeSet<>(Comparators.naturalNullsFirst()));
+    }
+
+    /**
+     * Creates a ValuesSet wrapping the provided single value.
+     *
+     * @throws IllegalStateException if the provided collection cannot be wrapped since it has the wrong comparator
+     */
+    public static ValuesSet of(@Nullable final String value)
+    {
+      final ValuesSet retVal = ValuesSet.create();
+      retVal.add(value);
+      return retVal;
+    }
+
+    /**
+     * Creates a ValuesSet copying the provided collection.
+     */
+    public static ValuesSet copyOf(final Collection<String> values)
+    {
+      final TreeSet<String> copyOfValues = new TreeSet<>(Comparators.naturalNullsFirst());
+      copyOfValues.addAll(values);
+      return new ValuesSet(copyOfValues);
     }
 
     public SortedSet<ByteBuffer> toUtf8()

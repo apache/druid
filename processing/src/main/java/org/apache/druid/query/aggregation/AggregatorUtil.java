@@ -155,20 +155,37 @@ public class AggregatorUtil
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_SUM_ESTIMATE_CACHE_TYPE_ID = 0x4E;
 
   /**
-   * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
+   * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators
+   * required to compute the output column.
+   *
+   * If the outputColumn does not exist in the list of PostAggregators, the return list will be empty (under the
+   * assumption that the outputColumn comes from a project, aggregation or really anything other than a
+   * PostAggregator).
+   *
+   * If the outputColumn <strong>does</strong> exist in the list of PostAggregators, then the return list will have at
+   * least one element.  If the PostAggregator with outputName depends on any other PostAggregators, then the returned
+   * list will contain all PostAggregators required to compute the outputColumn.
+   *
+   * Note that PostAggregators are processed in list-order, meaning that for a PostAggregator to depend on another
+   * PostAggregator, the "depender" must exist *after* the "dependee" in the list.  That is, if PostAggregator A
+   * depends on PostAggregator B, then the list should be [B, A], such that A is computed after B.
    *
    * @param postAggregatorList List of postAggregator, there is a restriction that the list should be in an order such
    *                           that all the dependencies of any given aggregator should occur before that aggregator.
    *                           See AggregatorUtilTest.testOutOfOrderPruneDependentPostAgg for example.
-   * @param postAggName        name of the postAgg on which dependency is to be calculated
+   * @param outputName        name of the postAgg on which dependency is to be calculated
    *
    * @return the list of dependent postAggregators
    */
-  public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String postAggName)
+  public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String outputName)
   {
+    if (postAggregatorList.isEmpty()) {
+      return postAggregatorList;
+    }
+
     ArrayList<PostAggregator> rv = new ArrayList<>();
     Set<String> deps = new HashSet<>();
-    deps.add(postAggName);
+    deps.add(outputName);
     // Iterate backwards to find the last calculated aggregate and add dependent aggregator as we find dependencies
     // in reverse order
     for (PostAggregator agg : Lists.reverse(postAggregatorList)) {

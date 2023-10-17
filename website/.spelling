@@ -53,6 +53,7 @@ Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
+CLI
 DDL
 DML
 DNS
@@ -109,6 +110,8 @@ html
 HyperLogLog
 IAM
 IANA
+IcebergFilter
+IcebergInputSource
 IETF
 IP
 IPv4
@@ -216,6 +219,7 @@ SslContextFactory
 StatsD
 SYSTEM_TABLE
 TaskRunner
+TabItem
 TCP
 TGT
 TLS
@@ -308,10 +312,13 @@ enum
 expectedType
 expr
 failover
+failovers
 featureSpec
 findColumnsFromHeader
 filenames
 filesystem
+filterColumn
+filterValue
 firefox
 firehose
 firehoses
@@ -323,6 +330,7 @@ gzip
 gzipped
 hadoop
 hasher
+hashcode
 hashtable
 high-QPS
 historicals
@@ -342,6 +350,7 @@ interruptible
 isAllowList
 jackson-jq
 javadoc
+javascript
 joinable
 jsonCompression
 json_keys
@@ -375,6 +384,7 @@ max_map_count
 memcached
 mergeable
 metadata
+metastores
 millis
 microbatch
 microbatches
@@ -430,6 +440,7 @@ preemptible
 prefetch
 prefetched
 prefetching
+precached
 prepend
 prepended
 prepending
@@ -483,6 +494,7 @@ skipHeaderRows
 Smoosh
 smoosh
 smooshed
+snapshotting
 splittable
 ssl
 sslmode
@@ -713,7 +725,6 @@ DurableStorageConfiguration
 ColumnTypeNotSupported
 InsertCannotAllocateSegment
 InsertCannotBeEmpty
-InsertCannotOrderByDescending
 InsertCannotReplaceExistingSegment
 InsertLockPreempted
 InsertTimeNull
@@ -737,6 +748,7 @@ TooManyWorkers
 NotEnoughMemory
 WorkerFailed
 WorkerRpcFailed
+TIMED_OUT
 # MSQ context parameters
 maxNumTasks
 taskAssignment
@@ -806,7 +818,6 @@ yaml
 Phadoop3
 dist-hadoop3
 hadoop3
-hadoop2
 2.x.x
 3.x.x
 ambari-metrics
@@ -872,6 +883,8 @@ P1D
 cycleSize
 doubleMax
 doubleAny
+doubleFirst
+doubleLast
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -881,6 +894,8 @@ druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
+longFirst
+longLast
 longMean
 longMeanNoNulls
 longMin
@@ -1024,7 +1039,6 @@ PT17S
 GCS
 StaticGoogleBlobStoreFirehose
 gcs-connector
-hadoop2
 hdfs
 Aotearoa
 Czechia
@@ -1087,6 +1101,7 @@ numProcessors
 q.size
 repartitionTransitionDuration
 replicastaskCounttaskCount
+resetOffsets
 resetuseEarliestSequenceNumberPOST
 resumePOST
 statusrecentErrorsdruid.supervisor.maxStoredExceptionEventsstatedetailedStatestatedetailedStatestatestatePENDINGRUNNINGSUSPENDEDSTOPPINGUNHEALTHY_SUPERVISORUNHEALTHY_TASKSdetailedStatestatedruid.supervisor.unhealthinessThresholddruid.supervisor.taskUnhealthinessThresholdtaskDurationtaskCountreplicasdetailedStatedetailedStateRUNNINGPOST
@@ -1115,6 +1130,7 @@ simpleJson
 dimensionSpec
 flattenSpec
 binaryAsString
+replaceMissingValueWith
 sslFactory
 sslMode
 Proto
@@ -1227,6 +1243,8 @@ pom.xml
 0.7.x
 0.7.x.
 TimeAndDims
+catalogProperties
+catalogUri
 column2
 column_1
 column_n
@@ -1235,12 +1253,15 @@ ctrl
 descriptorString
 headerFormat
 headerLabelPrefix
+icebergFilter
+icebergCatalog
 jsonLowercase
 kafka
 KafkaStringHeaderFormat
 kafka.header.
 kafka.key
 kafka.timestamp
+kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
@@ -1307,6 +1328,7 @@ segmentOutputPath
 segmentTable
 shardSpec
 single_dim
+tableName
 targetPartitionSize
 targetRowsPerSegment
 useCombiner
@@ -1399,6 +1421,8 @@ BUILD_SEGMENTS
 DETERMINE_PARTITIONS
 forceTimeChunkLock
 taskLockTimeout
+warehouseSource
+warehousePath
 index.md
 DOUBLE_ARRAY
 DOY
@@ -1489,6 +1513,8 @@ str1
 str2
 string_to_array
 stringAny
+stringFirst
+stringLast
 Strlen
 strlen
 strpos
@@ -1748,6 +1774,8 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
+floatFirst
+floatLast
 floatSum
 joinFilterRewriteMaxSize
 maxQueuedBytes
@@ -1799,6 +1827,7 @@ InsensitiveContainsSearchQuerySpec
 RegexSearchQuerySpec
 analysisType
 analysisTypes
+aggregatorMergeStrategy
 lenientAggregatorMerge
 minmax
 segmentMetadata
@@ -2011,6 +2040,8 @@ orderbys
 org.apache.druid
 org.apache.druid.jetty.RequestLog
 org.apache.hadoop
+OSHI
+OshiSysMonitor
 overlord.html
 pendingSegments
 pre-flight
@@ -2030,6 +2061,7 @@ slf4j
 sql
 sqlQuery
 successfulSending
+[S]igar
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
@@ -2276,3 +2308,18 @@ prometheus-emitter
 kubernetes-overlord-extensions
 UCS
 ISO646-US
+completeTasks
+runningTasks
+waitingTasks
+pendingTasks
+shutdownAllTasks
+supervisorId
+suspendAll
+resumeAll
+terminateAll
+selfDiscovered
+loadstatus
+isLeader
+taskslots
+loadstatus
+sqlQueryId

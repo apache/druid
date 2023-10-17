@@ -38,7 +38,6 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.vector.BooleanVectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -46,10 +45,12 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
@@ -90,19 +91,15 @@ public class ExpressionFilter implements Filter
     // input type information, so composed entirely of null constants or missing columns. the expression is
     // effectively constant
     if (outputType == null) {
-
-      // in sql compatible mode, this means no matches ever because null doesn't equal anything so just use the
-      // false matcher
-      if (NullHandling.sqlCompatible()) {
-        return BooleanVectorValueMatcher.of(factory.getReadableVectorInspector(), false);
+      // evaluate the expression, just in case it does actually match nulls
+      final ExprEval<?> constantEval = theExpr.eval(InputBindings.nilBindings());
+      final ConstantMatcherType constantMatcherType;
+      if (constantEval.value() == null) {
+        constantMatcherType = ConstantMatcherType.ALL_UNKNOWN;
+      } else {
+        constantMatcherType = constantEval.asBoolean() ? ConstantMatcherType.ALL_TRUE : ConstantMatcherType.ALL_FALSE;
       }
-      // however in default mode, we still need to evaluate the expression since it might end up... strange, from
-      // default values. Since it is effectively constant though, we can just do that up front and decide if it matches
-      // or not.
-      return BooleanVectorValueMatcher.of(
-          factory.getReadableVectorInspector(),
-          theExpr.eval(InputBindings.nilBindings()).asBoolean()
-      );
+      return constantMatcherType.asVectorMatcher(factory.getReadableVectorInspector());
     }
 
     // if we got here, we really have to evaluate the expressions to match
@@ -120,6 +117,11 @@ public class ExpressionFilter implements Filter
       case STRING:
         return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
             ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities(),
+            ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
+        ).makeMatcher(predicateFactory);
+      case ARRAY:
+        return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
+            ColumnCapabilitiesImpl.createDefault().setType(ExpressionType.toColumnType(outputType)).setHasNulls(true),
             ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       default:
@@ -140,9 +142,13 @@ public class ExpressionFilter implements Filter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         final ExprEval eval = selector.getObject();
+
+        if (includeUnknown && eval.value() == null) {
+          return true;
+        }
 
         if (eval.type().isArray()) {
           switch (eval.elementType().getType()) {
@@ -150,6 +156,9 @@ public class ExpressionFilter implements Filter
               final Object[] lResult = eval.asArray();
               if (lResult == null) {
                 return false;
+              }
+              if (includeUnknown) {
+                return Arrays.stream(lResult).anyMatch(o -> o == null || Evals.asBoolean((long) o));
               }
 
               return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((long) o));
@@ -159,6 +168,10 @@ public class ExpressionFilter implements Filter
                 return false;
               }
 
+              if (includeUnknown) {
+                return Arrays.stream(sResult).anyMatch(o -> o == null || Evals.asBoolean((String) o));
+              }
+
               return Arrays.stream(sResult).anyMatch(o -> Evals.asBoolean((String) o));
             case DOUBLE:
               final Object[] dResult = eval.asArray();
@@ -166,10 +179,14 @@ public class ExpressionFilter implements Filter
                 return false;
               }
 
+              if (includeUnknown) {
+                return Arrays.stream(dResult).anyMatch(o -> o == null || Evals.asBoolean((double) o));
+              }
+
               return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
           }
         }
-        return eval.asBoolean();
+        return (includeUnknown && eval.value() == null) || eval.asBoolean();
       }
 
       @Override
@@ -187,7 +204,7 @@ public class ExpressionFilter implements Filter
     final Expr.BindingAnalysis details = bindingDetails.get();
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.
-      return Filters.makeNullIndex(
+      return Filters.makeMissingColumnNullIndex(
           expr.get().eval(InputBindings.nilBindings()).asBoolean(),
           selector
       );
@@ -199,10 +216,7 @@ public class ExpressionFilter implements Filter
       // we use a default 'all false' capabilities here because if the column has a bitmap index, but the capabilities
       // are null, it means that the column is missing and should take the single valued path, while truly unknown
       // things will not have a bitmap index available
-      final ColumnCapabilities capabilities = selector.getColumnCapabilitiesWithDefault(
-          column,
-          ColumnCapabilitiesImpl.createDefault()
-      );
+      final ColumnCapabilities capabilities = selector.getColumnCapabilities(column);
       if (ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
         if (!Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
           return null;
@@ -210,7 +224,7 @@ public class ExpressionFilter implements Filter
         return Filters.makePredicateIndex(
             column,
             selector,
-            getBitmapPredicateFactory()
+            getBitmapPredicateFactory(capabilities)
         );
       }
     }
@@ -283,6 +297,7 @@ public class ExpressionFilter implements Filter
    */
   private DruidPredicateFactory getPredicateFactory()
   {
+    final boolean isNullUnknown = expr.get().eval(InputBindings.nilBindings()).value() == null;
     return new DruidPredicateFactory()
     {
       @Override
@@ -331,6 +346,12 @@ public class ExpressionFilter implements Filter
       {
         return super.equals(obj);
       }
+
+      @Override
+      public boolean isNullInputUnknown()
+      {
+        return isNullUnknown;
+      }
     };
   }
 
@@ -338,7 +359,7 @@ public class ExpressionFilter implements Filter
    * {@link DruidPredicateFactory} which evaluates the expression using the value as input, used for building predicate
    * indexes where the raw column values will be checked against this predicate
    */
-  private DruidPredicateFactory getBitmapPredicateFactory()
+  private DruidPredicateFactory getBitmapPredicateFactory(@Nullable ColumnCapabilities inputCapabilites)
   {
     return new DruidPredicateFactory()
     {
@@ -412,6 +433,19 @@ public class ExpressionFilter implements Filter
             return expr.get().eval(InputBindings.nilBindings()).asBoolean();
           }
         };
+      }
+
+      @Override
+      public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
+      {
+        if (inputCapabilites == null) {
+          return input -> expr.get()
+                              .eval(InputBindings.forInputSupplier(ExpressionType.STRING_ARRAY, () -> input))
+                              .asBoolean();
+        }
+        return input -> expr.get().eval(
+            InputBindings.forInputSupplier(ExpressionType.fromColumnType(inputCapabilites), () -> input)
+        ).asBoolean();
       }
 
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..
