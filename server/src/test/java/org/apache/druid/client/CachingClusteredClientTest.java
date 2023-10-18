@@ -2675,6 +2675,12 @@ public class CachingClusteredClientTest
           {
 
           }
+
+          @Override
+          public QueryableDruidServer getAndAddServer(String hostAndPort)
+          {
+            return serverView.getAndAddServer(hostAndPort);
+          }
         },
         cache,
         JSON_MAPPER,
@@ -3138,6 +3144,72 @@ public class CachingClusteredClientTest
     final String etag2 = responseContext.getEntityTag();
     Assert.assertNotEquals(etag1, etag2);
   }
+
+  @Test
+  public void testAddSequencesFromFederatedCluster()
+  {
+
+    Map<String, Object> context = new HashMap<>();
+    context.put(QueryContexts.FEDERATED_CLUSSTER_BROKERS, "test1");
+    context.putAll(CONTEXT);
+
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .granularity(GRANULARITY)
+                                                        .intervals(SEG_SPEC)
+                                                        .context(context)
+                                                        .intervals("2011-01-05/2011-01-10")
+                                                        .aggregators(RENAMED_AGGS)
+                                                        .postAggregators(RENAMED_POST_AGGS);
+
+    TimeseriesQuery query = builder.randomQueryId().build();
+
+    final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
+    final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 0);
+
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(0, 3, selector1));
+
+    final Capture<QueryPlus> capture = Capture.newInstance();
+    final Capture<ResponseContext> contextCap = Capture.newInstance();
+
+    QueryRunner mockRunner = EasyMock.createNiceMock(QueryRunner.class);
+    QueryRunner mockFederatedClusterRunner = EasyMock.createNiceMock(QueryRunner.class);
+    QueryableDruidServer queryableDruidServer = EasyMock.createNiceMock(QueryableDruidServer.class);
+
+    EasyMock.expect(mockRunner.run(EasyMock.capture(capture), EasyMock.capture(contextCap)))
+            .andReturn(Sequences.empty())
+            .anyTimes();
+    EasyMock.expect(serverView.getQueryRunner(lastServer))
+            .andReturn(mockRunner)
+            .anyTimes();
+
+    EasyMock.expect(serverView.getAndAddServer("test1"))
+            .andReturn(queryableDruidServer)
+            .anyTimes();
+
+    EasyMock.expect(queryableDruidServer.getQueryRunner())
+            .andReturn(mockFederatedClusterRunner)
+            .anyTimes();
+
+    EasyMock.expect(mockFederatedClusterRunner.run(
+                EasyMock.capture(Capture.newInstance()),
+                EasyMock.capture(Capture.newInstance())
+            ))
+            .andReturn(Sequences.empty())
+            .anyTimes();
+
+    EasyMock.replay(serverView);
+    EasyMock.replay(mockRunner);
+    EasyMock.replay(mockFederatedClusterRunner);
+    EasyMock.replay(queryableDruidServer);
+
+    runner.run(QueryPlus.wrap(query)).toList();
+  }
+
 
   @SuppressWarnings("unchecked")
   private QueryRunner getDefaultQueryRunner()
