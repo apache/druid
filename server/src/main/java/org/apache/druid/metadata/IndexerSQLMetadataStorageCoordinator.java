@@ -180,14 +180,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
+    final List<Interval> intervals = new ArrayList<>();
+    // Do not need an interval condition if the interval is ETERNITY
     if (!Intervals.isEternity(interval)) {
-      SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
-          queryBuilder,
-          ImmutableList.of(interval),
-          SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
-          connector
-      );
+      intervals.add(interval);
     }
+
+    SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
+        queryBuilder,
+        intervals,
+        SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
+        connector
+    );
 
     final String queryString = StringUtils.format(queryBuilder.toString(), dbTables.getSegmentsTable());
     return connector.retryWithHandle(
@@ -196,9 +200,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .createQuery(queryString)
               .bind("dataSource", dataSource);
 
-          if (!Intervals.isEternity(interval)) {
-            SqlSegmentsMetadataQuery.bindQueryIntervals(query, ImmutableList.of(interval));
-          }
+          SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
 
           return query
               .map((int index, ResultSet r, StatementContext ctx) ->
