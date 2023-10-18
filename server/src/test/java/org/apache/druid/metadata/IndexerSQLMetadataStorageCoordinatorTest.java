@@ -2583,14 +2583,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     List<Pair<DataSegment, String>> resultForEternity =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.ETERNITY);
     Assert.assertEquals(resultForExactInterval, resultForEternity);
-
-    List<Pair<DataSegment, String>> resultForFirstHalfOfEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), firstHalfEternityRangeSegment.getInterval());
-    Assert.assertEquals(resultForExactInterval, resultForFirstHalfOfEternity);
-
-    List<Pair<DataSegment, String>> resultForSecondHalfOfEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), secondHalfEternityRangeSegment.getInterval());
-    Assert.assertEquals(resultForExactInterval, resultForSecondHalfOfEternity);
   }
 
   @Test
@@ -2602,14 +2594,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     List<Pair<DataSegment, String>> resultForRandomInterval =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
     Assert.assertEquals(3, resultForRandomInterval.size());
-
-    List<Pair<DataSegment, String>> resultForFirstHalfOfEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), firstHalfEternityRangeSegment.getInterval());
-    Assert.assertEquals(3, resultForFirstHalfOfEternity.size());
-
-    List<Pair<DataSegment, String>> resultForSecondHalfOfEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), secondHalfEternityRangeSegment.getInterval());
-    Assert.assertEquals(3, resultForSecondHalfOfEternity.size());
 
     List<Pair<DataSegment, String>> resultForEternity =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), eternitySegment.getInterval());

@@ -180,6 +180,44 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
+    if (!Intervals.isEternity(interval)) {
+      SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
+          queryBuilder,
+          ImmutableList.of(interval),
+          SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
+          connector
+      );
+    }
+
+    final String queryString = StringUtils.format(queryBuilder.toString(), dbTables.getSegmentsTable());
+    return connector.retryWithHandle(
+        handle -> {
+          Query<Map<String, Object>> query = handle
+              .createQuery(queryString)
+              .bind("dataSource", dataSource);
+
+          if (!Intervals.isEternity(interval)) {
+            SqlSegmentsMetadataQuery.bindQueryIntervals(query, ImmutableList.of(interval));
+          }
+
+          return query
+              .map((int index, ResultSet r, StatementContext ctx) ->
+                       new Pair<>(
+                           JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
+                           r.getString("created_date")
+                       )
+              )
+              .list();
+        }
+    );
+  }
+
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates1(String dataSource, Interval interval)
+  {
+    StringBuilder queryBuilder = new StringBuilder(
+        "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
+    );
+
     final boolean intervalStartIsEternityStart = Intervals.ETERNITY.getStart().equals(interval.getStart());
     final boolean intervalEndIsEternityEnd = Intervals.ETERNITY.getEnd().equals(interval.getEnd());
 
