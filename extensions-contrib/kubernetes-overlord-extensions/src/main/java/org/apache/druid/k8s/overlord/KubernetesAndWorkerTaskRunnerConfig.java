@@ -26,6 +26,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 
 public class KubernetesAndWorkerTaskRunnerConfig
@@ -37,18 +38,25 @@ public class KubernetesAndWorkerTaskRunnerConfig
   @JsonProperty
   @NotNull
   private final String workerTaskRunnerType;
-
   /**
    * Whether or not to send tasks to the worker task runner instead of the Kubernetes runner.
    */
   @JsonProperty
   @NotNull
   private final boolean sendAllTasksToWorkerTaskRunner;
+  /**
+   * Select which runner type a task would run on, options are k8s or worker.
+   */
+  @JsonProperty
+  @Nullable
+  private final RunnerSelectorSpec runnerSelectorSpec;
+  private KubernetesRunnerSelectStrategy runnerSelectStrategy;
 
   @JsonCreator
   public KubernetesAndWorkerTaskRunnerConfig(
       @JsonProperty("workerTaskRunnerType") String workerTaskRunnerType,
-      @JsonProperty("sendAllTasksToWorkerTaskRunner") Boolean sendAllTasksToWorkerTaskRunner
+      @JsonProperty("sendAllTasksToWorkerTaskRunner") Boolean sendAllTasksToWorkerTaskRunner,
+      @JsonProperty("runnerSelectorSpec") @Nullable RunnerSelectorSpec runnerSelectorSpec
   )
   {
     this.workerTaskRunnerType = ObjectUtils.defaultIfNull(
@@ -66,6 +74,11 @@ public class KubernetesAndWorkerTaskRunnerConfig
         sendAllTasksToWorkerTaskRunner,
         false
     );
+    this.runnerSelectorSpec = runnerSelectorSpec;
+    if (this.runnerSelectorSpec != null) {
+      this.runnerSelectStrategy = new KubernetesRunnerSelectStrategy(
+          runnerSelectorSpec);
+    }
   }
 
   public String getWorkerTaskRunnerType()
@@ -76,6 +89,11 @@ public class KubernetesAndWorkerTaskRunnerConfig
   public boolean isSendAllTasksToWorkerTaskRunner()
   {
     return sendAllTasksToWorkerTaskRunner;
+  }
+
+  public KubernetesRunnerSelectStrategy getRunnerSelectStrategy()
+  {
+    return runnerSelectStrategy;
   }
 
 }

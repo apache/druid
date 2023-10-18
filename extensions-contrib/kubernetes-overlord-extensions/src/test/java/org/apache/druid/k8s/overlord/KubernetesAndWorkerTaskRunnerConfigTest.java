@@ -41,15 +41,17 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
 
     Assert.assertEquals(RemoteTaskRunnerFactory.TYPE_NAME, config.getWorkerTaskRunnerType());
     Assert.assertFalse(config.isSendAllTasksToWorkerTaskRunner());
-
+    KubernetesRunnerSelectStrategy runnerSelectStrategy = config.getRunnerSelectStrategy();
+    Assert.assertNotNull(runnerSelectStrategy);
   }
 
   @Test
   public void test_withDefaults()
   {
-    KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null);
+    KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null, null);
 
     Assert.assertEquals(HttpRemoteTaskRunnerFactory.TYPE_NAME, config.getWorkerTaskRunnerType());
     Assert.assertFalse(config.isSendAllTasksToWorkerTaskRunner());
+    Assert.assertNull(config.getRunnerSelectStrategy());
   }
 }

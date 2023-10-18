@@ -67,7 +67,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, null)
+        new KubernetesAndWorkerTaskRunnerConfig(null, null, null)
     );
   }
 
@@ -77,7 +77,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, false)
+        new KubernetesAndWorkerTaskRunnerConfig(null, false, null)
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(kubernetesTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -93,7 +93,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, true)
+        new KubernetesAndWorkerTaskRunnerConfig(null, true, null)
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -101,6 +101,33 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     replayAll();
     Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
     verifyAll();
+  }
+
+  @Test
+  public void test_runOnKubernetesOrWorkerBasedOnSelectorSpec() throws ExecutionException, InterruptedException
+  {
+    RunnerSelectorSpec spec = new RunnerSelectorSpec("k8s", ImmutableMap.of("index_kafka", "worker"));
+    KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
+        kubernetesTaskRunner,
+        workerTaskRunner,
+        new KubernetesAndWorkerTaskRunnerConfig(null, false, spec)
+    );
+    Task taskMock = EasyMock.createMock(Task.class);
+    TaskStatus taskStatus = TaskStatus.success(ID);
+    EasyMock.expect(taskMock.getId()).andReturn(ID).anyTimes();
+
+    EasyMock.expect(taskMock.getType()).andReturn("index_kafka").once();
+    EasyMock.expect(workerTaskRunner.run(taskMock)).andReturn(Futures.immediateFuture(taskStatus)).once();
+    EasyMock.replay(taskMock, workerTaskRunner);
+    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
+    EasyMock.verify(taskMock, workerTaskRunner);
+    EasyMock.reset(taskMock, workerTaskRunner);
+
+    EasyMock.expect(taskMock.getType()).andReturn("compact").once();
+    EasyMock.expect(kubernetesTaskRunner.run(taskMock)).andReturn(Futures.immediateFuture(taskStatus)).once();
+    EasyMock.replay(taskMock, kubernetesTaskRunner);
+    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
+    EasyMock.verify(taskMock, kubernetesTaskRunner);
   }
 
   @Test

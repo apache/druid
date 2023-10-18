@@ -286,4 +286,5 @@ To do this, set the following property.
 |--------|-----------------|-----------|-------|--------|
 |`druid.indexer.runner.k8sAndWorker.workerTaskRunnerType`|`String`|Determines whether the `httpRemote` or the `remote` task runner should be used in addition to the Kubernetes task runner.|`httpRemote`|No|
 |`druid.indexer.runner.k8sAndWorker.sendAllTasksToWorkerTaskRunner`|`boolean`| Whether to send all the tasks to the worker task runner. If this is set to false all tasks will be sent to Kubernetes|`false`|No|
+|`druid.indexer.runner.k8sAndWorker.runnerSelectorSpec`|`{"default":"k8s","overrides": {"index_kafka": "worker"}}`| Determines for a task type whether it should run in `k8s` or `worker` runner type|`false`|No|
 
