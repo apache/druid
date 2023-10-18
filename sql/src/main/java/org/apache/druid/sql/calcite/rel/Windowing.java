@@ -142,8 +142,6 @@ public class Windowing
     }
 
     for (int i = 0; i < window.groups.size(); ++i) {
-
-      // FIXME: I think this should be recreated after every group
       VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
           sourceRowSignature,
           plannerContext.getExpressionParser(),
