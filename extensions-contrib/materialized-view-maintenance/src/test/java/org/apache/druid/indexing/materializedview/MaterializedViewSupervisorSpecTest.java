@@ -221,7 +221,7 @@ public class MaterializedViewSupervisorSpecTest
         supervisor.getActiveRealtimeSequencePrefixes();
       }
       catch (Exception e) {
-        Assert.assertTrue(e instanceof  UnsupportedOperationException);
+        Assert.assertTrue(e instanceof UnsupportedOperationException);
       }
 
       Callable<Integer> noop = new Callable<Integer>() {
