@@ -277,7 +277,6 @@ public class DruidQuery
 
     if (partialQuery.getWindow() != null) {
       if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
-        assert (virtualColumnRegistry.isEmpty());
         windowing = Preconditions.checkNotNull(
             Windowing.fromCalciteStuff(
                 partialQuery,
@@ -1443,13 +1442,13 @@ public class DruidQuery
       return null;
     }
 
-    // all virtual cols are needed - these columns are only referenced from the aggregates
-    return WindowOperatorQuery.build(
+    return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
-        windowing.getOperators()
+        windowing.getOperators(),
+        null
     );
   }
 
