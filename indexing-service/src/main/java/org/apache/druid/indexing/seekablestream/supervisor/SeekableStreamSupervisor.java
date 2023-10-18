@@ -1093,6 +1093,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
   }
 
+  /**
+   * The base sequence name of a seekable stream task group is used as a prefix of the sequence names
+   * of pending segments published by it.
+   * This method can be used to identify the active pending segments for a datasource
+   * by checking if the sequence name begins with any of the active realtime sequence prefix returned by this method
+   * @return the set of base sequence names of both active and pending completion task gruops.
+   */
   @Override
   public Set<String> getActiveRealtimeSequencePrefixes()
   {
