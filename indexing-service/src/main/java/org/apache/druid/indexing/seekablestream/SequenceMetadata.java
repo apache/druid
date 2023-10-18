@@ -25,8 +25,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Committer;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -54,6 +58,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   private final String sequenceName;
   private final Set<PartitionIdType> exclusiveStartPartitions;
   private final Set<PartitionIdType> assignments;
+  private final TaskLockType taskLockType;
   private final boolean sentinel;
   /**
    * Lock for accessing {@link #endOffsets} and {@link #checkpointed}. This lock is required because
@@ -73,7 +78,8 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       @JsonProperty("startOffsets") Map<PartitionIdType, SequenceOffsetType> startOffsets,
       @JsonProperty("endOffsets") Map<PartitionIdType, SequenceOffsetType> endOffsets,
       @JsonProperty("checkpointed") boolean checkpointed,
-      @JsonProperty("exclusiveStartPartitions") Set<PartitionIdType> exclusiveStartPartitions
+      @JsonProperty("exclusiveStartPartitions") Set<PartitionIdType> exclusiveStartPartitions,
+      @JsonProperty("taskLockType") @Nullable TaskLockType taskLockType
   )
   {
     Preconditions.checkNotNull(sequenceName);
@@ -86,6 +92,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     this.assignments = new HashSet<>(startOffsets.keySet());
     this.checkpointed = checkpointed;
     this.sentinel = false;
+    this.taskLockType = taskLockType;
     this.exclusiveStartPartitions = exclusiveStartPartitions == null
                                     ? Collections.emptySet()
                                     : exclusiveStartPartitions;
@@ -137,6 +144,12 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     finally {
       lock.unlock();
     }
+  }
+
+  @JsonProperty
+  public TaskLockType getTaskLockType()
+  {
+    return taskLockType;
   }
 
   @JsonProperty
@@ -363,7 +376,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         );
       }
 
-      final SegmentTransactionalInsertAction action;
+      final TaskAction<SegmentPublishResult> action;
 
       if (segmentsToPush.isEmpty()) {
         // If a task ingested no data but made progress reading through its assigned partitions,
@@ -395,19 +408,21 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
           );
         }
       } else if (useTransaction) {
-        action = SegmentTransactionalInsertAction.appendAction(
-            segmentsToPush,
-            runner.createDataSourceMetadata(
-                new SeekableStreamStartSequenceNumbers<>(
-                    finalPartitions.getStream(),
-                    getStartOffsets(),
-                    exclusiveStartPartitions
-                )
-            ),
-            runner.createDataSourceMetadata(finalPartitions)
+        final DataSourceMetadata startMetadata = runner.createDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(
+                finalPartitions.getStream(),
+                getStartOffsets(),
+                exclusiveStartPartitions
+            )
         );
+        final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
+        action = taskLockType == TaskLockType.APPEND
+                 ? SegmentTransactionalAppendAction.forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata)
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata);
       } else {
-        action = SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null);
+        action = taskLockType == TaskLockType.APPEND
+                 ? SegmentTransactionalAppendAction.forSegments(segmentsToPush)
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null);
       }
 
       return toolbox.getTaskActionClient().submit(action);

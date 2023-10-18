@@ -51,6 +51,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -356,8 +357,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void verify(String sql, List<Object[]> results)
+    public void verify(String sql, QueryResults queryResults)
     {
+      List<Object[]> results = queryResults.results;
       List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
@@ -368,9 +370,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         assertResultsEquals(sql, expectedResults, results);
       }
       catch (AssertionError e) {
-        System.out.println("query: " + sql);
-        displayResults("Expected", expectedResults);
-        displayResults("Actual", results);
+        log.info("query: %s", sql);
+        log.info(resultsToString("Expected", expectedResults));
+        log.info(resultsToString("Actual", results));
         throw e;
       }
     }
@@ -475,7 +477,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .queryContext(ImmutableMap.of(
               PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              "windowsAllTheWayDown", true,
               QueryContexts.ENABLE_DEBUG, true)
               )
           .sql(testCase.getQueryString())
@@ -6207,7 +6208,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/aggOWnFn_17")
   @Test
   public void test_aggregates_aggOWnFn_17()
@@ -6726,7 +6726,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/defaultFrame/RBUPACR_bgint_6")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_bgint_6()
@@ -6782,7 +6781,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/defaultFrame/RBUPACR_dbl_6")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_dbl_6()
@@ -6838,7 +6836,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/defaultFrame/RBUPACR_int13")
   @Test
   public void test_frameclause_defaultFrame_RBUPACR_int13()
@@ -7118,7 +7115,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPACR/RBUPACR_bgint_6")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_bgint_6()
@@ -7174,7 +7170,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPACR/RBUPACR_dbl_6")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_dbl_6()
@@ -7198,7 +7193,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPACR/RBUPACR_int13")
   @Test
   public void test_frameclause_RBUPACR_RBUPACR_int13()
@@ -7238,7 +7232,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_bgint_6")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_bgint_6()
@@ -7254,7 +7247,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_dbl_6")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_6()
@@ -7262,7 +7254,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_dbl_7")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_dbl_7()
@@ -7302,7 +7293,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("frameclause/RBUPAUF/RBUPAUF_int_13")
   @Test
   public void test_frameclause_RBUPAUF_RBUPAUF_int_13()

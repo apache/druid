@@ -23,9 +23,6 @@ sidebar_label: "Query from deep storage"
   ~ under the License.
   -->
 
-
-> Query from deep storage is an [experimental feature](../development/experimental.md).
-
 Query from deep storage allows you to query segments that are stored only in deep storage, which provides lower costs than if you were to load everything onto Historical processes. The tradeoff is that queries from deep storage may take longer to complete. 
 
 This tutorial walks you through loading example data, configuring load rules so that not all the segments get loaded onto Historical processes, and querying data from deep storage.
