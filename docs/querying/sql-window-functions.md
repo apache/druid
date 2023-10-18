@@ -149,7 +149,7 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 |`event_time`|`channel`|`change`|`row_no`|`rank_no`|`dense_rank_no`|`pct_rank`|`cumulative_dist`|`ntile_val`|`lag_val`|`lead_val`|`first_val`|`last_val`|
 |------------|---------|--------|--------|---------|---------------|----------|----------------|-----------|---------|----------|-----------|----------|
-|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|1|1|1|1|0|0.125|1|null|7|1|6900|
+|`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|1|1|1|1|0.0|0.125|1|null|7|1|6900|
 |`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|7|2|2|2|0.14285714285714285|0.25|1|1|56|1|6900|
 |`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|56|3|3|3|0.2857142857142857|0.375|2|7|63|1|6900|
 |`2016-06-27T00:00:00.000Z`|`#kk.wikipedia`|63|4|4|4|0.42857142857142855|0.5|2|56|91|1|6900|
@@ -177,7 +177,7 @@ SELECT
     FLOOR(__time TO MINUTE) as "time",
     channel,
     ABS(delta) AS changes,
-    sum(ABS(delta)) OVER (PARTITION BY channel ORDER BY FLOOR(__time TO HOUR) ASC) AS cum_changes
+    sum(ABS(delta)) OVER (PARTITION BY channel ORDER BY FLOOR(__time TO MINUTE) ASC) AS cum_changes
 FROM wikipedia
 WHERE channel IN ('#kk.wikipedia', '#lt.wikipedia')
 GROUP BY channel, __time, delta
@@ -216,4 +216,3 @@ GROUP BY channel, __time, delta
 The following are known issues with window functions:
 
 - Descending order, DESC, in the ORDER BY clause in the window definition causes a Null Pointer Exception.
-- Druid throws an exception if you do not include the offset and default for LEAD() and LAG() functions.
