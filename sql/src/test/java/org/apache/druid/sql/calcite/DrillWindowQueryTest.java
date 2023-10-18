@@ -477,7 +477,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .queryContext(ImmutableMap.of(
               PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              "windowsAllTheWayDown", true,
               QueryContexts.ENABLE_DEBUG, true)
               )
           .sql(testCase.getQueryString())
