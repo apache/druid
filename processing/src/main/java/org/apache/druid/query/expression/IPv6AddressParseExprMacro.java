@@ -32,9 +32,9 @@ import java.util.List;
   * Implements an expression that parses a string into an IPv6 address
   *
   * Expression signatures:
-  * - long ipv6_parse(string)
+  * - ipv6_parse(string)
   *
-  * String arguments should be formatted as an IPv6 string e.g. "2001:4860:4860::8888"
+  * String arguments should be formatted as an IPv6 string e.g. "2001:4860::8ef8"
   * Invalid arguments return null.
   * </pre>
   *
