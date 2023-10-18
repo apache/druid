@@ -300,12 +300,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     });
   }
 
-  private static void assertColumnReadsIdentifier(final VirtualColumn column, final String identifier)
-  {
-    MatcherAssert.assertThat(column, CoreMatchers.instanceOf(ExpressionVirtualColumn.class));
-    Assert.assertEquals("\"" + identifier + "\"", ((ExpressionVirtualColumn) column).getExpression());
-  }
-
   @Test
   public void test_pushdown_or_filters_unnested_and_original_dimension_with_unnest_adapters()
   {
@@ -350,6 +344,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       return null;
     });
   }
+
   @Test
   public void test_nested_filters_unnested_and_original_dimension_with_unnest_adapters()
   {
@@ -483,7 +478,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         "(unnested-multi-string1 = 3 || (newcol = 2 && multi-string1 = 2 && unnested-multi-string1 = 1))"
     );
   }
-
   @Test
   public void test_nested_filters_unnested_and_topLevelAND3filtersInORWithNestedOrs()
   {
@@ -734,6 +728,78 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     });
   }
 
+  @Test
+  public void testUnnestValueMatcherValueExist()
+  {
+
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.makeCursors(
+        null,
+        UNNEST_STORAGE_ADAPTER.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+        }
+        cursor.advance();
+        count++;
+      }
+        /*
+      each row has 8 entries.
+      unnest 2 rows -> 16 rows after unnest
+       */
+      Assert.assertEquals(count, 16);
+      return null;
+    });
+
+  }
+
+  @Test
+  public void testUnnestValueMatcherValueNotExistExist()
+  {
+
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.makeCursors(
+        null,
+        UNNEST_STORAGE_ADAPTER.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+        }
+        cursor.advance();
+        count++;
+      }
+        /*
+      each row has 8 entries.
+      unnest 2 rows -> 16 rows after unnest
+       */
+      Assert.assertEquals(count, 16);
+      return null;
+    });
+
+  }
+
   public void testComputeBaseAndPostUnnestFilters(
       Filter testQueryFilter,
       String expectedBasePushDown,
@@ -776,6 +842,12 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         expectedPostUnnest,
         actualPostUnnestFilter == null ? "" : actualPostUnnestFilter.toString()
     );
+  }
+
+  private static void assertColumnReadsIdentifier(final VirtualColumn column, final String identifier)
+  {
+    MatcherAssert.assertThat(column, CoreMatchers.instanceOf(ExpressionVirtualColumn.class));
+    Assert.assertEquals("\"" + identifier + "\"", ((ExpressionVirtualColumn) column).getExpression());
   }
 }
 
