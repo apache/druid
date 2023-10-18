@@ -73,6 +73,7 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
     return new DimensionSelector()
     {
       final DimensionSelector delegateDimensionSelector = delegate.makeDimensionSelector(dimensionSpec);
+      final ExpressionType expressionType = ExpressionType.fromColumnType(dimensionSpec.getOutputType());
 
       @Override
       public IndexedInts getRow()
@@ -103,7 +104,6 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
       public Object getObject()
       {
         try {
-          ExpressionType expressionType = ExpressionType.fromColumnType(dimensionSpec.getOutputType());
           if (expressionType == null) {
             return delegateDimensionSelector.getObject();
           }
@@ -154,6 +154,9 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
     return new ColumnValueSelector()
     {
       final ColumnValueSelector delegateColumnValueSelector = delegate.makeColumnValueSelector(columnName);
+      final ExpressionType expressionType = ExpressionType.fromColumnType(
+          rowSignature.getColumnType(columnName).orElse(null)
+      );
 
       @Override
       public double getDouble()
@@ -205,9 +208,6 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
       public Object getObject()
       {
         try {
-          ExpressionType expressionType = ExpressionType.fromColumnType(rowSignature
-                                                                            .getColumnType(columnName)
-                                                                            .orElse(null));
           if (expressionType == null) {
             return delegateColumnValueSelector.getObject();
           }
