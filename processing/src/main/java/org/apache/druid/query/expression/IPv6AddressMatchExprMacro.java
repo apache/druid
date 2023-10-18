@@ -67,8 +67,6 @@ public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
  
     try {
       final Expr arg = args.get(0);
-      // we use 'blockString' for string matching with 'prefixContains' because we parse them into IPAddressString
-      // for longs, we convert into a prefix block use 'block' and 'contains' so avoid converting to IPAddressString
       final IPAddressString blockString = getSubnetInfo(args);
       final IPAddress block = blockString.toAddress().toPrefixBlock();
 
@@ -116,7 +114,6 @@ public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
  
       return new IPv6AddressMatchExpr(arg);
     }
- 
     catch (AddressStringException e) {
       throw processingFailed(e, "failed to parse address");
     }
