@@ -97,7 +97,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
@@ -114,7 +113,7 @@ public class MSQSelectTest extends MSQTestBase
                   .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 
@@ -124,7 +123,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 

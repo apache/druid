@@ -5607,7 +5607,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                           or(
                               isNull("__j0.a0"),
                               not(
-                                  or(
+                                  NullHandling.sqlCompatible()
+                                  ? istrue(
+                                      or(
+                                          not(expressionFilter("\"__j0.d0\"")),
+                                          notNull("__j0.d0")
+                                      )
+                                  )
+                                  : or(
                                       not(expressionFilter("\"__j0.d0\"")),
                                       notNull("__j0.d0")
                                   )

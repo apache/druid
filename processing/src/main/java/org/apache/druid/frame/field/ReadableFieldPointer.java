@@ -31,4 +31,9 @@ public interface ReadableFieldPointer
    * Starting position of the field.
    */
   long position();
+
+  /**
+   * Length of the field.
+   */
+  long length();
 }

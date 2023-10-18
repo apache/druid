@@ -80,7 +80,7 @@ public class PlannerContext
   /**
    * Undocumented context key, used to enable window functions.
    */
-  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
+  public static final String CTX_ENABLE_WINDOW_FNS = "enableWindowing";
 
   public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = NullHandling.replaceWithDefault();
