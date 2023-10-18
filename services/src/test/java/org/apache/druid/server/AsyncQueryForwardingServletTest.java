@@ -518,7 +518,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testProxyFailure() throws Exception
+  public void testNativeQueryProxyFailure() throws Exception
   {
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("foo")
@@ -532,6 +532,29 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.replay(hostFinder);
 
     verifyServletCallsForQuery(query, false, false, hostFinder, new Properties(), true);
+  }
+
+  @Test
+  public void testSqlQueryProxyFailure() throws Exception
+  {
+    final SqlQuery query = new SqlQuery(
+        "SELECT * FROM foo",
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        null
+    );
+    final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
+    EasyMock.expect(hostFinder.findServerSql(
+        query.withOverridenContext(ImmutableMap.of("sqlQueryId", "dummy", "queryId", "dummy")))
+    ).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
+    EasyMock.replay(hostFinder);
+
+    Properties properties = new Properties();
+    properties.setProperty("druid.router.sql.enable", "true");
+    verifyServletCallsForQuery(query, true, false, hostFinder, properties, true);
   }
 
   /**
