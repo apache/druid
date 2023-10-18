@@ -35,6 +35,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
@@ -729,12 +730,32 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testUnnestValueMatcherValueExist()
+  public void testUnnestValueMatcherValueDoesntExist()
   {
+    final String inputColumn = "multi-string5";
+    final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
 
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.makeCursors(
+    final DataSegment dataSegment = DataSegment.builder()
+                                               .dataSource("foo")
+                                               .interval(schemaInfo.getDataInterval())
+                                               .version("1")
+                                               .shardSpec(new LinearShardSpec(0))
+                                               .size(0)
+                                               .build();
+    final SegmentGenerator segmentGenerator = CLOSER.register(new SegmentGenerator());
+
+    IncrementalIndex index = CLOSER.register(
+        segmentGenerator.generateIncrementalIndex(dataSegment, schemaInfo, Granularities.HOUR, 100)
+    );
+    IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    UnnestStorageAdapter withNullsStorageAdapter = new UnnestStorageAdapter(
+        adapter,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + inputColumn + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+    Sequence<Cursor> cursorSequence = withNullsStorageAdapter.makeCursors(
         null,
-        UNNEST_STORAGE_ADAPTER.getInterval(),
+        withNullsStorageAdapter.getInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
@@ -745,56 +766,20 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      // wont match anything
+      ValueMatcher matcher = dimSelector.makeValueMatcher("x");
       int count = 0;
       while (!cursor.isDone()) {
         Object dimSelectorVal = dimSelector.getObject();
         if (dimSelectorVal == null) {
           Assert.assertNull(dimSelectorVal);
+          Assert.assertTrue(matcher.matches(true));
         }
+        Assert.assertFalse(matcher.matches(false));
         cursor.advance();
         count++;
       }
-        /*
-      each row has 8 entries.
-      unnest 2 rows -> 16 rows after unnest
-       */
-      Assert.assertEquals(count, 16);
-      return null;
-    });
-
-  }
-
-  @Test
-  public void testUnnestValueMatcherValueNotExistExist()
-  {
-
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.makeCursors(
-        null,
-        UNNEST_STORAGE_ADAPTER.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
-      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
-      int count = 0;
-      while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
-        }
-        cursor.advance();
-        count++;
-      }
-        /*
-      each row has 8 entries.
-      unnest 2 rows -> 16 rows after unnest
-       */
-      Assert.assertEquals(count, 16);
+      Assert.assertEquals(count, 618);
       return null;
     });
 
