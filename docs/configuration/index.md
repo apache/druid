@@ -25,7 +25,7 @@ title: "Configuration reference"
 
 This page documents all of the configuration properties for each Druid service type.
 
-## Recommended Configuration File Organization
+## Recommended configuration file organization
 
 A recommended way of organizing Druid configuration files can be seen in the `conf` directory in the Druid package root, shown below:
 
@@ -61,7 +61,7 @@ The `jvm.config` files contain JVM flags such as heap sizing properties for each
 
 Common properties shared by all services are placed in `_common/common.runtime.properties`.
 
-## Configuration Interpolation
+## Configuration interpolation
 
 Configuration values can be interpolated from System Properties, Environment Variables, or local files. Below is an example of how this can be used:
 
@@ -90,11 +90,11 @@ If you need to set a variable that is wrapped by `${...}` but do not want it to 
 config.name=$${value}
 ```
 
-## Common Configurations
+## Common configurations
 
 The properties under this section are common configurations that should be shared across all Druid services in a cluster.
 
-### JVM Configuration Best Practices
+### JVM configuration best practices
 
 There are four JVM parameters that we set on all of our processes:
 
@@ -118,7 +118,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |`druid.extensions.directory`|The root extension directory where user can put extensions related files. Druid will load extensions stored under this directory.|`extensions` (This is a relative path to Druid's working directory)|
 |`druid.extensions.hadoopDependenciesDir`|The root hadoop dependencies directory where user can put hadoop related dependencies files. Druid will load the dependencies based on the hadoop coordinate specified in the hadoop index task.|`hadoop-dependencies` (This is a relative path to Druid's working directory|
 |`druid.extensions.loadList`|A JSON array of extensions to load from extension directories by Druid. If it is not specified, its value will be `null` and Druid will load all the extensions under `druid.extensions.directory`. If its value is empty list `[]`, then no extensions will be loaded at all. It is also allowed to specify absolute path of other custom extensions not stored in the common extensions directory.|null|
-|`druid.extensions.searchCurrentClassloader`|This is a boolean flag that determines if Druid will search the main classloader for extensions.  It defaults to true but can be turned off if you have reason to not automatically add all modules on the classpath.|true|
+|`druid.extensions.searchCurrentClassloader`|This is a boolean flag that determines if Druid will search the main classloader for extensions. It defaults to true but can be turned off if you have reason to not automatically add all modules on the classpath.|true|
 |`druid.extensions.useExtensionClassloaderFirst`|This is a boolean flag that determines if Druid extensions should prefer loading classes from their own jars rather than jars bundled with Druid. If false, extensions must be compatible with classes provided by any jars bundled with Druid. If true, extensions may depend on conflicting versions.|false|
 |`druid.extensions.hadoopContainerDruidClasspath`|Hadoop Indexing launches hadoop jobs and this configuration provides way to explicitly set the user classpath for the hadoop job. By default this is computed automatically by druid based on the druid process classpath and set of extensions. However, sometimes you might want to be explicit to resolve dependency conflicts between druid and hadoop.|null|
 |`druid.extensions.addExtensionsToHadoopContainer`|Only applicable if `druid.extensions.hadoopContainerDruidClasspath` is provided. If set to true, then extensions specified in the loadList are added to hadoop container classpath. Note that when `druid.extensions.hadoopContainerDruidClasspath` is not provided then extensions are always added to hadoop container classpath.|false|
@@ -130,6 +130,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |`druid.modules.excludeList`|A JSON array of canonical class names (e.g., `"org.apache.druid.somepackage.SomeModule"`) of module classes which shouldn't be loaded, even if they are found in extensions specified by `druid.extensions.loadList`, or in the list of core modules specified to be loaded on a particular Druid process type. Useful when some useful extension contains some module, which shouldn't be loaded on some Druid process type because some dependencies of that module couldn't be satisfied.|[]|
 
 ### ZooKeeper
+
 We recommend just setting the base ZK path and the ZK service host, but all ZK paths that Druid uses can be overwritten to absolute paths.
 
 |Property|Description|Default|
@@ -140,7 +141,7 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |`druid.zk.service.pwd`|The [Password Provider](../operations/password-provider.md) or the string password to authenticate with ZooKeeper. This is an optional property.|none|
 |`druid.zk.service.authScheme`|digest is the only authentication scheme supported. |digest|
 
-#### ZooKeeper Behavior
+#### ZooKeeper behavior
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -149,7 +150,8 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |`druid.zk.service.compress`|Boolean flag for whether or not created Znodes should be compressed.|`true`|
 |`druid.zk.service.acl`|Boolean flag for whether or not to enable ACL security for ZooKeeper. If ACL is enabled, zNode creators will have all permissions.|`false`|
 
-#### Path Configuration
+#### Path configuration
+
 Druid interacts with ZK through a set of standard path configurations. We recommend just setting the base ZK path, but all ZK paths that Druid uses can be overwritten to absolute paths.
 
 |Property|Description|Default|
@@ -182,7 +184,7 @@ The following path is used for service discovery. It is **not** affected by `dru
 
 ### TLS
 
-#### General Configuration
+#### General configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -192,7 +194,7 @@ The following path is used for service discovery. It is **not** affected by `dru
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each process. Please see `Configuration` section of individual processes to check the valid and default values for these ports.
 
-#### Jetty Server TLS Configuration
+#### Jetty server TLS configuration
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
 
@@ -219,8 +221,7 @@ Following table contains non-mandatory advanced configuration options, use cauti
 |`druid.server.https.includeProtocols`|List of exact protocols names to include.|Jetty's default include protocol list|no|
 |`druid.server.https.excludeProtocols`|List of exact protocols names to exclude.|Jetty's default exclude protocol list|no|
 
-
-#### Internal Client TLS Configuration (requires `simple-client-sslcontext` extension)
+#### Internal client TLS configuration (requires `simple-client-sslcontext` extension)
 
 These properties apply to the SSLContext that will be provided to the internal HTTP client that Druid services use to communicate with each other. These properties require the `simple-client-sslcontext` extension to be loaded. Without it, Druid services will be unable to communicate with each other when TLS is enabled.
 
@@ -235,7 +236,7 @@ These properties apply to the SSLContext that will be provided to the internal H
 This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.
 
-### Authentication and Authorization
+### Authentication and authorization
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
@@ -249,7 +250,7 @@ For more information, please see [Authentication and Authorization](../operation
 
 For configuration options for specific auth extensions, please refer to the extension documentation.
 
-### Startup Logging
+### Startup logging
 
 All processes can log debugging information on startup.
 
@@ -260,7 +261,7 @@ All processes can log debugging information on startup.
 
 Note that some sensitive information may be logged if these settings are enabled.
 
-### Request Logging
+### Request logging
 
 All processes that can serve queries can also log the query requests they see. Broker processes can additionally log the SQL requests (both from HTTP and JDBC) they see.
 For an example of setting up request logging, see [Request logging](../operations/request-logging.md).
@@ -341,6 +342,7 @@ Requests that meet the threshold are logged using the request logger type set in
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composing request logging
+
 The `composing` request logger emits request logs to multiple request loggers.
 
 |Property|Description|Default|
@@ -348,6 +350,7 @@ The `composing` request logger emits request logs to multiple request loggers.
 |`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
 
 #### Switching request logging
+
 The `switching` request logger routes native query request logs to one request logger and SQL query request logs to another request logger.
 
 |Property|Description|Default|
@@ -355,7 +358,7 @@ The `switching` request logger routes native query request logs to one request l
 |`druid.request.logging.nativeQueryLogger`|Request logger for emitting native query request logs.|none|
 |`druid.request.logging.sqlQueryLogger`|Request logger for emitting SQL query request logs.|none|
 
-### Audit Logging
+### Audit logging
 
 Coordinator and Overlord log changes to lookups, segment load/drop rules, dynamic configuration changes for auditing
 
@@ -366,7 +369,7 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, dynami
 |`druid.audit.manager.maxPayloadSizeBytes`|The maximum size of audit payload to store in Druid's metadata store audit table. If the size of audit payload exceeds this value, the audit log would be stored with a message indicating that the payload was omitted instead. Setting `maxPayloadSizeBytes` to -1 (default value) disables this check, meaning Druid will always store audit payload regardless of it's size. Setting to any negative number other than `-1` is invalid. Human-readable format is supported, see [here](human-readable-byte.md).  |-1|
 |`druid.audit.manager.skipNullField`|If true, the audit payload stored in metadata store will exclude any field with null value. |false|
 
-### Enabling Metrics
+### Enabling metrics
 
 You can configure Druid processes to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors) via [emitters](#metrics-emitters).
 
@@ -422,7 +425,7 @@ There are several emitters available:
 - [`graphite`](#graphite-emitter) emits metrics to a [Graphite](https://graphiteapp.org/) Carbon service.
 - [`switching`](#switching-emitter) initializes and emits to multiple emitter modules based on the event feed.
 
-##### Logging Emitter Module
+##### Logging emitter module
 
 The use this emitter module, set `druid.emitter=logging`. The `logging` emitter uses a Log4j2 logger named
 `druid.emitter.logging.loggerClass` to emit events. Each event is logged as a single `json` object with a
@@ -434,7 +437,7 @@ log4j config to route these logs to different sources based on the feed of the e
 |`druid.emitter.logging.loggerClass`|The class used for logging.|`org.apache.druid.java.util.emitter.core.LoggingEmitter`|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
 
-##### HTTP Emitter Module
+##### HTTP emitter module
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -448,7 +451,7 @@ log4j config to route these logs to different sources based on the feed of the e
 |`druid.emitter.http.minHttpTimeoutMillis`|If the speed of filling batches imposes timeout smaller than that, not even trying to send batch to endpoint, because it will likely fail, not being able to send the data that fast. Configure this depending based on emitter/successfulSending/minTimeMs metric. Reasonable values are 10ms..100ms.|0|
 |`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none, required config|
 
-##### HTTP Emitter Module TLS Overrides
+##### HTTP emitter module TLS overrides
 
 By default, when sending events to a TLS-enabled receiver, the HTTP Emitter uses an SSLContext obtained from the process described at [Druid's internal communication over TLS](../operations/tls-support.md), i.e., the same
 SSLContext that would be used for internal communications between Druid processes.
@@ -466,7 +469,7 @@ The following properties allow the HTTP Emitter to use its own truststore config
 |`druid.emitter.http.ssl.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|
 |`druid.emitter.http.ssl.protocol`|TLS protocol to use.|"TLSv1.2"|
 
-##### Parametrized HTTP Emitter Module
+##### Parametrized HTTP emitter module
 
 The parametrized emitter takes the same configs as the [`http` emitter](#http-emitter-module) using the prefix `druid.emitter.parametrized.httpEmitting.`.
 For example:
@@ -481,19 +484,19 @@ Instead use `recipientBaseUrlPattern` described in the table below.
 |--------|-----------|-------|
 |`druid.emitter.parametrized.recipientBaseUrlPattern`|The URL pattern to send an event to, based on the event's feed. E.g., `http://foo.bar/{feed}`, that will send event to `http://foo.bar/metrics` if the event's feed is "metrics".|none, required config|
 
-##### Composing Emitter Module
+##### Composing emitter module
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.composing.emitters`|List of emitter modules to load, e.g., ["logging","http"].|[]|
 
-##### Graphite Emitter
+##### Graphite emitter
 
 To use graphite as emitter set `druid.emitter=graphite`. For configuration details, see [Graphite emitter](../development/extensions-contrib/graphite.md) for the Graphite emitter Druid extension.
 
-##### Switching Emitter
+##### Switching emitter
 
-To use switching as emitter set `druid.emitter=switching`. 
+To use switching as emitter set `druid.emitter=switching`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -531,7 +534,7 @@ The configurations concern how to push and pull [Segments](../design/segments.md
 |--------|-----------|-------|
 |`druid.storage.type`|Choices:local, noop, s3, hdfs, c*. The type of deep storage to use.|local|
 
-#### Local Deep Storage
+#### Local deep storage
 
 Local deep storage uses the local filesystem.
 
@@ -539,11 +542,11 @@ Local deep storage uses the local filesystem.
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|Directory on disk to use as deep storage.|/tmp/druid/localStorage|
 
-#### Noop Deep Storage
+#### Noop deep storage
 
 This deep storage doesn't do anything. There are no configs.
 
-#### S3 Deep Storage
+#### S3 deep storage
 
 This deep storage is used to interface with Amazon's S3. Note that the `druid-s3-extensions` extension must be loaded.
 The below table shows some important configurations for S3. See [S3 Deep Storage](../development/extensions-core/s3.md) for full configurations.
@@ -560,7 +563,7 @@ The below table shows some important configurations for S3. See [S3 Deep Storage
 |`druid.storage.sse.custom.base64EncodedKey`|Base64-encoded key. Should be specified if `druid.storage.sse.type` is `custom`.|None|
 |`druid.storage.useS3aSchema`|If true, use the "s3a" filesystem when using Hadoop-based ingestion. If false, the "s3n" filesystem will be used. Only affects Hadoop-based ingestion.|false|
 
-#### HDFS Deep Storage
+#### HDFS deep storage
 
 This deep storage is used to interface with HDFS.  Note that the `druid-hdfs-storage` extension must be loaded.
 
@@ -568,7 +571,7 @@ This deep storage is used to interface with HDFS.  Note that the `druid-hdfs-sto
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|HDFS directory to use as deep storage.|none|
 
-#### Cassandra Deep Storage
+#### Cassandra deep storage
 
 This deep storage is used to interface with Cassandra.  Note that the `druid-cassandra-storage` extension must be loaded.
 
@@ -578,14 +581,14 @@ This deep storage is used to interface with Cassandra.  Note that the `druid-cas
 |`druid.storage.keyspace`|Cassandra key space.|none|
 
 
-### Ingestion Security Configuration
+### Ingestion security configuration
 
 #### HDFS input source
 
 You can set the following property to specify permissible protocols for
 the [HDFS input source](../ingestion/input-sources.md#hdfs-input-source).
 
-|Property|Possible Values|Description|Default|
+|Property|Possible values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.ingestion.hdfs.allowedProtocols`|List of protocols|Allowed protocols for the HDFS input source and HDFS firehose.|["hdfs"]|
 
@@ -595,14 +598,14 @@ the [HDFS input source](../ingestion/input-sources.md#hdfs-input-source).
 You can set the following property to specify permissible protocols for
 the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
-|Property|Possible Values|Description|Default|
+|Property|Possible values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source and HTTP firehose.|["http", "https"]|
 
 
-### External Data Access Security Configuration
+### External data access security configuration
 
-#### JDBC Connections to External Databases
+#### JDBC connections to external databases
 
 You can use the following properties to specify permissible JDBC options for:
 - [SQL input source](../ingestion/input-sources.md#sql-input-source)
@@ -611,26 +614,25 @@ You can use the following properties to specify permissible JDBC options for:
 
 These properties do not apply to metadata storage connections.
 
-|Property|Possible Values|Description|Default|
+|Property|Possible values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.access.jdbc.enforceAllowedProperties`|Boolean|When true, Druid applies `druid.access.jdbc.allowedProperties` to JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, or `jdbc:mariadb:`. When false, Druid allows any kind of JDBC connections without JDBC property validation. This config is for backward compatibility especially during upgrades since enforcing allow list can break existing ingestion jobs or lookups based on JDBC. This config is deprecated and will be removed in a future release.|true|
 |`druid.access.jdbc.allowedProperties`|List of JDBC properties|Defines a list of allowed JDBC properties. Druid always enforces the list for all JDBC connections starting with `jdbc:postgresql:`, `jdbc:mysql:`, and `jdbc:mariadb:` if `druid.access.jdbc.enforceAllowedProperties` is set to true.<br/><br/>This option is tested against MySQL connector 5.1.49, MariaDB connector 2.7.4, and PostgreSQL connector 42.2.14. Other connector versions might not work.|["useSSL", "requireSSL", "ssl", "sslmode"]|
 |`druid.access.jdbc.allowUnknownJdbcUrlFormat`|Boolean|When false, Druid only accepts JDBC connections starting with `jdbc:postgresql:` or `jdbc:mysql:`. When true, Druid allows JDBC connections to any kind of database, but only enforces `druid.access.jdbc.allowedProperties` for PostgreSQL and MySQL/MariaDB.|true|
 
-
-### Task Logging
+### Task logging
 
 You can use the `druid.indexer` configuration to set a [long-term storage](#log-long-term-storage) location for task log files, and to set a [retention policy](#log-retention-policy).
 
 For more information about ingestion tasks and the process of generating logs, see the [task reference](../ingestion/tasks.md).
 
-#### Log Long-term Storage
+#### Log long-term storage
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.type`|Where to store task logs.  `noop`, [`s3`](#s3-task-logs), [`azure`](#azure-blob-store-task-logs), [`google`](#google-cloud-storage-task-logs), [`hdfs`](#hdfs-task-logs), [`file`](#file-task-logs) |`file`|
 
-##### File Task Logs
+##### File task logs
 
 Store task logs in the local filesystem.
 
@@ -638,7 +640,7 @@ Store task logs in the local filesystem.
 |--------|-----------|-------|
 |`druid.indexer.logs.directory`|Local filesystem path.|log|
 
-##### S3 Task Logs
+##### S3 task logs
 
 Store task logs in S3. Note that the `druid-s3-extensions` extension must be loaded.
 
@@ -648,7 +650,8 @@ Store task logs in S3. Note that the `druid-s3-extensions` extension must be loa
 |`druid.indexer.logs.s3Prefix`|S3 key prefix.|none|
 |`druid.indexer.logs.disableAcl`|Boolean flag for ACL. If this is set to `false`, the full control would be granted to the bucket owner. If the task logs bucket is the same as the deep storage (S3) bucket, then the value of this property will need to be set to true if druid.storage.disableAcl has been set to true.|false|
 
-##### Azure Blob Store Task Logs
+##### Azure Blob Store task logs
+
 Store task logs in Azure Blob Store.
 
 Note: The `druid-azure-extensions` extension must be loaded, and this uses the same storage account as the deep storage module for azure.
@@ -658,7 +661,8 @@ Note: The `druid-azure-extensions` extension must be loaded, and this uses the s
 |`druid.indexer.logs.container`|The Azure Blob Store container to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
-##### Google Cloud Storage Task Logs
+##### Google Cloud Storage task logs
+
 Store task logs in Google Cloud Storage.
 
 Note: The `druid-google-extensions` extension must be loaded, and this uses the same storage settings as the deep storage module for google.
@@ -668,7 +672,7 @@ Note: The `druid-google-extensions` extension must be loaded, and this uses the 
 |`druid.indexer.logs.bucket`|The Google Cloud Storage bucket to write logs to|none|
 |`druid.indexer.logs.prefix`|The path to prepend to logs|none|
 
-##### HDFS Task Logs
+##### HDFS task logs
 
 Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be loaded.
 
@@ -676,7 +680,7 @@ Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be lo
 |--------|-----------|-------|
 |`druid.indexer.logs.directory`|The directory to store logs.|none|
 
-#### Log Retention Policy
+#### Log retention policy
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -728,7 +732,7 @@ On the other hand, if `druid.server.http.errorResponseTransform.allowedRegex` is
 {"error":"Plan validation failed","errorMessage":"org.apache.calcite.runtime.CalciteContextException: From line 1, column 15 to line 1, column 38: Object 'nonexistent-datasource' not found","errorClass":null,"host":null}
 ```
 
-### Overlord Discovery
+### Overlord discovery
 
 This config is used to find the [Overlord](../design/overlord.md) using Curator service discovery. Only required if you are actually running an Overlord.
 
@@ -737,7 +741,7 @@ This config is used to find the [Overlord](../design/overlord.md) using Curator 
 |`druid.selectors.indexing.serviceName`|The druid.service name of the Overlord process. To start the Overlord with a different name, set it with this property. |druid/overlord|
 
 
-### Coordinator Discovery
+### Coordinator discovery
 
 This config is used to find the [Coordinator](../design/coordinator.md) using Curator service discovery. This config is used by the realtime indexing processes to get information about the segments loaded in the cluster.
 
@@ -746,11 +750,11 @@ This config is used to find the [Coordinator](../design/coordinator.md) using Cu
 |`druid.selectors.coordinator.serviceName`|The druid.service name of the Coordinator process. To start the Coordinator with a different name, set it with this property. |druid/coordinator|
 
 
-### Announcing Segments
+### Announcing segments
 
 You can configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
 
-##### Batch Data Segment Announcer
+##### Batch data segment announcer
 
 In current Druid, multiple data segments may be announced under the same Znode.
 
@@ -780,14 +784,14 @@ the following properties.
  JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 :::
 
-### Double Column storage
+### Double column storage
 
 Prior to version 0.13.0, Druid's storage layer used a 32-bit float representation to store columns created by the
 doubleSum, doubleMin, and doubleMax aggregators at indexing time.
 Starting from version 0.13.0 the default will be 64-bit floats for Double columns.
 Using 64-bit representation for double column will lead to avoid precision loss at the cost of doubling the storage size of such columns.
 To keep the old format set the system-wide property `druid.indexing.doubleStorage=float`.
-You can also use floatSum, floatMin and floatMax to use 32-bit float representation.
+You can also use `floatSum`, `floatMin`, and `floatMax` to use 32-bit float representation.
 Support for 64-bit floating point columns was released in Druid 0.11.0, so if you use this feature then older versions of Druid will not be able to read your data segments.
 
 |Property|Description|Default|
@@ -795,6 +799,7 @@ Support for 64-bit floating point columns was released in Druid 0.11.0, so if yo
 |`druid.indexing.doubleStorage`|Set to "float" to use 32-bit double representation for double columns.|double|
 
 ### SQL compatible null handling
+
 Prior to version 0.13.0, Druid string columns treated `''` and `null` values as interchangeable, and numeric columns were unable to represent `null` values, coercing `null` to `0`. Druid 0.13.0 introduced a mode which enabled SQL compatible null handling, allowing string columns to distinguish empty strings from nulls, and numeric columns to contain null rows.
 
 |Property|Description|Default|
@@ -804,7 +809,7 @@ Prior to version 0.13.0, Druid string columns treated `''` and `null` values as 
 |`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. |`false`|
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#handling-null-values) for more details.
 
-### HTTP Client
+### HTTP client
 
 All Druid components can communicate with each other over HTTP.
 
@@ -817,7 +822,7 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`max(10, ((number of cores * 17) / 16 + 2) + 30)`|
 
-### Common endpoints Configuration
+### Common endpoints configuration
 
 This section contains the configuration options for endpoints that are supported by all processes.
 
@@ -825,7 +830,7 @@ This section contains the configuration options for endpoints that are supported
 |--------|-----------|-------|
 |`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
 
-## Master Server
+## Master server
 
 This section contains the configuration options for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.md#server-types).
 
@@ -837,7 +842,7 @@ For general Coordinator Process information, see [here](../design/coordinator.md
 
 These Coordinator static configurations can be defined in the `coordinator/runtime.properties` file.
 
-##### Coordinator Process Config
+##### Coordinator process config
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -847,7 +852,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/coordinator|
 
-##### Coordinator Operation
+##### Coordinator operation
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -868,7 +873,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator process should act like an Overlord as well. This configuration allows users to simplify a druid cluster by not having to deploy any standalone Overlord processes. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also. See next.|false|
 |`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord processes and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
 
-##### Metadata Management
+##### Metadata management
 
 |Property|Description|Required|Default|
 |--------|-----------|---------|-------|
@@ -888,8 +893,8 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.datasource.period`| How often to do automatic deletion of datasource metadata in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Value must be equal to or greater than  `druid.coordinator.period.metadataStoreManagementPeriod`. Only applies if `druid.coordinator.kill.datasource.on` is set to "True".| No| `P1D`|
 |`druid.coordinator.kill.datasource.durationToRetain`| Duration of datasource metadata to be retained from created time in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Only applies if `druid.coordinator.kill.datasource.on` is set to "True".| Yes if `druid.coordinator.kill.datasource.on` is set to "True".| `P90D`|
 
-##### Segment Management
-|Property|Possible Values|Description|Default|
+##### Segment management
+|Property|Possible values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|http|
 |`druid.coordinator.loadqueuepeon.type`|curator or http|Implementation to use to assign segment loads and drops to historicals. Curator-based implementation is now deprecated, so you should transition to using HTTP-based segment assignments.|http|
@@ -900,7 +905,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |--------|-----------|-------|
 |`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than `druid.segmentCache.numLoadingThreads` config on Historical process.|1|
 
-##### Metadata Retrieval
+##### Metadata retrieval
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -910,7 +915,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.manager.rules.defaultRule`|The default rule for the cluster|_default|
 |`druid.manager.rules.alertThreshold`|The duration after a failed poll upon which an alert should be emitted.|PT10M|
 
-#### Dynamic Configuration
+#### Dynamic configuration
 
 The Coordinator has dynamic configurations to tune certain behavior on the fly, without requiring a service restart.
 
@@ -921,9 +926,9 @@ However, if you need to do it via HTTP, the JSON object can be submitted to the 
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config
 ```
 
-Optional Header Parameters for auditing the config change can also be specified.
+Optional header parameters for auditing the config change can also be specified.
 
-|Header Param Name|Description|Default|
+|Header param name|Description|Default|
 |-----------------|-----------|-------|
 |`X-Druid-Author`| author making the config change|""|
 |`X-Druid-Comment`| comment describing the change being done|""|
@@ -991,6 +996,7 @@ When `smartSegmentLoading` is disabled, Druid uses the configured values of thes
 Disable `smartSegmentLoading` only if you want to explicitly set the values of any of the above properties.
 
 ##### Audit history
+
 To view the audit history of Coordinator dynamic config issue a GET request to the URL -
 
 ```
@@ -1005,7 +1011,8 @@ To view last `n` entries of the audit history of Coordinator dynamic config issu
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
 
-##### Lookups Dynamic Configuration
+##### Lookups dynamic configuration
+
 These configuration options control Coordinator lookup management. See [dynamic configuration for lookups](../querying/lookups.md#dynamic-configuration) configurations that affect lookup propagation.
 
 |Property|Description|Default|
@@ -1116,11 +1123,11 @@ The below is a list of the supported configurations for auto-compaction.
 
 For general Overlord Process information, see [here](../design/overlord.md).
 
-#### Overlord Static Configuration
+#### Overlord static configuration
 
 These Overlord static configurations can be defined in the `overlord/runtime.properties` file.
 
-##### Overlord Process Configs
+##### Overlord process configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1130,7 +1137,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/overlord|
 
-##### Overlord Operations
+##### Overlord operations
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1447,7 +1454,7 @@ EC2's autoscaler properties are:
 
 For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
-## Data Server
+## Data server
 
 This section contains the configuration options for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
 
@@ -1457,7 +1464,7 @@ Configuration options for the [Indexer process](../design/indexer.md) are also p
 
 These MiddleManager and Peon configurations can be defined in the `middleManager/runtime.properties` file.
 
-#### MiddleManager Process Config
+#### MiddleManager process config
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1467,7 +1474,7 @@ These MiddleManager and Peon configurations can be defined in the `middleManager
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/middlemanager|
 
-#### MiddleManager Configuration
+#### MiddleManager configuration
 
 Middle managers pass their configurations down to their child peons. The MiddleManager requires the following configs:
 
@@ -1490,7 +1497,7 @@ Middle managers pass their configurations down to their child peons. The MiddleM
 |`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir.  This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks.  The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
 |`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`_default_worker_category`|
 
-#### Peon Processing
+#### Peon processing
 
 Processing properties set on the MiddleManager will be passed through to Peons.
 
@@ -1514,7 +1521,7 @@ ensure at least this amount of direct memory is available by providing `-XX:MaxD
 
 See [general query configuration](#general-query-configuration).
 
-#### Peon Caching
+#### Peon caching
 
 You can optionally configure caching to be enabled on the peons by setting caching configs here.
 
@@ -1528,7 +1535,7 @@ You can optionally configure caching to be enabled on the peons by setting cachi
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
 
-#### Additional Peon Configuration
+#### Additional Peon configuration
 Although peons inherit the configurations of their parent MiddleManagers, explicit child peon configs in MiddleManager can be set by prefixing them with:
 
 ```
@@ -1550,7 +1557,7 @@ Additional peon configs include:
 |`druid.indexer.task.restoreTasksOnRestart`|If true, MiddleManagers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/input-sources.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
 |`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). If you use the string-based schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](../ingestion/ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest placeholder data for empty columns or else not query on empty columns.<br/><br/>You can overwrite this configuration  by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true|
-|`druid.indexer.task.tmpStorageBytesPerTask`|Maximum number of bytes per task to be used to store temporary files on disk. This config is generally intended for internal usage.  Attempts to set it are very likely to be overwritten by the TaskRunner that executes the task, so be sure of what you expect to happen before directly adjusting this configuration parameter.  The config is documented here primarily to provide an understanding of what it means if/when someone sees that it has been set. A value of -1 disables this limit.  |-1|
+|`druid.indexer.task.tmpStorageBytesPerTask`|Maximum number of bytes per task to be used to store temporary files on disk. This config is generally intended for internal usage. Attempts to set it are very likely to be overwritten by the TaskRunner that executes the task, so be sure of what you expect to happen before directly adjusting this configuration parameter. The config is documented here primarily to provide an understanding of what it means if/when someone sees that it has been set. A value of -1 disables this limit.  |-1|
 |`druid.indexer.server.maxChatRequests`|Maximum number of concurrent requests served by a task's chat handler. Set to 0 to disable limiting.|0|
 
 If the peon is running in remote mode, there must be an Overlord up and running. Peons in remote mode can set the following configurations:
@@ -1591,7 +1598,7 @@ then the value from the configuration below is used:
 
 ### Indexer
 
-#### Indexer Process Configuration
+#### Indexer process configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1601,14 +1608,14 @@ then the value from the configuration below is used:
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/indexer|
 
-#### Indexer General Configuration
+#### Indexer general configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.worker.version`|Version identifier for the Indexer.|0|
 |`druid.worker.capacity`|Maximum number of tasks the Indexer can accept.|Number of available processors - 1|
-|`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used.  Example: `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
-|`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir.  This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks.  The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
+|`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used. Example: `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
+|`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir. This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks. The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
 |`druid.worker.globalIngestionHeapLimitBytes`|Total amount of heap available for ingestion processing. This is applied by automatically setting the `maxBytesInMemory` property on tasks.|60% of configured JVM heap|
 |`druid.worker.numConcurrentMerges`|Maximum number of segment persist or merge operations that can run concurrently across all tasks.|`druid.worker.capacity` / 2, rounded down|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
@@ -1622,7 +1629,7 @@ then the value from the configuration below is used:
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|60|
 
-#### Indexer Concurrent Requests
+#### Indexer concurrent requests
 
 Druid uses Jetty to serve HTTP requests.
 
@@ -1641,7 +1648,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|[]|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 
-#### Indexer Processing Resources
+#### Indexer processing resources
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1658,12 +1665,11 @@ The amount of direct memory needed by Druid is at least
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
 line.
 
-
-#### Query Configurations
+#### Query configurations
 
 See [general query configuration](#general-query-configuration).
 
-#### Indexer Caching
+#### Indexer caching
 
 You can optionally configure caching to be enabled on the Indexer by setting caching configs here.
 
@@ -1684,7 +1690,8 @@ For general Historical Process information, see [here](../design/historical.md).
 
 These Historical configurations can be defined in the `historical/runtime.properties` file.
 
-#### Historical Process Configuration
+#### Historical process configuration
+
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
@@ -1693,7 +1700,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/historical|
 
-#### Historical General Configuration
+#### Historical general configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1701,7 +1708,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.server.tier`| A string to name the distribution tier that the storage process belongs to. Many of the [rules Coordinator processes use](../operations/rule-configuration.md) to manage segments can be keyed on tiers. |  `_default_tier` |
 |`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which processes are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
 
-#### Storing Segments
+#### Storing segments
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1733,7 +1740,7 @@ Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can do
 
 #### Historical query configs
 
-##### Concurrent Requests
+##### Concurrent requests
 
 Druid uses Jetty to serve HTTP requests.
 
@@ -1771,7 +1778,7 @@ line.
 
 See [general query configuration](#general-query-configuration).
 
-#### Historical Caching
+#### Historical caching
 
 You can optionally only configure caching to be enabled on the Historical by setting caching configs here.
 
@@ -1784,7 +1791,7 @@ You can optionally only configure caching to be enabled on the Historical by set
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
-## Query Server
+## Query server
 
 This section contains the configuration options for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
 
@@ -1796,7 +1803,7 @@ For general Broker process information, see [here](../design/broker.md).
 
 These Broker configurations can be defined in the `broker/runtime.properties` file.
 
-#### Broker Process Configs
+#### Broker process configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1829,6 +1836,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 ##### Prioritization strategies
 
 ###### Manual prioritization strategy
+
 With this configuration, queries are never assigned a priority automatically, but will preserve a priority manually set on the [query context](../querying/query-context.md) with the `priority` key. This mode can be explicitly set by setting `druid.query.scheduler.prioritization.strategy` to `manual`.
 
 ###### Threshold prioritization strategy
@@ -1851,6 +1859,7 @@ This strategy can be enabled by setting `druid.query.scheduler.prioritization.st
 In this mode, queries are never assigned a lane, and the concurrent query count will only be limited by `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, if set. This is the default Druid query scheduler operating mode. Enable this strategy explicitly by setting `druid.query.scheduler.laning.strategy` to `none`.
 
 ###### 'High/Low' laning strategy
+
 This laning strategy splits queries with a `priority` below zero into a `low` query lane, automatically. Queries with priority of zero (the default) or above are considered 'interactive'. The limit on `low` queries can be set to some desired percentage of the total capacity (or HTTP thread pool size), reserving capacity for interactive queries. Queries in the `low` lane are _not_ guaranteed their capacity, which may be consumed by interactive queries, but may use up to this limit if total capacity is available.
 
 If the `low` lane is specified in the [query context](../querying/query-context.md) `lane` parameter, this will override the computed lane.
@@ -1862,6 +1871,7 @@ This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=h
 |`druid.query.scheduler.laning.maxLowPercent`|Maximum percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`, defining the number of HTTP threads that can be used by queries with a priority lower than 0. Value must be an integer in the range 1 to 100, and will be rounded up|No default, must be set if using this mode|
 
 ##### Guardrails for materialization of subqueries
+
 Druid stores the subquery rows in temporary tables that live in the Java heap. It is a good practice to avoid large subqueries in Druid.
 Therefore, there are guardrails that are built in Druid to prevent the queries from generating subquery results which can exhaust the heap
 space. They can be set on a cluster level or modified per query level as desired.
@@ -1885,6 +1895,7 @@ If you choose to modify or set any of the above limits, you must also think abou
 There is no formula to calculate the correct value. Trial and error is the best approach.
 
 ###### 'Manual' laning strategy
+
 This laning strategy is best suited for cases where one or more external applications which query Druid are capable of manually deciding what lane a given query should belong to. Configured with a map of lane names to percent or exact max capacities, queries with a matching `lane` parameter in the [query context](../querying/query-context.md) will be subjected to those limits.
 
 |Property|Description|Default|
@@ -1892,7 +1903,7 @@ This laning strategy is best suited for cases where one or more external applica
 |`druid.query.scheduler.laning.lanes.{name}`|Maximum percent or exact limit of queries that can concurrently run in the defined lanes. Any number of lanes may be defined like this. The lane names 'total' and 'default' are reserved for internal use.|No default, must define at least one lane with a limit above 0. If `druid.query.scheduler.laning.isLimitPercent` is set to `true`, values must be integers in the range of 1 to 100.|
 |`druid.query.scheduler.laning.isLimitPercent`|If set to `true`, the values set for `druid.query.scheduler.laning.lanes` will be treated as a percent of the smaller number of `druid.server.http.numThreads` or `druid.query.scheduler.numThreads`. Note that in this mode, these lane values across lanes are _not_ required to add up to, and can exceed, 100%.|`false`|
 
-##### Server Configuration
+##### Server configuration
 
 Druid uses Jetty to serve HTTP requests. Each query being processed consumes a single thread from `druid.server.http.numThreads`, so consider defining `druid.query.scheduler.numThreads` to a lower value in order to reserve HTTP threads for responding to health checks, lookup loading, and other non-query, (in most cases) comparatively very short-lived, HTTP requests.
 
@@ -1913,7 +1924,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 |`druid.server.http.enableHSTS`|If set to true, druid services will add strict transport security header `Strict-Transport-Security: max-age=63072000; includeSubDomains` to all HTTP responses|`false`|
 
-##### Client Configuration
+##### Client configuration
 
 Druid Brokers use an HTTP client to communicate with data servers (Historical servers and real-time tasks). This
 client has the following configuration options.
@@ -1928,7 +1939,7 @@ client has the following configuration options.
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context.md). Druid supports [human-readable](human-readable-byte.md) format. |`25MB` or 2% of maximum Broker heap size, whichever is greater.|
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|max(10, ((number of cores * 17) / 16 + 2) + 30)`|
 
-##### Retry Policy
+##### Retry policy
 
 Druid broker can optionally retry queries internally for transient errors.
 
@@ -1965,7 +1976,7 @@ line.
 
 See [general query configuration](#general-query-configuration).
 
-###### Broker Generated Query Configuration Supplementation
+###### Broker generated query configuration supplementation
 
 The Broker generates queries internally. This configuration section describes how an operator can augment the configuration
 of these queries.
@@ -1977,7 +1988,6 @@ queries in order to avoid running as a default priority of 0.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.broker.internal.query.config.context`|A string formatted `key:value` map of a query context to add to internally generated broker queries.|null|
-
 
 #### SQL
 
@@ -2015,7 +2025,7 @@ The Druid SQL server is configured through the following properties on the Broke
  number of rows permitted across all subqueries.
 :::
 
-#### Broker Caching
+#### Broker caching
 
 You can optionally only configure caching to be enabled on the Broker by setting caching configs here.
 
@@ -2037,7 +2047,8 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
  See [Query caching](../querying/caching.md) for more information.
 :::
 
-#### Segment Discovery
+#### Segment discovery
+
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of ZooKeeper.|http|
@@ -2047,7 +2058,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 |`druid.broker.segment.watchRealtimeTasks`|Boolean|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves.  When `watchRealtimeTasks` is true, the Broker watches for segment announcements from both Historicals and realtime processes. To configure a broker to exclude segments served by realtime processes, set `watchRealtimeTasks` to false. |true|
 |`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
 
-## Cache Configuration
+## Cache configuration
 
 This section describes caching configuration that is common to Broker, Historical, and MiddleManager/Peon processes.
 
@@ -2062,13 +2073,13 @@ Cache settings are set globally, so the same configuration can be re-used
 for both Broker and Historical processes, when defined in the common properties file.
 
 
-### Cache Type
+### Cache type
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.cache.type`|`local`, `memcached`, `hybrid`, `caffeine`|The type of cache to use for queries. See below of the configuration options for each cache type|`caffeine`|
 
-#### Local Cache
+#### Local cache
 
 :::info
  DEPRECATED: Use caffeine (default as of v0.12.0) instead
@@ -2084,7 +2095,7 @@ A simple in-memory LRU cache. Local cache resides in JVM heap memory, so if you 
 |`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
 |`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
 
-#### Caffeine Cache
+#### Caffeine cache
 
 A highly performant local cache implementation for Druid based on [Caffeine](https://github.com/ben-manes/caffeine). Requires a JRE8u60 or higher if using `COMMON_FJP`.
 
@@ -2264,7 +2275,7 @@ Supported query contexts:
 |`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|true|
 ### Router
 
-#### Router Process Configs
+#### Router process configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -2274,7 +2285,7 @@ Supported query contexts:
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|9088|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/router|
 
-#### Runtime Configuration
+#### Runtime configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
