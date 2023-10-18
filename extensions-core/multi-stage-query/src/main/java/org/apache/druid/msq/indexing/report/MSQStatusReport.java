@@ -50,7 +50,7 @@ public class MSQStatusReport
 
   private final long durationMs;
 
-  private final Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workersStats;
+  private final Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStats;
 
   private final int pendingTasks;
 
@@ -66,7 +66,7 @@ public class MSQStatusReport
       @JsonProperty("warnings") Collection<MSQErrorReport> warningReports,
       @JsonProperty("startTime") @Nullable DateTime startTime,
       @JsonProperty("durationMs") long durationMs,
-      @JsonProperty("workers") Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workersStats,
+      @JsonProperty("workers") Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStats,
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
       @JsonProperty("segmentLoadWaiterStatus") @Nullable SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus
@@ -77,7 +77,7 @@ public class MSQStatusReport
     this.warningReports = warningReports != null ? warningReports : Collections.emptyList();
     this.startTime = startTime;
     this.durationMs = durationMs;
-    this.workersStats = workersStats;
+    this.workerStats = workerStats;
     this.pendingTasks = pendingTasks;
     this.runningTasks = runningTasks;
     this.segmentLoadWaiterStatus = segmentLoadWaiterStatus;
@@ -133,7 +133,7 @@ public class MSQStatusReport
   @JsonProperty("workers")
   public Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> getWorkersDurationsMs()
   {
-    return workersStats;
+    return workerStats;
   }
 
   @Nullable

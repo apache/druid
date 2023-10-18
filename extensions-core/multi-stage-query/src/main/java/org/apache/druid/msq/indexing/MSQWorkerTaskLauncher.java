@@ -390,31 +390,27 @@ public class MSQWorkerTaskLauncher
     }
   }
 
-  public Map<Integer, List<WorkerStats>> getWorkersStats()
+  public Map<Integer, List<WorkerStats>> getWorkerStats()
   {
-    final Map<Integer, List<WorkerStats>> workersStatsMap = new TreeMap<>();
+    final Map<Integer, List<WorkerStats>> workerStats = new TreeMap<>();
 
-    for (String task : taskTrackers.keySet()) {
+    for (Map.Entry<String, TaskTracker> taskEntry : taskTrackers.entrySet()) {
 
-      TaskTracker taskTracker = taskTrackers.get(task);
+      TaskTracker taskTracker = taskEntry.getValue();
 
       long duration = (taskTracker.status.getDuration() == -1
                        && taskTracker.status.getStatusCode() == TaskState.RUNNING)
                       ? System.currentTimeMillis() - taskTracker.startTimeMillis
                       : taskTracker.status.getDuration();
 
-      workersStatsMap.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
-                     .add(new WorkerStats(
-                         task,
-                         taskTracker.status.getStatusCode(),
-                         duration
-                     ));
+      workerStats.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
+                 .add(new WorkerStats(taskEntry.getKey(), taskTracker.status.getStatusCode(), duration));
     }
 
-    for (Integer task : workersStatsMap.keySet()) {
-      workersStatsMap.get(task).sort(Comparator.comparing(WorkerStats::getWorkerId));
+    for (List<WorkerStats> workerStatsList : workerStats.values()) {
+      workerStatsList.sort(Comparator.comparing(WorkerStats::getWorkerId));
     }
-    return workersStatsMap;
+    return workerStats;
   }
 
   private void mainLoop()

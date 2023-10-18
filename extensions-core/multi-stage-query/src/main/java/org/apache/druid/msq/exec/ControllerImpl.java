@@ -2227,7 +2227,7 @@ public class ControllerImpl implements Controller
       WorkerCount workerTaskCount = taskLauncher.getWorkerTaskCount();
       pendingTasks = workerTaskCount.getPendingWorkerCount();
       runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
-      workerStatsMap = taskLauncher.getWorkersStats();
+      workerStatsMap = taskLauncher.getWorkerStats();
     }
 
     SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
