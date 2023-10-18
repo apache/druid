@@ -217,6 +217,13 @@ public class MaterializedViewSupervisorSpecTest
         Assert.assertTrue(e instanceof UnsupportedOperationException);
       }
 
+      try {
+        supervisor.getActiveRealtimeSequencePrefixes();
+      }
+      catch (Exception e) {
+        Assert.assertTrue(e instanceof  UnsupportedOperationException);
+      }
+
       Callable<Integer> noop = new Callable<Integer>() {
         @Override
         public Integer call()

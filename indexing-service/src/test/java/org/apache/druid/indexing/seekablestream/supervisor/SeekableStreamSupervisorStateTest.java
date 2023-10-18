@@ -1314,7 +1314,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetActiveRealtimeSequencePrefixes() throws IOException
+  public void testGetActiveRealtimeSequencePrefixes()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
 
