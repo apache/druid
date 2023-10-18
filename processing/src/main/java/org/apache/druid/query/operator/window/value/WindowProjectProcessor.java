@@ -64,7 +64,7 @@ public class WindowProjectProcessor implements Processor
   {
     final AppendableRowsAndColumns retVal = RowsAndColumns.expectAppendable(incomingPartition);
 
-    ColumnValueSelector<?> vv = virtualColumn.makeColumnValueSelector(null, new AllNullColumnSelectorFactory());
+    ColumnValueSelector<?> vv = virtualColumn.makeColumnValueSelector(virtualColumn.getOutputName(), new AllNullColumnSelectorFactory());
 
     Column column = new ConstantObjectColumn(
         vv.getObject(),
