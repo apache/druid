@@ -709,6 +709,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedFilterMatch()
   {
+    // testGroupByOnUnnestedColumn but with filter to match single value
     cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
@@ -736,8 +737,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
         .build();
 
-    // Total rows should add up to 26 * 2 = 52
-    // 26 rows and each has 2 entries in the column to be unnested
     List<ResultRow> expectedResults = Collections.singletonList(
         makeRow(
             query,
@@ -754,6 +753,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedNotFilterMatch()
   {
+    // testGroupByOnUnnestedColumn but with negated filter to match everything except 1 value
     cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
@@ -839,6 +839,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedNotFilterMatchNonexistentValue()
   {
+    // testGroupByOnUnnestedColumn but with negated filter on nonexistent value to still match everything
     cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
@@ -866,8 +867,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
         .build();
 
-    // Total rows should add up to 26 * 2 = 52
-    // 26 rows and each has 2 entries in the column to be unnested
     List<ResultRow> expectedResults = Arrays.asList(
         makeRow(
             query,
