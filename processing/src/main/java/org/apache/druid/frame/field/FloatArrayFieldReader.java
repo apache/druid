@@ -37,6 +37,7 @@ public class FloatArrayFieldReader extends NumericArrayFieldReader
   {
     return new NumericArrayFieldSelector<Float>(memory, fieldPointer)
     {
+      private static final int FIELD_SIZE = Byte.BYTES + Float.BYTES;
       final SettableFieldPointer fieldPointer = new SettableFieldPointer();
       final ColumnValueSelector<?> columnValueSelector =
           FloatFieldReader.forArray().makeColumnValueSelector(memory, fieldPointer);
@@ -45,7 +46,7 @@ public class FloatArrayFieldReader extends NumericArrayFieldReader
       @Override
       public Float getIndividualValueAtMemory(long position)
       {
-        fieldPointer.setPosition(position);
+        fieldPointer.setPositionAndLength(position, FIELD_SIZE);
         if (columnValueSelector.isNull()) {
           return null;
         }
@@ -55,7 +56,7 @@ public class FloatArrayFieldReader extends NumericArrayFieldReader
       @Override
       public int getIndividualFieldSize()
       {
-        return Byte.BYTES + Float.BYTES;
+        return FIELD_SIZE;
       }
     };
   }
