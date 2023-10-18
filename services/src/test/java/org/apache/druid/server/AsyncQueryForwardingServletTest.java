@@ -229,7 +229,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     Properties properties = new Properties();
     properties.setProperty("druid.router.sql.enable", "true");
-    verifyServletCallsForQuery(query, true, false, hostFinder, properties);
+    verifyServletCallsForQuery(query, true, false, hostFinder, properties, false);
   }
 
   @Test
@@ -246,7 +246,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     EasyMock.expect(hostFinder.pickServer(query)).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
     EasyMock.replay(hostFinder);
 
-    verifyServletCallsForQuery(query, false, false, hostFinder, new Properties());
+    verifyServletCallsForQuery(query, false, false, hostFinder, new Properties(), false);
   }
 
   @Test
@@ -260,7 +260,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             .once();
     EasyMock.replay(hostFinder);
 
-    verifyServletCallsForQuery(jdbcRequest, false, true, hostFinder, new Properties());
+    verifyServletCallsForQuery(jdbcRequest, false, true, hostFinder, new Properties(), false);
   }
 
   @Test
@@ -517,6 +517,23 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assert.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
+  @Test
+  public void testProxyFailure() throws Exception
+  {
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("foo")
+                                        .intervals("2000/P1D")
+                                        .granularity(Granularities.ALL)
+                                        .context(ImmutableMap.of("queryId", "dummy"))
+                                        .build();
+
+    final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
+    EasyMock.expect(hostFinder.pickServer(query)).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
+    EasyMock.replay(hostFinder);
+
+    verifyServletCallsForQuery(query, false, false, hostFinder, new Properties(), true);
+  }
+
   /**
    * Verifies that the Servlet calls the right methods the right number of times.
    */
@@ -525,7 +542,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       boolean isNativeSql,
       boolean isJDBCSql,
       QueryHostFinder hostFinder,
-      Properties properties
+      Properties properties,
+      boolean isFailure
   ) throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
@@ -593,27 +611,29 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     requestMock.setAttribute("org.apache.druid.proxy.to.host.scheme", "http");
     EasyMock.expectLastCall();
     EasyMock.expect(requestMock.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(new AuthenticationResult("userA", "basic", "basic", null));
+    if (isFailure) {
+      EasyMock.expect(requestMock.getRemoteAddr()).andReturn("0.0.0.0:0");
+    }
+
     EasyMock.replay(requestMock);
 
     final AtomicLong didService = new AtomicLong();
     final Request proxyRequestMock = Mockito.spy(Request.class);
-    final Result result = new Result(
-        proxyRequestMock,
-        new HttpResponse(proxyRequestMock, ImmutableList.of())
-        {
-          @Override
-          public HttpFields getHeaders()
-          {
-            HttpFields httpFields = new HttpFields();
-            if (isJDBCSql) {
-              httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "jdbcDummy"));
-            } else if (isNativeSql) {
-              httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "dummy"));
-            }
-            return httpFields;
-          }
+    HttpResponse response = new HttpResponse(proxyRequestMock, ImmutableList.of())
+    {
+      @Override
+      public HttpFields getHeaders()
+      {
+        HttpFields httpFields = new HttpFields();
+        if (isJDBCSql) {
+          httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "jdbcDummy"));
+        } else if (isNativeSql) {
+          httpFields.add(new HttpField("X-Druid-SQL-Query-Id", "dummy"));
         }
-    );
+        return httpFields;
+      }
+    };
+    final Result result = new Result(proxyRequestMock, response);
     final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
@@ -646,7 +666,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     // partial state of the servlet. Hence, only catching the exact exception to avoid possible errors.
     // Further, the metric assertions are also done to ensure that the metrics have emitted.
     try {
-      servlet.newProxyResponseListener(requestMock, null).onComplete(result);
+      if (isFailure) {
+        servlet.newProxyResponseListener(requestMock, null).onFailure(response, new Throwable("Proxy failed"));
+      } else {
+        servlet.newProxyResponseListener(requestMock, null).onComplete(result);
+      }
     }
     catch (NullPointerException ignored) {
     }
