@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 
+
 import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -55,9 +56,8 @@ public class UpdateStatusActionTest
   {
     UpdateStatusAction action = new UpdateStatusAction("failure");
     Task task = NoopTask.create();
-    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
     TaskRunner runner = mock(TaskRunner.class);
-    when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
+    TaskActionToolbox toolbox = CreateMockTaskActionToolbox(Optional.of(runner));
     action.perform(task, toolbox);
     verify(runner, times(1)).updateStatus(eq(task), eq(TaskStatus.failure(task.getId(), "Error with task")));
   }
@@ -67,10 +67,14 @@ public class UpdateStatusActionTest
   {
     UpdateStatusAction action = new UpdateStatusAction("successful");
     Task task = NoopTask.create();
-    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    TaskActionToolbox toolbox = CreateMockTaskActionToolbox(Optional.absent());
     TaskRunner runner = mock(TaskRunner.class);
-    when(toolbox.getTaskRunner()).thenReturn(Optional.absent());
     action.perform(task, toolbox);
     verify(runner, never()).updateStatus(any(), any());
+  }
+  TaskActionToolbox CreateMockTaskActionToolbox(Optional<TaskRunner> taskRunner){
+    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    when(toolbox.getTaskRunner()).thenReturn(taskRunner);
+    return toolbox;
   }
 }
