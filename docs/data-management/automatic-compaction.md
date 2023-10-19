@@ -203,6 +203,82 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 }
 ```
 
+## Concurrent compaction
+
+:::info
+Concurrent compaction is an [experimental feature](../development/experimental.md) and is not currently available for SQL-based ingestion.
+:::
+
+If you enable automatic compaction, you can also use concurrent compaction for streaming and legacy JSON-based batch ingestion. Concurrent compaction compacts the data as you ingest it.
+
+Setting up concurrent compaction is a two-step process. The first is to update your datasource and the second is to update your ingestion job.
+
+Using concurrent compaction in the following scenarios can be beneficial:
+
+- If the job with an `APPEND` task and the job with a `REPLACE` task have the same segment granularity. For example, when a datasource and its streaming ingestion job have the same granularity.
+- If the job with an `APPEND` task  has a finer segment granularity than the replacing job.
+
+We do not recommend using concurrent compaction when the job with an `APPEND` task has a coarser granularity than the job with a `REPLACE` task. For example, if the `APPEND` job has a yearly granularity and the `REPLACE` job has a monthly granularity. The job that finishes second will fail.
+ 
+### Configure concurrent compaction
+
+##### Update the compaction settings with the API
+ 
+ First, prepare your datasource for concurrent compaction by setting its task lock type to `REPLACE`.
+Add the `taskContext` like you would any other auto-compaction setting through the API:
+
+```shell
+curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/config/compaction' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "dataSource": "YOUR_DATASOURCE",
+    "taskContext": {
+        "taskLockType": "REPLACE"
+    }
+}'
+```
+
+##### Update the compaction settings with the UI
+
+In the **Compaction config** for a datasource, set  **Allow concurrent compaction append tasks** to **True**.
+
+#### Add a task lock type to your ingestion job
+
+Next, you need to configure the task lock type for your ingestion job. For streaming jobs, the context parameter goes in your supervisor spec. For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec. You can provide the context parameter through the API like any other parameter for a streaming ingestion or JSON-based batch ingestion.
+
+##### Add the task lock type through the API
+
+Add the following JSON snippet to your supervisor or ingestion spec if you're using the API:
+
+   ```json
+   "context": {
+      "taskLockType": LOCK_TYPE
+   }   
+   ```
+ 
+The `LOCK_TYPE` depends on what you're trying to accomplish.
+
+Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you use any of the following partitioning types, use `REPLACE`:
+
+- hash partitioning 
+- range partitioning
+- dynamic partitioning with append to existing set to `false`
+
+Set `taskLockType` to  `APPEND` if dynamic partitioning with append to existing is set to `true`. 
+
+If you have multiple append jobs all targeting the same datasource and want them to run simultaneously, you need to also include the following context parameter:
+
+```json
+"useSharedLock": "true"
+```
+
+Keep in mind that `taskLockType` takes precedence over `useSharedLock`. Do not use it with `REPLACE` task locks.
+
+##### Add a task lock using the Druid console
+
+As part of the batch or streaming ingestion **Load data** wizards, you can, you can choose **Allow concurrent append tasks** to use concurrent compaction. 
+
+
 ## Learn more
 
 See the following topics for more information:
