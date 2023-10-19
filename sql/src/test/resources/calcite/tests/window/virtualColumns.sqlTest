@@ -8,6 +8,13 @@ sql: |
   FROM foo
 
 expectedOperators:
+  - type: "scan"
+    limit: -1
+    virtualColumns:
+      - type: "expression"
+        name: "_v0"
+        expression: "42.0"
+        outputType: "DOUBLE"
   - { type: "naivePartition", partitionColumns: [ ] }
   - type: "window"
     processor:
