@@ -17,33 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.segment.filter;
+package org.apache.druid.query.filter;
 
-import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-final class TrueValueMatcher implements ValueMatcher
+public class IsFalseDimFilter extends IsBooleanDimFilter
 {
-  private static final TrueValueMatcher INSTANCE = new TrueValueMatcher();
-
-  public static TrueValueMatcher instance()
+  public static IsFalseDimFilter of(DimFilter field)
   {
-    return INSTANCE;
+    return new IsFalseDimFilter(field);
   }
 
-  private TrueValueMatcher()
+  @JsonCreator
+  public IsFalseDimFilter(
+      @JsonProperty("field") DimFilter field
+  )
   {
-  }
-
-  @Override
-  public boolean matches()
-  {
-    return true;
+    super(field, false);
   }
 
   @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  public DimFilter optimize()
   {
-    // nothing to inspect
+    return new IsFalseDimFilter(getField().optimize());
   }
 }

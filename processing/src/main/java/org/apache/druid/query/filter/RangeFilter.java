@@ -52,7 +52,7 @@ import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
@@ -313,7 +313,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     }
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier == null) {
-      return new AllFalseBitmapColumnIndex(selector);
+      return new AllUnknownBitmapColumnIndex(selector);
     }
 
     if (matchValueType.is(ValueType.STRING)) {

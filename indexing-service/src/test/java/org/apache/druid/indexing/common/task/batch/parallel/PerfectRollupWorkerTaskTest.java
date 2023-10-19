@@ -111,7 +111,8 @@ public class PerfectRollupWorkerTaskTest
           null,
           createDataSchema(granularitySpecInputIntervals),
           createTuningConfig(forceGuaranteedRollup, partitionsSpec),
-          null
+          null,
+          "supervisor-id"
       );
     }
 
@@ -149,10 +150,11 @@ public class PerfectRollupWorkerTaskTest
         @Nullable TaskResource taskResource,
         DataSchema dataSchema,
         ParallelIndexTuningConfig tuningConfig,
-        @Nullable Map<String, Object> context
+        @Nullable Map<String, Object> context,
+        String supervisorId
     )
     {
-      super(id, groupId, taskResource, dataSchema, tuningConfig, context);
+      super(id, groupId, taskResource, dataSchema, tuningConfig, context, supervisorId);
     }
 
     @Override

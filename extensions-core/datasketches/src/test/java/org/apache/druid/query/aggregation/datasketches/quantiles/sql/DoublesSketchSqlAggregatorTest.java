@@ -279,7 +279,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
               10.1,
               20.2,
               Double.NaN,
-              10.1,
+              2.0,
               Double.NaN
           }
       );

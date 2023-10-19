@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +59,11 @@ public final class Rows
   }
 
   /**
-   * Convert an object to a list of strings.
+   * Convert an object to a list of strings. This function translates single value nulls into an empty list, and any
+   * nulls inside of a list or array into the string "null". Do not use this method if you don't want this behavior,
+   * but note that many implementations of {@link InputRow#getDimension(String)} do use this method, so it is
+   * recommended to use {@link InputRow#getRaw(String)} if you want the actual value without this coercion. For legacy
+   * reasons, some stuff counts on this incorrect behavior, (such as {@link Rows#toGroupKey(long, InputRow)}).
    */
   public static List<String> objectToStrings(final Object inputValue)
   {
@@ -70,6 +75,8 @@ public final class Rows
     } else if (inputValue instanceof byte[]) {
       // convert byte[] to base64 encoded string
       return Collections.singletonList(StringUtils.encodeBase64String((byte[]) inputValue));
+    } else if (inputValue instanceof Object[]) {
+      return Arrays.stream((Object[]) inputValue).map(String::valueOf).collect(Collectors.toList());
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }

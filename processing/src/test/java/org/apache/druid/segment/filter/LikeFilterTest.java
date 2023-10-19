@@ -36,13 +36,14 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -58,18 +59,25 @@ public class LikeFilterTest extends BaseFilterTest
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          DimensionsSpec.EMPTY
+          DimensionsSpec.builder()
+                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2")))
+                        .build()
       )
   );
+  private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
+                                                                .add("dim0", ColumnType.STRING)
+                                                                .add("dim1", ColumnType.STRING)
+                                                                .add("dim2", ColumnType.STRING)
+                                                                .build();
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "foo")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "foobar")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "bar")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "foobarbaz")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "foo%bar")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "new\nline")).get(0)
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "0", "", ""),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "1", "foo", "aaa"),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "2", "foobar", "aab"),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "3", "bar", null),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "4", "foobarbaz", "abb"),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "5", "foo%bar", "bbb"),
+      makeSchemaRow(PARSER, ROW_SIGNATURE, "6", "new\nline", "bbz")
   );
 
   public LikeFilterTest(
@@ -83,9 +91,6 @@ public class LikeFilterTest extends BaseFilterTest
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @AfterClass
   public static void tearDown() throws Exception
   {
@@ -98,6 +103,21 @@ public class LikeFilterTest extends BaseFilterTest
     assertFilterMatches(
         new LikeDimFilter("dim1", "bar", null, null),
         ImmutableList.of("3")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim1", "bar", null, null)),
+        ImmutableList.of("0", "1", "2", "4", "5", "6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim2", "bbb", null, null),
+        ImmutableList.of("5")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim2", "bbb", null, null)),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("0", "1", "2", "3", "4", "6")
+        : ImmutableList.of("0", "1", "2", "4", "6")
     );
   }
 
@@ -117,6 +137,21 @@ public class LikeFilterTest extends BaseFilterTest
         new LikeDimFilter("dim1", "bar", null, new SubstringDimExtractionFn(3, 3)),
         ImmutableList.of("2", "4")
     );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim1", "bar", null, new SubstringDimExtractionFn(3, 3))),
+        ImmutableList.of("0", "1", "3", "5", "6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim2", "bbb", null, new SubstringDimExtractionFn(0, 3)),
+        ImmutableList.of("5")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim2", "bbb", null, new SubstringDimExtractionFn(0, 3))),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("0", "1", "2", "3", "4", "6")
+        : ImmutableList.of("0", "1", "2", "4", "6")
+    );
   }
 
   @Test
@@ -125,6 +160,19 @@ public class LikeFilterTest extends BaseFilterTest
     assertFilterMatches(
         new LikeDimFilter("dim1", "foo%", null, null),
         ImmutableList.of("1", "2", "4", "5")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim1", "foo%", null, null)),
+        ImmutableList.of("0", "3", "6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim2", "aa%", null, null),
+        ImmutableList.of("1", "2")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim2", "aa%", null, null)),
+        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "3", "4", "5", "6") : ImmutableList.of("0", "4", "5", "6")
     );
   }
 
@@ -144,6 +192,21 @@ public class LikeFilterTest extends BaseFilterTest
         new LikeDimFilter("dim1", "a%", null, new SubstringDimExtractionFn(1, null)),
         ImmutableList.of("3")
     );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim1", "a%", null, new SubstringDimExtractionFn(1, null))),
+        ImmutableList.of("0", "1", "2", "4", "5", "6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim2", "a%", null, new SubstringDimExtractionFn(1, null)),
+        ImmutableList.of("1", "2")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim2", "a%", null, new SubstringDimExtractionFn(1, null))),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("0", "3", "4", "5", "6")
+        : ImmutableList.of("0", "4", "5", "6")
+    );
   }
 
   @Test
@@ -152,6 +215,19 @@ public class LikeFilterTest extends BaseFilterTest
     assertFilterMatches(
         new LikeDimFilter("dim1", "%oba%", null, null),
         ImmutableList.of("2", "4")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim1", "%oba%", null, null)),
+        ImmutableList.of("0", "1", "3", "5", "6")
+    );
+
+    assertFilterMatches(
+        new LikeDimFilter("dim2", "%b%", null, null),
+        ImmutableList.of("2", "4", "5", "6")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim2", "%b%", null, null)),
+        NullHandling.sqlCompatible() ? ImmutableList.of("0", "1") : ImmutableList.of("0", "1", "3")
     );
   }
 
@@ -195,6 +271,22 @@ public class LikeFilterTest extends BaseFilterTest
     assertFilterMatches(
         new LikeDimFilter("dim1", "%", "@", null),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim1", "%", "@", null)),
+        ImmutableList.of()
+    );
+
+    // doesnt match null tho in sql compatible mode
+    assertFilterMatches(
+        new LikeDimFilter("dim2", "%", "@", null),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of("0", "1", "2", "4", "5", "6")
+        : ImmutableList.of("0", "1", "2", "3", "4", "5", "6")
+    );
+    assertFilterMatches(
+        NotDimFilter.of(new LikeDimFilter("dim2", "%", "@", null)),
+        ImmutableList.of()
     );
   }
 
@@ -301,9 +393,8 @@ public class LikeFilterTest extends BaseFilterTest
     Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
     Assert.assertEquals(filter2, rewrittenFilter);
 
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
-    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
+    Throwable t = Assert.assertThrows(IAE.class, () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1")));
+    Assert.assertEquals("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0", t.getMessage());
   }
 
   @Test
