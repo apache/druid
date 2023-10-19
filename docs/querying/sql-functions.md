@@ -769,7 +769,7 @@ Finds whether a string is in a given expression, case-insensitive.
 
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-Returns true if the `address` belongs to the `subnet` literal, else false.
+Returns true if the IPv4 `address` belongs to the `subnet` literal, else false.
 
 ## IPV4_PARSE
 
@@ -786,6 +786,14 @@ Parses `address` into an IPv4 address stored as an integer.
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
 Converts `address` into an IPv4 address in dot-decimal notation.
+
+## IPV6_MATCH
+
+`IPV6_MATCH(address, subnet)`
+
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+
+Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 ## JSON_KEYS
 
