@@ -27,12 +27,15 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -108,6 +111,13 @@ public class WindowOperatorQueryTest
 
     final TableDataSource newDs = new TableDataSource("bob");
     Assert.assertSame(newDs, query.withDataSource(newDs).getDataSource());
+  }
+
+  @Test
+  public void withQuerySpec()
+  {
+    QuerySegmentSpec spec = new MultipleIntervalSegmentSpec(Collections.emptyList());
+    Assert.assertSame(spec, ((WindowOperatorQuery) query.withQuerySegmentSpec(spec)).getQuerySegmentSpec());
   }
 
   @Test
