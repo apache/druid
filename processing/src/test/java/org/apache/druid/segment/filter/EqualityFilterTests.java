@@ -37,6 +37,8 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.FilterTuning;
+import org.apache.druid.query.filter.IsFalseDimFilter;
+import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
@@ -255,6 +257,26 @@ public class EqualityFilterTests
             NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
             ImmutableList.of("0", "2", "4")
         );
+        // "(s0 = 'a') is not true", same rows as "s0 <> 'a'", but also with null rows
+        assertFilterMatches(
+            NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+            ImmutableList.of("0", "2", "3", "4")
+        );
+        // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
+        assertFilterMatches(
+            IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+            ImmutableList.of("1", "5")
+        );
+        // "(s0 = 'a') is false", equivalent results to "s0 <> 'a'"
+        assertFilterMatches(
+            IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+            ImmutableList.of("0", "2", "4")
+        );
+        // "(s0 = 'a') is not false", same rows as "s0 = 'a'", but also with null rows
+        assertFilterMatches(
+            NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+            ImmutableList.of("1", "3", "5")
+        );
 
         try {
           // make sure if 3vl is disabled with behave with 2vl
@@ -287,6 +309,28 @@ public class EqualityFilterTests
         assertFilterMatches(
             NotDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "noexist", null)),
             ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
+
+        // in default value mode, is true/is false are basically pointless since they have the same behavior as = and <>
+        // "(s0 = 'a') is not true" equivalent to "s0 <> 'a'"
+        assertFilterMatches(
+            NotDimFilter.of(IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+            ImmutableList.of("0", "2", "3", "4")
+        );
+        // "(s0 = 'a') is true", equivalent to "s0 = 'a'"
+        assertFilterMatches(
+            IsTrueDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+            ImmutableList.of("1", "5")
+        );
+        // "(s0 = 'a') is false" equivalent to "s0 <> 'a'"
+        assertFilterMatches(
+            IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null)),
+            ImmutableList.of("0", "2", "3", "4")
+        );
+        // "(s0 = 'a') is not false", equivalent to "s0 = 'a'"
+        assertFilterMatches(
+            NotDimFilter.of(IsFalseDimFilter.of(new EqualityFilter("s0", ColumnType.STRING, "a", null))),
+            ImmutableList.of("1", "5")
         );
       }
     }

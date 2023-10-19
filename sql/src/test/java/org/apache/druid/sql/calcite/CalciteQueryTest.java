@@ -3101,7 +3101,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           equality("dim2", "a", ColumnType.STRING),
                           and(
                               isNull("dim2"),
-                              not(equality("dim2", "a", ColumnType.STRING))
+                              NullHandling.sqlCompatible()
+                              ? not(istrue(equality("dim2", "a", ColumnType.STRING)))
+                              : not(selector("dim2", "a"))
                           )
                       )
                   )
@@ -3109,12 +3111,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             // Matches everything but "abc"
             ? new Object[]{5L}
-            : new Object[]{2L}
+            // match only null values
+            : new Object[]{4L}
         )
     );
   }
@@ -4847,13 +4849,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a1", "cnt"),
-                          not(equality("dim1", "abc", ColumnType.STRING))
+                          NullHandling.sqlCompatible()
+                          ? not(istrue(equality("dim1", "abc", ColumnType.STRING)))
+                          : not(selector("dim1", "abc"))
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a2", "cnt"),
-                          NullHandling.replaceWithDefault()
-                          ? selector("dim1", "a", new SubstringDimExtractionFn(0, 1))
-                          : expressionFilter("(substring(\"dim1\", 0, 1) == 'a')")
+                          NullHandling.sqlCompatible()
+                          ? expressionFilter("(substring(\"dim1\", 0, 1) == 'a')")
+                          : selector("dim1", "a", new SubstringDimExtractionFn(0, 1))
 
                       ),
                       new FilteredAggregatorFactory(

@@ -52,10 +52,55 @@ public class ParquetGroupConverter
   private static final long NANOS_PER_MILLISECOND = TimeUnit.MILLISECONDS.toNanos(1);
 
   /**
-   * See {@link ParquetGroupConverter#convertField(Group, String)}
+   * https://github.com/apache/drill/blob/2ab46a9411a52f12a0f9acb1144a318059439bc4/exec/java-exec/src/main/java/org/apache/drill/exec/store/parquet/ParquetReaderUtility.java#L89
+   */
+  public static final long CORRECT_CORRUPT_DATE_SHIFT = 2 * JULIAN_EPOCH_OFFSET_DAYS;
+
+  private final boolean binaryAsString;
+  private final boolean convertCorruptDates;
+
+  public ParquetGroupConverter(boolean binaryAsString, boolean convertCorruptDates)
+  {
+    this.binaryAsString = binaryAsString;
+    this.convertCorruptDates = convertCorruptDates;
+  }
+
+  /**
+   * Recursively converts a group into native Java Map
+   *
+   * @param g the group
+   * @return the native Java object
+   */
+  public Object convertGroup(Group g)
+  {
+    Map<String, Object> retVal = new LinkedHashMap<>();
+
+    for (Type field : g.getType().getFields()) {
+      final String fieldName = field.getName();
+      retVal.put(fieldName, convertField(g, fieldName));
+    }
+
+    return retVal;
+  }
+
+  Object unwrapListElement(Object o)
+  {
+    if (o instanceof Group) {
+      Group g = (Group) o;
+      return convertListElement(g);
+    }
+    return o;
+  }
+
+  /**
+   * Convert a parquet group field as though it were a map. Logical types of 'list' and 'map' will be transformed
+   * into java lists and maps respectively ({@link ParquetGroupConverter#convertLogicalList} and
+   * {@link ParquetGroupConverter#convertLogicalMap}), repeated fields will also be translated to lists, and
+   * primitive types will be extracted into an ingestion friendly state (e.g. 'int' and 'long'). Finally,
+   * if a field is not present, this method will return null.
    */
   @Nullable
-  private static Object convertField(Group g, String fieldName, boolean binaryAsString)
+  Object convertField(Group g, String fieldName)
   {
     if (!g.getType().containsField(fieldName)) {
       return null;
@@ -76,22 +121,22 @@ public class ParquetGroupConverter
         int repeated = g.getFieldRepetitionCount(fieldIndex);
         List<Object> vals = new ArrayList<>();
         for (int i = 0; i < repeated; i++) {
-          vals.add(convertPrimitiveField(g, fieldIndex, i, binaryAsString));
+          vals.add(convertPrimitiveField(g, fieldIndex, i));
         }
         return vals;
       }
-      return convertPrimitiveField(g, fieldIndex, binaryAsString);
+      return convertPrimitiveField(g, fieldIndex);
     } else {
       if (fieldType.isRepetition(Type.Repetition.REPEATED)) {
-        return convertRepeatedFieldToList(g, fieldIndex, binaryAsString);
+        return convertRepeatedFieldToList(g, fieldIndex);
       }
 
       if (isLogicalMapType(fieldType)) {
-        return convertLogicalMap(g.getGroup(fieldIndex, 0), binaryAsString);
+        return convertLogicalMap(g.getGroup(fieldIndex, 0));
       }
 
       if (isLogicalListType(fieldType)) {
-        return convertLogicalList(g.getGroup(fieldIndex, 0), binaryAsString);
+        return convertLogicalList(g.getGroup(fieldIndex, 0));
       }
 
       // not a list, but not a primitive, return the nested group type
@@ -102,7 +147,7 @@ public class ParquetGroupConverter
   /**
    * convert a repeated field into a list of primitives or groups
    */
-  private static List<Object> convertRepeatedFieldToList(Group g, int fieldIndex, boolean binaryAsString)
+  private List<Object> convertRepeatedFieldToList(Group g, int fieldIndex)
   {
 
     Type t = g.getType().getFields().get(fieldIndex);
@@ -111,7 +156,7 @@ public class ParquetGroupConverter
     List<Object> vals = new ArrayList<>();
     for (int i = 0; i < repeated; i++) {
       if (t.isPrimitive()) {
-        vals.add(convertPrimitiveField(g, fieldIndex, i, binaryAsString));
+        vals.add(convertPrimitiveField(g, fieldIndex, i));
       } else {
         vals.add(g.getGroup(fieldIndex, i));
       }
@@ -134,7 +179,7 @@ public class ParquetGroupConverter
   /**
    * convert a parquet 'list' logical type {@link Group} to a java list of primitives or groups
    */
-  private static List<Object> convertLogicalList(Group g, boolean binaryAsString)
+  private List<Object> convertLogicalList(Group g)
   {
     /*
       // List<Integer> (nullable list, non-null elements)
@@ -181,16 +226,16 @@ public class ParquetGroupConverter
 
     for (int i = 0; i < repeated; i++) {
       if (isListItemPrimitive) {
-        vals.add(convertPrimitiveField(g, 0, i, binaryAsString));
+        vals.add(convertPrimitiveField(g, 0, i));
       } else {
         Group listItem = g.getGroup(0, i);
-        vals.add(convertListElement(listItem, binaryAsString));
+        vals.add(convertListElement(listItem));
       }
     }
     return vals;
   }
 
-  private static Object convertListElement(Group listItem, boolean binaryAsString)
+  private Object convertListElement(Group listItem)
   {
     if (
         listItem.getType().isRepetition(Type.Repetition.REPEATED) &&
@@ -199,7 +244,7 @@ public class ParquetGroupConverter
         listItem.getType().getFields().get(0).isPrimitive()
     ) {
       // nullable primitive list elements can have a repeating wrapper element, peel it off
-      return convertPrimitiveField(listItem, 0, binaryAsString);
+      return convertPrimitiveField(listItem, 0);
     } else if (
         listItem.getType().isRepetition(Type.Repetition.REPEATED) &&
         listItem.getType().getFieldCount() == 1 &&
@@ -244,7 +289,7 @@ public class ParquetGroupConverter
   /**
    * Convert a parquet 'map' logical type {@link Group} to a java map of string keys to groups/lists/primitive values
    */
-  private static Map<String, Object> convertLogicalMap(Group g, boolean binaryAsString)
+  private Map<String, Object> convertLogicalMap(Group g)
   {
     /*
       // Map<String, Integer> (nullable map, non-null values)
@@ -268,8 +313,8 @@ public class ParquetGroupConverter
     Map<String, Object> converted = new HashMap<>();
     for (int i = 0; i < mapEntries; i++) {
       Group mapEntry = g.getGroup(0, i);
-      String key = convertPrimitiveField(mapEntry, 0, binaryAsString).toString();
-      Object value = convertField(mapEntry, "value", binaryAsString);
+      String key = convertPrimitiveField(mapEntry, 0).toString();
+      Object value = convertField(mapEntry, "value");
       converted.put(key, value);
     }
     return converted;
@@ -281,17 +326,17 @@ public class ParquetGroupConverter
    * @return "ingestion ready" java object, or null
    */
   @Nullable
-  private static Object convertPrimitiveField(Group g, int fieldIndex, boolean binaryAsString)
+  private Object convertPrimitiveField(Group g, int fieldIndex)
   {
     PrimitiveType pt = (PrimitiveType) g.getType().getFields().get(fieldIndex);
     if (pt.isRepetition(Type.Repetition.REPEATED) && g.getFieldRepetitionCount(fieldIndex) > 1) {
       List<Object> vals = new ArrayList<>();
       for (int i = 0; i < g.getFieldRepetitionCount(fieldIndex); i++) {
-        vals.add(convertPrimitiveField(g, fieldIndex, i, binaryAsString));
+        vals.add(convertPrimitiveField(g, fieldIndex, i));
       }
       return vals;
     }
-    return convertPrimitiveField(g, fieldIndex, 0, binaryAsString);
+    return convertPrimitiveField(g, fieldIndex, 0);
   }
 
   /**
@@ -300,7 +345,7 @@ public class ParquetGroupConverter
    * @return "ingestion ready" java object, or null
    */
   @Nullable
-  private static Object convertPrimitiveField(Group g, int fieldIndex, int index, boolean binaryAsString)
+  private Object convertPrimitiveField(Group g, int fieldIndex, int index)
   {
     PrimitiveType pt = (PrimitiveType) g.getType().getFields().get(fieldIndex);
     OriginalType ot = pt.getOriginalType();
@@ -310,7 +355,7 @@ public class ParquetGroupConverter
         // convert logical types
         switch (ot) {
           case DATE:
-            long ts = g.getInteger(fieldIndex, index) * MILLIS_IN_DAY;
+            long ts = convertDateToMillis(g.getInteger(fieldIndex, index));
             return ts;
           case TIME_MICROS:
             return g.getLong(fieldIndex, index);
@@ -443,6 +488,14 @@ public class ParquetGroupConverter
     }
   }
 
+  private long convertDateToMillis(int value)
+  {
+    if (convertCorruptDates) {
+      value -= CORRECT_CORRUPT_DATE_SHIFT;
+    }
+    return value * MILLIS_IN_DAY;
+  }
+
   /**
    * convert deprecated parquet int96 nanosecond timestamp to a long, based on
    * https://github.com/prestodb/presto/blob/master/presto-parquet/src/main/java/com/facebook/presto/parquet/ParquetTimestampUtils.java#L44
@@ -489,52 +542,5 @@ public class ParquetGroupConverter
     } else {
       return new BigDecimal(new BigInteger(value.getBytes()), scale);
     }
-  }
-
-  private final boolean binaryAsString;
-
-  public ParquetGroupConverter(boolean binaryAsString)
-  {
-    this.binaryAsString = binaryAsString;
-  }
-
-  /**
-   * Recursively converts a group into native Java Map
-   *
-   * @param g the group
-   * @return the native Java object
-   */
-  public Object convertGroup(Group g)
-  {
-    Map<String, Object> retVal = new LinkedHashMap<>();
-
-    for (Type field : g.getType().getFields()) {
-      final String fieldName = field.getName();
-      retVal.put(fieldName, convertField(g, fieldName));
-    }
-
-    return retVal;
-  }
-
-  /**
-   * Convert a parquet group field as though it were a map. Logical types of 'list' and 'map' will be transformed
-   * into java lists and maps respectively ({@link ParquetGroupConverter#convertLogicalList} and
-   * {@link ParquetGroupConverter#convertLogicalMap}), repeated fields will also be translated to lists, and
-   * primitive types will be extracted into an ingestion friendly state (e.g. 'int' and 'long'). Finally,
-   * if a field is not present, this method will return null.
-   */
-  @Nullable
-  Object convertField(Group g, String fieldName)
-  {
-    return convertField(g, fieldName, binaryAsString);
-  }
-
-  Object unwrapListElement(Object o)
-  {
-    if (o instanceof Group) {
-      Group g = (Group) o;
-      return convertListElement(g, binaryAsString);
-    }
-    return o;
   }
 }

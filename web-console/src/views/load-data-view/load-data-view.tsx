@@ -3178,8 +3178,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   appendToExisting ? 'append' : 'replace'
                 } tasks (experimental)`,
                 defaultValue: undefined,
-                valueAdjustment: v => (v ? (appendToExisting ? 'APPEND' : 'REPLACE') : undefined),
-                adjustValue: v => v === (appendToExisting ? 'APPEND' : 'REPLACE'),
+                valueAdjustment: v => {
+                  if (!v) return undefined;
+
+                  if (isStreamingSpec(spec)) {
+                    return 'APPEND';
+                  } else {
+                    return appendToExisting ? 'APPEND' : 'REPLACE';
+                  }
+                },
+                adjustValue: v => {
+                  if (v === undefined) return false;
+
+                  if (isStreamingSpec(spec)) {
+                    return v === 'APPEND';
+                  }
+
+                  return v === (appendToExisting ? 'APPEND' : 'REPLACE');
+                },
                 info: <p>Allows or forbids concurrent tasks.</p>,
               },
             ]}
