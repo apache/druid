@@ -140,9 +140,6 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     public ColumnValueSelector makeColumnValueSelector(@Nonnull String columnName)
     {
       return withColumnAccessor(columnName, columnAccessor -> {
-        if (columnAccessor == null) {
-          return DimensionSelector.constant(null);
-        } else {
           final ColumnType type = columnAccessor.getType();
           switch (type.getType()) {
             case STRING:
@@ -151,7 +148,6 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
               return new ComplexColumnValueSelector(columnAccessor);
             default:
               return new PassThroughColumnValueSelector(columnAccessor);
-          }
         }
       });
     }
@@ -174,9 +170,9 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
       if (retVal == null) {
         Column racColumn = rac.findColumn(column);
         if (racColumn == null) {
-          throw DruidException.defensive("didnt expected this!");
+          throw DruidException.defensive("Column[%s] not found!", column);
         }
-        retVal = racColumn == null ? null : racColumn.toAccessor();
+        retVal = racColumn.toAccessor();
         accessorCache.put(column, retVal);
       }
       return fn.apply(retVal);

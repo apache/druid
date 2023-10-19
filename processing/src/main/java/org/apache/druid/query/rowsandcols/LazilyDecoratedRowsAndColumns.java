@@ -366,10 +366,10 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
     for (String column : columnsToGenerate) {
       final Column racColumn = rac.findColumn(column);
-      if (racColumn != null) {
-        sigBob.add(column, racColumn.toAccessor().getType());
+      if (racColumn == null) {
         continue;
       }
+      sigBob.add(column, racColumn.toAccessor().getType());
     }
 
     final int limitedNumRows;
