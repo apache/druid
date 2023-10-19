@@ -19,6 +19,12 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.identity.ChainedTokenCredentialBuilder;
+import com.azure.identity.ManagedIdentityCredential;
+import com.azure.identity.ManagedIdentityCredentialBuilder;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.CustomerProvidedKey;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -41,6 +47,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.util.List;
@@ -124,7 +131,7 @@ public class AzureStorageDruidModule implements DruidModule
    */
   @Provides
   @LazySingleton
-  public Supplier<CloudBlobClient> getCloudBlobClient(final AzureAccountConfig config)
+  public Supplier<BlobServiceClient> getCloudBlobClient(final AzureAccountConfig config)
   {
     if ((config.getKey() != null && config.getSharedAccessStorageToken() != null)
         ||
@@ -132,46 +139,35 @@ public class AzureStorageDruidModule implements DruidModule
       throw new ISE("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both."
                     + " Please refer to azure documentation.");
     }
+    ChainedTokenCredentialBuilder credentialBuilder = new ChainedTokenCredentialBuilder();
     return Suppliers.memoize(() -> {
-      try {
-        final CloudStorageAccount account;
-        if (config.getKey() != null) {
-          account = CloudStorageAccount.parse(
-              StringUtils.format(
-                  STORAGE_CONNECTION_STRING_WITH_KEY,
-                  config.getProtocol(),
-                  config.getAccount(),
-                  config.getKey()
-              )
+          BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
+              .endpoint(String.format("https://%s.blob.core.windows.net", config.getAccount()));
 
-          );
-          return account.createCloudBlobClient();
-        } else if (config.getSharedAccessStorageToken() != null) {
-          account = CloudStorageAccount.parse(StringUtils.format(
-              STORAGE_CONNECTION_STRING_WITH_TOKEN,
-              config.getProtocol(),
-              config.getAccount(),
-              config.getSharedAccessStorageToken()
-          ));
-          return account.createCloudBlobClient();
-        } else {
-          throw new ISE(
-              "None of 'key' or 'sharedAccessStorageToken' is set in the azure config."
-              + " Please refer to azure extension documentation.");
+          if (config.getKey() != null) {
+            clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));
+          } else if (config.getSharedAccessStorageToken() != null) {
+            clientBuilder.sasToken(config.getSharedAccessStorageToken());
+          } else if (config.getManagedIdentityClientId() != null) {
+            ManagedIdentityCredential managedIdentityCredential = new ManagedIdentityCredentialBuilder()
+                .clientId(config.getManagedIdentityClientId())
+                .resourceId(config.getAccount())
+                .build();
+            credentialBuilder.addFirst(managedIdentityCredential);
+            clientBuilder.credential(credentialBuilder.build());
+          }
+
+          return clientBuilder.buildClient();
         }
-      }
-      catch (URISyntaxException | InvalidKeyException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    );
   }
 
   @Provides
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final Supplier<CloudBlobClient> cloudBlobClient
+      final Supplier<BlobServiceClient> blobServiceClient
   )
   {
-    return new AzureStorage(cloudBlobClient);
+    return new AzureStorage(blobServiceClient);
   }
 }

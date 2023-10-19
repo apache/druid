@@ -46,6 +46,9 @@ public class AzureAccountConfig
   @JsonProperty
   private String sharedAccessStorageToken;
 
+  @JsonProperty
+  private String managedIdentityClientId;
+
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
   {
@@ -93,6 +96,11 @@ public class AzureAccountConfig
   {
     return sharedAccessStorageToken;
   }
+  public String getManagedIdentityClientId()
+  {
+    return managedIdentityClientId;
+  }
+
 
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setSharedAccessStorageToken(String sharedAccessStorageToken)
