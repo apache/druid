@@ -21,9 +21,11 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -33,10 +35,11 @@ import org.junit.Test;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeNotNull;
 
-public class LazilyDecoratedRowsAndColumnsTest extends SemanticTestBase
+public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestBase
 {
-  public LazilyDecoratedRowsAndColumnsTest(String name, Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn)
+  public TestVirtualColumnEvaluationRowsAndColumnsTest(String name, Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn)
   {
     super(name, fn);
   }
@@ -44,20 +47,11 @@ public class LazilyDecoratedRowsAndColumnsTest extends SemanticTestBase
   @Test
   public void testMaterializeVirtualColumns()
   {
-
     Object[][] vals = new Object[][] {
         {1L, "a", 123L, 0L},
         {2L, "a", 456L, 1L},
         {3L, "b", 789L, 2L},
         {4L, "b", 123L, 3L},
-        {5L, "c", 456L, 4L},
-        {6L, "c", 789L, 5L},
-        {7L, "c", 123L, 6L},
-        {8L, "d", 456L, 7L},
-        {9L, "e", 789L, 8L},
-        {10L, "f", 123L, 9L},
-        {11L, "f", 456L, 10L},
-        {12L, "g", 789L, 11L},
     };
 
     RowSignature siggy = RowSignature.builder()
@@ -69,6 +63,8 @@ public class LazilyDecoratedRowsAndColumnsTest extends SemanticTestBase
 
     final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, siggy));
 
+    assumeNotNull("skipping: StorageAdapter not supported", base.as(StorageAdapter.class));
+
     LazilyDecoratedRowsAndColumns ras = new LazilyDecoratedRowsAndColumns(
         base,
         null,
@@ -78,13 +74,18 @@ public class LazilyDecoratedRowsAndColumnsTest extends SemanticTestBase
             "val * 2",
             ColumnType.LONG,
             TestExprMacroTable.INSTANCE)),
-        0,
+        Integer.MAX_VALUE,
         null,
         null);
 
+    // do the materialziation
     ras.numRows();
 
-     assertEquals(Lists.newArrayList("__time", "dim", "val", "arrayIndex", "expr"), ras.getColumnNames());
+    assertEquals(Lists.newArrayList("__time", "dim", "val", "arrayIndex", "expr"), ras.getColumnNames());
+
+    new RowsAndColumnsHelper()
+        .expectColumn("expr", new long[] {123 * 2, 456L * 2, 789 * 2, 123 * 2})
+        .validate(ras);
 
   }
 

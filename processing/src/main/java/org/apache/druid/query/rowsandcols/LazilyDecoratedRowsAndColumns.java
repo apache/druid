@@ -99,11 +99,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   @Override
   public Collection<String> getColumnNames()
   {
-    if (viewableColumns != null) {
-      return viewableColumns;
-    }
-    maybeMaterialize();
-    return viewableColumns;
+    return viewableColumns == null ? base.getColumnNames() : viewableColumns;
   }
 
   @Override
@@ -177,7 +173,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     return interval != null || filter != null || limit != -1 || ordering != null || virtualColumns != null;
   }
 
-  protected Pair<byte[], RowSignature> materialize()
+  private Pair<byte[], RowSignature> materialize()
   {
     if (ordering != null) {
       throw new ISE("Cannot reorder[%s] scan data right now", ordering);
