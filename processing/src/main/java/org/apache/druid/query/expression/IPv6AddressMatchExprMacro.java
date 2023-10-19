@@ -47,7 +47,6 @@ import java.util.List;
   * </pre>
   *
   * @see IPv6AddressParseExprMacro
-  * @see IPv6AddressStringifyExprMacro
 */
 public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 {
