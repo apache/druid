@@ -48,6 +48,7 @@ import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -114,7 +115,7 @@ public class MSQWorkerTaskLauncher
   // Mutable state accessible only to the main loop. LinkedHashMap since order of key set matters. Tasks are added
   // here once they are submitted for running, but before they are fully started up.
   // taskId -> taskTracker
-  private final Map<String, TaskTracker> taskTrackers = new LinkedHashMap<>();
+  private final Map<String, TaskTracker> taskTrackers = Collections.synchronizedMap(new LinkedHashMap<>());
 
   // Set of tasks which are issued a cancel request by the controller.
   private final Set<String> canceledWorkerTasks = ConcurrentHashMap.newKeySet();
@@ -371,13 +372,13 @@ public class MSQWorkerTaskLauncher
       this.duration = duration;
     }
 
-    @JsonProperty()
+    @JsonProperty
     public String getWorkerId()
     {
       return workerId;
     }
 
-    @JsonProperty()
+    @JsonProperty
     public TaskState getState()
     {
       return state;

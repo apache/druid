@@ -131,7 +131,7 @@ public class MSQStatusReport
   }
 
   @JsonProperty("workers")
-  public Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> getWorkersDurationsMs()
+  public Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> getWorkerStats()
   {
     return workerStats;
   }
