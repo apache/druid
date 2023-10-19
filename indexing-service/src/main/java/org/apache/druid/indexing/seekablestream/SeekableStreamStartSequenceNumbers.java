@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -163,7 +164,7 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
   }
 
   @Override
-  public int compareTo(SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other)
+  public int compareTo(SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other, Comparator<SequenceOffsetType> comparator)
   {
     if (this.getClass() != other.getClass()) {
       throw new IAE(
@@ -181,7 +182,7 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
       AtomicReference<Boolean> res = new AtomicReference<>(false);
       partitionSequenceNumberMap.forEach(
           (partitionId, sequenceOffset) -> {
-            if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && (Long) sequenceOffset > (Long) otherStart.partitionSequenceNumberMap.get(partitionId)) {
+            if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && comparator.compare(sequenceOffset, otherStart.partitionSequenceNumberMap.get(partitionId)) > 0) {
               res.set(true);
             }
           }

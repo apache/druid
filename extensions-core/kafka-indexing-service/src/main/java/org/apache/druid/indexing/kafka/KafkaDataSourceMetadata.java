@@ -28,6 +28,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.java.util.common.IAE;
 
+import java.util.Comparator;
+
 public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>
 {
 
@@ -72,6 +74,6 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
     }
     final SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> that = (SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>) other;
 
-    return getSeekableStreamSequenceNumbers().compareTo(that.getSeekableStreamSequenceNumbers());
+    return getSeekableStreamSequenceNumbers().compareTo(that.getSeekableStreamSequenceNumbers(), Comparator.naturalOrder());
   }
 }

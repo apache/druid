@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
+import java.util.Comparator;
 import java.util.Map;
 
 @JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = SeekableStreamEndSequenceNumbers.class)
@@ -32,12 +33,7 @@ import java.util.Map;
     @Type(name = "start", value = SeekableStreamStartSequenceNumbers.class),
     @Type(name = "end", value = SeekableStreamEndSequenceNumbers.class)
 })
-/**
- * Comparable is used to compare this and the other sequence offsets.
- * Returns 1, if this sequence is ahead of the other.
- * otherwise, Return 0
- */
-public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> extends Comparable<SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>>
+public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
 {
   /**
    * Returns the stream/topic name.
@@ -66,4 +62,11 @@ public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetTy
   SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> minus(
       SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other
   );
+
+  /**
+   * Compare this and the other sequence offsets using comparator.
+   * Returns 1, if this sequence is ahead of the other.
+   * otherwise, Return 0
+   */
+  int compareTo(SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> seekableStreamSequenceNumbers, Comparator<SequenceOffsetType> comparator);
 }
