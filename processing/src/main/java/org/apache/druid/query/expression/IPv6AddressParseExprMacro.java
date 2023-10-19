@@ -23,8 +23,10 @@ import inet.ipaddr.ipv6.IPv6Address;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
  
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
  
 /**
@@ -80,6 +82,13 @@ public class IPv6AddressParseExprMacro implements ExprMacroTable.ExprMacro
       public Expr visit(Shuttle shuttle)
       {
         return shuttle.visit(apply(shuttle.visitAll(args)));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
       }
     }
  
