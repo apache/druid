@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.java.util.common.ISE;
@@ -853,6 +854,100 @@ public class MSQArraysTest extends MSQTestBase
                                              .build()
                      )
                      .setExpectedRowSignature(rowSignature)
+                     .setExpectedResultRows(expectedRows)
+                     .verifyResults();
+  }
+
+  @Test
+  public void testScanExternBooleanArray()
+  {
+    final List<Object[]> expectedRows = Collections.singletonList(
+        new Object[]{Arrays.asList(1L, 0L, null)}
+    );
+
+    RowSignature scanSignature = RowSignature.builder()
+                                             .add("a_bool", ColumnType.LONG_ARRAY)
+                                             .build();
+
+    Query<?> expectedQuery = newScanQueryBuilder()
+        .dataSource(
+            new ExternalDataSource(
+                new InlineInputSource("{\"a_bool\":[true,false,null]}"),
+                new JsonInputFormat(null, null, null, null, null),
+                scanSignature
+            )
+        )
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("a_bool")
+        .context(defaultScanQueryContext(context, scanSignature))
+        .build();
+
+    testSelectQuery().setSql("SELECT a_bool FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{\"type\": \"inline\", \"data\":\"{\\\"a_bool\\\":[true,false,null]}\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"a_bool\", \"type\": \"ARRAY<LONG>\"}]'\n"
+                             + "  )\n"
+                             + ")")
+                     .setQueryContext(context)
+                     .setExpectedMSQSpec(MSQSpec
+                                             .builder()
+                                             .query(expectedQuery)
+                                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                                 new ColumnMapping("a_bool", "a_bool")
+                                             )))
+                                             .tuningConfig(MSQTuningConfig.defaultConfig())
+                                             .destination(TaskReportMSQDestination.INSTANCE)
+                                             .build()
+                     )
+                     .setExpectedRowSignature(scanSignature)
+                     .setExpectedResultRows(expectedRows)
+                     .verifyResults();
+  }
+
+  @Test
+  public void testScanExternArrayWithNonConvertibleType()
+  {
+    final List<Object[]> expectedRows = Collections.singletonList(
+        new Object[]{Arrays.asList(null, null)}
+    );
+
+    RowSignature scanSignature = RowSignature.builder()
+                                             .add("a_bool", ColumnType.LONG_ARRAY)
+                                             .build();
+
+    Query<?> expectedQuery = newScanQueryBuilder()
+        .dataSource(
+            new ExternalDataSource(
+                new InlineInputSource("{\"a_bool\":[\"Test\",\"Test2\"]}"),
+                new JsonInputFormat(null, null, null, null, null),
+                scanSignature
+            )
+        )
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("a_bool")
+        .context(defaultScanQueryContext(context, scanSignature))
+        .build();
+
+    testSelectQuery().setSql("SELECT a_bool FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{\"type\": \"inline\", \"data\":\"{\\\"a_bool\\\":[\\\"Test\\\",\\\"Test2\\\"]}\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"a_bool\", \"type\": \"ARRAY<LONG>\"}]'\n"
+                             + "  )\n"
+                             + ")")
+                     .setQueryContext(context)
+                     .setExpectedMSQSpec(MSQSpec
+                                             .builder()
+                                             .query(expectedQuery)
+                                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                                 new ColumnMapping("a_bool", "a_bool")
+                                             )))
+                                             .tuningConfig(MSQTuningConfig.defaultConfig())
+                                             .destination(TaskReportMSQDestination.INSTANCE)
+                                             .build()
+                     )
+                     .setExpectedRowSignature(scanSignature)
                      .setExpectedResultRows(expectedRows)
                      .verifyResults();
   }

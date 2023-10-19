@@ -59,6 +59,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -363,6 +364,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static NotDimFilter not(DimFilter filter)
   {
     return new NotDimFilter(filter);
+  }
+
+  public static IsTrueDimFilter istrue(DimFilter filter)
+  {
+    return new IsTrueDimFilter(filter);
   }
 
   public static InDimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
