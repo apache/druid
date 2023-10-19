@@ -32,7 +32,7 @@ public class IPv6AddressExprUtils
   private static final IPAddressStringParameters IPV6_SUBNET_PARAMS = new IPAddressStringParameters.Builder().allowSingleSegment(false).allow_inet_aton(false).allowEmpty(false).allowIPv4(false).toParams();
 
   /**
-  * @return True if argument is a valid IPv6 address dotted-decimal string. Single segments, Inet addresses and subnets are not allowed.
+  * @return True if argument is a valid IPv6 address semicolon separated string. Single segments, Inet addresses and subnets are not allowed.
   */
   static boolean isValidIPv6Address(@Nullable String addressString)
   {
@@ -48,7 +48,7 @@ public class IPv6AddressExprUtils
   }
 
   /**
-  * @return IPv6 address if the supplied string is a valid dotted-decimal IPv6 Address string.
+  * @return IPv6 address if the supplied string is a valid semicolon separated IPv6 Address string.
   */
   @Nullable
   public static IPv6Address parse(@Nullable String string)
