@@ -36,8 +36,7 @@ public class IPv6AddressParseOperatorConversion extends DirectOperatorConversion
     .operatorBuilder(StringUtils.toUpperCase(IPv6AddressParseExprMacro.FN_NAME))
     .operandTypeChecker(
         OperandTypes.or(
-            OperandTypes.family(SqlTypeFamily.STRING),
-            OperandTypes.family(SqlTypeFamily.INTEGER)
+            OperandTypes.family(SqlTypeFamily.STRING)
         ))
     .returnTypeInference(ReturnTypes.INTEGER_NULLABLE)
     .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)

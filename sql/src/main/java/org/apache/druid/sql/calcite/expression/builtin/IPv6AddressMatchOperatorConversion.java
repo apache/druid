@@ -34,8 +34,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 public class IPv6AddressMatchOperatorConversion extends DirectOperatorConversion
 {
     private static final SqlSingleOperandTypeChecker ADDRESS_OPERAND = OperandTypes.or(
-        OperandTypes.family(SqlTypeFamily.STRING),
-        OperandTypes.family(SqlTypeFamily.INTEGER)
+        OperandTypes.family(SqlTypeFamily.STRING)
     );
 
     private static final SqlSingleOperandTypeChecker SUBNET_OPERAND = OperandTypes.family(SqlTypeFamily.STRING);

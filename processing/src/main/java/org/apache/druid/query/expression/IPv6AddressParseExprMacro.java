@@ -42,7 +42,7 @@ import java.util.List;
   */
 public class IPv6AddressParseExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String FN_NAME = "ipv6_parse";
+  public static final String FN_NAME = "IPV6_PARSE";
  
   @Override
   public String name()
