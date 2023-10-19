@@ -103,8 +103,6 @@ Druid only rolls up the output segment when `rollup` is set for all input segmen
 See [Roll-up](../ingestion/rollup.md) for more details.
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
 
-### Concurrent compaction
-
 ## Learn more
 
 See the following topics for more information:
