@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure.blob;
 
+import com.azure.storage.blob.models.BlobItem;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
 
@@ -31,16 +32,18 @@ import java.util.Date;
  */
 public class CloudBlobHolder
 {
-  private final CloudBlob delegate;
+  private final BlobItem delegate;
+  private final String container;
 
-  public CloudBlobHolder(CloudBlob delegate)
+  public CloudBlobHolder(BlobItem delegate, String container)
   {
     this.delegate = delegate;
+    this.container = container;
   }
 
   public String getContainerName() throws URISyntaxException, StorageException
   {
-    return delegate.getContainer().getName();
+    return container;
   }
 
   public String getName()
@@ -50,11 +53,11 @@ public class CloudBlobHolder
 
   public long getBlobLength()
   {
-    return delegate.getProperties().getLength();
+    return delegate.getProperties().getContentLength();
   }
 
   public Date getLastModifed()
   {
-    return delegate.getProperties().getLastModified();
+    return Date.from(delegate.getProperties().getLastModified().toInstant());
   }
 }

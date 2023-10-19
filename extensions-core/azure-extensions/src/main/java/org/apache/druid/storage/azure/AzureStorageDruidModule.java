@@ -46,7 +46,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -122,8 +121,6 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(AzureCloudBlobIteratorFactory.class));
     binder.install(new FactoryModuleBuilder()
                        .build(AzureCloudBlobIterableFactory.class));
-    binder.install(new FactoryModuleBuilder()
-                       .build(ListBlobItemHolderFactory.class));
   }
 
   /**

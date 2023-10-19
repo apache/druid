@@ -19,15 +19,14 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.rest.PagedResponse;
+import com.azure.storage.blob.models.BlobItem;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import com.microsoft.azure.storage.ResultContinuation;
-import com.microsoft.azure.storage.ResultSegment;
-import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
 import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URI;
@@ -46,12 +45,12 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
 
-  private ResultSegment<ListBlobItem> result;
+  private Iterator<PagedResponse<BlobItem>> pagedResult;
   private String currentContainer;
   private String currentPrefix;
   private ResultContinuation continuationToken;
   private CloudBlobHolder currentBlobItem;
-  private Iterator<ListBlobItem> blobItemIterator;
+  private Iterator<BlobItem> blobItemIterator;
   private final AzureAccountConfig config;
 
   @AssistedInject
@@ -68,7 +67,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
     this.config = config;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
-    this.result = null;
+    this.pagedResult = null;
     this.currentContainer = null;
     this.currentPrefix = null;
     this.continuationToken = null;
@@ -108,7 +107,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
     log.debug("currentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
               currentUri, currentContainer, currentPrefix
     );
-    result = null;
+    pagedResult = null;
     continuationToken = null;
   }
 
@@ -121,14 +120,13 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
           currentContainer,
           currentPrefix
       );
-      result = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
+      pagedResult = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
           currentContainer,
           currentPrefix,
           continuationToken,
           maxListingLength
-      ), config.getMaxTries());
-      continuationToken = result.getContinuationToken();
-      blobItemIterator = result.getResults().iterator();
+      ), config.getMaxTries()).iterableByPage().iterator();
+      blobItemIterator = pagedResult.next().getValue().iterator();
     }
     catch (Exception e) {
       throw new RE(
@@ -146,18 +144,16 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
    */
   private void advanceBlobItem()
   {
-    while (blobItemIterator.hasNext() || continuationToken != null || prefixesIterator.hasNext()) {
+    while (prefixesIterator.hasNext() || pagedResult.hasNext() || blobItemIterator.hasNext()) {
       while (blobItemIterator.hasNext()) {
-        ListBlobItemHolder blobItem = blobItemDruidFactory.create(blobItemIterator.next());
-        /* skip directory objects */
-        if (blobItem.isCloudBlob() && blobItem.getCloudBlob().getBlobLength() > 0) {
-          currentBlobItem = blobItem.getCloudBlob();
+        BlobItem blobItem = blobItemIterator.next();
+        if (!blobItem.isPrefix() && blobItem.getProperties().getContentLength() > 0) {
+          currentBlobItem = new CloudBlobHolder(blobItem, currentContainer);
           return;
         }
       }
-
-      if (continuationToken != null) {
-        fetchNextBatch();
+      if (pagedResult.hasNext()) {
+        blobItemIterator = pagedResult.next().getValue().iterator();
       } else if (prefixesIterator.hasNext()) {
         prepareNextRequest();
         fetchNextBatch();
