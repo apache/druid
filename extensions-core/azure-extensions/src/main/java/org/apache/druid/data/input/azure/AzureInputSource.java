@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.azure;
 
+import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -139,12 +140,12 @@ public class AzureInputSource extends CloudObjectInputSource
       public long getObjectSize(CloudObjectLocation location)
       {
         try {
-          final CloudBlob blobWithAttributes = storage.getBlockBlobReferenceWithAttributes(
+          final BlockBlobClient blobWithAttributes = storage.getBlockBlobReferenceWithAttributes(
               location.getBucket(),
               location.getPath()
           );
 
-          return blobWithAttributes.getProperties().getLength();
+          return blobWithAttributes.getProperties().getBlobSize();
         }
         catch (URISyntaxException | StorageException e) {
           throw new RuntimeException(e);

@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.util.ClientOptions;
 import com.azure.identity.ChainedTokenCredentialBuilder;
 import com.azure.identity.ManagedIdentityCredential;
 import com.azure.identity.ManagedIdentityCredentialBuilder;
@@ -156,7 +157,6 @@ public class AzureStorageDruidModule implements DruidModule
             credentialBuilder.addFirst(managedIdentityCredential);
             clientBuilder.credential(credentialBuilder.build());
           }
-
           return clientBuilder.buildClient();
         }
     );
