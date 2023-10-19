@@ -140,14 +140,14 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     public ColumnValueSelector makeColumnValueSelector(@Nonnull String columnName)
     {
       return withColumnAccessor(columnName, columnAccessor -> {
-          final ColumnType type = columnAccessor.getType();
-          switch (type.getType()) {
-            case STRING:
-              return new StringColumnValueSelector(columnAccessor);
-            case COMPLEX:
-              return new ComplexColumnValueSelector(columnAccessor);
-            default:
-              return new PassThroughColumnValueSelector(columnAccessor);
+        final ColumnType type = columnAccessor.getType();
+        switch (type.getType()) {
+          case STRING:
+            return new StringColumnValueSelector(columnAccessor);
+          case COMPLEX:
+            return new ComplexColumnValueSelector(columnAccessor);
+          default:
+            return new PassThroughColumnValueSelector(columnAccessor);
         }
       });
     }

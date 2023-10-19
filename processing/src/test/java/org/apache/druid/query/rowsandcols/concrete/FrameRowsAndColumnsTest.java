@@ -42,18 +42,18 @@ public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 
   private static FrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    LazilyDecoratedRowsAndColumns z = new LazilyDecoratedRowsAndColumns(input, null, null, null, Integer.MAX_VALUE, null, null);
+    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, Integer.MAX_VALUE, null, null);
 
-    z.numRows(); // materialize
+    rac.numRows(); // materialize
 
-    Field baseField;
     try {
-      baseField = z.getClass().getDeclaredField("base");
+      Field baseField = rac.getClass().getDeclaredField("base");
       baseField.setAccessible(true);
-      Object o = baseField.get(z);
+      Object o = baseField.get(rac);
       assertTrue(o instanceof FrameRowsAndColumns);
       return (FrameRowsAndColumns) o;
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
 

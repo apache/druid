@@ -105,7 +105,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   public void testGetColumnNames()
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
-    List<String> colNames = ImmutableList.<String> builder()
+    List<String> colNames = ImmutableList.<String>builder()
         .add("expr")
         .add("expr2i")
         .add("expr2")
