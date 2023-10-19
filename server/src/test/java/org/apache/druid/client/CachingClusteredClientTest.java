@@ -3150,7 +3150,7 @@ public class CachingClusteredClientTest
   {
 
     Map<String, Object> context = new HashMap<>();
-    context.put(QueryContexts.FEDERATED_CLUSSTER_BROKERS, "test1");
+    context.put(QueryContexts.FEDERATED_CLUSTER_BROKERS, "test1");
     context.putAll(CONTEXT);
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()

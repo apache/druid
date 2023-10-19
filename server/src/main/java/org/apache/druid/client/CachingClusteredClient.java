@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -680,8 +681,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final List<Sequence<T>> listOfSequences
     )
     {
-      if (query.context().containsKey(QueryContexts.FEDERATED_CLUSSTER_BROKERS)) {
-        String[] brokers = query.context().getString(QueryContexts.FEDERATED_CLUSSTER_BROKERS).split(",");
+      String federatedClusterBrokersStr = query.context().getString(QueryContexts.FEDERATED_CLUSTER_BROKERS);
+      if (!Strings.isNullOrEmpty(federatedClusterBrokersStr)) {
+        String[] brokers = federatedClusterBrokersStr.split(",");
         for (String hostName : brokers) {
           if (hostName.length() > 0) {
             final QueryRunner serverRunner = serverView.getAndAddServer(hostName).getQueryRunner();
@@ -690,7 +692,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             final Sequence<T> serverResults = serverRunner.run(
                 queryPlus.withQuery(queryPlus.getQuery()
                                              .withOverriddenContext(ImmutableMap.of(
-                                                 QueryContexts.FEDERATED_CLUSSTER_BROKERS,
+                                                 QueryContexts.FEDERATED_CLUSTER_BROKERS,
                                                  ""
                                              )))
                          .withMaxQueuedBytes(maxQueuedBytes),
