@@ -1463,13 +1463,12 @@ public class DruidQuery
           .addAll(windowing.getOperators())
           .build();
     }
-    return new WindowOperatorQuery(
+    return WindowOperatorQuery.build(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
-        operators,
-        null
+        operators
     );
   }
 
