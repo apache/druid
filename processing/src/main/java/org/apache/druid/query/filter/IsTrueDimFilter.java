@@ -17,34 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.frame.field;
+package org.apache.druid.query.filter;
 
-/**
- * A simple {@link ReadableFieldPointer} that returns the position and the length that was set on its object.
- */
-public class SettableFieldPointer implements ReadableFieldPointer
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class IsTrueDimFilter extends IsBooleanDimFilter
 {
-  long position = 0;
-  long length = -1;
-
-  /**
-   * Sets the position and the length to be returned when interface's methods are called.
-   */
-  public void setPositionAndLength(long position, long length)
+  public static IsTrueDimFilter of(DimFilter field)
   {
-    this.position = position;
-    this.length = length;
+    return new IsTrueDimFilter(field);
+  }
+
+  @JsonCreator
+  public IsTrueDimFilter(
+      @JsonProperty("field") DimFilter field
+  )
+  {
+    super(field, true);
   }
 
   @Override
-  public long position()
+  public DimFilter optimize()
   {
-    return position;
-  }
-
-  @Override
-  public long length()
-  {
-    return length;
+    return new IsTrueDimFilter(getField().optimize());
   }
 }

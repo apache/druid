@@ -17,27 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.query.filter;
 
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodStatus;
-import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-public class PeonPhaseTest
+public class IsFalseDimFilter extends IsBooleanDimFilter
 {
-
-  @Test
-  void testGetPhaseForToMakeCoverageHappy()
+  public static IsFalseDimFilter of(DimFilter field)
   {
-    Pod pod = mock(Pod.class);
-    PodStatus status = mock(PodStatus.class);
-    when(status.getPhase()).thenReturn("Succeeded");
-    when(pod.getStatus()).thenReturn(status);
-    assertEquals(PeonPhase.UNKNOWN, PeonPhase.getPhaseFor(null));
-    assertEquals(PeonPhase.SUCCEEDED, PeonPhase.getPhaseFor(pod));
+    return new IsFalseDimFilter(field);
+  }
+
+  @JsonCreator
+  public IsFalseDimFilter(
+      @JsonProperty("field") DimFilter field
+  )
+  {
+    super(field, false);
+  }
+
+  @Override
+  public DimFilter optimize()
+  {
+    return new IsFalseDimFilter(getField().optimize());
   }
 }

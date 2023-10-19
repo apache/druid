@@ -261,6 +261,82 @@ public class SqlSegmentsMetadataQuery
     return null;
   }
 
+  /**
+   * Append the condition for the interval and match mode to the given string builder with a partial query
+   * @param sb - StringBuilder containing the paritial query with SELECT clause and WHERE condition for used, datasource
+   * @param intervals - intervals to fetch the segments for
+   * @param matchMode - Interval match mode - overlaps or contains
+   * @param connector - SQL connector
+   */
+  public static void appendConditionForIntervalsAndMatchMode(
+      final StringBuilder sb,
+      final Collection<Interval> intervals,
+      final IntervalMode matchMode,
+      final SQLMetadataConnector connector
+  )
+  {
+    if (intervals.isEmpty()) {
+      return;
+    }
+
+    sb.append(" AND (");
+    for (int i = 0; i < intervals.size(); i++) {
+      sb.append(
+          matchMode.makeSqlCondition(
+              connector.getQuoteString(),
+              StringUtils.format(":start%d", i),
+              StringUtils.format(":end%d", i)
+          )
+      );
+
+      // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
+      // we are using string comparison, a segment with this start or end will not be returned otherwise.
+      if (matchMode.equals(IntervalMode.OVERLAPS)) {
+        sb.append(StringUtils.format(
+            " OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i
+        ));
+        sb.append(StringUtils.format(
+            " OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i
+        ));
+      }
+
+      if (i != intervals.size() - 1) {
+        sb.append(" OR ");
+      }
+    }
+
+    // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
+    // this start and end will not be returned otherwise.
+    // Known Issue: https://github.com/apache/druid/issues/12860
+    if (matchMode.equals(IntervalMode.OVERLAPS)) {
+      sb.append(StringUtils.format(
+          " OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()
+      ));
+    }
+    sb.append(")");
+  }
+
+  /**
+   * Given a Query object bind the input intervals to it
+   * @param query Query to fetch segments
+   * @param intervals Intervals to fetch segments for
+   */
+  public static void bindQueryIntervals(final Query<Map<String, Object>> query, final Collection<Interval> intervals)
+  {
+    if (intervals.isEmpty()) {
+      return;
+    }
+
+    final Iterator<Interval> iterator = intervals.iterator();
+    for (int i = 0; iterator.hasNext(); i++) {
+      Interval interval = iterator.next();
+      query.bind(StringUtils.format("start%d", i), interval.getStart().toString())
+           .bind(StringUtils.format("end%d", i), interval.getEnd().toString());
+    }
+  }
+
   private CloseableIterator<DataSegment> retrieveSegments(
       final String dataSource,
       final Collection<Interval> intervals,
@@ -275,36 +351,8 @@ public class SqlSegmentsMetadataQuery
     final StringBuilder sb = new StringBuilder();
     sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
 
-    if (compareAsString && !intervals.isEmpty()) {
-      sb.append(" AND (");
-      for (int i = 0; i < intervals.size(); i++) {
-        sb.append(
-            matchMode.makeSqlCondition(
-                connector.getQuoteString(),
-                StringUtils.format(":start%d", i),
-                StringUtils.format(":end%d", i)
-            )
-        );
-
-        // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
-        // we are using string comparison, a segment with this start or end will not be returned otherwise.
-        if (matchMode.equals(IntervalMode.OVERLAPS)) {
-          sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
-          sb.append(StringUtils.format(" OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
-        }
-
-        if (i != intervals.size() - 1) {
-          sb.append(" OR ");
-        }
-      }
-
-      // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
-      // this start and end will not be returned otherwise.
-      // Known Issue: https://github.com/apache/druid/issues/12860
-      if (matchMode.equals(IntervalMode.OVERLAPS)) {
-        sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()));
-      }
-      sb.append(")");
+    if (compareAsString) {
+      appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
     final Query<Map<String, Object>> sql = handle
@@ -317,12 +365,7 @@ public class SqlSegmentsMetadataQuery
     }
 
     if (compareAsString) {
-      final Iterator<Interval> iterator = intervals.iterator();
-      for (int i = 0; iterator.hasNext(); i++) {
-        Interval interval = iterator.next();
-        sql.bind(StringUtils.format("start%d", i), interval.getStart().toString())
-           .bind(StringUtils.format("end%d", i), interval.getEnd().toString());
-      }
+      bindQueryIntervals(sql, intervals);
     }
 
     final ResultIterator<DataSegment> resultIterator =

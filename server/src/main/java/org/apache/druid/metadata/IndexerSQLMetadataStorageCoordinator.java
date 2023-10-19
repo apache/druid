@@ -174,15 +174,34 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval)
   {
-    String rawQueryString = "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true";
-    final String queryString = StringUtils.format(rawQueryString, dbTables.getSegmentsTable());
+    StringBuilder queryBuilder = new StringBuilder(
+        "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
+    );
+
+    final List<Interval> intervals = new ArrayList<>();
+    // Do not need an interval condition if the interval is ETERNITY
+    if (!Intervals.isEternity(interval)) {
+      intervals.add(interval);
+    }
+
+    SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
+        queryBuilder,
+        intervals,
+        SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
+        connector
+    );
+
+    final String queryString = StringUtils.format(queryBuilder.toString(), dbTables.getSegmentsTable());
     return connector.retryWithHandle(
         handle -> {
           Query<Map<String, Object>> query = handle
               .createQuery(queryString)
               .bind("dataSource", dataSource);
+
+          SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+
           return query
               .map((int index, ResultSet r, StatementContext ctx) ->
                        new Pair<>(
