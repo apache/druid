@@ -62,7 +62,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
   }
 
   @Test
-  public void testPartitionAggregateAndSortTest1()
+  public void testColumnSelectorFactoryNonExistentColumn()
   {
     RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(

@@ -81,6 +81,7 @@ public class FrameRowsAndColumns implements RowsAndColumns
 
   }
 
+  @SuppressWarnings("unchecked")
   @Nullable
   @Override
   public <T> T as(Class<T> clazz)
