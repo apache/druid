@@ -48,6 +48,7 @@ import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,11 @@ public class VirtualColumns implements Cacheable
       }
     }
     return new VirtualColumns(ImmutableList.copyOf(virtualColumns), withDotSupport, withoutDotSupport);
+  }
+
+  public static VirtualColumns create(VirtualColumn... virtualColumns)
+  {
+    return create(Arrays.asList(virtualColumns));
   }
 
   public static VirtualColumns nullToEmpty(@Nullable VirtualColumns virtualColumns)
