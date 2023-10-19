@@ -3177,7 +3177,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 label: `Allow concurrent ${
                   appendToExisting ? 'append' : 'replace'
                 } tasks (experimental)`,
-                defaultValue: undefined,
+                defaultValue: isStreamingSpec(spec) ? true : undefined,
                 valueAdjustment: v => (v ? (appendToExisting ? 'APPEND' : 'REPLACE') : undefined),
                 adjustValue: v => v === (appendToExisting ? 'APPEND' : 'REPLACE'),
                 info: <p>Allows or forbids concurrent tasks.</p>,
