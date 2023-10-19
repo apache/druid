@@ -11,14 +11,6 @@ expectedOperators:
   - { type: "naivePartition", partitionColumns: [ ] }
   - type: "window"
     processor:
-      type: "project"
-      virtualColumn:
-          type: "expression"
-          name: "_v0"
-          expression: "42.0"
-          outputType: "DOUBLE"
-  - type: "window"
-    processor:
       type: "framedAgg"
       frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
       aggregations:

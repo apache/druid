@@ -160,23 +160,29 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      return withColumnAccessor(column, columnAccessor ->
-          new ColumnCapabilitiesImpl()
+      return withColumnAccessor(column, columnAccessor -> {
+        if (columnAccessor == null) {
+          return ColumnCapabilitiesImpl.createDefault();
+        } else {
+          return new ColumnCapabilitiesImpl()
               .setType(columnAccessor.getType())
               .setHasMultipleValues(false)
               .setDictionaryEncoded(false)
-              .setHasBitmapIndexes(false));
+              .setHasBitmapIndexes(false);
+        }
+      });
     }
 
     private <T> T withColumnAccessor(String column, Function<ColumnAccessor, T> fn)
     {
+      @Nullable
       ColumnAccessor retVal = accessorCache.get(column);
       if (retVal == null) {
         Column racColumn = rac.findColumn(column);
         if (racColumn == null) {
-          throw DruidException.defensive("Can't find column[%s]", column);
+          throw DruidException.defensive("didnt expected this!");
         }
-        retVal = racColumn.toAccessor();
+        retVal = racColumn == null ? null : racColumn.toAccessor();
         accessorCache.put(column, retVal);
       }
       return fn.apply(retVal);

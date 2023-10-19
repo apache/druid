@@ -29,7 +29,6 @@ import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.operator.window.value.WindowFirstProcessor;
 import org.apache.druid.query.operator.window.value.WindowLastProcessor;
 import org.apache.druid.query.operator.window.value.WindowOffsetProcessor;
-import org.apache.druid.query.operator.window.value.WindowProjectProcessor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 /**
@@ -56,7 +55,6 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
     @JsonSubTypes.Type(name = "first", value = WindowFirstProcessor.class),
     @JsonSubTypes.Type(name = "last", value = WindowLastProcessor.class),
     @JsonSubTypes.Type(name = "offset", value = WindowOffsetProcessor.class),
-    @JsonSubTypes.Type(name = "project", value = WindowProjectProcessor.class),
     @JsonSubTypes.Type(name = "framedAgg", value = WindowFramedAggregateProcessor.class)
 })
 public interface Processor

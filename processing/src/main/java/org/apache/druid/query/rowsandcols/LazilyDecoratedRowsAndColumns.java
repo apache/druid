@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
@@ -46,6 +47,7 @@ import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
@@ -184,7 +186,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     } else {
       return materializeStorageAdapter(as);
     }
-
   }
 
   private void reset(RowsAndColumns rac)
@@ -210,7 +211,12 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         null
     );
 
-    Collection<String> cols = viewableColumns == null ? base.getColumnNames() : viewableColumns;
+ImmutableList<String> defColumns = ImmutableList.<String> builder()
+  .addAll(base.getColumnNames())
+  .addAll(virtualColumns.getColumnNames())
+  .build();
+
+    Collection<String> cols = viewableColumns == null ? defColumns : viewableColumns;
     AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
     FrameWriter writer = cursors.accumulate(null, (accumulated, in) -> {
@@ -328,17 +334,20 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       }
     }
 
-    if (virtualColumns != null) {
-      throw new UOE("Cannot apply virtual columns [%s] with naive apply.", virtualColumns);
-    }
+
+        if (virtualColumns != null) {
+          throw new UOE("Cannot apply virtual columns [%s] with naive apply.", virtualColumns);
+        }
+
 
     ArrayList<String> columnsToGenerate = new ArrayList<>();
     if (viewableColumns != null) {
       columnsToGenerate.addAll(viewableColumns);
     } else {
       columnsToGenerate.addAll(rac.getColumnNames());
-      // When/if we support virtual columns from here, we should auto-add them to the list here as well as they expand
-      // the implicit project when no projection is defined
+      if (virtualColumns != null) {
+        columnsToGenerate.addAll(virtualColumns.getColumnNames());
+      }
     }
 
     // There is all sorts of sub-optimal things in this code, but we just ignore them for now as it is difficult to
@@ -354,13 +363,17 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     final RowSignature.Builder sigBob = RowSignature.builder();
     final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
 
+
     for (String column : columnsToGenerate) {
       final Column racColumn = rac.findColumn(column);
-      if (racColumn == null) {
+      if (racColumn != null) {
+        sigBob.add(column, racColumn.toAccessor().getType());
         continue;
       }
+      final VirtualColumn vc;
+      if (virtualColumns != null && (vc = virtualColumns.getVirtualColumn(column)) != null) {
 
-      sigBob.add(column, racColumn.toAccessor().getType());
+      }
     }
 
     final int limitedNumRows;
