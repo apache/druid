@@ -48,7 +48,6 @@ import java.util.List;
   * If the "address" argument does not represent an IPv6 address then false is returned.
   * </pre>
   *
-  * @see IPv6AddressParseExprMacro
 */
 public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 {
