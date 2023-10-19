@@ -127,6 +127,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       }
       Assert.assertEquals(1, results.recordedQueries.size());
 
+      maybeDumpActualResults(results.results);
       final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
       for (int i = 0; i < input.expectedOperators.size(); ++i) {
         final OperatorFactory expectedOperator = input.expectedOperators.get(i);
@@ -145,7 +146,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
       }
 
-      maybeDumpActualResults(results.results);
       for (Object[] result : input.expectedResults) {
         for (int i = 0; i < result.length; i++) {
           // Jackson deserializes numbers as the minimum size required to
