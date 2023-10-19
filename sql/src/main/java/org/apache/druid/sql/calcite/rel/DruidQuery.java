@@ -1450,7 +1450,7 @@ public class DruidQuery
     final List<OperatorFactory> operators;
 
     if (!virtualColumns.isEmpty()) {
-      operators = ImmutableList.<OperatorFactory> builder()
+      operators = ImmutableList.<OperatorFactory>builder()
           .add(new ScanOperatorFactory(
               null,
               null,
