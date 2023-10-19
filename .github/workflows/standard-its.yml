@@ -139,7 +139,7 @@ jobs:
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     runs-on: ubuntu-22.04
     env:
-      MVN: mvn --no-snapshot-updates
+      MVN: mvn -B --no-transfer-progress --no-snapshot-updates
       MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
       CONFIG_FILE: k8s_run_config_file.json
       IT_TEST: -Dit.test=ITNestedQueryPushDownTest

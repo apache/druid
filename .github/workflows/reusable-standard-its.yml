@@ -47,7 +47,7 @@ on:
         default: com.mysql.jdbc.Driver
 
 env:
-  MVN: mvn --no-snapshot-updates
+  MVN: mvn -B --no-transfer-progress --no-snapshot-updates
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
   DOCKER_IP: 127.0.0.1  # for integration tests

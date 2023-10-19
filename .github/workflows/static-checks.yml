@@ -31,7 +31,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MVN: mvn -B
+  MVN: mvn -B --no-transfer-progress
   MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
   MAVEN_SKIP_TESTS: -P skip-tests
   MAVEN_OPTS: -Xmx3000m
