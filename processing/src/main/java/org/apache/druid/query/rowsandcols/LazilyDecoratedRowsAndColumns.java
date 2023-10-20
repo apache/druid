@@ -218,7 +218,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       if (virtualColumns == null) {
         cols = base.getColumnNames();
       } else {
-        cols = ImmutableList.<String> builder()
+        cols = ImmutableList.<String>builder()
             .addAll(base.getColumnNames())
             .addAll(virtualColumns.getColumnNames())
             .build();
