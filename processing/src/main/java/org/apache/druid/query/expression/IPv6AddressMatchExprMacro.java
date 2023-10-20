@@ -68,7 +68,6 @@ public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
     try {
       final Expr arg = args.get(0);
       final IPAddressString blockString = getSubnetInfo(args);
-      final IPAddress block = blockString.toAddress().toPrefixBlock();
 
       class IPv6AddressMatchExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
       {
@@ -121,7 +120,7 @@ public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
  
       return new IPv6AddressMatchExpr(arg);
     }
-    catch (AddressStringException e) {
+    catch (Exception e) {
       throw processingFailed(e, "failed to parse address");
     }
   }
