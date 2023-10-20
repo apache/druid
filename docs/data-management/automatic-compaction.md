@@ -276,7 +276,7 @@ Keep in mind that `taskLockType` takes precedence over `useSharedLock`. Do not u
 
 ##### Add a task lock using the Druid console
 
-As part of the batch or streaming ingestion **Load data** wizards, you can, you can choose **Allow concurrent append tasks** to use concurrent compaction. 
+As part of the batch or streaming ingestion **Load data** wizards, you can choose **Allow concurrent append tasks** to use concurrent compaction. 
 
 
 ## Learn more
