@@ -73,6 +73,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -194,10 +196,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   }
 
   /**
-   * Test the case when coordinator returns information for all the requested dataSources
+   * Test the case when coordinator returns information for all the requested datasources.
    */
   @Test
-  public void testGetAllDsSchemaFromCoordinator() throws InterruptedException
+  public void testCoordinatorReturnsAllDSSchema() throws InterruptedException
   {
     final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
     final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
@@ -218,6 +220,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
       }
     };
 
+    // don't expect any segment metadata queries
     QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);
 
     BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
@@ -243,11 +246,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   }
 
   /**
-   * Test the case when Coordinator returns information for a subset of dataSources.
-   * Check if SegmentMetadataQuery is fired for segments of the remaining dataSources.
+   * Test the case when Coordinator returns information for a subset of datasources.
+   * Check if SegmentMetadataQuery is fired for segments of the remaining datasources.
    */
   @Test
-  public void testGetFewDsSchemaFromCoordinator() throws InterruptedException
+  public void testCoordinatorReturnsFewDSSchema() throws InterruptedException
   {
     final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
     final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
@@ -300,6 +303,40 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     schema.awaitInitialization();
 
     EasyMock.verify(factoryMock, lifecycleMock);
+  }
+
+  /**
+   * Verify that broker polls schema for all datasources in every cycle.
+   */
+  @Test
+  public void testBrokerPollsAllDSSchema() throws InterruptedException
+  {
+    ArgumentCaptor<Set<String>> argumentCaptor = ArgumentCaptor.forClass(Set.class);
+    CoordinatorClient coordinatorClient = Mockito.mock(CoordinatorClient.class);
+    Mockito.when(coordinatorClient.fetchDataSourceInformation(argumentCaptor.capture())).thenReturn(Futures.immediateFuture(null));
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        coordinatorClient
+    );
+
+    schema.start();
+    schema.awaitInitialization();
+
+    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE), argumentCaptor.getValue());
+
+    refreshLatch = new CountDownLatch(1);
+    serverView.addSegment(newSegment("xyz", 0), ServerType.HISTORICAL);
+
+    refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
+
+    // verify that previously refreshed are included in the last coordinator poll
+    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz"), argumentCaptor.getValue());
   }
 
   @Test

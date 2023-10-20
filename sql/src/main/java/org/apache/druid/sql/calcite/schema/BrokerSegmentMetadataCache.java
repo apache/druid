@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -155,15 +154,18 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
+    // query all the datasource schema, which includes,
+    // datasources explicitly marked for rebuilding
+    // datasources for the segments to be refreshed
+    // prebuilt datasources
     final Set<String> dataSourcesToQuery = new HashSet<>(dataSourcesToRebuild);
 
     segmentsToRefresh.forEach(segment -> dataSourcesToQuery.add(segment.getDataSource()));
 
+    dataSourcesToQuery.addAll(tables.keySet());
+
     // Fetch datasource information from the Coordinator
     Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = queryDataSourceInformation(dataSourcesToQuery);
-
-    // remove any extra datasources returned
-    polledDataSourceMetadata.keySet().removeIf(Predicates.not(dataSourcesToQuery::contains));
 
     // update datasource metadata in the cache
     polledDataSourceMetadata.forEach(this::updateDSMetadata);
