@@ -56,8 +56,5 @@ public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-
-
   }
-
 }

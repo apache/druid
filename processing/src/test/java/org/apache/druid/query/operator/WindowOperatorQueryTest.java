@@ -21,7 +21,6 @@ package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
@@ -124,7 +123,7 @@ public class WindowOperatorQueryTest
   public void withOperators()
   {
     List<OperatorFactory> operators = ImmutableList.<OperatorFactory>builder()
-        .add(new NaivePartitioningOperatorFactory(Lists.newArrayList("some")))
+        .add(new NaivePartitioningOperatorFactory(Collections.singletonList("some")))
         .build();
     Assert.assertSame(operators, ((WindowOperatorQuery) query.withOperators(operators)).getOperators());
   }
