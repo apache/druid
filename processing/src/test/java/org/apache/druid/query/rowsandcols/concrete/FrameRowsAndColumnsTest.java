@@ -29,10 +29,9 @@ import static org.junit.Assert.assertTrue;
 
 public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-
-  public FrameRowsAndColumnsTest(Class<?> expectedClass)
+  public FrameRowsAndColumnsTest()
   {
-    super(expectedClass);
+    super(FrameRowsAndColumns.class);
   }
 
   public static Function<MapOfColumnsRowsAndColumns, FrameRowsAndColumns> MAKER = input -> {
