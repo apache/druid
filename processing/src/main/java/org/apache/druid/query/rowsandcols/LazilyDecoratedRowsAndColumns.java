@@ -102,6 +102,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     return viewableColumns == null ? base.getColumnNames() : viewableColumns;
   }
 
+  public RowsAndColumns getBase()
+  {
+    return base;
+  }
+
   @Override
   public int numRows()
   {

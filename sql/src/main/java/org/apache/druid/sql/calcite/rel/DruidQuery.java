@@ -1449,7 +1449,9 @@ public class DruidQuery
     VirtualColumns virtualColumns = virtualColumnRegistry.build(Collections.emptySet());
     final List<OperatorFactory> operators;
 
-    if (!virtualColumns.isEmpty()) {
+    if (virtualColumns.isEmpty()) {
+      operators = windowing.getOperators();
+    } else {
       operators = ImmutableList.<OperatorFactory>builder()
           .add(new ScanOperatorFactory(
               null,
@@ -1460,8 +1462,6 @@ public class DruidQuery
               null))
           .addAll(windowing.getOperators())
           .build();
-    } else {
-      operators = windowing.getOperators();
     }
     return new WindowOperatorQuery(
         dataSource,

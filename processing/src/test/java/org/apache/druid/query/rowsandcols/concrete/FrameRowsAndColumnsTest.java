@@ -22,10 +22,7 @@ package org.apache.druid.query.rowsandcols.concrete;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumnsTestBase;
-import java.lang.reflect.Field;
 import java.util.function.Function;
-
-import static org.junit.Assert.assertTrue;
 
 public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
@@ -45,15 +42,6 @@ public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 
     rac.numRows(); // materialize
 
-    try {
-      Field baseField = rac.getClass().getDeclaredField("base");
-      baseField.setAccessible(true);
-      Object o = baseField.get(rac);
-      assertTrue(o instanceof FrameRowsAndColumns);
-      return (FrameRowsAndColumns) o;
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    return (FrameRowsAndColumns) rac.getBase();
   }
 }
