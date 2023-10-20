@@ -1,8 +1,8 @@
 {
-  "workerTaskRunnerType": "remote",
-  "sendAllTasksToWorkerTaskRunner": false,
-  "runnerSelectorSpec": {
+  "runnerStrategy": {
+    "type": "taskSpec",
     "default": "k8s",
+    "workerType": "remote",
     "overrides": {
       "index_kafka": "worker"
     }

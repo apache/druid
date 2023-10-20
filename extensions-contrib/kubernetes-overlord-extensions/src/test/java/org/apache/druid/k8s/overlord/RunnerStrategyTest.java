@@ -30,30 +30,40 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(EasyMockRunner.class)
-public class KubernetesRunnerSelectStrategyTest extends EasyMockSupport
+public class RunnerStrategyTest extends EasyMockSupport
 {
   @Mock Task task;
 
   @Test
-  public void test_whenNoSelectorSpecConfigured_throwsException()
+  public void test_mixRunnerStrategy_returnsCorrectRunnerType()
   {
-    Assert.assertThrows(RuntimeException.class, () -> new KubernetesRunnerSelectStrategy(null));
-  }
-
-  @Test
-  public void test_whenDefaultAndOverridesSelectorSpecConfigured_returnsCorrectRunnerType()
-  {
-    RunnerSelectorSpec spec = new RunnerSelectorSpec("k8s", ImmutableMap.of("index_kafka", "worker"));
-    KubernetesRunnerSelectStrategy runnerSelectStrategy = new KubernetesRunnerSelectStrategy(spec);
-
+    MixRunnerStrategy runnerStrategy = new MixRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
     EasyMock.expect(task.getType()).andReturn("index_kafka");
     EasyMock.expectLastCall().once();
     EasyMock.expect(task.getType()).andReturn("compact");
     EasyMock.expectLastCall().once();
     replayAll();
-    Assert.assertEquals("worker", runnerSelectStrategy.getRunnerTypeForTask(task));
-    Assert.assertEquals("k8s", runnerSelectStrategy.getRunnerTypeForTask(task));
+    Assert.assertEquals("httpRemote", runnerStrategy.getRunnerTypeForTask(task).getType());
+    Assert.assertEquals("k8s", runnerStrategy.getRunnerTypeForTask(task).getType());
     verifyAll();
+  }
+
+  @Test
+  public void test_kubernetesRunnerStrategy_returnsCorrectRunnerType()
+  {
+    KubernetesRunnerStrategy runnerStrategy = new KubernetesRunnerStrategy();
+
+    Assert.assertEquals("k8s", runnerStrategy.getRunnerTypeForTask(task).getType());
+  }
+
+  @Test
+  public void test_workerRunnerStrategy_returnsCorrectRunnerType()
+  {
+    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy("remote");
+    Assert.assertEquals("remote", runnerStrategy.getRunnerTypeForTask(task).getType());
+
+    runnerStrategy = new WorkerRunnerStrategy(null);
+    Assert.assertEquals("httpRemote", runnerStrategy.getRunnerTypeForTask(task).getType());
   }
 
 }

@@ -23,31 +23,32 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.common.task.Task;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Objects;
 
-public class RunnerSelectorSpec
+public class MixRunnerStrategy implements RunnerStrategy
 {
   @Nullable
   private final Map<String, String> overrides;
+  private final RunnerStrategy kubernetesRunnerStrategy = new KubernetesRunnerStrategy();
+  private WorkerRunnerStrategy workerRunnerStrategy = null;
+  private final RunnerStrategy defaultRunnerStrategy;
   private final String defaultRunner;
 
   @JsonCreator
-  public RunnerSelectorSpec(
+  public MixRunnerStrategy(
       @JsonProperty("default") String defaultRunner,
+      @JsonProperty("workerType") String workerType,
       @JsonProperty("overrides") @Nullable Map<String, String> overrides
   )
   {
     Preconditions.checkNotNull(defaultRunner);
-    Preconditions.checkArgument(
-        KubernetesRunnerSelectStrategy.KUBERNETES_RUNNER_TYPE.equals(defaultRunner)
-        || KubernetesRunnerSelectStrategy.WORKER_RUNNER_TYPE.equals(defaultRunner),
-        "runnerSelectorSpec default must be set to one of (%s, %s)",
-        KubernetesRunnerSelectStrategy.KUBERNETES_RUNNER_TYPE,
-        KubernetesRunnerSelectStrategy.WORKER_RUNNER_TYPE
-    );
+    workerRunnerStrategy = new WorkerRunnerStrategy(workerType);
+    defaultRunnerStrategy = RunnerType.KUBERNETES_RUNNER_TYPE.getType().equals(defaultRunner) ?
+                            kubernetesRunnerStrategy : workerRunnerStrategy;
+
     this.defaultRunner = defaultRunner;
     this.overrides = overrides;
   }
@@ -66,29 +67,42 @@ public class RunnerSelectorSpec
   }
 
   @Override
-  public boolean equals(final Object o)
+  public RunnerType getRunnerTypeForTask(Task task)
   {
-    if (this == o) {
-      return true;
+    String runnerType = null;
+    if (overrides != null) {
+      runnerType = overrides.get(task.getType());
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    final RunnerSelectorSpec that = (RunnerSelectorSpec) o;
-    return Objects.equals(defaultRunner, that.defaultRunner) &&
-           Objects.equals(overrides, that.overrides);
+
+    RunnerStrategy runnerStrategy = getRunnerSelectStrategy(runnerType);
+    return runnerStrategy == null ? null : runnerStrategy.getRunnerTypeForTask(task);
   }
 
-  @Override
-  public int hashCode()
+  public String getWorkerType()
   {
-    return Objects.hash(defaultRunner, overrides);
+    return workerRunnerStrategy == null ? null : workerRunnerStrategy.getWorkerType();
+  }
+
+  private RunnerStrategy getRunnerSelectStrategy(String runnerType)
+  {
+    if (runnerType == null) {
+      return defaultRunnerStrategy;
+    }
+
+    if (RunnerType.KUBERNETES_RUNNER_TYPE.getType().equals(runnerType)) {
+      return kubernetesRunnerStrategy;
+    } else if ("worker".equals(runnerType)) {
+      return workerRunnerStrategy;
+    } else {
+      // means wrong configuration
+      return null;
+    }
   }
 
   @Override
   public String toString()
   {
-    return "RunnerSelectorSpec{" +
+    return "MixRunnerSelectStrategy{" +
            "default=" + defaultRunner +
            ", overrides=" + overrides +
            '}';

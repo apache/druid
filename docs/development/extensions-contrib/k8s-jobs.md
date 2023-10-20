@@ -284,7 +284,8 @@ To do this, set the following property.
 
 |Property| Possible Values |Description|Default|required|
 |--------|-----------------|-----------|-------|--------|
-|`druid.indexer.runner.k8sAndWorker.workerTaskRunnerType`|`String`|Determines whether the `httpRemote` or the `remote` task runner should be used in addition to the Kubernetes task runner.|`httpRemote`|No|
-|`druid.indexer.runner.k8sAndWorker.sendAllTasksToWorkerTaskRunner`|`boolean`| Whether to send all the tasks to the worker task runner. If this is set to false all tasks will be sent to Kubernetes|`false`|No|
-|`druid.indexer.runner.k8sAndWorker.runnerSelectorSpec`|`{"default":"k8s","overrides": {"index_kafka": "worker"}}`| Determines for a task type whether it should run in `k8s` or `worker` runner type|`false`|No|
+|`druid.indexer.runner.k8sAndWorker.runnerStrategy.type`|`String`(e.g., `k8s`, `worker`, `taskSpec`)| Defines the task runner type to execute tasks.|`k8s`|No|
+|`druid.indexer.runner.k8sAndWorker.runnerStrategy.workerType`|`String`(e.g., `httpRemote`, `remote`)| Specifies the variant of the worker task runner to be utilized, applicable when the `runnerStrategy.type` is set to `worker` or `taskSpec`.|`httpRemote`|No|
+|`druid.indexer.runner.k8sAndWorker.runnerStrategy.default`|`String`(e.g., `k8s`, `worker`)| Indicates the default task runner to be used for executing tasks under the `taskSpec` strategy.|`k8s`|No|
+|`druid.indexer.runner.k8sAndWorker.runnerStrategy.overrides`|`JsonObject`(e.g., `{"index_kafka": "worker"}`)| Provides specific overrides for certain task types, allowing for a more granular control of task runner allocations based on the task's nature. Each entry in the object maps a task type to a preferred task runner. |`{}`|No|
 

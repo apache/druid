@@ -67,7 +67,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, null, null)
+        new KubernetesAndWorkerTaskRunnerConfig(null)
     );
   }
 
@@ -77,7 +77,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, false, null)
+        new KubernetesAndWorkerTaskRunnerConfig(null)
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(kubernetesTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -93,7 +93,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, true, null)
+        new KubernetesAndWorkerTaskRunnerConfig(new WorkerRunnerStrategy(null))
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -104,13 +104,13 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_runOnKubernetesOrWorkerBasedOnSelectorSpec() throws ExecutionException, InterruptedException
+  public void test_runOnKubernetesOrWorkerBasedOnStrategy() throws ExecutionException, InterruptedException
   {
-    RunnerSelectorSpec spec = new RunnerSelectorSpec("k8s", ImmutableMap.of("index_kafka", "worker"));
+    MixRunnerStrategy runnerStrategy = new MixRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, false, spec)
+        new KubernetesAndWorkerTaskRunnerConfig(runnerStrategy)
     );
     Task taskMock = EasyMock.createMock(Task.class);
     TaskStatus taskStatus = TaskStatus.success(ID);

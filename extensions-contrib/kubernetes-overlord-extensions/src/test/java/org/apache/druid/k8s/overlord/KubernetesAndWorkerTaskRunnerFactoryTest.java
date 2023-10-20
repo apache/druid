@@ -45,7 +45,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new KubernetesAndWorkerTaskRunnerConfig(null, null, null)
+        new KubernetesAndWorkerTaskRunnerConfig(null)
     );
 
     EasyMock.expect(httpRemoteTaskRunnerFactory.build()).andReturn(null);
@@ -63,7 +63,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new KubernetesAndWorkerTaskRunnerConfig("remote", null, null)
+        new KubernetesAndWorkerTaskRunnerConfig(new WorkerRunnerStrategy("remote"))
     );
 
     EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
@@ -81,7 +81,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new KubernetesAndWorkerTaskRunnerConfig("noop", null, null)
+        new KubernetesAndWorkerTaskRunnerConfig(new WorkerRunnerStrategy("noop"))
     );
 
     EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);

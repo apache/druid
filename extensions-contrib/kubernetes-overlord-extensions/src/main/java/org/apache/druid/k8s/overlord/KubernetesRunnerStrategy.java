@@ -19,15 +19,19 @@
 
 package org.apache.druid.k8s.overlord;
 
-import org.junit.Assert;
-import org.junit.Test;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.indexing.common.task.Task;
 
-public class RunnerSelectorSpecTest
+public class KubernetesRunnerStrategy implements RunnerStrategy
 {
-  @Test
-  public void test_whenInvalidDefaultValueConfigured_throwException()
+  @JsonCreator
+  public KubernetesRunnerStrategy()
   {
-    Assert.assertThrows(RuntimeException.class, () -> new RunnerSelectorSpec(null, null));
-    Assert.assertThrows(RuntimeException.class, () -> new RunnerSelectorSpec("unknownRunnerType", null));
+  }
+
+  @Override
+  public RunnerType getRunnerTypeForTask(Task task)
+  {
+    return RunnerType.KUBERNETES_RUNNER_TYPE;
   }
 }

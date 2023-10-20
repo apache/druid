@@ -102,26 +102,20 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    if (kubernetesAndWorkerTaskRunnerConfig.isSendAllTasksToWorkerTaskRunner()) {
-      return workerTaskRunner.run(task);
-    } else {
-      KubernetesRunnerSelectStrategy runnerSelectStrategy = kubernetesAndWorkerTaskRunnerConfig.getRunnerSelectStrategy();
-      if (runnerSelectStrategy == null) {
-        return kubernetesTaskRunner.run(task);
-      }
-
-      String runnerTypeForTask = runnerSelectStrategy.getRunnerTypeForTask(task);
-      if (KubernetesRunnerSelectStrategy.WORKER_RUNNER_TYPE.equals(runnerTypeForTask)) {
-        return workerTaskRunner.run(task);
-      } else if (KubernetesRunnerSelectStrategy.KUBERNETES_RUNNER_TYPE.equals(runnerTypeForTask)) {
+    RunnerStrategy runnerStrategy = kubernetesAndWorkerTaskRunnerConfig.getRunnerStrategy();
+    RunnerStrategy.RunnerType runnerType = runnerStrategy.getRunnerTypeForTask(task);
+    if (runnerType != null) {
+      if (RunnerStrategy.RunnerType.KUBERNETES_RUNNER_TYPE.equals(runnerType)) {
         return kubernetesTaskRunner.run(task);
       } else {
-        throw DruidException.defensive()
-                            .build("Wrong runner type [%s] configured for task type [%s]",
-                                   runnerTypeForTask,
-                                   task.getType()
-                            );
+        return workerTaskRunner.run(task);
       }
+    } else {
+      throw DruidException.defensive()
+                          .build(
+                              "Wrong runner type configured for task type [%s]",
+                              task.getType()
+                          );
     }
   }
 

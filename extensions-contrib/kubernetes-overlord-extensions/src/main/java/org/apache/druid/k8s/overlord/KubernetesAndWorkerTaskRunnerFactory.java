@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
 
@@ -55,11 +56,25 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   {
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunnerFactory.build(),
-        HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(kubernetesAndWorkerTaskRunnerConfig.getWorkerTaskRunnerType()) ?
-            httpRemoteTaskRunnerFactory.build() : remoteTaskRunnerFactory.build(),
+        getWorkerTaskRunner(kubernetesAndWorkerTaskRunnerConfig),
         kubernetesAndWorkerTaskRunnerConfig
     );
     return runner;
+  }
+
+  private WorkerTaskRunner getWorkerTaskRunner(KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig)
+  {
+    RunnerStrategy runnerStrategy = kubernetesAndWorkerTaskRunnerConfig.getRunnerStrategy();
+    String workerType = null;
+    if (runnerStrategy instanceof WorkerRunnerStrategy) {
+      workerType = ((WorkerRunnerStrategy) runnerStrategy).getWorkerType();
+    } else if (runnerStrategy instanceof MixRunnerStrategy) {
+      workerType = ((MixRunnerStrategy) runnerStrategy).getWorkerType();
+    }
+
+    return
+        workerType == null || HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType) ?
+        httpRemoteTaskRunnerFactory.build() : remoteTaskRunnerFactory.build();
   }
 
   @Override

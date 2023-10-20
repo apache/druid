@@ -19,34 +19,39 @@
 
 package org.apache.druid.k8s.overlord;
 
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexing.common.task.Task;
 
 /**
  * A strategy for selecting a runner type to run a task, it could be k8s or worker.
  */
-public class KubernetesRunnerSelectStrategy
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = KubernetesRunnerStrategy.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "k8s", value = KubernetesRunnerStrategy.class),
+    @JsonSubTypes.Type(name = "worker", value = WorkerRunnerStrategy.class),
+    @JsonSubTypes.Type(name = "taskSpec", value = MixRunnerStrategy.class)
+})
+public interface RunnerStrategy
 {
-  public static final String KUBERNETES_RUNNER_TYPE = "k8s";
-  public static final String WORKER_RUNNER_TYPE = "worker";
-
-  private final RunnerSelectorSpec runnerSelectorSpec;
-
-  public KubernetesRunnerSelectStrategy(
-      RunnerSelectorSpec runnerSelectorSpec
-  )
+  enum RunnerType
   {
-    Preconditions.checkNotNull(runnerSelectorSpec);
-    this.runnerSelectorSpec = runnerSelectorSpec;
-  }
+    KUBERNETES_RUNNER_TYPE("k8s"),
+    WORKER_REMOTE_RUNNER_TYPE("remote"),
+    WORKER_HTTPREMOTE_RUNNER_TYPE("httpRemote");
 
-  public String getRunnerTypeForTask(Task task)
-  {
-    String runnerType = null;
-    if (runnerSelectorSpec.getOverrides() != null) {
-      runnerType = runnerSelectorSpec.getOverrides().get(task.getType());
+    private final String type;
+
+    RunnerType(String type)
+    {
+      this.type = type;
     }
 
-    return runnerType == null ? runnerSelectorSpec.getDefault() : runnerType;
+    public String getType()
+    {
+      return type;
+    }
   }
+
+  RunnerType getRunnerTypeForTask(Task task);
 }
