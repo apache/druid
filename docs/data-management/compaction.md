@@ -22,6 +22,7 @@ description: "Defines compaction and automatic compaction (auto-compaction or au
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
+  
 Query performance in Apache Druid depends on optimally sized segments. Compaction is one strategy you can use to optimize segment size for your Druid database. Compaction tasks read an existing set of segments for a given time interval and combine the data into a new "compacted" set of segments. In some cases the compacted segments are larger, but there are fewer of them. In other cases the compacted segments may be smaller. Compaction tends to increase performance because optimized segments require less per-segment processing and less memory overhead for ingestion and for querying paths.
 
 ## Compaction guidelines
