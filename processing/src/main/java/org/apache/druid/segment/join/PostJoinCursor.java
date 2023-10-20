@@ -73,6 +73,15 @@ public class PostJoinCursor implements Cursor
   {
     if (valueMatcher != null) {
       while (!isDone() && !valueMatcher.matches(false)) {
+        baseCursor.advance();
+      }
+    }
+  }
+
+  private void advanceToMatchUninterruptibly()
+  {
+    if (valueMatcher != null) {
+      while (!isDone() && !valueMatcher.matches(false)) {
         baseCursor.advanceUninterruptibly();
       }
     }
@@ -99,15 +108,15 @@ public class PostJoinCursor implements Cursor
   @Override
   public void advance()
   {
-    advanceUninterruptibly();
-    BaseQuery.checkInterrupted();
+    baseCursor.advance();
+    advanceToMatch();
   }
 
   @Override
   public void advanceUninterruptibly()
   {
     baseCursor.advanceUninterruptibly();
-    advanceToMatch();
+    advanceToMatchUninterruptibly();
   }
 
   @Override
