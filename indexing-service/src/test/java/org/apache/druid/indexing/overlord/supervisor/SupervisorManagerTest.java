@@ -23,9 +23,13 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.easymock.Capture;
@@ -434,6 +438,69 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertTrue(manager.getSupervisorIds().isEmpty());
   }
 
+  @Test
+  public void testGetActiveSupervisorIdForDatasourceWithAppendLock()
+  {
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(Collections.emptyMap());
+
+    NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec("noop", ImmutableList.of("noopDS"));
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
+    SeekableStreamSupervisorSpec suspendedSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    Supervisor suspendedSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
+    EasyMock.expect(suspendedSpec.getId()).andReturn("suspendedSpec").anyTimes();
+    EasyMock.expect(suspendedSpec.isSuspended()).andReturn(true).anyTimes();
+    EasyMock.expect(suspendedSpec.getDataSources()).andReturn(ImmutableList.of("suspendedDS")).anyTimes();
+    EasyMock.expect(suspendedSpec.createSupervisor()).andReturn(suspendedSupervisor).anyTimes();
+    EasyMock.expect(suspendedSpec.createAutoscaler(suspendedSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(suspendedSpec.getContext()).andReturn(null).anyTimes();
+    EasyMock.replay(suspendedSpec);
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
+    SeekableStreamSupervisorSpec activeSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    Supervisor activeSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
+    EasyMock.expect(activeSpec.getId()).andReturn("activeSpec").anyTimes();
+    EasyMock.expect(activeSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(activeSpec.getDataSources()).andReturn(ImmutableList.of("activeDS")).anyTimes();
+    EasyMock.expect(activeSpec.createSupervisor()).andReturn(activeSupervisor).anyTimes();
+    EasyMock.expect(activeSpec.createAutoscaler(activeSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(activeSpec.getContext()).andReturn(null).anyTimes();
+    EasyMock.replay(activeSpec);
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
+    SeekableStreamSupervisorSpec activeAppendSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    Supervisor activeAppendSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
+    EasyMock.expect(activeAppendSpec.getId()).andReturn("activeAppendSpec").anyTimes();
+    EasyMock.expect(activeAppendSpec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(activeAppendSpec.getDataSources()).andReturn(ImmutableList.of("activeAppendDS")).anyTimes();
+    EasyMock.expect(activeAppendSpec.createSupervisor()).andReturn(activeAppendSupervisor).anyTimes();
+    EasyMock.expect(activeAppendSpec.createAutoscaler(activeAppendSupervisor)).andReturn(null).anyTimes();
+    EasyMock.expect(activeAppendSpec.getContext()).andReturn(ImmutableMap.of(
+        Tasks.TASK_LOCK_TYPE,
+        TaskLockType.APPEND.name()
+    )).anyTimes();
+    EasyMock.replay(activeAppendSpec);
+    metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
+
+    replayAll();
+    manager.start();
+
+    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("nonExistent").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(noopSupervisorSpec);
+    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("noopDS").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(suspendedSpec);
+    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("suspendedDS").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(activeSpec);
+    Assert.assertFalse(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeDS").isPresent());
+
+    manager.createOrUpdateAndStartSupervisor(activeAppendSpec);
+    Assert.assertTrue(manager.getActiveSupervisorIdForDatasourceWithAppendLock("activeAppendDS").isPresent());
+
+    verifyAll();
+  }
 
   private static class TestSupervisorSpec implements SupervisorSpec
   {
