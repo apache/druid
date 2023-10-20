@@ -64,6 +64,14 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       return false;
     }
   };
+  public static final ColumnCapabilitiesImpl NULL_COLUMN = makeNilCaps();
+
+  private static ColumnCapabilitiesImpl makeNilCaps()
+  {
+    final ColumnCapabilitiesImpl capabilities = createDefault();
+    capabilities.hasNulls = Capable.TRUE;
+    return capabilities;
+  }
 
   public static ColumnCapabilitiesImpl copyOf(@Nullable final ColumnCapabilities other)
   {
@@ -82,6 +90,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     }
     return capabilities;
   }
+
 
   /**
    * Copy a {@link ColumnCapabilities} and coerce all {@link ColumnCapabilities.Capable#UNKNOWN} to
