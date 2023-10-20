@@ -24,12 +24,19 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 
@@ -38,6 +45,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
+import org.apache.druid.timeline.partition.ShardSpec;
 
 /**
  * The broker-side (also used by server in some cases) API for a specific Query type.
@@ -290,6 +298,20 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
   {
     return segments;
+  }
+
+  public <S extends Comparable<?>, T> Map<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> decorateBySegmentsChunk(
+      QueryPlus<T> queryPlus,
+      Map<S, List<SegmentDescriptor>> serverAndSegments,
+      int numCorePartitions,
+      List<String> domainDimensions
+  )
+  {
+    final SortedMap<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> serverSegments = new TreeMap<>();
+    for (Entry<S, List<SegmentDescriptor>> entry : serverAndSegments.entrySet()) {
+      serverSegments.put(entry.getKey(), Pair.of(entry.getValue(), queryPlus));
+    }
+    return serverSegments;
   }
 
   /**

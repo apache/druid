@@ -883,10 +883,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return new Builder(this).setSubtotalsSpec(subtotalsSpec).build();
   }
 
-  public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
+  public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs, final HavingSpec havingSpec)
   {
-    return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
+    return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).setHavingSpec(havingSpec).build();
   }
+
 
   private static void verifyOutputNames(
       List<DimensionSpec> dimensions,
