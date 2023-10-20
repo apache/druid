@@ -20,8 +20,6 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -33,6 +31,7 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,8 +43,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Place where tests can live that are testing the interactions of multiple semantic interfaces
@@ -69,8 +67,8 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
             "some", new IntArrayColumn(new int[] {3, 54, 21, 1, 5, 54, 2, 3, 92}))));
     AtomicInteger currRow = new AtomicInteger();
     ColumnSelectorFactory csfm = ColumnSelectorFactoryMaker.fromRAC(rac).make(currRow);
-    DruidException e = assertThrows(DruidException.class, () -> csfm.makeColumnValueSelector("nonexistent"));
-    assertThat(e, DruidExceptionMatcher.defensive().expectMessageIs("Column[nonexistent] not found!"));
+
+    assertEquals(DimensionSelector.nilSelector(), csfm.makeColumnValueSelector("nonexistent"));
   }
 
   /**
