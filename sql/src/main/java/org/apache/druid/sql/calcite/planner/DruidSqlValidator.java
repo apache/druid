@@ -61,7 +61,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
-
     super.validateCall(call, scope);
   }
 
