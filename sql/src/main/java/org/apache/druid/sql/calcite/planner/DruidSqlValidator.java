@@ -22,12 +22,13 @@ package org.apache.druid.sql.calcite.planner;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
-import org.apache.druid.error.InvalidSqlInput;
 
 /**
  * Druid extended SQL validator. (At present, it doesn't actually
@@ -51,16 +52,27 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     if (call.getKind() == SqlKind.NULLS_FIRST) {
       SqlNode op0 = call.getOperandList().get(0);
       if (op0.getKind() == SqlKind.DESCENDING) {
-        throw InvalidSqlInput.exception("DESCENDING ordering with NULLS FIRST is not supported!");
+        throw buildCalciteContextException("DESCENDING ordering with NULLS FIRST is not supported!", call);
       }
     }
     if (call.getKind() == SqlKind.NULLS_LAST) {
       SqlNode op0 = call.getOperandList().get(0);
       if (op0.getKind() != SqlKind.DESCENDING) {
-        throw InvalidSqlInput.exception("ASCENDING ordering with NULLS LAST is not supported!");
+        throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
 
     super.validateCall(call, scope);
+  }
+
+  private CalciteContextException buildCalciteContextException(String message, SqlCall call)
+  {
+    SqlParserPos pos = call.getParserPosition();
+    return new CalciteContextException(message,
+        null,
+        pos.getLineNum(),
+        pos.getColumnNum(),
+        pos.getEndLineNum(),
+        pos.getEndColumnNum());
   }
 }
