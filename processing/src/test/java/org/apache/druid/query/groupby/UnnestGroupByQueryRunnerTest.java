@@ -40,6 +40,8 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
@@ -702,6 +704,228 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     return GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
+  }
+
+  @Test
+  public void testGroupByOnUnnestedFilterMatch()
+  {
+    // testGroupByOnUnnestedColumn but with filter to match single value
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+            null,
+            ExprMacroTable.nil()
+        ),
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        )
+        .setDimFilter(
+            new EqualityFilter(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, ColumnType.STRING, "a", null)
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
+        .build();
+
+    List<ResultRow> expectedResults = Collections.singletonList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "a",
+            "rows", 2L
+        )
+    );
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
+  }
+
+  @Test
+  public void testGroupByOnUnnestedNotFilterMatch()
+  {
+    // testGroupByOnUnnestedColumn but with negated filter to match everything except 1 value
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+            null,
+            ExprMacroTable.nil()
+        ),
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        )
+        .setDimFilter(
+            NotDimFilter.of(new EqualityFilter(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, ColumnType.STRING, "a", null))
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "b",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "e",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "h",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "m",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "n",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "p",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "t",
+            "rows", 4L
+        )
+    );
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
+  }
+
+  @Test
+  public void testGroupByOnUnnestedNotFilterMatchNonexistentValue()
+  {
+    // testGroupByOnUnnestedColumn but with negated filter on nonexistent value to still match everything
+    cannotVectorize();
+
+    final DataSource unnestDataSource = UnnestDataSource.create(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+            null,
+            ExprMacroTable.nil()
+        ),
+        null
+    );
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(unnestDataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
+        )
+        .setDimFilter(
+            NotDimFilter.of(new EqualityFilter(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, ColumnType.STRING, "noexist", null))
+        )
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+        .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
+        .build();
+
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "a",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "b",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "e",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "h",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "m",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "n",
+            "rows", 2L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "p",
+            "rows", 6L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "t",
+            "rows", 4L
+        )
+    );
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
   }
 
   private Map<String, Object> makeContext()

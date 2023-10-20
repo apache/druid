@@ -64,7 +64,6 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   private static final String PROP_SPEC = "spec";
   private static final boolean SKIP_NULL = true;
 
-  private final String supervisorTaskId;
   private final String subtaskSpecId;
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
@@ -98,7 +97,6 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
     this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
-    this.supervisorTaskId = supervisorTaskId;
     this.intervalToPartitions = intervalToPartitions;
   }
 
@@ -129,12 +127,6 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   public ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
-  }
-
-  @JsonProperty
-  public String getSupervisorTaskId()
-  {
-    return supervisorTaskId;
   }
 
   @JsonProperty
@@ -176,7 +168,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
     return tryTimeChunkLock(
-        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+        new SurrogateTaskActionClient(getSupervisorTaskId(), taskActionClient),
         getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
@@ -194,7 +186,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         getDataSource(),
         getSubtaskSpecId(),
         ingestionSchema.getDataSchema().getGranularitySpec(),
-        new SupervisorTaskAccess(supervisorTaskId, taskClient),
+        new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
         partitionAnalysis
     );
   }
