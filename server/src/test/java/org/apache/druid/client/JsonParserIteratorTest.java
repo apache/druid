@@ -316,8 +316,41 @@ public class JsonParserIteratorTest
     }
   }
 
+  public static class IAEExceptionConversionTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    private String meshErrMsg = "pstream connect error or disconnect/reset before header";
+
+    @Test
+    public void testMeshProxyError()
+        throws JsonProcessingException
+    {
+      JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+          JAVA_TYPE,
+          Futures.immediateFuture(
+              mockMeshProxyResponse(meshErrMsg)
+          ),
+          URL,
+          null,
+          HOST,
+          OBJECT_MAPPER
+      );
+
+      expectedException.expect(QueryInterruptedException.class);
+      expectedException.expectMessage(meshErrMsg);
+      iterator.hasNext();
+    }
+  }
+
   private static InputStream mockErrorResponse(Exception e) throws JsonProcessingException
   {
     return new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(e));
+  }
+
+  private static InputStream mockMeshProxyResponse(String errMsg) throws JsonProcessingException
+  {
+    return new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(errMsg));
   }
 }
