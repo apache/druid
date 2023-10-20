@@ -56,51 +56,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   private final List<OperatorFactory> operators;
   private final List<OperatorFactory> leafOperators;
 
-  public static WindowOperatorQuery build(
-      DataSource dataSource,
-      QuerySegmentSpec intervals,
-      Map<String, Object> context,
-      RowSignature rowSignature,
-      List<OperatorFactory> operators
-  )
-  {
-    List<OperatorFactory> leafOperators = new ArrayList<OperatorFactory>();
-
-    if (dataSource instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
-      if (subQuery instanceof ScanQuery) {
-        // transform the scan query into a leaf operator
-        ScanQuery scan = (ScanQuery) subQuery;
-        dataSource = subQuery.getDataSource();
-
-        ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-        for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
-          ordering.add(
-              new ColumnWithDirection(
-                  orderBy.getColumnName(),
-                  ScanQuery.Order.DESCENDING == orderBy.getOrder()
-                      ? ColumnWithDirection.Direction.DESC
-                      : ColumnWithDirection.Direction.ASC));
-        }
-
-        leafOperators.add(
-            new ScanOperatorFactory(
-                null,
-                scan.getFilter(),
-                (int) scan.getScanRowsLimit(),
-                scan.getColumns(),
-                scan.getVirtualColumns(),
-                ordering));
-      }
-    } else if (dataSource instanceof InlineDataSource) {
-      // ok
-    } else {
-      throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
-    }
-
-    return new WindowOperatorQuery(dataSource, intervals, context, rowSignature, operators, leafOperators);
-  }
-
   @JsonCreator
   public WindowOperatorQuery(
       @JsonProperty("dataSource") DataSource dataSource,
