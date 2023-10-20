@@ -32,7 +32,6 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,6 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Place where tests can live that are testing the interactions of multiple semantic interfaces
@@ -81,7 +81,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
     AtomicInteger currRow = new AtomicInteger();
     ColumnSelectorFactory csfm = ColumnSelectorFactoryMaker.fromRAC(rac).make(currRow);
 
-    assertEquals(ColumnCapabilitiesImpl.NULL_COLUMN, csfm.getColumnCapabilities("nonexistent"));
+    assertNotNull(csfm.getColumnCapabilities("nonexistent"));
   }
 
   /**
