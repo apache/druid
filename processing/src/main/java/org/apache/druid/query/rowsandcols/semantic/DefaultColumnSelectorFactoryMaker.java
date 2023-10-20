@@ -162,7 +162,7 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     {
       return withColumnAccessor(column, columnAccessor -> {
         if (columnAccessor == null) {
-          return ColumnCapabilitiesImpl.createDefault();
+          return null;
         } else {
           return new ColumnCapabilitiesImpl()
               .setType(columnAccessor.getType())

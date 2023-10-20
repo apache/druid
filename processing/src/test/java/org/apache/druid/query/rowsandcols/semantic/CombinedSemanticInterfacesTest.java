@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 /**
  * Place where tests can live that are testing the interactions of multiple semantic interfaces
@@ -81,7 +81,7 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
     AtomicInteger currRow = new AtomicInteger();
     ColumnSelectorFactory csfm = ColumnSelectorFactoryMaker.fromRAC(rac).make(currRow);
 
-    assertNotNull(csfm.getColumnCapabilities("nonexistent"));
+    assertNull(csfm.getColumnCapabilities("nonexistent"));
   }
 
   /**
