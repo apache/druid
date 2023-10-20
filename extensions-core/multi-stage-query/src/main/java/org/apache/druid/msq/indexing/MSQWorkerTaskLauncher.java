@@ -399,13 +399,11 @@ public class MSQWorkerTaskLauncher
 
       TaskTracker taskTracker = taskEntry.getValue();
 
-      long duration = (taskTracker.status.getDuration() == -1
-                       && taskTracker.status.getStatusCode() == TaskState.RUNNING)
-                      ? System.currentTimeMillis() - taskTracker.startTimeMillis
-                      : taskTracker.status.getDuration();
-
       workerStats.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
-                 .add(new WorkerStats(taskEntry.getKey(), taskTracker.status.getStatusCode(), duration));
+                 .add(new WorkerStats(taskEntry.getKey(),
+                                      taskTracker.status.getStatusCode(),
+                                      taskTracker.status.getDuration()
+                 ));
     }
 
     for (List<WorkerStats> workerStatsList : workerStats.values()) {
@@ -889,6 +887,5 @@ public class MSQWorkerTaskLauncher
     {
       return isRetrying;
     }
-
   }
 }
