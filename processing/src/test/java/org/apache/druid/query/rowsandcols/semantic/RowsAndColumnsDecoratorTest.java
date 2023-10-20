@@ -222,7 +222,6 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
     } else {
       final RowsAndColumns rac = decor.toRowsAndColumns();
       Assert.assertEquals(msg, vals.size(), rac.numRows());
-      rac.findColumn("xx");
 
       ColumnAccessor[] accessors = new ColumnAccessor[siggy.size()];
       for (int i = 0; i < siggy.size(); ++i) {

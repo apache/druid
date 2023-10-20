@@ -204,7 +204,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     final Sequence<Cursor> cursors = as.makeCursors(
         filter,
         interval == null ? Intervals.ETERNITY : interval,
-        virtualColumns,
+        virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns,
         Granularities.ALL,
         false,
         null
@@ -215,10 +215,14 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     if (viewableColumns != null) {
       cols = viewableColumns;
     } else {
-      cols = ImmutableList.<String>builder()
-          .addAll(base.getColumnNames())
-          .addAll(virtualColumns.getColumnNames())
-          .build();
+      if (virtualColumns == null) {
+        cols = base.getColumnNames();
+      } else {
+        cols = ImmutableList.<String> builder()
+            .addAll(base.getColumnNames())
+            .addAll(virtualColumns.getColumnNames())
+            .build();
+      }
     }
     AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
@@ -235,9 +239,18 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       final RowSignature.Builder sigBob = RowSignature.builder();
 
       for (String col : cols) {
-        final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(col);
+        ColumnCapabilities capabilities;
+        capabilities = columnSelectorFactory.getColumnCapabilities(col);
         if (capabilities != null) {
           sigBob.add(col, capabilities.toColumnType());
+          continue;
+        }
+        if (virtualColumns != null) {
+          capabilities = virtualColumns.getColumnCapabilities(columnSelectorFactory, col);
+          if (capabilities != null) {
+            sigBob.add(col, capabilities.toColumnType());
+            continue;
+          }
         }
       }
       final RowSignature signature = sigBob.build();
