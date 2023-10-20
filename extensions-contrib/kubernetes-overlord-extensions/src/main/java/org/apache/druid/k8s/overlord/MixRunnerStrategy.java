@@ -33,7 +33,7 @@ public class MixRunnerStrategy implements RunnerStrategy
   @Nullable
   private final Map<String, String> overrides;
   private final RunnerStrategy kubernetesRunnerStrategy = new KubernetesRunnerStrategy();
-  private WorkerRunnerStrategy workerRunnerStrategy = null;
+  private WorkerRunnerStrategy workerRunnerStrategy;
   private final RunnerStrategy defaultRunnerStrategy;
   private final String defaultRunner;
 
@@ -80,7 +80,7 @@ public class MixRunnerStrategy implements RunnerStrategy
 
   public String getWorkerType()
   {
-    return workerRunnerStrategy == null ? null : workerRunnerStrategy.getWorkerType();
+    return workerRunnerStrategy.getWorkerType();
   }
 
   private RunnerStrategy getRunnerSelectStrategy(String runnerType)
