@@ -225,8 +225,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         getContext(),
         rowSignature,
         operators,
-        leafOperators
-    );
+        leafOperators);
   }
 
   @Override
@@ -265,4 +264,5 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
            ", operators=" + operators +
            '}';
   }
+
 }
