@@ -43,7 +43,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -51,7 +50,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
-import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -69,7 +67,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
@@ -947,52 +944,6 @@ public class DruidQuery
     return true;
   }
 
-  /**
-   * We can re-write scan-style sub queries into an operator instead of doing the actual Scan query.
-   */
-  private static Pair<DataSource, List<OperatorFactory>> pushScanQueryIntoOperators(final DataSource dataSource)
-  {
-    DataSource newDataSource;
-    List<OperatorFactory> leafOperators = new ArrayList<OperatorFactory>();
-
-    if (dataSource instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
-      if (subQuery instanceof ScanQuery) {
-        // transform the scan query into a leaf operator
-        ScanQuery scan = (ScanQuery) subQuery;
-        newDataSource = subQuery.getDataSource();
-
-        ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-        for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
-          ordering.add(
-              new ColumnWithDirection(
-                  orderBy.getColumnName(),
-                  ScanQuery.Order.DESCENDING == orderBy.getOrder()
-                      ? ColumnWithDirection.Direction.DESC
-                      : ColumnWithDirection.Direction.ASC));
-        }
-
-        leafOperators.add(
-            new ScanOperatorFactory(
-                null,
-                scan.getFilter(),
-                (int) scan.getScanRowsLimit(),
-                scan.getColumns(),
-                scan.getVirtualColumns(),
-                ordering));
-      } else {
-        newDataSource = dataSource;
-      }
-    } else if (dataSource instanceof InlineDataSource) {
-      newDataSource = dataSource;
-    } else {
-      throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
-    }
-
-    return new Pair<>(newDataSource, leafOperators);
-  }
-
-
   public DataSource getDataSource()
   {
     return dataSource;
@@ -1512,19 +1463,14 @@ public class DruidQuery
           .addAll(windowing.getOperators())
           .build();
     }
-
-
-    Pair<DataSource, List<OperatorFactory>> dataSourceLeafOpsPair = pushScanQueryIntoOperators(dataSource);
-    final DataSource dataSource1 = dataSourceLeafOpsPair.lhs;
-    final List<OperatorFactory> leafOperators = dataSourceLeafOpsPair.rhs ;
-
     return new WindowOperatorQuery(
-        dataSource1,
+        dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         operators,
-        leafOperators);
+        null
+    );
   }
 
   /**

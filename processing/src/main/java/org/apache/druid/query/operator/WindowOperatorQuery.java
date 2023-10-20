@@ -21,7 +21,6 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -52,6 +51,33 @@ import java.util.Objects;
  */
 public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 {
+  private static DataSource validateMaybeRewriteDataSource(DataSource dataSource, boolean hasLeafs)
+  {
+    if (hasLeafs) {
+      return dataSource;
+    }
+
+    // We can re-write scan-style sub queries into an operator instead of doing the actual Scan query.  So, we
+    // check for that and, if we are going to do the rewrite, then we return the sub datasource such that the
+    // parent constructor in BaseQuery stores the actual data source that we want to be distributed to.
+
+    // At this point, we could also reach into a QueryDataSource and validate that the ordering expected by the
+    // partitioning at least aligns with the ordering coming from the underlying query.  We unfortunately don't
+    // have enough information to validate that the underlying ordering aligns with expectations for the actual
+    // window operator queries, but maybe we could get that and validate it here too.
+    if (dataSource instanceof QueryDataSource) {
+      final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+      if (subQuery instanceof ScanQuery) {
+        return subQuery.getDataSource();
+      }
+      return dataSource;
+    } else if (dataSource instanceof InlineDataSource) {
+      return dataSource;
+    } else {
+      throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
+    }
+  }
+
   private final RowSignature rowSignature;
   private final List<OperatorFactory> operators;
   private final List<OperatorFactory> leafOperators;
@@ -67,14 +93,51 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   )
   {
     super(
-        dataSource,
+        validateMaybeRewriteDataSource(dataSource, leafOperators != null),
         intervals,
         false,
         context
     );
     this.rowSignature = rowSignature;
     this.operators = operators;
-    this.leafOperators = Preconditions.checkNotNull(leafOperators, "leafOperators may not be null at this point!");
+
+    if (leafOperators == null) {
+      this.leafOperators = new ArrayList<>();
+      // We have to double check again because this was validated in a static context before passing to the `super()`
+      // and we cannot save state from that...  Ah well.
+
+      if (dataSource instanceof QueryDataSource) {
+        final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+        if (subQuery instanceof ScanQuery) {
+          ScanQuery scan = (ScanQuery) subQuery;
+
+          ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
+            ordering.add(
+                new ColumnWithDirection(
+                    orderBy.getColumnName(),
+                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
+                    ? ColumnWithDirection.Direction.DESC
+                    : ColumnWithDirection.Direction.ASC
+                )
+            );
+          }
+
+          this.leafOperators.add(
+              new ScanOperatorFactory(
+                  null,
+                  scan.getFilter(),
+                  (int) scan.getScanRowsLimit(),
+                  scan.getColumns(),
+                  scan.getVirtualColumns(),
+                  ordering
+              )
+          );
+        }
+      }
+    } else {
+      this.leafOperators = leafOperators;
+    }
   }
 
   @JsonProperty("operatorDefinition")
@@ -165,7 +228,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         leafOperators
     );
   }
-
 
   @Override
   public boolean equals(Object o)
