@@ -14263,7 +14263,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 DESC NULLS FIRST) from druid.foo")
         .run());
 
-    assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported!"));
+    assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
   }
 
   @Test
@@ -14273,6 +14273,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 NULLS LAST) from druid.foo")
         .run());
-    assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported!"));
+    assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
   }
 }

@@ -23,6 +23,7 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.runtime.CalciteContextException;
+import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
@@ -68,7 +69,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   {
     SqlParserPos pos = call.getParserPosition();
     return new CalciteContextException(message,
-        null,
+        new CalciteException(message, null),
         pos.getLineNum(),
         pos.getColumnNum(),
         pos.getEndLineNum(),
