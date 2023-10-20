@@ -107,5 +107,6 @@ You can check that your segments are rolled up or not by using [Segment Metadata
 
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
+- [Manual compaction](./manual-compaction.md) for how to run a one-time compaction task
 - [Automatic compaction](automatic-compaction.md) for how to enable and configure automatic compaction.
 

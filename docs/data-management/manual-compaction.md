@@ -3,9 +3,13 @@ id: manual-compaction
 title: "Manual compaction"
 ---
 
+In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance.
+
+You can perform manual compaction where you submit a one-time compaction task for a specific interval. Generally, you don't need to do this if you use [automatic compaction](./automatic-compaction.md), which is recommended for most workloads.
+
 ## Setting up manual compaction
 
-To perform a manual compaction, you submit a compaction task. Compaction tasks merge all segments for the defined interval according to the following syntax:
+ Compaction tasks merge all segments for the defined interval according to the following syntax:
 
 ```json
 {
@@ -134,3 +138,11 @@ The compaction task has two kinds of `inputSpec`:
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`rollup`|Enables compaction-time rollup. To preserve the original setting, keep the default value. To enable compaction-time rollup, set the value to `true`. Once the data is rolled up, you can no longer recover individual records.|No|
+
+## Learn more
+
+See the following topics for more information:
+* [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
+* [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
+* [Coordinator process](../design/coordinator.md#automatic-compaction) for details on how the Coordinator plans compaction tasks.
+
