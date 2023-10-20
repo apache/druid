@@ -17,27 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.segment.filter;
 
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodStatus;
-import org.junit.jupiter.api.Test;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-public class PeonPhaseTest
+/**
+ * Constant condition {@link ValueMatcher} that always returns true regardless of the underlying column value
+ */
+final class AllTrueValueMatcher implements ValueMatcher
 {
+  private static final AllTrueValueMatcher INSTANCE = new AllTrueValueMatcher();
 
-  @Test
-  void testGetPhaseForToMakeCoverageHappy()
+  public static AllTrueValueMatcher instance()
   {
-    Pod pod = mock(Pod.class);
-    PodStatus status = mock(PodStatus.class);
-    when(status.getPhase()).thenReturn("Succeeded");
-    when(pod.getStatus()).thenReturn(status);
-    assertEquals(PeonPhase.UNKNOWN, PeonPhase.getPhaseFor(null));
-    assertEquals(PeonPhase.SUCCEEDED, PeonPhase.getPhaseFor(pod));
+    return INSTANCE;
+  }
+
+  private AllTrueValueMatcher()
+  {
+  }
+
+  @Override
+  public boolean matches(boolean includeUnknown)
+  {
+    return true;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // nothing to inspect
   }
 }

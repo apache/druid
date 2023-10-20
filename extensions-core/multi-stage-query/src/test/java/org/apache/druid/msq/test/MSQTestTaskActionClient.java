@@ -28,7 +28,9 @@ import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -121,8 +123,15 @@ public class MSQTestTaskActionClient implements TaskActionClient
                                      ).collect(Collectors.toSet());
       }
     } else if (taskAction instanceof SegmentTransactionalInsertAction) {
-      // Always OK.
       final Set<DataSegment> segments = ((SegmentTransactionalInsertAction) taskAction).getSegments();
+      publishedSegments.addAll(segments);
+      return (RetType) SegmentPublishResult.ok(segments);
+    } else if (taskAction instanceof SegmentTransactionalReplaceAction) {
+      final Set<DataSegment> segments = ((SegmentTransactionalReplaceAction) taskAction).getSegments();
+      publishedSegments.addAll(segments);
+      return (RetType) SegmentPublishResult.ok(segments);
+    } else if (taskAction instanceof SegmentTransactionalAppendAction) {
+      final Set<DataSegment> segments = ((SegmentTransactionalAppendAction) taskAction).getSegments();
       publishedSegments.addAll(segments);
       return (RetType) SegmentPublishResult.ok(segments);
     } else {

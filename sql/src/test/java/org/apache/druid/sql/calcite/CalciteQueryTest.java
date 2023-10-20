@@ -109,7 +109,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.sql.calcite.DecoupledIgnore.Modes;
+import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -136,6 +136,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertThrows;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
@@ -673,6 +676,35 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{1L, 1.0f, "", 2L, 2.0f, "1", 1L, 3.0f, "2", 2L, 4.0f, "21"}
         )
+    );
+  }
+
+  @Test
+  public void testLatestToLatestByConversion()
+  {
+    msqIncompatible();
+    testQuery(
+        "SELECT LATEST(dim1,10) FROM (SELECT DISTINCT __time, dim1 from foo)",
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                                .setDataSource(CalciteTests.DATASOURCE1)
+                                .setInterval(querySegmentSpec(Filtration.eternity()))
+                                .setGranularity(Granularities.ALL)
+                                .setDimensions(dimensions(
+                                    new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
+                                    new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
+                                ))
+                                .setContext(QUERY_CONTEXT_DEFAULT)
+                                .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(
+                    new StringLastAggregatorFactory("a0", "d1", "d0", 10))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()),
+        ImmutableList.of(new Object[]{"abc"})
     );
   }
 
@@ -2647,10 +2679,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{"10.1", 1L},
             new Object[]{"2", 1L},
             new Object[]{"abc", 1L},
+            new Object[]{"def", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{"2", 1L},
             new Object[]{"def", 1L}
         )
     );
@@ -2688,7 +2725,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2773,7 +2810,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_CONVERT)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -2811,7 +2848,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
+  @NotYetSupported
   @Test
   public void testUnionAllQueries()
   {
@@ -2845,7 +2882,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testUnionAllQueriesWithLimit()
   {
@@ -3067,7 +3104,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           equality("dim2", "a", ColumnType.STRING),
                           and(
                               isNull("dim2"),
-                              not(equality("dim2", "a", ColumnType.STRING))
+                              NullHandling.sqlCompatible()
+                              ? not(istrue(equality("dim2", "a", ColumnType.STRING)))
+                              : not(selector("dim2", "a"))
                           )
                       )
                   )
@@ -3076,11 +3115,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            NullHandling.replaceWithDefault() ?
+            NullHandling.replaceWithDefault()
             // Matches everything but "abc"
-            new Object[]{5L} :
+            ? new Object[]{5L}
             // match only null values
-            new Object[]{4L}
+            : new Object[]{4L}
         )
     );
   }
@@ -3203,7 +3242,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * This test case should be in {@link CalciteUnionQueryTest}. However, there's a bug in the test framework that
    * doesn't reset framework once the merge buffers
    */
-  @DecoupledIgnore
+  @NotYetSupported
   @Test
   public void testUnionAllSameTableThreeTimes()
   {
@@ -3247,7 +3286,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
   {
@@ -4653,7 +4692,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -4685,7 +4724,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -4729,7 +4768,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_CONVERT)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
@@ -4813,13 +4852,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a1", "cnt"),
-                          not(equality("dim1", "abc", ColumnType.STRING))
+                          NullHandling.sqlCompatible()
+                          ? not(istrue(equality("dim1", "abc", ColumnType.STRING)))
+                          : not(selector("dim1", "abc"))
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a2", "cnt"),
-                          NullHandling.replaceWithDefault()
-                          ? selector("dim1", "a", new SubstringDimExtractionFn(0, 1))
-                          : expressionFilter("(substring(\"dim1\", 0, 1) == 'a')")
+                          NullHandling.sqlCompatible()
+                          ? expressionFilter("(substring(\"dim1\", 0, 1) == 'a')")
+                          : selector("dim1", "a", new SubstringDimExtractionFn(0, 1))
 
                       ),
                       new FilteredAggregatorFactory(
@@ -5317,7 +5358,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableQueries()
   {
@@ -5389,7 +5430,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableExactCountDistinctOnSketch()
   {
@@ -5893,7 +5934,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{5L}
+            new Object[]{NullHandling.replaceWithDefault() ? 5L : 4L}
         )
     );
   }
@@ -5946,7 +5987,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            new Object[]{NullHandling.replaceWithDefault() ? 2L : 1L}
         )
     );
   }
@@ -5981,7 +6022,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{5L}
+            NullHandling.replaceWithDefault() ? new Object[]{5L} : new Object[]{4L}
         )
     );
   }
@@ -6384,7 +6425,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testExactCountDistinctWithGroupingAndOtherAggregators()
   {
@@ -6439,7 +6480,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
   {
@@ -7082,7 +7123,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testExactCountDistinctUsingSubqueryWithWherePushDown()
   {
@@ -7120,12 +7161,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             new Object[]{3L, 2L}
-        ) :
-        ImmutableList.of(
-            new Object[]{5L, 3L}
         )
     );
 
@@ -7813,7 +7850,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testFilterOnCurrentTimestampWithIntervalArithmetic()
   {
@@ -7861,7 +7898,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testFilterOnCurrentTimestampOnView()
   {
@@ -10112,7 +10149,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
   {
@@ -11561,7 +11598,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore
+  @NotYetSupported
   @Test
   public void testRequireTimeConditionPositive()
   {
@@ -11765,7 +11802,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.ERROR_HANDLING)
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testRequireTimeConditionSemiJoinNegative()
   {
@@ -13744,7 +13781,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.PLAN_MISMATCH)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testPlanWithInFilterLessThanInSubQueryThreshold()
   {
@@ -14069,7 +14106,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-  @DecoupledIgnore
+  @NotYetSupported
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
@@ -14112,7 +14149,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledIgnore(mode = Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
@@ -14216,5 +14253,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}
         ));
+  }
+
+  @Test
+  public void testUnSupportedNullsFirst()
+  {
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 DESC NULLS FIRST) from druid.foo")
+        .run());
+
+    assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
+  }
+
+  @Test
+  public void testUnSupportedNullsLast()
+  {
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 NULLS LAST) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
   }
 }

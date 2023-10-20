@@ -31,6 +31,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.indexing.overlord.TaskRunnerUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
@@ -47,6 +50,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -89,6 +94,8 @@ public class KubernetesPeonLifecycle
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
+  private final List<Pair<TaskRunnerListener, Executor>> listeners;
+
   @MonotonicNonNull
   private LogWatch logWatch;
 
@@ -99,7 +106,8 @@ public class KubernetesPeonLifecycle
       KubernetesPeonClient kubernetesClient,
       TaskLogs taskLogs,
       ObjectMapper mapper,
-      TaskStateListener stateListener
+      TaskStateListener stateListener,
+      List<Pair<TaskRunnerListener, Executor>> listeners
   )
   {
     this.taskId = new K8sTaskId(task);
@@ -108,6 +116,7 @@ public class KubernetesPeonLifecycle
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
+    this.listeners = listeners;
   }
 
   /**
@@ -178,7 +187,11 @@ public class KubernetesPeonLifecycle
   {
     try {
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
-
+      TaskRunnerUtils.notifyLocationChanged(
+          listeners,
+          task.getId(),
+          getTaskLocation()
+      );
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
           timeout,
@@ -190,12 +203,14 @@ public class KubernetesPeonLifecycle
     finally {
       try {
         saveLogs();
+        shutdown();
       }
       catch (Exception e) {
-        log.warn(e, "Log processing failed for task [%s]", taskId);
+        log.warn(e, "Cleanup failed for task [%s]", taskId);
       }
-
-      stopTask();
+      finally {
+        stopTask();
+      }
     }
   }
 

@@ -735,8 +735,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{NULL_STRING, 3L},
+            new Object[]{"xabc", 1L}
+        )
+        : ImmutableList.of(
+            new Object[]{null, 5L},
             new Object[]{"xabc", 1L}
         )
     );
@@ -775,8 +780,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{NULL_STRING, 3L},
+            new Object[]{"xabc", 1L}
+        )
+        :
+        ImmutableList.of(
             new Object[]{"xabc", 1L}
         )
     );
@@ -823,8 +833,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{NULL_STRING, 6L},
+            new Object[]{"xabc", 2L}
+        )
+        : ImmutableList.of(
             new Object[]{"xabc", 2L}
         )
     );
@@ -5593,7 +5607,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                           or(
                               isNull("__j0.a0"),
                               not(
-                                  or(
+                                  NullHandling.sqlCompatible()
+                                  ? istrue(
+                                      or(
+                                          not(expressionFilter("\"__j0.d0\"")),
+                                          notNull("__j0.d0")
+                                      )
+                                  )
+                                  : or(
                                       not(expressionFilter("\"__j0.d0\"")),
                                       notNull("__j0.d0")
                                   )

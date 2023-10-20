@@ -37,6 +37,7 @@ public class DoubleArrayFieldReader extends NumericArrayFieldReader
   {
     return new NumericArrayFieldSelector<Double>(memory, fieldPointer)
     {
+      private static final int FIELD_SIZE = Byte.BYTES + Double.BYTES;
       final SettableFieldPointer fieldPointer = new SettableFieldPointer();
       final ColumnValueSelector<?> columnValueSelector =
           DoubleFieldReader.forArray().makeColumnValueSelector(memory, fieldPointer);
@@ -45,7 +46,7 @@ public class DoubleArrayFieldReader extends NumericArrayFieldReader
       @Override
       public Double getIndividualValueAtMemory(long position)
       {
-        fieldPointer.setPosition(position);
+        fieldPointer.setPositionAndLength(position, FIELD_SIZE);
         if (columnValueSelector.isNull()) {
           return null;
         }
@@ -55,7 +56,7 @@ public class DoubleArrayFieldReader extends NumericArrayFieldReader
       @Override
       public int getIndividualFieldSize()
       {
-        return Byte.BYTES + Double.BYTES;
+        return FIELD_SIZE;
       }
     };
   }

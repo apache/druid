@@ -20,17 +20,34 @@
 package org.apache.druid.segment.filter;
 
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 /**
-*/
-public final class BooleanValueMatcher
+ * Constant condition {@link ValueMatcher} that always returns the boolean value passed to {@link #matches(boolean)},
+ * for columns which contain only null values
+ */
+final class AllUnknownValueMatcher implements ValueMatcher
 {
-  public static ValueMatcher of(boolean matches)
+  private static final AllUnknownValueMatcher INSTANCE = new AllUnknownValueMatcher();
+
+  public static AllUnknownValueMatcher instance()
   {
-    return matches ? TrueValueMatcher.instance() : FalseValueMatcher.instance();
+    return INSTANCE;
   }
 
-  private BooleanValueMatcher()
+  private AllUnknownValueMatcher()
   {
+  }
+
+  @Override
+  public boolean matches(boolean includeUnknown)
+  {
+    return includeUnknown;
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    // nothing to inspect
   }
 }

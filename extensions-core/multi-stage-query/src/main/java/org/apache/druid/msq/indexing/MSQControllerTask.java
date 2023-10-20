@@ -51,6 +51,8 @@ import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -204,12 +206,19 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   {
     // If we're in replace mode, acquire locks for all intervals before declaring the task ready.
     if (isIngestion(querySpec) && ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()) {
+      final TaskLockType taskLockType =
+          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(querySpec.getQuery().getContext()), true);
       final List<Interval> intervals =
           ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks();
-      log.debug("Task[%s] trying to acquire[%s] locks for intervals[%s] to become ready", getId(), TaskLockType.EXCLUSIVE, intervals);
+      log.debug(
+          "Task[%s] trying to acquire[%s] locks for intervals[%s] to become ready",
+          getId(),
+          taskLockType,
+          intervals
+      );
       for (final Interval interval : intervals) {
         final TaskLock taskLock =
-            taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
+            taskActionClient.submit(new TimeChunkLockTryAcquireAction(taskLockType, interval));
 
         if (taskLock == null) {
           return false;

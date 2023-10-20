@@ -133,7 +133,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     }
 
     return new ImmutableBitmapValues(index.forValue(value).computeBitmapResult(
-        new DefaultBitmapResultFactory(adapter.getQueryableIndex().getBitmapFactoryForDimensions()))
+        new DefaultBitmapResultFactory(adapter.getQueryableIndex().getBitmapFactoryForDimensions()), false)
     );
   }
 

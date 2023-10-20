@@ -283,10 +283,4 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   {
     kubernetesTaskRunner.updateStatus(task, status);
   }
-
-  @Override
-  public void updateLocation(Task task, TaskLocation location)
-  {
-    kubernetesTaskRunner.updateLocation(task, location);
-  }
 }

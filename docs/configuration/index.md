@@ -798,8 +798,9 @@ Support for 64-bit floating point columns was released in Druid 0.11.0, so if yo
 Prior to version 0.13.0, Druid string columns treated `''` and `null` values as interchangeable, and numeric columns were unable to represent `null` values, coercing `null` to `0`. Druid 0.13.0 introduced a mode which enabled SQL compatible null handling, allowing string columns to distinguish empty strings from nulls, and numeric columns to contain null rows.
 
 |Property|Description|Default|
-|---|---|---|
+|--------|-----------|-------|
 |`druid.generic.useDefaultValueForNull`|Set to `false` to store and query data in SQL compatible mode. When set to `true` (legacy mode), `null` values will be stored as `''` for string columns and `0` for numeric columns.|`false`|
+|`druid.generic.useThreeValueLogicForNativeFilters`|Set to `true` to use SQL compatible three-value logic when processing native Druid filters when `druid.generic.useDefaultValueForNull=false` and `druid.expressions.useStrictBooleans=true`. When set to `false` Druid uses 2 value logic for filter processing, even when `druid.generic.useDefaultValueForNull=false` and `druid.expressions.useStrictBooleans=true`. See [boolean handling](../querying/sql-data-types.md#boolean-logic) for more details|`true`|
 |`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. |`false`|
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#handling-null-values) for more details.
 
@@ -1862,7 +1863,7 @@ This strategy can be enabled by setting `druid.query.scheduler.laning.strategy=h
 
 ##### Guardrails for materialization of subqueries
 Druid stores the subquery rows in temporary tables that live in the Java heap. It is a good practice to avoid large subqueries in Druid.
-Therefore there are guardrails that are built in Druid to prevent the queries from generating subquery results which can exhaust the heap
+Therefore, there are guardrails that are built in Druid to prevent the queries from generating subquery results which can exhaust the heap
 space. They can be set on a cluster level or modified per query level as desired.
 Note the following guardrails that can be set by the cluster admin to limit the subquery results:
 
@@ -1870,6 +1871,15 @@ Note the following guardrails that can be set by the cluster admin to limit the 
 2. `druid.server.http.maxSubqueryBytes` in broker's config to set a default for the entire cluster or `maxSubqueryBytes` in the query context to set an upper limit on the number of bytes a subquery can generate
 
 Note that limiting the subquery by bytes is a newer feature therefore it is experimental as it materializes the results differently.
+
+`maxSubqueryBytes` can be configured to the following values:
+1. 'disabled' - It is the default setting out of the box. It disables the subquery's from the byte based limit, and effectively disables this feature.
+2. 'auto' - Druid automatically decides the optimal byte based limit based upon the heap space available and the max number of concurrent queries.
+3. A positive long value - User can manually specify the number of bytes that the results of the subqueries of a single query can occupy on the heap.
+
+Due to the conversion between the Java objects and the Frame's format, setting `maxSubqueryBytes` can become slow if the subquery starts generating
+rows in the order of magnitude of around 10 million and above. In those scenarios, disable the `maxSubqueryBytes` settings for such queries, assess the 
+number of rows that the subqueries generate and override the `maxSubqueryRows` to appropriate value.
 
 If you choose to modify or set any of the above limits, you must also think about the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.
 There is no formula to calculate the correct value. Trial and error is the best approach.
@@ -1895,7 +1905,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used. Human-readable format is supported, see [here](human-readable-byte.md). |Long.MAX_VALUE|
 |`druid.server.http.maxSubqueryRows`|Maximum number of rows from all subqueries per query. Druid stores the subquery rows in temporary tables that live in the Java heap. `druid.server.http.maxSubqueryRows` is a guardrail to prevent the system from exhausting available heap. When a subquery exceeds the row limit, Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."<br /><br />It is a good practice to avoid large subqueries in Druid. However, if you choose to raise the subquery row limit, you must also increase the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.<br /><br />There is no formula to calculate the correct value. Trial and error is the best approach.|100000|
-|`druid.server.http.maxSubqueryBytes`|Maximum number of bytes from all subqueries per query. Since the results are stored on the Java heap, `druid.server.http.maxSubqueryBytes` is a guardrail like `druid.server.http.maxSubqueryRows` to prevent the heap space from exhausting. When a subquery exceeds the byte limit, Druid throws a resource limit exceeded exception. A negative value for the guardrail indicates that Druid won't guardrail by memory. Check the docs for `druid.server.http.maxSubqueryRows` to see how to set the optimal value for a cluster. This is an experimental feature for now as this materializes the results in a different format.|-1|
+|`druid.server.http.maxSubqueryBytes`|Maximum number of bytes from all subqueries per query. Since the results are stored on the Java heap, `druid.server.http.maxSubqueryBytes` is a guardrail like `druid.server.http.maxSubqueryRows` to prevent the heap space from exhausting. When a subquery exceeds the byte limit, Druid throws a resource limit exceeded exception. A negative value for the guardrail indicates that Druid won't guardrail by memory. This can be set to 'disabled' which disables the results from being limited via the byte limit, 'auto' which sets this value automatically taking free heap space into account, or a positive long value depicting the number of bytes per query's subqueries' results can occupy. This is an experimental feature for now as this materializes the results in a different format.|'disabled'|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
