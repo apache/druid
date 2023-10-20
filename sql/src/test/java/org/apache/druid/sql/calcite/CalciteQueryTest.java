@@ -137,6 +137,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertThrows;
+
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
   @Test
@@ -14250,6 +14253,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}
         ));
+  }
+
+  @Test
+  public void testUnSupportedNullsFirst()
+  {
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 DESC NULLS FIRST) from druid.foo")
+        .run());
+
+    assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
+  }
+
+  @Test
+  public void testUnSupportedNullsLast()
+  {
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 NULLS LAST) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
   }
 
   @Test
