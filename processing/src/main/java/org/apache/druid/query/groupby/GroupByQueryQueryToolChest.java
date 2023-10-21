@@ -35,10 +35,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import java.util.HashSet;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedMap;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -77,18 +73,20 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.LogicalSegment;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
@@ -746,20 +744,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   @Override
-  public <S extends Comparable<?>, T> Map<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>>
-  decorateBySegmentsChunk(
+  public <S extends Comparable<?>, T> Map<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> decorateBySegmentsChunk(
       QueryPlus<T> queryPlus,
       Map<S, List<SegmentDescriptor>> serverAndSegments,
       int numCorePartitions,
       List<String> domainDimensions
-  ) {
+  )
+  {
     GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
-    String firstGroupingDimension = query.getDimensions().get(0).getDimension();
-    boolean optimizable = domainDimensions.contains(firstGroupingDimension);
-    if (!optimizable) {
+    boolean havingCanBePushedDown;
+    if (query.getDimensions().size() == 0) {
+      havingCanBePushedDown = false;
+    } else {
+      String firstGroupingDimension = query.getDimensions().get(0).getDimension();
+      havingCanBePushedDown = domainDimensions.contains(firstGroupingDimension);
+    }
+
+    if (!havingCanBePushedDown) {
       final SortedMap<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> serverSegments = new TreeMap<>();
       for (Entry<S, List<SegmentDescriptor>> entry : serverAndSegments.entrySet()) {
-        QueryPlus<T> newQueryPlus = (QueryPlus<T>)queryPlus
+        QueryPlus<T> newQueryPlus = (QueryPlus<T>) queryPlus
             .withQuery(query.withPostAggregatorSpecs(ImmutableList.of(), null));
         serverSegments.put(entry.getKey(), Pair.of(entry.getValue(), newQueryPlus));
       }
@@ -775,7 +779,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       List<SegmentDescriptor> segments = entry.getValue();
       for (SegmentDescriptor descriptor : segments) {
         int shardNumber = descriptor.getPartitionNumber();
-        S tmpServer = (S)shardNumberToServers[shardNumber];
+        S tmpServer = (S) shardNumberToServers[shardNumber];
         if (tmpServer == null) {
           shardNumberToServers[shardNumber] = server;
         } else if (!tmpServer.equals(server)) {
@@ -789,7 +793,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     for (Entry<S, List<SegmentDescriptor>> entry : serverAndSegments.entrySet()) {
       QueryPlus<T> newQueryPlus = queryPlus;
       if (!serversToOptimize.contains(entry.getKey())) {
-        newQueryPlus = (QueryPlus<T>)queryPlus
+        newQueryPlus = (QueryPlus<T>) queryPlus
             .withQuery(query.withPostAggregatorSpecs(ImmutableList.of(), null));
       }
       serverSegments.put(entry.getKey(), Pair.of(entry.getValue(), newQueryPlus));

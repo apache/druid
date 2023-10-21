@@ -35,7 +35,6 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Bytes;
 import com.google.inject.Inject;
-import java.util.Map.Entry;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
@@ -71,12 +70,9 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.server.QueryResource;
@@ -377,8 +373,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
       ShardSpec shardSpec = timeline.lookup(intervals.get(0)).get(0).getObject().getChunk(0).getObject().getSegment().getShardSpec();
 
       Map<DruidServer, Pair<List<SegmentDescriptor>, QueryPlus<T>>> serverSegmentsQueries = toolChest.decorateBySegmentsChunk(
-          queryPlus, segmentsByServer, shardSpec.getNumCorePartitions(),
-          shardSpec.getDomainDimensions());
+          queryPlus,
+          segmentsByServer,
+          shardSpec.getNumCorePartitions(),
+          shardSpec.getDomainDimensions()
+      );
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
