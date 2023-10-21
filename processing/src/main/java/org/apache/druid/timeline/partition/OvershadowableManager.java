@@ -401,7 +401,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
   {
     final RootPartitionRange lowFence = new RootPartitionRange(0, 0);
     final RootPartitionRange highFence = new RootPartitionRange(partitionId, partitionId);
-    return stateMap.subMap(lowFence, false, highFence, false).descendingMap().entrySet().iterator();
+    Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> subItr;
+    try {
+      subItr = stateMap.subMap(lowFence, false, highFence, false).descendingMap().entrySet().iterator();
+    }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Illegal partitionId %s", highFence);
+    }
+    return subItr;
   }
 
   /**
@@ -416,7 +423,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
   {
     final RootPartitionRange lowFence = new RootPartitionRange(partitionId, partitionId);
     final RootPartitionRange highFence = new RootPartitionRange(Integer.MAX_VALUE, Integer.MAX_VALUE);
-    return stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
+    Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> subItr;
+    try {
+      subItr = stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
+    }
+    catch (IllegalArgumentException e) {
+      throw new IAE("Illegal partitionId %s, please reduce number of Segments per time period!", lowFence);
+    }
+    return subItr;
   }
 
   /**
@@ -1027,14 +1041,17 @@ class OvershadowableManager<T extends Overshadowable<T>>
   {
     private final int startPartitionId;
     private final int endPartitionId;
+    private static final int MAX_PARTITIONS = 65536;
 
     @VisibleForTesting
     static RootPartitionRange of(int startPartitionId, int endPartitionId)
     {
-      if (startPartitionId > Short.MAX_VALUE) {
+      if (startPartitionId > MAX_PARTITIONS) {
         log.error(
-            "PartitionId [%s] exceeding range of Short.MAX_VALUE, please compact your segements or reduce number of segments in time period!",
-            startPartitionId);
+            "PartitionId [%s] exceeding max number of Segments Druid can handle in single time period [%s], please compact or reduce number of segments in time period!",
+            startPartitionId,
+            MAX_PARTITIONS
+        );
       }
       return new RootPartitionRange(startPartitionId, endPartitionId);
     }
