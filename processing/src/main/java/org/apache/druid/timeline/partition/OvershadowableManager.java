@@ -428,7 +428,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
       subItr = stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
     }
     catch (IllegalArgumentException e) {
-      throw new IAE("Illegal partitionId %s, please reduce number of Segments per time period!", lowFence);
+      throw new IAE("Illegal partitionId %s, please reduce number of segments per time-trunk!", lowFence);
     }
     return subItr;
   }
@@ -1041,16 +1041,16 @@ class OvershadowableManager<T extends Overshadowable<T>>
   {
     private final int startPartitionId;
     private final int endPartitionId;
-    private static final int MAX_PARTITIONS = 65536;
+    private static final int MAX_PARTITIONS_PER_TIMETRUNK = 65536;
 
     @VisibleForTesting
     static RootPartitionRange of(int startPartitionId, int endPartitionId)
     {
-      if (startPartitionId > MAX_PARTITIONS) {
+      if (startPartitionId > MAX_PARTITIONS_PER_TIMETRUNK) {
         log.error(
-            "PartitionId [%s] exceeding max number of Segments Druid can handle in single time period [%s], please compact or reduce number of segments in time period!",
+            "PartitionId [%s] exceeding max number of Segments Druid can handle in single time-trunk [%s], please compact or reduce number of segments in time-trunk!",
             startPartitionId,
-            MAX_PARTITIONS
+            MAX_PARTITIONS_PER_TIMETRUNK
         );
       }
       return new RootPartitionRange(startPartitionId, endPartitionId);
