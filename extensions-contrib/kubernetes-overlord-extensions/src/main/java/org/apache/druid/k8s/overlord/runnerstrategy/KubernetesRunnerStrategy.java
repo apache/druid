@@ -17,36 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord;
+package org.apache.druid.k8s.overlord.runnerstrategy;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.lang3.ObjectUtils;
+import org.apache.druid.indexing.common.task.Task;
 
-import javax.annotation.Nullable;
-
-public class KubernetesAndWorkerTaskRunnerConfig
+/**
+ * Implementation of {@link RunnerStrategy} that always selects the Kubernetes runner type for tasks.
+ *
+ * <p>This strategy is specific for tasks that are intended to be executed in a Kubernetes environment.
+ * Regardless of task specifics, this strategy always returns {@link RunnerType#KUBERNETES_RUNNER_TYPE}.
+ */
+public class KubernetesRunnerStrategy implements RunnerStrategy
 {
-
-  private final String RUNNER_STRATEGY_TYPE = "runnerStrategy.type";
-  /**
-   * Select which runner type a task would run on, options are k8s or worker.
-   */
-  @JsonProperty(RUNNER_STRATEGY_TYPE)
-  private String runnerStrategy;
-
   @JsonCreator
-  public KubernetesAndWorkerTaskRunnerConfig(
-      @JsonProperty(RUNNER_STRATEGY_TYPE) @Nullable String runnerStrategy
-  )
+  public KubernetesRunnerStrategy()
   {
-    this.runnerStrategy = ObjectUtils.defaultIfNull(runnerStrategy, KubernetesTaskRunnerFactory.TYPE_NAME);
   }
 
-  @JsonProperty(RUNNER_STRATEGY_TYPE)
-  public String getRunnerStrategy()
+  @Override
+  public RunnerType getRunnerTypeForTask(Task task)
   {
-    return runnerStrategy;
+    return RunnerType.KUBERNETES_RUNNER_TYPE;
   }
-
 }

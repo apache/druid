@@ -31,6 +31,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
+import org.apache.druid.k8s.overlord.runnerstrategy.KubernetesRunnerStrategy;
+import org.apache.druid.k8s.overlord.runnerstrategy.TaskTypeRunnerStrategy;
+import org.apache.druid.k8s.overlord.runnerstrategy.WorkerRunnerStrategy;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -67,7 +70,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null)
+        new KubernetesRunnerStrategy()
     );
   }
 
@@ -77,7 +80,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null)
+        new KubernetesRunnerStrategy()
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(kubernetesTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -93,7 +96,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(new WorkerRunnerStrategy(null))
+        new WorkerRunnerStrategy(null)
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -106,11 +109,11 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_runOnKubernetesOrWorkerBasedOnStrategy() throws ExecutionException, InterruptedException
   {
-    MixRunnerStrategy runnerStrategy = new MixRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
+    TaskTypeRunnerStrategy runnerStrategy = new TaskTypeRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(runnerStrategy)
+        runnerStrategy
     );
     Task taskMock = EasyMock.createMock(Task.class);
     TaskStatus taskStatus = TaskStatus.success(ID);

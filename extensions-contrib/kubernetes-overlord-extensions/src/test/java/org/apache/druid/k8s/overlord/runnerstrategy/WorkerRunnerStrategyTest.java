@@ -17,21 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord;
+package org.apache.druid.k8s.overlord.runnerstrategy;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+
 import org.apache.druid.indexing.common.task.Task;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-public class KubernetesRunnerStrategy implements RunnerStrategy
+@RunWith(EasyMockRunner.class)
+public class WorkerRunnerStrategyTest extends EasyMockSupport
 {
-  @JsonCreator
-  public KubernetesRunnerStrategy()
-  {
-  }
+  @Mock
+  Task task;
 
-  @Override
-  public RunnerType getRunnerTypeForTask(Task task)
+  @Test
+  public void test_workerRunnerStrategy_returnsCorrectRunnerType()
   {
-    return RunnerType.KUBERNETES_RUNNER_TYPE;
+    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy("remote");
+    Assert.assertEquals("remote", runnerStrategy.getRunnerTypeForTask(task).getType());
+
+    runnerStrategy = new WorkerRunnerStrategy(null);
+    Assert.assertEquals("httpRemote", runnerStrategy.getRunnerTypeForTask(task).getType());
   }
 }

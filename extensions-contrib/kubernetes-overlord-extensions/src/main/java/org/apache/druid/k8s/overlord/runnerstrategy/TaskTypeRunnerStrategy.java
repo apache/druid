@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord;
+package org.apache.druid.k8s.overlord.runnerstrategy;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -28,7 +28,17 @@ import org.apache.druid.indexing.common.task.Task;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class MixRunnerStrategy implements RunnerStrategy
+/**
+ * Implementation of {@link RunnerStrategy} that allows dynamic selection of runner type based on task type.
+ *
+ * <p>This strategy checks each task's type against a set of overrides to determine the appropriate runner type.
+ * If no override is specified for a task's type, it uses a default runner.
+ *
+ * <p>Runner types are determined based on configurations provided at construction, including default runner
+ * type and specific overrides per task type. This strategy is designed for environments where tasks may require
+ * different execution environments (e.g., Kubernetes or worker nodes).
+ */
+public class TaskTypeRunnerStrategy implements RunnerStrategy
 {
   @Nullable
   private final Map<String, String> overrides;
@@ -38,7 +48,7 @@ public class MixRunnerStrategy implements RunnerStrategy
   private final String defaultRunner;
 
   @JsonCreator
-  public MixRunnerStrategy(
+  public TaskTypeRunnerStrategy(
       @JsonProperty("default") String defaultRunner,
       @JsonProperty("workerType") String workerType,
       @JsonProperty("overrides") @Nullable Map<String, String> overrides
@@ -78,6 +88,7 @@ public class MixRunnerStrategy implements RunnerStrategy
     return runnerStrategy == null ? null : runnerStrategy.getRunnerTypeForTask(task);
   }
 
+  @Override
   public String getWorkerType()
   {
     return workerRunnerStrategy.getWorkerType();
@@ -102,7 +113,7 @@ public class MixRunnerStrategy implements RunnerStrategy
   @Override
   public String toString()
   {
-    return "MixRunnerSelectStrategy{" +
+    return "TaskTypeRunnerStrategy{" +
            "default=" + defaultRunner +
            ", overrides=" + overrides +
            '}';

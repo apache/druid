@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord;
+package org.apache.druid.k8s.overlord.runnerstrategy;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
@@ -30,14 +30,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(EasyMockRunner.class)
-public class RunnerStrategyTest extends EasyMockSupport
+public class TaskTypeRunnerStrategyTest extends EasyMockSupport
 {
-  @Mock Task task;
+  @Mock
+  Task task;
 
   @Test
-  public void test_mixRunnerStrategy_returnsCorrectRunnerType()
+  public void test_taskTypeRunnerStrategy_returnsCorrectRunnerType()
   {
-    MixRunnerStrategy runnerStrategy = new MixRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
+    TaskTypeRunnerStrategy runnerStrategy = new TaskTypeRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
     EasyMock.expect(task.getType()).andReturn("index_kafka");
     EasyMock.expectLastCall().once();
     EasyMock.expect(task.getType()).andReturn("compact");
@@ -47,23 +48,4 @@ public class RunnerStrategyTest extends EasyMockSupport
     Assert.assertEquals("k8s", runnerStrategy.getRunnerTypeForTask(task).getType());
     verifyAll();
   }
-
-  @Test
-  public void test_kubernetesRunnerStrategy_returnsCorrectRunnerType()
-  {
-    KubernetesRunnerStrategy runnerStrategy = new KubernetesRunnerStrategy();
-
-    Assert.assertEquals("k8s", runnerStrategy.getRunnerTypeForTask(task).getType());
-  }
-
-  @Test
-  public void test_workerRunnerStrategy_returnsCorrectRunnerType()
-  {
-    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy("remote");
-    Assert.assertEquals("remote", runnerStrategy.getRunnerTypeForTask(task).getType());
-
-    runnerStrategy = new WorkerRunnerStrategy(null);
-    Assert.assertEquals("httpRemote", runnerStrategy.getRunnerTypeForTask(task).getType());
-  }
-
 }

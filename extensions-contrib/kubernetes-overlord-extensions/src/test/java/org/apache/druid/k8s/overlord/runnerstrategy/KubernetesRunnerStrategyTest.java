@@ -17,34 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord;
+package org.apache.druid.k8s.overlord.runnerstrategy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.indexing.common.task.Task;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
-import java.io.IOException;
-
-public class KubernetesAndWorkerTaskRunnerConfigTest
+@RunWith(EasyMockRunner.class)
+public class KubernetesRunnerStrategyTest extends EasyMockSupport
 {
-  @Test
-  public void test_deserializable() throws IOException
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    KubernetesAndWorkerTaskRunnerConfig config = mapper.readValue(
-        this.getClass().getClassLoader().getResource("kubernetesAndWorkerTaskRunnerConfig.json"),
-        KubernetesAndWorkerTaskRunnerConfig.class
-    );
-
-    Assert.assertEquals("worker", config.getRunnerStrategy());
-  }
+  @Mock
+  Task task;
 
   @Test
-  public void test_withDefaults()
+  public void test_kubernetesRunnerStrategy_returnsCorrectRunnerType()
   {
-    KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null);
+    KubernetesRunnerStrategy runnerStrategy = new KubernetesRunnerStrategy();
 
-    Assert.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, config.getRunnerStrategy());
+    Assert.assertEquals(RunnerStrategy.RunnerType.KUBERNETES_RUNNER_TYPE, runnerStrategy.getRunnerTypeForTask(task));
   }
 }
