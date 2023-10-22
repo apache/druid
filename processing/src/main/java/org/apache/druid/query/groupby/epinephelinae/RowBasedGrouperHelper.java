@@ -566,17 +566,19 @@ public class RowBasedGrouperHelper
   public static CloseableGrouperIterator<RowBasedKey, ResultRow> makeGrouperIterator(
       final Grouper<RowBasedKey> grouper,
       final GroupByQuery query,
-      final Closeable closeable
+      final Closeable closeable,
+      final boolean sorted
   )
   {
-    return makeGrouperIterator(grouper, query, null, closeable);
+    return makeGrouperIterator(grouper, query, null, closeable, sorted);
   }
 
   public static CloseableGrouperIterator<RowBasedKey, ResultRow> makeGrouperIterator(
       final Grouper<RowBasedKey> grouper,
       final GroupByQuery query,
       @Nullable final List<DimensionSpec> dimsToInclude,
-      final Closeable closeable
+      final Closeable closeable,
+      final boolean sorted
   )
   {
     final boolean includeTimestamp = query.getResultRowHasTimestamp();
@@ -615,7 +617,7 @@ public class RowBasedGrouperHelper
     }
 
     return new CloseableGrouperIterator<>(
-        grouper.iterator(true),
+        grouper.iterator(sorted),
         entry -> {
           final ResultRow resultRow = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
 
