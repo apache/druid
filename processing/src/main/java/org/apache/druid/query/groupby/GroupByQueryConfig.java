@@ -43,6 +43,7 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
   public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
   public static final String CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING = "groupByEnableMultiValueUnnesting";
+  private static final String CTX_KEY_MERGE_BUFFER_SLICES_PER_THREAD = "mergeBufferSlicesPerThread";
   public static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
@@ -125,6 +126,8 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean enableMultiValueUnnesting = true;
+  @JsonProperty
+  private int mergeBufferSlicesPerThread = 1;
 
   public boolean isSingleThreaded()
   {
@@ -295,6 +298,11 @@ public class GroupByQueryConfig
     return enableMultiValueUnnesting;
   }
 
+  public int getMergeBufferSlicesPerThread()
+  {
+    return mergeBufferSlicesPerThread;
+  }
+
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -347,6 +355,10 @@ public class GroupByQueryConfig
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()
     );
+    newConfig.mergeBufferSlicesPerThread = queryContext.getInt(
+        CTX_KEY_MERGE_BUFFER_SLICES_PER_THREAD,
+        getMergeBufferSlicesPerThread()
+    );
 
     logger.debug("Override config for GroupBy query %s - %s", query.getId(), newConfig.toString());
     return newConfig;
@@ -370,6 +382,7 @@ public class GroupByQueryConfig
            ", vectorize=" + vectorize +
            ", forcePushDownNestedQuery=" + forcePushDownNestedQuery +
            ", enableMultiValueUnnesting=" + enableMultiValueUnnesting +
+           ", mergeBufferSlicesPerThread=" + mergeBufferSlicesPerThread +
            '}';
   }
 }

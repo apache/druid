@@ -104,7 +104,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
-      int concurrencyHint,
       BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
       ObjectMapper spillMapper,
@@ -116,7 +115,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     this.queryProcessingPool = queryProcessingPool;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
-    this.concurrencyHint = concurrencyHint;
+    this.concurrencyHint = config.getMergeBufferSlicesPerThread() * processingConfig.getNumThreads();
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;

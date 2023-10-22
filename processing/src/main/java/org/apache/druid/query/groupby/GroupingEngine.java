@@ -395,7 +395,6 @@ public class GroupingEngine
         queryProcessingPool,
         queryWatcher,
         queryRunners,
-        processingConfig.getNumThreads(),
         mergeBufferPool,
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
