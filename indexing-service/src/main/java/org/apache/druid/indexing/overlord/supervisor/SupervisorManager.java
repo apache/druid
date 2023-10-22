@@ -22,14 +22,18 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
@@ -72,15 +76,34 @@ public class SupervisorManager
     return supervisors.keySet();
   }
 
-  public Optional<String> getActiveSupervisorIdForDatasource(String datasource)
+  /**
+   * @param datasource Datasource to find active supervisor id with append lock for.
+   * @return An optional with the active appending supervisor id if it exists.
+   */
+  public Optional<String> getActiveSupervisorIdForDatasourceWithAppendLock(String datasource)
   {
     for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
       final String supervisorId = entry.getKey();
       final Supervisor supervisor = entry.getValue().lhs;
       final SupervisorSpec supervisorSpec = entry.getValue().rhs;
+
+      TaskLockType taskLockType = null;
+      if (supervisorSpec instanceof SeekableStreamSupervisorSpec) {
+        SeekableStreamSupervisorSpec seekableStreamSupervisorSpec = (SeekableStreamSupervisorSpec) supervisorSpec;
+        Map<String, Object> context = seekableStreamSupervisorSpec.getContext();
+        if (context != null) {
+          taskLockType = QueryContexts.getAsEnum(
+              Tasks.TASK_LOCK_TYPE,
+              context.get(Tasks.TASK_LOCK_TYPE),
+              TaskLockType.class
+          );
+        }
+      }
+
       if (supervisor instanceof SeekableStreamSupervisor
           && !supervisorSpec.isSuspended()
-          && supervisorSpec.getDataSources().contains(datasource)) {
+          && supervisorSpec.getDataSources().contains(datasource)
+          && TaskLockType.APPEND.equals(taskLockType)) {
         return Optional.of(supervisorId);
       }
     }

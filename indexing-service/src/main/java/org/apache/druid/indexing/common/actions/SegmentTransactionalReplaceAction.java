@@ -139,14 +139,14 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   private void tryUpgradeOverlappingPendingSegments(Task task, TaskActionToolbox toolbox)
   {
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
-    final Optional<String> activeSupervisorId =
-        supervisorManager.getActiveSupervisorIdForDatasource(task.getDataSource());
-    if (!activeSupervisorId.isPresent()) {
+    final Optional<String> activeSupervisorIdWithAppendLock =
+        supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
+    if (!activeSupervisorIdWithAppendLock.isPresent()) {
       return;
     }
 
     final Set<String> activeRealtimeSequencePrefixes
-        = supervisorManager.getActiveRealtimeSequencePrefixes(activeSupervisorId.get());
+        = supervisorManager.getActiveRealtimeSequencePrefixes(activeSupervisorIdWithAppendLock.get());
     Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
         toolbox.getIndexerMetadataStorageCoordinator()
                .upgradePendingSegmentsOverlappingWith(segments, activeRealtimeSequencePrefixes);
@@ -157,7 +157,11 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
     upgradedPendingSegments.forEach(
         (oldId, newId) -> toolbox.getSupervisorManager()
-                                 .registerNewVersionOfPendingSegmentOnSupervisor(activeSupervisorId.get(), oldId, newId)
+                                 .registerNewVersionOfPendingSegmentOnSupervisor(
+                                     activeSupervisorIdWithAppendLock.get(),
+                                     oldId,
+                                     newId
+                                 )
     );
   }
 
