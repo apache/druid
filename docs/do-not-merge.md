@@ -5,7 +5,7 @@ Apache Druid 28.0.0 contains over $NUMBER_FEATURES new features, bug fixes, perf
 
 See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A28.0+sort%3Aupdated-desc+) for additional details, including bug fixes.
 
-Review the [upgrade notes and incompatible changes](#upgrade-notes-and-incompatible-changes) before you upgrade to Druid 28.0.0.
+Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid 28.0.0.
 
 # Highlights
 
@@ -13,31 +13,77 @@ Review the [upgrade notes and incompatible changes](#upgrade-notes-and-incompati
 
 ## Window functions (experimental)
 
-You can use [window functions](../docs/querying/sql-window-functions.md) in Apache Druid to produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
+You can use [window functions](https://druid.apache.org/docs/latest/querying/sql-window-functions) in Apache Druid to produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
 
 Enable window functions in your query with the `enableWindowing: true` context parameter.
 
-## Numeric array type support
+[#15184](https://github.com/apache/druid/pull/15184)
 
-Row-based frames and, by extension, the MSQ task engine now support numeric array types. This means that all queries consuming or producing arrays work with the MSQ task engine. Numeric arrays can also be ingested using SQL-based ingestion with MSQ. For example, queries like `SELECT [1, 2]` are valid now since they consume a numeric array instead of failing with an unsupported column type exception.
+## Concurrent compaction (experimental)
+
+When you have automatic compaction enabled, you can use concurrent compaction to compact data as you ingest it. Concurrent compaction supports streaming ingestion and JSON-based batch ingestion.
+
+For more information, see [Concurrent compaction](https://druid.apache.org/docs/latest/data-management/automatic-compaction#concurrent-compaction).
+
+### Concurrent batch APPEND and REPLACE
+
+`APPEND` batch ingestion jobs can now share locks. This allows you to run multiple `APPEND` batch ingestion jobs against the same time internal. `REPLACE` batch ingestion jobs still require an exclusive lock. This means you can run multiple `APPEND` batch ingestion jobs and one `REPLACE` batch ingestion job for a given interval.
+
+[#14407](https://github.com/apache/druid/pull/14407)
+
+### Streaming ingestion with concurrent REPLACE
+
+Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest concurrently with compaction running with `REPLACE` locks. The segment granularity of the streaming job must be equal to or finer than that of the concurrent `REPLACE` job.
+
+[#15039](https://github.com/apache/druid/pull/15039)
 
 ## Query from deep storage
 
-[Query from deep storage](https://druid.apache.org/docs/latest/querying/query-deep-storage/) is no longer an experimental feature. When you query from deep storage, more data is available for queries without having to scale your Historical processes to accommodate more data. To use this feature, make sure you configure your load rules as described in the [Query from deep storage tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-query-deep-storage/).
+[Query from deep storage](https://druid.apache.org/docs/latest/querying/query-deep-storage/) is no longer an experimental feature. When you query from deep storage, more data is available for queries without having to scale your Historical processes to accommodate more data. To benefit from the space saving that query from deep storage offers, configure your load rules to unload data from your Historical processes.
 
 ### Result formats
 
-Query from deep storage now supports different result formats.
+Query from deep storage now supports multiple result formats.
 Previously, the `/druid/v2/sql/statements/` endpoint only supported results in the `object` format. Now, results can be written in any format specified in the `resultFormat` parameter.
 For more information on result parameters supported by the Druid SQL API, see [Responses](https://druid.apache.org/docs/latest/api-reference/sql-api#responses).
 
 [#14571](https://github.com/apache/druid/pull/14571)
 
+### Broadened access for queries for deep storage
+
+Users with the `STATE` permission can interact with status APIs for queries from deep storage. Previously, only the user who submitted the query could use those APIs. This enables the web console to monitor the running status of the queries. Users with the `STATE` permission can access the query results.
+
+[#14944](https://github.com/apache/druid/pull/14944)
+
 ### Unused segments
 
-Druid now stops loading and moving segments as soon as they are marked as unused. This prevents Historicals from spending time on superfluous loads of segments that will be unloaded later. You can mark segments as unused by a drop rule, overshadowing, or by calling [the Data management API](./api-reference/data-management-api.md).
+Druid now stops loading and moving segments as soon as they are marked as unused. This prevents Historical processes from spending time on superfluous loads of segments that will be unloaded later. You can mark segments as unused by a drop rule, overshadowing, or by calling [the Data management API](https://druid.apache.org/docs/latest/api-reference/data-management-api).
 
 [#14644](https://github.com/apache/druid/pull/14644)
+
+## SQL planner upgrade
+
+Druid uses Apache Calcite for SQL planning and optimization. Starting in Druid 28.0.0, the Calcite version has been upgraded from 1.21 to 1.35. As part of the upgrade, the [behavior of type inference for dynamic parameters](#dynamic-parameters) and the recommended [syntax for UNNEST](#new-syntax-for-sql-unnest) have changed.
+
+### Dynamic parameters
+
+The behavior of type inference for dynamic parameters has changed. To avoid any type interference issues, explicitly `CAST` all dynamic parameters as a specific data type in SQL queries. For example:
+
+```sql
+SELECT (1 * CAST (? as DOUBLE))/2 as tmp
+```
+
+For more information, see [Dynamic parameters in the upgrade notes](#dynamic-parameters-1).
+
+### New syntax for SQL UNNEST
+
+The recommended syntax for SQL UNNEST has changed. We recommend using CROSS JOIN instead of commas for most queries to prevent issues with precedence. For example:
+
+```sql
+SELECT column_alias_name1 FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
+
+For more information, see [UNNEST syntax in the upgrade notes](#unnest-syntax).
 
 ## Ingest from multiple Kafka topics to a single datasource
 
@@ -49,6 +95,21 @@ For more information, see [Stop supervisors that ingest from multiple Kafka topi
 
 [#14424](https://github.com/apache/druid/pull/14424)
 [#14865](https://github.com/apache/druid/pull/14865)
+
+## Hadoop 2 removed
+
+Support for Hadoop 2 has been removed.
+Migrate to SQL-based ingestion or native ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid's built-in ingestion is not possible, you must upgrade your Hadoop infrastructure to 3.x+ before upgrading to Druid 28.0.0.
+
+[#14763](https://github.com/apache/druid/pull/14763)
+
+## Legacy groupBy v1 removed
+
+The groupBy v1 engine has been removed. Use the groupBy v2 engine instead.  
+If you are using groupBy v1 in native queries, you must change your queries before upgrading. Otherwise, your queries will fail.
+For more information, see [GroupBy queries](https://druid.apache.org/docs/latest/querying/groupbyquery).
+
+[#14866](https://github.com/apache/druid/pull/14866)
 
 ## JSON and auto column indexer
 
@@ -66,27 +127,13 @@ For more information, see [Nested column format in the upgrade notes](#nested-co
 [#14955](https://github.com/apache/druid/pull/14955)
 [#14456](https://github.com/apache/druid/pull/14456)
 
-## Reset offsets for a supervisor
-
-Added a new API endpoint `/druid/indexer/v1/supervisor/:supervisorId/resetOffsets` to reset specific partition offsets for a supervisor without resetting the entire set.
-This endpoint clears only the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading.
-
-[#14772](https://github.com/apache/druid/pull/14772)
-
-## Removed Hadoop 2
-
-Support for Hadoop 2 has been removed.
-Migrate to SQL-based ingestion or native ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid's built-in ingestion is not possible, you must upgrade your Hadoop infrastructure to 3.x+ before upgrading to Druid 28.0.0.
-
-[#14763](https://github.com/apache/druid/pull/14763)
-
 # Additional features and improvements
 
 ## SQL compatibility
 
 ### Three-valued logic
 
-Druid native filters now correctly observe SQL [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) (`true`, `false`, `unknown`) instead of Druid's classic two-state logic when the following configuration values are set:
+Druid native filters now correctly observe SQL [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL), `true`, `false`, `unknown`, instead of Druid's classic two-state logic when you set the following configuration values:
 
 * `druid.generic.useThreeValueLogicForNativeFilters = true`
 * `druid.expressions.useStrictBooleans = true`
@@ -102,7 +149,7 @@ Previously, true and false could be represented either as `true` and `false`, re
 
 If you don't explicitly configure this property in `runtime.properties`, clusters now use LONG types for any ingested boolean values, and in the output of boolean functions for transformations and query time operations.
 
-This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility).
+This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
 
 [#14734](https://github.com/apache/druid/pull/14734)
 
@@ -112,19 +159,11 @@ This change may impact your query results. For more information, see [SQL compat
 Druid now differentiates between empty records, such as `' '`, and null records.
 Previously, Druid might treat empty records as empty or null.
 
-This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility).
+This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
 
 [#14792](https://github.com/apache/druid/pull/14792)
 
 ## SQL-based ingestion
-
-### New context parameter for segment loading
-
-If the new `waitTillSegmentsLoad` query context parameter is set to `true`, the job will wait for segments to be loaded. If `false`, the controller exits immediately after finishing a query.
-
-Waiting ensures that any future queries made after the ingestion exits will include results from the ingestion. The drawback is that the controller task waits till the segments are loaded, which can take some time depending on the number of segments.
-
-[#15076](https://github.com/apache/druid/pull/15076)
 
 ### Azure connector
 
@@ -136,19 +175,11 @@ For more information, see [Durable storage](https://druid.apache.org/docs/latest
 
 ### New ingestion mode for arrays
 
-The MSQ task engine now includes an `arrayIngestMode` that determines how arrays are treated for ingestion. Previously, arrays were ingested as multi-value dimensions (MVDs). They can now be ingested as `ARRAY<STRING>` or numeric arrays instead if the ingest mode is set to `array`. 
+The MSQ task engine now includes an `arrayIngestMode` that determines how arrays are treated for ingestion. Previously, arrays were ingested as multi-value dimensions (MVDs). They can now be ingested as `ARRAY<STRING>` or numeric arrays instead if the ingest mode is set to `array`.
 
 The default mode is for MVDs, which is unchanged from previous releases.
 
 [#15093](https://github.com/apache/druid/pull/15093)
-
-### UNNEST functionality
-
-You can now use UNNEST with MSQ queries. This lets you flatten and explode data during batch ingestion. For more information, see the [UNNEST tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/) and [UNNEST documentation](https://druid.apache.org/docs/latest/querying/sql/#unnest).
-
-You no longer need to include the context parameter `"enableUnnest": true` to run queries involving UNNEST.
-
-[#14886](https://github.com/apache/druid/pull/14886)
 
 ### Ingestion status
 
@@ -158,57 +189,71 @@ Ingestion reports now include a `segmentLoadStatus` object that provides informa
 
 ### Other SQL-based ingestion improvements
 
+* Added a new `rowsPerPage` context parameter for the MSQ task engine.
+Use `rowsPerPage` to limit the number of rows per page. For more information on context parameters for the MSQ task engine, see [Context parameters](https://druid.apache.org/docs/latest/multi-stage-query/reference#context-parameters) [#14994](https://github.com/apache/druid/pull/14994)
 * Druid now ignores `ServiceClosedException` on `postCounters` while the controller is offline [#14707](https://github.com/apache/druid/pull/14707)
-* You can now cancel MSQ tasks if they're waiting for segments to load [#15000](https://github.com/apache/druid/pull/15000)
+* Improved error messages related to OVERWRITE keyword [#14870](https://github.com/apache/druid/pull/14870)
 
-## JSON-based ingestion
+## Ingestion
 
-### Concurrent batch append and replace
+### UNNEST functionality
 
-Append batch ingestion jobs can now share locks. This allows you to run multiple append batch ingestion jobs against the same time internal. Replace batch ingestion job still requires an exclusive lock. This means you can run multiple append batch ingestion jobs and one replace batch ingestion job for a given interval.
+You can now use UNNEST with MSQ queries. This lets you flatten and explode data during batch ingestion. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
 
-[#14407](https://github.com/apache/druid/pull/14407)
+You no longer need to include the context parameter `"enableUnnest": true` to run queries involving UNNEST.
 
-### Other JSON-based ingestion updates
+[#14886](https://github.com/apache/druid/pull/14886)
+
+### Reset offsets for a supervisor
+
+Added a new API endpoint `/druid/indexer/v1/supervisor/:supervisorId/resetOffsets` to reset specific partition offsets for a supervisor without resetting the entire set.
+This endpoint clears only the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading.
+
+[#14772](https://github.com/apache/druid/pull/14772)
+
+### Other ingestion improvements
 
 * Added `PropertyNamingStrategies` from Jackson to fix Hadoop ingestion and make it compatible with newer Jackson [#14671](https://github.com/apache/druid/pull/14671)
 * Added pod name to the `TaskLocation` object for Kubernetes task scheduling to make debugging easier [#14758](https://github.com/apache/druid/pull/14758)
 * Added lifecycle hooks to `KubernetesTaskRunner` [#14790](https://github.com/apache/druid/pull/14790)
 * Added new method for `SqlStatementResource` and `SqlTaskResource` to set request attribute [#14878](https://github.com/apache/druid/pull/14878)
 * Added a sampling factor for `DeterminePartitionsJob` [#13840](https://github.com/apache/druid/pull/13840)
-* Added `usedClusterCapacity` to the `GET` `/totalWorkerCapacity` response&mdash;use this API to get the total ingestion capacity on the overlord [#14888](https://github.com/apache/druid/pull/14888)
+* Added `usedClusterCapacity` to the `GET` `/totalWorkerCapacity` response. Use this API to get the total ingestion capacity on the overlord [#14888](https://github.com/apache/druid/pull/14888)
 * Improved Kubernetes task runner performance [#14649](https://github.com/apache/druid/pull/14649)
-* Improved handling of long data source names&mdash;previously, the Kubernetes task runner would throw an error if the name of a data source was too long [#14620](https://github.com/apache/druid/pull/14620)
+* Improved handling of long data source names. Previously, the Kubernetes task runner would throw an error if the name of a data source was too long [#14620](https://github.com/apache/druid/pull/14620)
 * Improved the streaming ingestion completion timeout error message [#14636](https://github.com/apache/druid/pull/14636)
 * Druid now retries fetching S3 task logs on transient S3 errors [#14714](https://github.com/apache/druid/pull/14714)
 * Druid now reports `task/pending/time` metrics for Kubernetes-based ingestion [#14698](https://github.com/apache/druid/pull/14698)
 * Druid now reports `k8s/peon/startup/time` metrics for Kubernetes-based ingestion [#14771](https://github.com/apache/druid/pull/14771)
 * `handoffConditionTimeout` now defaults to 15 minutes&mdash;the default change won't affect existing supervisors [#14539](https://github.com/apache/druid/pull/14539)
 * Fixed an NPE with checkpoint parsing for streaming ingestion [#14353](https://github.com/apache/druid/pull/14353)
+* Fixed an issue with Hadoop ingestion writing arrays as `objects.toString` as a result of transform expressions [#15127](https://github.com/apache/druid/pull/15127)
 * The `PodTemplateTaskAdapter` now accounts for queryable tasks [#14789](https://github.com/apache/druid/pull/14789)
 * The rolling supervisor now restarts at `taskDuration` [#14396](https://github.com/apache/druid/pull/14396)
 * S3 `deleteObjects` requests are now retried if the failure state allows retry [#14776](https://github.com/apache/druid/pull/14776)
 * You can now ingest the name of a Kafka topic to a datasource [#14857](https://github.com/apache/druid/pull/14857)
 
-## Ingestion
+## MSQ task engine querying
 
-### MiddleManager-less ingestion task payloads
+### Numeric array type support
 
-You can now provide compressed task payloads larger than 128KB.
+Row-based frames and, by extension, the MSQ task engine now support numeric array types. This means that all queries consuming or producing arrays work with the MSQ task engine. Numeric arrays can also be ingested using SQL-based ingestion with MSQ. For example, queries like `SELECT [1, 2]` are valid now since they consume a numeric array instead of failing with an unsupported column type exception.
 
-[#14887](https://github.com/apache/druid/pull/14887)
+[#14900](https://github.com/apache/druid/pull/14900)
 
-## Querying
+### MSQ queries for realtime tasks
 
-### Interactive queries
+The MSQ task engine can now include real time segments in query results. To do this, use the `includeSegmentSource` context parameter and set it to `REALTIME`.
 
-### Task-based queries
+[#15024](https://github.com/apache/druid/pull/15024)
 
-#### UNION ALL queries
+### MSQ support for UNION ALL queries
 
-You can now use the MSQ task engine to run UNION ALL queries with the `UnionDataSource`.
+You can now use the MSQ task engine to run UNION ALL queries with `UnionDataSource`.
 
 [#14981](https://github.com/apache/druid/pull/14981)
+
+## Querying
 
 ### Improved LOOKUP function
 
@@ -218,28 +263,17 @@ The LOOKUP function now accepts an optional constant string as a third argument.
 
 ### AVG function
 
-The AVG aggregation function now returns a double instead of a long.
+The AVG aggregation function now returns a `double` instead of a `long`.
 
 [#15089](https://github.com/apache/druid/pull/15089)
 
-### MSQ queries for realtime tasks
+### Improvements to EARLIEST and LATEST operators
 
-The MSQ task engine can include real time segments in query results now. To do this, use the `includeSegmentSource` context parameter and set it to `REALTIME`.
+Improved EARLIEST and LATEST operators as follows:
 
-[#15024](https://github.com/apache/druid/pull/15024)
-
-### EARLIEST and LATEST aggregations
-
-You can now use EARLIEST/EARLIEST_BY and LATEST/LATEST_BY for STRING columns without specifying the `maxBytesPerValue` parameter.
-If you omit the `maxBytesPerValue` parameter, the aggregations default to 1024 bytes for the buffer.
-
-[#14848](https://github.com/apache/druid/pull/14848)
-
-### Broadened access for queries for deep storage
-
-Users with the `STATE` permission can interact with status APIs for queries from deep storage. Previously, only the user who submitted the query could use those APIs. This enables the web console to monitor the running status of the queries. Users with the `STATE` permission can access the query results.
-
-[#14944](https://github.com/apache/druid/pull/14944)
+* EARLIEST and LATEST operators now rewrite to EARLIEST_BY and LATEST_BY during query processing to make the `__time` column reference explicit to Calcite. [#15095](https://github.com/apache/druid/pull/15095)
+* You can now use EARLIEST/EARLIEST_BY and LATEST/LATEST_BY for STRING columns without specifying the `maxBytesPerValue` parameter.
+If you omit the `maxBytesPerValue` parameter, the aggregations default to 1024 bytes for the buffer. [#14848](https://github.com/apache/druid/pull/14848)
 
 ### Functions for evaluating distinctness
 
@@ -248,19 +282,6 @@ Expressions are distinct if they have different values or if one of them is NULL
 Expressions are not distinct if their values are the same or if both of them are NULL.
 
 Because the functions treat NULLs as known values  when used as a comparison operator, they always return true or false, even if one or both expressions are NULL.
-
-Native query example:
-
-```
-isdistinctfrom(2.0, 2.0)
-notdistinctfrom(2.0, 1.0)
-```
-
-SQL syntax:
-
-```
-`x IS [NOT] DISTINCT FROM y`
-```
 
 The following table shows the difference in behavior between the equals sign (=) and IS [NOT] DISTINCT FROM:
 
@@ -292,7 +313,7 @@ The new SQL and native query function, `decode_base64_utf8` decodes a Base64-enc
 
 [#14943](https://github.com/apache/druid/pull/14943)
 
-### Improved `maxSubqueryBytes`
+### Improved subquery guardrail
 
 You can now set the `maxSubqueryBytes` guardrail to one of the following:
 
@@ -303,39 +324,20 @@ You can now set the `maxSubqueryBytes` guardrail to one of the following:
   ```text
   ((total JVM space - memory occupied by lookups) * 0.5) / maximum queries that the system can handle concurrently
   ```
+
 * INTEGER: The number of bytes to use for materializing subquery results. Set a specific value if you understand the query patterns and want to optimize memory usage.  
-  For example, set the `maxSubqueryBytes` parameter to 300000000 (300 * 1000 * 1000) for a 300 MB limit.
-  Set the `maxSubqueryBytes` parameter to 314572800 (300 * 1024 * 1024) for a 300 MiB limit.
+  For example, set the `maxSubqueryBytes` parameter to 300000000 (`300 * 1000 * 1000`) for a 300 MB limit.
+  Set the `maxSubqueryBytes` parameter to 314572800 (`300 * 1024 * 1024`) for a 300 MiB limit.
 
 [#14808](https://github.com/apache/druid/pull/14808)
-
-### Whole-query caching on the Broker for groupBy v2
-
-Enabled [whole-query caching](https://druid.apache.org/docs/latest/querying/caching#whole-query-caching) on the Broker for [groupBy v2](https://druid.apache.org/docs/latest/querying/groupbyquery.html) queries.
-
-[#11595](https://github.com/apache/druid/pull/11595)
 
 ### Other query improvements
 
 * Added filters to the set of filters that work with UNNEST filter rewrite and pushdown [#14777](https://github.com/apache/druid/pull/14777)
-* Improved error messages related to OVERWRITE keyword [#14870](https://github.com/apache/druid/pull/14870)
+* Enabled [whole-query caching](https://druid.apache.org/docs/latest/querying/caching#whole-query-caching) on the Broker for [groupBy v2](https://druid.apache.org/docs/latest/querying/groupbyquery.html) queries [#11595](https://github.com/apache/druid/pull/11595)
 * Improved performance of EARLIEST aggregator with vectorization [#14408](https://github.com/apache/druid/pull/14408)
 
 ## Metrics and monitoring
-
-### Segment scan metric
-
-Added a new metric to figure out the usage of `druid.processing.numThreads` on the Historicals/Indexers/Peons.
-
-|Metric|Description|Dimensions|Normal value|
-|------|-----------|----------|------------|
-|`segment/scan/active`|Number of segments currently scanned. This metric also indicates how many threads from `druid.processing.numThreads` are currently being used.||Close to `druid.processing.numThreads`|
-
-### Pending requests metric
-
-You can now add a metric `mergeBuffer\pendingRequests` to monitor the contention level of the merge buffer pool. This metric is exposed through the `QueryCountStatsMonitor` module for the Broker.
-
-[#15025](https://github.com/apache/druid/pull/15025)
 
 ### New ingestion metrics
 
@@ -345,11 +347,11 @@ You can now add a metric `mergeBuffer\pendingRequests` to monitor the contention
 
 [#14582](https://github.com/apache/druid/pull/14582)
 
-### New query metric
+### New query metrics
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
+|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|This metric is exposed through the `QueryCountStatsMonitor` module for the Broker.| |
 
 [#15025](https://github.com/apache/druid/pull/15025)
 
@@ -362,9 +364,9 @@ You can now add a metric `mergeBuffer\pendingRequests` to monitor the contention
 
 [#14333](https://github.com/apache/druid/pull/14333)
 
-### Subquery stats for the Broker
+### New subquery metrics for the Broker
 
-The new  `SubqueryCountStatsMonitor` emits metrics corresponding to the subqueries and their execution
+The new  `SubqueryCountStatsMonitor` emits metrics corresponding to the subqueries and their execution.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -378,27 +380,7 @@ The new  `SubqueryCountStatsMonitor` emits metrics corresponding to the subqueri
 
 [#14808](https://github.com/apache/druid/pull/14808)
 
-### New Kafka consumer metrics
-
-Added the following Kafka consumer metrics:
-
-* `kafka/consumer/bytesConsumed`: Equivalent to the Kafka consumer metric `bytes-consumed-total`. Only emitted for Kafka tasks.
-* `kafka/consumer/recordsConsumed`: Equivalent to the Kafka consumer metric `records-consumed-total`. Only emitted for Kafka tasks.
-
-[#14582](https://github.com/apache/druid/pull/14582)
-
-### service/heartbeat metric
-
-* Exposed `service/heartbeat` metric to `statsd-reporter` [#14564](https://github.com/apache/druid/pull/14564)
-* Modified the `service/heartbeat` metric to expose the `leader` dimension [#14593](https://github.com/apache/druid/pull/14593)
-
-### Tombstone and segment counts
-
-Added `ingest/tombstones/count` and `ingest/segments/count` metrics in MSQ to report the number of tombstones and segments after Druid finishes publishing segments.
-
-[#14980](https://github.com/apache/druid/pull/14980)
-
-### New coordination metrics
+### New Coordinator metrics
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -409,6 +391,42 @@ Added `ingest/tombstones/count` and `ingest/segments/count` metrics in MSQ to re
 
 [#14782](https://github.com/apache/druid/pull/14782)
 [#14951](https://github.com/apache/druid/pull/14951)
+
+### New compaction metrics
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`compact/segmentAnalyzer/fetchAndProcessMillis`|Time taken to fetch and process segments to infer the schema for the compaction task to run.|`dataSource`, `taskId`, `taskType`, `groupId`,`tags`| Varies. A high value indicates compaction tasks will speed up from explicitly setting the data schema. |
+
+[#14752](https://github.com/apache/druid/pull/14752)
+
+### Segment scan metrics
+
+Added a new metric to figure out the usage of `druid.processing.numThreads` on the Historicals/Indexers/Peons.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`segment/scan/active`|Number of segments currently scanned. This metric also indicates how many threads from `druid.processing.numThreads` are currently being used.||Close to `druid.processing.numThreads`|
+
+### New Kafka consumer metrics
+
+Added the following Kafka consumer metrics:
+
+* `kafka/consumer/bytesConsumed`: Equivalent to the Kafka consumer metric `bytes-consumed-total`. Only emitted for Kafka tasks.
+* `kafka/consumer/recordsConsumed`: Equivalent to the Kafka consumer metric `records-consumed-total`. Only emitted for Kafka tasks.
+
+[#14582](https://github.com/apache/druid/pull/14582)
+
+### service/heartbeat metrics
+
+* Exposed `service/heartbeat` metric to `statsd-reporter` [#14564](https://github.com/apache/druid/pull/14564)
+* Modified the `service/heartbeat` metric to expose the `leader` dimension [#14593](https://github.com/apache/druid/pull/14593)
+
+### Tombstone and segment counts
+
+Added `ingest/tombstones/count` and `ingest/segments/count` metrics in MSQ to report the number of tombstones and segments after Druid finishes publishing segments.
+
+[#14980](https://github.com/apache/druid/pull/14980)
 
 ## Cluster management
 
@@ -430,18 +448,13 @@ Configure it with the following properties:
 
 The Druid segments table now has a column called `used_flag_last_updated` (VARCHAR (255)). This column is a UTC date string corresponding to the last time that the used column was modified.
 
-Note that this is an incompatible change to the table. For upgrade information, see [Update Druid segments table](#update-druid-segments-table).
+Note that this is an incompatible change to the table. For upgrade information, see [Upgrade Druid segments table](#upgrade-druid-segments-table).
 
 [#12599](https://github.com/apache/druid/pull/12599)
 
-### Enabled multiple console appenders
-
-You can now use multiple console appenders in Peon logging.
-
-[#14521](https://github.com/apache/druid/pull/14521)
-
 ### Other cluster management changes
 
+* You can now use multiple console appenders in Peon logging [#14521](https://github.com/apache/druid/pull/14521)
 * Thread names of the processing pool for Indexer, Peon, and Historical processes now include the query ID [#15059](https://github.com/apache/druid/pull/15059)
 * The value for `replicationThrottleLimit` used for smart segment loading has been increased from 2% to 5% of total number of used segments. The total number of replicas in the load queue at the start of a run plus the replicas assigned in a run is kept less than or equal to the throttle limit [#14913](https://github.com/apache/druid/pull/14913)
 * The value default  value for `balancerComputeThreads` is now calculated based on the number of CPUs divided by 2. Previously, the value was `1`. Smart segment loading uses this computed value [#14902](https://github.com/apache/druid/pull/14902)
@@ -453,13 +466,25 @@ You can now use multiple console appenders in Peon logging.
    * The `sys.tasks` metadata table and web console now show the Kubernetes pod name rather than the peon location when using Middle Manager-less ingestion [#14959](https://github.com/apache/druid/pull/14959)
    * Added support for Middle Manager-less ingestion to migrate with zero downtime to and from `WorkerTaskRunners` that use Middle Managers [#14918](https://github.com/apache/druid/pull/14918)
 * Druid extensions cannot bind custom Coordinator duties to the duty groups `IndexingServiceDuties` and `MetadataStoreManagementDuties` anymore. These are meant to be core coordinator built-in flows and should not be affected by custom duties. Users can still define a `CustomCoordinatorDuty` with a custom duty group and period [#14891](https://github.com/apache/druid/pull/14891)
-* The `service/heartbeat` metric now has additional dimensions to provide more insight into ingestion on the cluster [#14743](https://github.com/apache/druid/pull/14743)
-* A new metric `compact/segmentAnalyzer/fetchAndProcessMillis` is now reported by compaction tasks to indicate how much time was spent fetching and processing segments to infer the schema [#14752](https://github.com/apache/druid/pull/14752)
-* Druid now adjust `balancerComputeThreads` and `maxSegmentsToMove` automatically based on usage skew between the historicals in a tier [#14584](https://github.com/apache/druid/pull/14584)
+* Druid now adjusts `balancerComputeThreads` and `maxSegmentsToMove` automatically based on usage skew between the Historical processes in a tier [#14584](https://github.com/apache/druid/pull/14584)
 * Removed the configurable property `druid.coordinator.compaction.skipLockedIntervals` because it should always be `true` [#14807](https://github.com/apache/druid/pull/14807)
 * Updated mm-less task runner lifecycle logic to better match the logic in the HTTP and ZooKeeper worker task runners [#14895](https://github.com/apache/druid/pull/14895)
 
 ## Data management
+
+### Alert message for segment assignments
+Improved alert message for segment assignments when an invalid tier is specified in a load rule or when no rule applies on a segment.
+
+[#14696](https://github.com/apache/druid/pull/14696)
+
+### Coordinator API for unused segments
+
+Added `includeUnused` as an optional parameter to the Coordinator API.
+You can send a `GET` request to `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}?includeUnused=true` to retrieve the metadata for a specific segment as stored in the metadata store.
+
+The API also returns unused segments if the `includeUnused` parameter is set.
+
+[#14846](https://github.com/apache/druid/pull/14846/)
 
 ### Kill task improvements
 
@@ -477,11 +502,9 @@ You can now use multiple console appenders in Peon logging.
 
 ### Added UI support for segment loading query context parameter
 
-The web console now supports the new **Wait until segments have loaded** query context parameter.
+The web console now supports the `waitTillSegmentsLoad` query context parameter.
 
 ![UI for waitTillSegmentsLoad context parameter](image.png)
-
-For more information on the `waitTillSegmentsLoad` query context parameter, see [New context parameter for segment loading](#new-context-parameter-for-segment-loading).
 
 [#15110](https://github.com/apache/druid/pull/15110)
 
@@ -499,14 +522,13 @@ The following screenshot shows the concurrent compaction switch in the compactio
 
 ### Other web console improvements
 
-* You can select to allow concurrent append tasks in the web console [#15114](https://github.com/apache/druid/pull/15114)
+* You can select to allow concurrent APPEND tasks in the web console [#15114](https://github.com/apache/druid/pull/15114)
 * You can now copy query results from the web console directly to the clipboard [#14889](https://github.com/apache/druid/pull/14889)
-* The web console now shows the execution dialog for `query_controller` tasks in the task view instead of the generic raw task details dialog.
-You can still access the raw task details from the ellipsis (...) menu [#14930)](https://github.com/apache/druid/pull/14930)
+* The web console now shows the execution dialog for `query_controller` tasks in the task view instead of the generic raw task details dialog. You can still access the raw task details from the ellipsis (...) menu [#14930)](https://github.com/apache/druid/pull/14930)
 * You can now select a horizontal range in the web console time chart to modify the current WHERE clause [#14929](https://github.com/apache/druid/pull/14929)
 * You can now set dynamic query parameters in the web console [#14921](https://github.com/apache/druid/pull/14921)
-* You can now edit the Coordinator dynamic coonfiguration within the web console [#14791](https://github.com/apache/druid/pull/14791)
-* Within the web console, you can now prettify SQL queries and use flatten with a Kafka input format [#14906](https://github.com/apache/druid/pull/14906)
+* You can now edit the Coordinator dynamic coonfiguration in the web console [#14791](https://github.com/apache/druid/pull/14791)
+* You can now prettify SQL queries and use flatten with a Kafka input format [#14906](https://github.com/apache/druid/pull/14906)
 * A warning now appears when a CSV or TSV sample contains newlines that Druid does not accept [#14783](https://github.com/apache/druid/pull/14783)
 * You can now select a format when downloading data [#14794](https://github.com/apache/druid/pull/14794)
 * Improved the clarity of cluster default rules in the retention dialog [#14793](https://github.com/apache/druid/pull/14793)
@@ -516,6 +538,12 @@ You can still access the raw task details from the ellipsis (...) menu [#14930)]
 
 ## Extensions
 
+### Ingestion task payloads for Kubernetes
+
+You can now provide compressed task payloads larger than 128 KB when you run MiddleManager-less ingestion jobs.
+
+[#14887](https://github.com/apache/druid/pull/14887)
+
 ### Prometheus emitter
 
 The Prometheus emitter now supports a new optional configuration parameter, `druid.emitter.prometheus.extraLabels`.
@@ -524,7 +552,16 @@ For more information, see [Prometheus emitter extension](https://druid.apache.or
 
 [#14728](https://github.com/apache/druid/pull/14728)
 
-## Dependency updates
+## Documentation improvements
+
+We've moved Jupyter Notebooks that guide you through query, ingestion, and data management with Apache Druid to the new [Learn Druid](https://github.com/implydata/learn-druid) repository.
+The repository also contains a Docker Compose file to get you up and running with a learning lab.
+
+[#15136](https://github.com/apache/druid/pull/15136)
+
+## Developer notes
+
+### Dependency updates
 
 The following dependencies have had their versions bumped:
 
@@ -564,35 +601,14 @@ The following dependencies have had their versions bumped:
 * `snappy-java` has been upgraded from 1.1.10.1 to 1.1.10.3 [#14641](https://github.com/apache/druid/pull/14641)
 * Hibernate validator version has been upgraded [#14757](https://github.com/apache/druid/pull/14757)
 * The Dependabot PR limit for Java dependencies has been increased [#14804](https://github.com/apache/druid/pull/14804)
-
-## Developer notes
-
-### Alert message for segment assignments
-Improved alert message for segment assignments when an invalid tier is specified in a load rule or when no rule applies on a segment.
-
-[#14696](https://github.com/apache/druid/pull/14696)
-
-### Coordinator API for unused segments
-
-Added `includeUnused` as an optional parameter to the Coordinator API.
-You can send a `GET` request to `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}?includeUnused=true` to retrieve the metadata for a specific segment as stored in the metadata store.
-
-The API also returns unused segments if the `includeUnused` parameter is set.
-
-[#14846](https://github.com/apache/druid/pull/14846/)
-
-## Documentation improvements
-
-We've moved Jupyter Notebooks that guide you through query, ingestion, and data management with Apache Druid to the new [Learn Druid](https://github.com/implydata/learn-druid) repository.
-The repository also contains a Docker Compose file to get you up and running with a learning lab.
-
-[#15136](https://github.com/apache/druid/pull/15136)
+* `jetty` has been upgraded from 9.4.51.v20230217 to 9.4.53.v20231009 [#15129](https://github.com/apache/druid/pull/15129)
+* `netty4` has been upgraded from 4.1.94.Final to 4.1.100.Final [#15129](https://github.com/apache/druid/pull/15129)
 
 # Upgrade notes and incompatible changes
 
 ## Upgrade notes
 
-### Update Druid segments table
+### Upgrade Druid segments table
 
 Druid 28.0.0 adds a new column to the Druid metadata table that requires an update to the table.
 
@@ -635,20 +651,6 @@ ALTER TABLE druid_segments
 ADD used_flag_last_updated varchar(255);
 ```
 
-### New syntax for SQL UNNEST
-
-As part of the Calcite upgrade, the recommended syntax for SQL UNNEST has changed. We recommend using CROSS JOIN instead of commas for most queries to prevent issues with precedence. For example, use
-
-```sql
-SELECT column_alias_name1 FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
-```
-
-Do not use:
-
-```sql
-SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
-```
-
 ### Dynamic parameters
 
 As part of the Calcite upgrade, you are now required to provide the type of the dynamic parameter using the `CAST` keyword.
@@ -665,11 +667,19 @@ Do not use:
 SELECT (1 * ?)/2 as tmp
 ```
 
-### Renamed setting for maxSubqueryBytes
+### UNNEST syntax
 
-The `unlimited` setting for `maxSubqueryBytes` has changed from `unlimited` to `disabled` to better describe the functionality. The functionality has not changed: when you set `'maxSubqueryBytes'='disabled`, the guard rail around subquery row bytes is not applied.
+As part of the Calcite upgrade, the recommended syntax for SQL UNNEST has changed. We recommend using CROSS JOIN instead of commas for most queries to prevent issues with precedence. For example, use
 
-[#15108](https://github.com/apache/druid/pull/15108)
+```sql
+SELECT column_alias_name1 FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
+
+Do not use:
+
+```sql
+SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
 
 ### Nested column format
 
@@ -697,13 +707,9 @@ In a classic batch ingestion job, include `formatVersion` in the `dimensions` li
 
 To set the default nested column version, set the desired format version in the common runtime properties. For example:
 
-```
+```js
 druid.indexing.formats.nestedColumnFormatVersion=4
 ```
-
-### Stop supervisors that ingest from multiple Kafka topics before downgrading
-
-If you have added supervisors that ingest from multiple Kafka topics in Druid 28.0.0 or later, stop those supervisors before downgrading to a version prior to Druid 28.0.0 because the supervisors will fail in versions prior to Druid 28.0.0.
 
 ### SQL compatibility
 
@@ -721,7 +727,7 @@ The following table illustrates some example scenarios and the impact of the cha
 
 <details><summary>Show the table</summary>
 
-| Query| 2023.08 STS and earlier| 2023.09 STS and later|
+| Query| Druid 27.0.0 and earlier| Druid 28.0.0 and later|
 |------|------------------------|----------------------|
 | Query empty string| Empty string (`''`) or null| Empty string (`''`)|
 | Query null string| Null or empty| Null|
@@ -737,6 +743,10 @@ The following table illustrates some example scenarios and the impact of the cha
 | COMPLEX| none| Null|
 
 </details>
+
+### Stop supervisors that ingest from multiple Kafka topics before downgrading
+
+If you have added supervisors that ingest from multiple Kafka topics in Druid 28.0.0 or later, stop those supervisors before downgrading to a version prior to Druid 28.0.0 because the supervisors will fail in versions prior to Druid 28.0.0.
 
 ### `lenientAggregatorMerge` deprecated
 
@@ -754,6 +764,10 @@ The paths for `druid.processing.merge.pool.*` and `druid.processing.merge.task.*
 
 ## Incompatible changes
 
+### Removed Hadoop 2
+
+Support for Hadoop 2 has been removed. Migrate to SQL-based ingestion or native ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid ingestion is not possible, plan to upgrade your Hadoop infrastructure.
+
 ### Removed Coordinator dynamic configs
 
 The `decommissioningMaxPercentOfMaxSegmentsToMove` config has been removed. 
@@ -763,7 +777,7 @@ The use case for this config is handled by smart segment loading now, which is e
 
 ### Removed legacy groupBy v1
 
-GroupBy v1 engine has been removed. Use the groupBy v2 engine instead.  
+The groupBy v1 engine has been removed. Use the groupBy v2 engine instead.  
 If you are using groupBy v1 in native queries, you must change your queries before upgrading. Otherwise, your queries will fail.
 For more information, see [GroupBy queries](https://druid.apache.org/docs/latest/querying/groupbyquery.html).
 
