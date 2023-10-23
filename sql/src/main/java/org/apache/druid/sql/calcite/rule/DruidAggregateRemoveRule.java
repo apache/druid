@@ -80,5 +80,4 @@ public class DruidAggregateRemoveRule extends AggregateRemoveRule
   {
     super(config);
   }
-
 }
