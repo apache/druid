@@ -96,7 +96,7 @@ public interface Supervisor
   int getActiveTaskGroupsCount();
 
   /**
-   * @return active base sequence names for reading and pending completion task groups of a seekable stream supervisor
+   * @return active sequence prefixes for reading and pending completion task groups of a seekable stream supervisor
    */
   Set<String> getActiveRealtimeSequencePrefixes();
 }

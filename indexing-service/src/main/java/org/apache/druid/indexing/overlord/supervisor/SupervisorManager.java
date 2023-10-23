@@ -113,10 +113,11 @@ public class SupervisorManager
 
   public Set<String> getActiveRealtimeSequencePrefixes(String activeSupervisorId)
   {
-    if (!supervisors.containsKey(activeSupervisorId)) {
+    if (supervisors.containsKey(activeSupervisorId)) {
+      return supervisors.get(activeSupervisorId).lhs.getActiveRealtimeSequencePrefixes();
+    } else {
       return Collections.emptySet();
     }
-    return supervisors.get(activeSupervisorId).lhs.getActiveRealtimeSequencePrefixes();
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)

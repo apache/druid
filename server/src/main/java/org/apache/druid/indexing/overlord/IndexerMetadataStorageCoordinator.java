@@ -347,7 +347,7 @@ public interface IndexerMetadataStorageCoordinator
    * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @param activeRealtimeSequencePrefixes Set of base sequence names of active and pending completion task groups
+   * @param activeRealtimeSequencePrefixes Set of sequence prefixes of active and pending completion task groups
    *                                       of the supervisor (if any) for this datasource
    * @return Map from originally allocated pending segment to its new upgraded ID.
    */
