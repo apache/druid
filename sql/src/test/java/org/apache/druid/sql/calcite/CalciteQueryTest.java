@@ -13949,15 +13949,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "group by 1",
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setDataSource(GroupByQuery.builder()
+                                                   .setDataSource(CalciteTests.DATASOURCE3)
+                                                   .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                                                   .setGranularity(Granularities.ALL)
+                                                   .addDimension(new DefaultDimensionSpec(
+                                                       "dim1",
+                                                       "_d0",
+                                                       ColumnType.STRING
+                                                   ))
+                                                   .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
+                                                   .build()
+                        )
                         .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                        .setGranularity(Granularities.ALL)
-                        .addDimension(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
-                        .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
-                        .setPostAggregatorSpecs(ImmutableList.of(
-                            expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)")
+                        .setDimensions(new DefaultDimensionSpec("_d0", "d0", ColumnType.STRING))
+                        .setAggregatorSpecs(aggregators(
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("_a0"),
+                                useDefault ?
+                                selector("a0", "0") :
+                                equality("a0", 0, ColumnType.LONG)
+                            )
                         ))
+                        .setGranularity(Granularities.ALL)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
+
         ),
         useDefault ? ImmutableList.of(
             new Object[]{"", 0L},

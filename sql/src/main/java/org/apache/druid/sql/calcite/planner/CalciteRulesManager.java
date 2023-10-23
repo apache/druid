@@ -177,7 +177,11 @@ public class CalciteRulesManager
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
-          CoreRules.AGGREGATE_REMOVE,
+          // Removing CoreRules.AGGREGATE_REMOVE rule here
+          // as after the Calcite upgrade, it would plan queries to a scan over a group by
+          // with ordering on a non-time column
+          // which is not allowed in Druid. We should add that rule back
+          // once Druid starts to support non-time ordering over scan queries
           CoreRules.UNION_TO_DISTINCT,
           CoreRules.PROJECT_REMOVE,
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
