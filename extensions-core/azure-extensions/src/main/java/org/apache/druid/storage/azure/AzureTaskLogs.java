@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -153,7 +153,7 @@ public class AzureTaskLogs implements TaskLogs
         throw new IOException(e);
       }
     }
-    catch (StorageException | URISyntaxException e) {
+    catch (StorageErrorException | URISyntaxException e) {
       throw new IOE(e, "Failed to stream logs from: %s", taskKey);
     }
   }

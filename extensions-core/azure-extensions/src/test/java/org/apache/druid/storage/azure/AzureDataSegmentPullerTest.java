@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.microsoft.azure.storage.StorageException;
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.easymock.EasyMock;
@@ -53,7 +53,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
   @Test
   public void test_getSegmentFiles_success()
-      throws SegmentLoadingException, URISyntaxException, StorageException, IOException
+      throws SegmentLoadingException, URISyntaxException, StorageErrorException, IOException
   {
     final String value = "bucket";
     final File pulledFile = AzureTestUtils.createZipTempFile(SEGMENT_FILE_NAME, value);
@@ -85,7 +85,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
   @Test
   public void test_getSegmentFiles_blobPathIsHadoop_success()
-      throws SegmentLoadingException, URISyntaxException, StorageException, IOException
+      throws SegmentLoadingException, URISyntaxException, StorageErrorException, IOException
   {
     final String value = "bucket";
     final File pulledFile = AzureTestUtils.createZipTempFile(SEGMENT_FILE_NAME, value);
@@ -117,7 +117,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
   @Test(expected = RuntimeException.class)
   public void test_getSegmentFiles_nonRecoverableErrorRaisedWhenPullingSegmentFiles_doNotDeleteOutputDirectory()
-      throws IOException, URISyntaxException, StorageException, SegmentLoadingException
+      throws IOException, URISyntaxException, StorageErrorException, SegmentLoadingException
   {
 
     final File outDir = FileUtils.createTempDir();
@@ -149,14 +149,14 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
   @Test(expected = SegmentLoadingException.class)
   public void test_getSegmentFiles_recoverableErrorRaisedWhenPullingSegmentFiles_deleteOutputDirectory()
-      throws IOException, URISyntaxException, StorageException, SegmentLoadingException
+      throws IOException, URISyntaxException, StorageErrorException, SegmentLoadingException
   {
 
     final File outDir = FileUtils.createTempDir();
     try {
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
-          new StorageException(null, null, 0, null, null)
+          new StorageErrorException(null, null)
       ).atLeastOnce();
 
       replayAll();

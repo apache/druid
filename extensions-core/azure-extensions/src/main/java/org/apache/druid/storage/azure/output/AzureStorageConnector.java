@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure.output;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
@@ -64,7 +64,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
     try {
       return buildInputParams(path, 0, azureStorage.getBlockBlobLength(config.getContainer(), objectPath(path)));
     }
-    catch (URISyntaxException | StorageException e) {
+    catch (URISyntaxException | StorageErrorException e) {
       throw new IOException(e);
     }
   }
@@ -100,7 +100,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
                   config.getMaxRetry()
               );
             }
-            catch (URISyntaxException | StorageException e) {
+            catch (URISyntaxException | StorageErrorException e) {
               throw new IOException(e);
             }
           }
@@ -128,7 +128,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
     try {
       return azureStorage.getBlockBlobExists(config.getContainer(), objectPath(path), config.getMaxRetry());
     }
-    catch (URISyntaxException | StorageException e) {
+    catch (URISyntaxException | StorageErrorException e) {
       throw new IOException(e);
     }
   }
@@ -144,7 +144,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
           config.getMaxRetry()
       );
     }
-    catch (URISyntaxException | StorageException e) {
+    catch (URISyntaxException | StorageErrorException e) {
       throw new IOException(e);
     }
   }
@@ -159,7 +159,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
           config.getMaxRetry()
       );
     }
-    catch (URISyntaxException | StorageException e) {
+    catch (URISyntaxException | StorageErrorException e) {
       throw new IOException(e);
     }
   }
@@ -174,7 +174,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
           config.getMaxRetry()
       );
     }
-    catch (StorageException | URISyntaxException e) {
+    catch (StorageErrorException | URISyntaxException e) {
       throw new IOException(e);
     }
   }
@@ -185,7 +185,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
     try {
       azureStorage.emptyCloudBlobDirectory(config.getContainer(), objectPath(path), config.getMaxRetry());
     }
-    catch (StorageException | URISyntaxException e) {
+    catch (StorageErrorException | URISyntaxException e) {
       throw new IOException(e);
     }
   }
@@ -198,7 +198,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
     try {
       paths = azureStorage.listDir(config.getContainer(), prefixBasePath, config.getMaxRetry());
     }
-    catch (StorageException | URISyntaxException e) {
+    catch (StorageErrorException | URISyntaxException e) {
       throw new IOException(e);
     }
 

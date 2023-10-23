@@ -19,10 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.google.common.io.ByteSource;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
@@ -62,7 +62,7 @@ public class AzureByteSource extends ByteSource
     try {
       return azureStorage.getBlockBlobInputStream(offset, containerName, blobPath);
     }
-    catch (StorageException | URISyntaxException e) {
+    catch (StorageErrorException | URISyntaxException e) {
       if (AzureUtils.AZURE_RETRY.apply(e)) {
         throw new IOException("Recoverable exception", e);
       }

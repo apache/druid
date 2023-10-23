@@ -24,6 +24,7 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.batch.BlobBatchClient;
 import com.azure.storage.blob.batch.BlobBatchClientBuilder;
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobRange;
 import com.azure.storage.blob.models.DeleteSnapshotsOptionType;
@@ -33,7 +34,6 @@ import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -78,13 +78,13 @@ public class AzureStorage
   }
 
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
-      throws StorageException, URISyntaxException
+      throws StorageErrorException, URISyntaxException
   {
     return emptyCloudBlobDirectory(containerName, virtualDirPath, null);
   }
 
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath, final Integer maxAttempts)
-      throws StorageException, URISyntaxException
+      throws StorageErrorException, URISyntaxException
   {
     List<String> deletedFiles = new ArrayList<>();
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
@@ -108,7 +108,7 @@ public class AzureStorage
   }
 
   public void uploadBlockBlob(final File file, final String containerName, final String blobPath)
-      throws IOException, StorageException, URISyntaxException
+      throws IOException, StorageErrorException, URISyntaxException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
 
@@ -123,7 +123,7 @@ public class AzureStorage
       final String blobPath,
       @Nullable final Integer streamWriteSizeBytes,
       Integer maxAttempts
-  ) throws URISyntaxException, StorageException
+  ) throws URISyntaxException, StorageErrorException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
     BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(blobPath).getBlockBlobClient();
@@ -138,57 +138,57 @@ public class AzureStorage
 
   // There's no need to download attributes with the new azure clients, they will get fetched as needed.
   public BlockBlobClient getBlockBlobReferenceWithAttributes(final String containerName, final String blobPath)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     return getOrCreateBlobContainerClient(containerName).getBlobClient(blobPath).getBlockBlobClient();
   }
 
   public long getBlockBlobLength(final String containerName, final String blobPath)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     return getBlockBlobReferenceWithAttributes(containerName, blobPath).getProperties().getBlobSize();
   }
 
   public InputStream getBlockBlobInputStream(final String containerName, final String blobPath)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     return getBlockBlobInputStream(0L, containerName, blobPath);
   }
 
   public InputStream getBlockBlobInputStream(long offset, final String containerName, final String blobPath)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     return getBlockBlobInputStream(offset, null, containerName, blobPath);
   }
 
   public InputStream getBlockBlobInputStream(long offset, Long length, final String containerName, final String blobPath)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     return getBlockBlobInputStream(offset, length, containerName, blobPath, null);
   }
 
   public InputStream getBlockBlobInputStream(long offset, Long length, final String containerName, final String blobPath, Integer maxAttempts)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
     return blobContainerClient.getBlobClient(blobPath).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
   }
 
   public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(blobServiceClient.get()).buildClient();
     blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
   }
 
   public List<String> listDir(final String containerName, final String virtualDirPath)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     return listDir(containerName, virtualDirPath, null);
   }
 
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)
-      throws StorageException, URISyntaxException
+      throws StorageErrorException, URISyntaxException
   {
     List<String> files = new ArrayList<>();
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
@@ -203,14 +203,14 @@ public class AzureStorage
     return files;
   }
 
-  public boolean getBlockBlobExists(String container, String blobPath) throws URISyntaxException, StorageException
+  public boolean getBlockBlobExists(String container, String blobPath) throws URISyntaxException, StorageErrorException
   {
     return getBlockBlobExists(container, blobPath, null);
   }
 
 
   public boolean getBlockBlobExists(String container, String blobPath, Integer maxAttempts)
-      throws URISyntaxException, StorageException
+      throws URISyntaxException, StorageErrorException
   {
     return getOrCreateBlobContainerClient(container).getBlobClient(blobPath).exists();
   }
@@ -226,7 +226,7 @@ public class AzureStorage
       final String containerName,
       final String prefix,
       int maxResults
-  ) throws IOException, URISyntaxException
+  ) throws IOException, URISyntaxException, StorageErrorException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
     return blobContainerClient.listBlobs(

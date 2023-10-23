@@ -19,10 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
@@ -57,7 +57,7 @@ public class AzureUtils
         return false;
       }
 
-      if (t instanceof StorageException) {
+      if (t instanceof StorageErrorException) {
         return true;
       }
 

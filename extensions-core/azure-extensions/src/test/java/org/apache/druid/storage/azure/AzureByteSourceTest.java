@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.microsoft.azure.storage.StorageException;
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Test;
@@ -34,7 +34,7 @@ public class AzureByteSourceTest extends EasyMockSupport
   private static final long OFFSET = 10L;
 
   @Test
-  public void test_openStream_withoutOffset_succeeds() throws IOException, URISyntaxException, StorageException
+  public void test_openStream_withoutOffset_succeeds() throws IOException, URISyntaxException, StorageErrorException
   {
     final String containerName = "container";
     final String blobPath = "/path/to/file";
@@ -53,7 +53,7 @@ public class AzureByteSourceTest extends EasyMockSupport
   }
 
   @Test
-  public void test_openStream_withOffset_succeeds() throws IOException, URISyntaxException, StorageException
+  public void test_openStream_withOffset_succeeds() throws IOException, URISyntaxException, StorageErrorException
   {
     final String containerName = "container";
     final String blobPath = "/path/to/file";
@@ -72,18 +72,15 @@ public class AzureByteSourceTest extends EasyMockSupport
   }
 
   @Test(expected = IOException.class)
-  public void openStreamWithRecoverableErrorTest() throws URISyntaxException, StorageException, IOException
+  public void openStreamWithRecoverableErrorTest() throws URISyntaxException, StorageErrorException, IOException
   {
     final String containerName = "container";
     final String blobPath = "/path/to/file";
     AzureStorage azureStorage = createMock(AzureStorage.class);
 
     EasyMock.expect(azureStorage.getBlockBlobInputStream(NO_OFFSET, containerName, blobPath)).andThrow(
-        new StorageException(
+        new StorageErrorException(
             "",
-            "",
-            500,
-            null,
             null
         )
     );

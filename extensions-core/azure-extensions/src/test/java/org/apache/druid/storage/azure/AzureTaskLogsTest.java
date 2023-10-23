@@ -19,10 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.FileUtils;
@@ -61,7 +61,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   private static final String KEY_1 = "key1";
   private static final String KEY_2 = "key2";
   private static final URI PREFIX_URI = URI.create(StringUtils.format("azure://%s/%s", CONTAINER, PREFIX));
-  private static final Exception RECOVERABLE_EXCEPTION = new StorageException("", "", null);
+  private static final Exception RECOVERABLE_EXCEPTION = new StorageErrorException("", null);
   private static final Exception NON_RECOVERABLE_EXCEPTION = new URISyntaxException("", "");
 
   private AzureInputDataConfig inputDataConfig;

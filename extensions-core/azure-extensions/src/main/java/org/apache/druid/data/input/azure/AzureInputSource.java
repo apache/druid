@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.azure;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -146,7 +147,7 @@ public class AzureInputSource extends CloudObjectInputSource
 
           return blobWithAttributes.getProperties().getBlobSize();
         }
-        catch (URISyntaxException | StorageException e) {
+        catch (URISyntaxException | StorageErrorException e) {
           throw new RuntimeException(e);
         }
       }

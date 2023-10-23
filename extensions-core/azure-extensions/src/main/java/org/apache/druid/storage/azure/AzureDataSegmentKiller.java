@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -76,10 +76,8 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     try {
       azureStorage.emptyCloudBlobDirectory(containerName, dirPath);
     }
-    catch (StorageException e) {
-      Object extendedInfo =
-          e.getExtendedErrorInformation() == null ? null : e.getExtendedErrorInformation().getErrorMessage();
-      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), extendedInfo);
+    catch (StorageErrorException e) {
+      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getMessage());
     }
     catch (URISyntaxException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getReason());
