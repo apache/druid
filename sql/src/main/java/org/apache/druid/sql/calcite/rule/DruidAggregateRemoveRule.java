@@ -1,132 +1,84 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package org.apache.druid.sql.calcite.rule;
 
-import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.RelFactories;
-import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.runtime.SqlFunctions;
+import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlSplittableAggFunction;
-import org.apache.calcite.tools.RelBuilder;
-import org.apache.calcite.tools.RelBuilderFactory;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-/**
- * Planner rule that removes
- * a {@link Aggregate}
- * if it computes no aggregate functions
- * (that is, it is implementing {@code SELECT DISTINCT}),
- * or all the aggregate functions are splittable,
- * and the underlying relational expression is already distinct.
- */
-public class DruidAggregateRemoveRule extends RelOptRule {
-  public static final DruidAggregateRemoveRule INSTANCE =
-      new DruidAggregateRemoveRule(LogicalAggregate.class,
-                              RelFactories.LOGICAL_BUILDER);
-
-  //~ Constructors -----------------------------------------------------------
-
-  @Deprecated // to be removed before 2.0
-  public DruidAggregateRemoveRule(Class<? extends Aggregate> aggregateClass) {
-    this(aggregateClass, RelFactories.LOGICAL_BUILDER);
-  }
-
-  /**
-   * Creates an AggregateRemoveRule.
-   */
-  public DruidAggregateRemoveRule(Class<? extends Aggregate> aggregateClass,
-                             RelBuilderFactory relBuilderFactory) {
-    super(
-        operandJ(aggregateClass, null, agg -> isAggregateSupported(agg),
-                 any()), relBuilderFactory, null);
-  }
-
-  private static boolean isAggregateSupported(Aggregate aggregate) {
-    if (aggregate.getGroupType() != Aggregate.Group.SIMPLE
-        || aggregate.getGroupCount() == 0) {
-      return false;
-    }
-    // If any aggregate functions do not support splitting, bail out.
-    for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
-      if (aggregateCall.filterArg >= 0
-          || aggregateCall.getAggregation()
-                          .unwrap(SqlSplittableAggFunction.class) == null) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  //~ Methods ----------------------------------------------------------------
-
+public class DruidAggregateRemoveRule extends AggregateRemoveRule
+{
   @Override
-  public void onMatch(RelOptRuleCall call) {
+  public void onMatch(RelOptRuleCall call)
+  {
     final Aggregate aggregate = call.rel(0);
-    final RelNode input = aggregate.getInput();
-    final RelMetadataQuery mq = call.getMetadataQuery();
-    if (!SqlFunctions.isTrue(mq.areColumnsUnique(input, aggregate.getGroupSet()))) {
+    boolean status = isSortUnderAggregate(call, aggregate);
+    if (status) {
       return;
     }
-
-    final RelBuilder relBuilder = call.builder();
-    final RexBuilder rexBuilder = relBuilder.getRexBuilder();
-    final List<RexNode> projects = new ArrayList<>();
     for (AggregateCall aggCall : aggregate.getAggCallList()) {
       final SqlAggFunction aggregation = aggCall.getAggregation();
-      if (aggregation.getKind() == SqlKind.SUM0) {
-        // Bail out for SUM0 to avoid potential infinite rule matching,
-        // because it may be generated by transforming SUM aggregate
-        // function to SUM0 and COUNT.
+      if (!(aggregation.getKind() == SqlKind.SUM || aggregation.getKind() == SqlKind.COUNT)) {
+        // Only allow AVG to trigger Calcite's AggregateRemoveRule
+        // intercept others from here and return
         return;
       }
-      final SqlSplittableAggFunction splitter =
-          Objects.requireNonNull(
-              aggregation.unwrap(SqlSplittableAggFunction.class));
-      final RexNode singleton = splitter.singleton(
-          rexBuilder, input.getRowType(), aggCall);
-      projects.add(singleton);
     }
-
-    final RelNode newInput = convert(input, aggregate.getTraitSet().simplify());
-    relBuilder.push(newInput);
-    if (!projects.isEmpty()) {
-      projects.addAll(0, relBuilder.fields(aggregate.getGroupSet().asList()));
-      relBuilder.project(projects);
-    } else if (newInput.getRowType().getFieldCount()
-               > aggregate.getRowType().getFieldCount()) {
-      // If aggregate was projecting a subset of columns, and there were no
-      // aggregate functions, add a project for the same effect.
-      relBuilder.project(relBuilder.fields(aggregate.getGroupSet().asList()));
-    }
-    call.transformTo(relBuilder.build());
+    super.onMatch(call);
   }
-}
 
-// End AggregateRemoveRule.java
+  private static boolean isSortUnderAggregate(RelOptRuleCall call, Aggregate aggregate)
+  {
+    final RelNode input = aggregate.getInput();
+    final RelMetadataQuery mq = call.getMetadataQuery();
+    List<RelCollation> collations = mq.collations(input);
+    assert collations != null;
+    boolean status = false;
+    // checking if the input of the aggregate has a sort
+    // do not invoke Calcite's AggregateRemove if aggregate has a sort underneath
+    for (RelCollation r : collations) {
+      final List<RelFieldCollation> fieldCollations = r.getFieldCollations();
+      if (!fieldCollations.isEmpty()) {
+        status = true;
+      }
+    }
+    return status;
+  }
+
+  public static DruidAggregateRemoveRule toRule()
+  {
+    return new DruidAggregateRemoveRule(Config.DEFAULT);
+  }
+
+  protected DruidAggregateRemoveRule(Config config)
+  {
+    super(config);
+  }
+
+}

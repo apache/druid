@@ -35,7 +35,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.metadata.RelMetadataProvider;
-import org.apache.calcite.rel.rules.AggregateRemoveRule;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
@@ -179,8 +178,8 @@ public class CalciteRulesManager
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
-          //foDruidAggregateRemoveRule.INSTANCE,
-          //CoreRules.AGGREGATE_REMOVE,
+          CoreRules.FILTER_AGGREGATE_TRANSPOSE,
+          DruidAggregateRemoveRule.toRule(),
           CoreRules.UNION_TO_DISTINCT,
           CoreRules.PROJECT_REMOVE,
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
