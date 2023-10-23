@@ -143,8 +143,13 @@ public class SqlStatementResourceHelper
    * <ol>
    *   <li>{@link DataSourceMSQDestination} a single page is returned which adds all the counters of {@link SegmentGenerationProgressCounter.Snapshot}</li>
    *   <li>{@link TaskReportMSQDestination} a single page is returned which adds all the counters of {@link ChannelCounters}</li>
-   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker which has generated output rows. The list is sorted on page Id.
-   *   If the worker generated 0 rows, we do no populated a page for it. {@link PageInformation#id} is equal to the worker number</li>
+   *   <li>{@link DurableStorageMSQDestination} a page is returned for each partition, worker which has generated output rows. The pages are populated in the following order:
+   *   <ul>
+   *     <li>For each partition from 0 to N</li>
+   *     <li>For each worker from 0 to M</li>
+   *     <li>If num rows for that partition,worker combination is 0, create a page</li>
+   *     so that we maintain the record ordering.
+   *   </ul>
    * </ol>
    */
   public static Optional<List<PageInformation>> populatePageList(
@@ -155,9 +160,9 @@ public class SqlStatementResourceHelper
     if (msqTaskReportPayload.getStages() == null || msqTaskReportPayload.getCounters() == null) {
       return Optional.empty();
     }
-    int finalStage = msqTaskReportPayload.getStages().getStages().size() - 1;
+    MSQStagesReport.Stage finalStage = getFinalStage(msqTaskReportPayload);
     CounterSnapshotsTree counterSnapshotsTree = msqTaskReportPayload.getCounters();
-    Map<Integer, CounterSnapshots> workerCounters = counterSnapshotsTree.snapshotForStage(finalStage);
+    Map<Integer, CounterSnapshots> workerCounters = counterSnapshotsTree.snapshotForStage(finalStage.getStageNumber());
     if (workerCounters == null || workerCounters.isEmpty()) {
       return Optional.empty();
     }
@@ -193,25 +198,54 @@ public class SqlStatementResourceHelper
       }
 
     } else if (msqDestination instanceof DurableStorageMSQDestination) {
-      List<PageInformation> pageList = new ArrayList<>();
-      for (Map.Entry<Integer, CounterSnapshots> counterSnapshots : workerCounters.entrySet()) {
-        long rows = 0L;
-        long size = 0L;
-        QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getValue().getMap().getOrDefault("output", null);
-        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
-          rows += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getRows()).sum();
-          size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
-        }
-        // do not populate a page if the worker generated 0 rows.
-        if (rows != 0L) {
-          pageList.add(new PageInformation(counterSnapshots.getKey(), rows, size));
-        }
-      }
-      pageList.sort(PageInformation.getIDComparator());
-      return Optional.of(pageList);
+
+      return populatePagesForDurableStorageDestination(finalStage, workerCounters);
     } else {
       return Optional.empty();
     }
+  }
+
+  private static Optional<List<PageInformation>> populatePagesForDurableStorageDestination(
+      MSQStagesReport.Stage finalStage,
+      Map<Integer, CounterSnapshots> workerCounters
+  )
+  {
+    // figure out number of partitions and number of workers
+    int totalPartitions = finalStage.getPartitionCount();
+    int totalWorkerCount = finalStage.getWorkerCount();
+
+    if (totalPartitions == -1) {
+      throw DruidException.defensive("Expected partition count to be set for stage[%d]", finalStage);
+    }
+    if (totalWorkerCount == -1) {
+      throw DruidException.defensive("Expected worker count to be set for stage[%d]", finalStage);
+    }
+
+
+    List<PageInformation> pages = new ArrayList<>();
+    for (int partitionNumber = 0; partitionNumber < totalPartitions; partitionNumber++) {
+      for (int workerNumber = 0; workerNumber < totalWorkerCount; workerNumber++) {
+        CounterSnapshots workerCounter = workerCounters.get(workerNumber);
+
+        if (workerCounter != null && workerCounter.getMap() != null) {
+          QueryCounterSnapshot channelCounters = workerCounter.getMap().get("output");
+
+          if (channelCounters != null && channelCounters instanceof ChannelCounters.Snapshot) {
+            long rows = 0L;
+            long size = 0L;
+
+            if (((ChannelCounters.Snapshot) channelCounters).getRows().length > partitionNumber) {
+              rows += ((ChannelCounters.Snapshot) channelCounters).getRows()[partitionNumber];
+              size += ((ChannelCounters.Snapshot) channelCounters).getBytes()[partitionNumber];
+            }
+            if (rows != 0L) {
+              pages.add(new PageInformation(pages.size(), rows, size, workerNumber, partitionNumber));
+            }
+          }
+        }
+      }
+    }
+    return Optional.of(pages);
   }
 
   public static Optional<SqlStatementResult> getExceptionPayload(
@@ -234,7 +268,7 @@ public class SqlStatementResourceHelper
           null,
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build(taskResponse.getStatus().getErrorMsg()).toErrorResponse()
+                        .build("%s", taskResponse.getStatus().getErrorMsg()).toErrorResponse()
       ));
     }
 
@@ -336,6 +370,7 @@ public class SqlStatementResourceHelper
     }
     return null;
   }
+
   public static Map<String, Object> getQueryExceptionDetails(Map<String, Object> payload)
   {
     return getMap(getMap(payload, "status"), "errorReport");

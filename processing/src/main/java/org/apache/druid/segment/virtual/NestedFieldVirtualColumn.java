@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -35,6 +34,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
@@ -1639,9 +1639,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+    public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
     {
-      return baseSelector.makeValueMatcher(predicate);
+      return baseSelector.makeValueMatcher(predicateFactory);
     }
 
     @Override

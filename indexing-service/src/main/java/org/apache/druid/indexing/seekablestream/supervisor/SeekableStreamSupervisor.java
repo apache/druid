@@ -97,6 +97,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
@@ -1090,6 +1091,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     log.info("Posting ResetOffsetsNotice with reset dataSource metadata[%s]", resetDataSourceMetadata);
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
+  }
+
+  public void registerNewVersionOfPendingSegment(
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
+  )
+  {
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      for (String taskId : taskGroup.taskIds()) {
+        taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
+      }
+    }
+    for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
+      for (TaskGroup taskGroup : taskGroupList) {
+        for (String taskId : taskGroup.taskIds()) {
+          taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
+        }
+      }
+    }
   }
 
   public ReentrantLock getRecordSupplierLock()

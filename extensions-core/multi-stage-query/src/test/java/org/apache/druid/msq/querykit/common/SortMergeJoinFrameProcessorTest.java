@@ -45,6 +45,7 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -1215,14 +1216,14 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
       final RowSignature joinSignature
   )
   {
-    final ListenableFuture<Long> retValFromProcessor = exec.runFully(processor, null);
+    final ListenableFuture<Object> retValFromProcessor = exec.runFully(processor, null);
     final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
         readableOutputChannel,
         FrameReader.create(joinSignature)
     );
 
     final List<List<Object>> rows = rowsFromProcessor.toList();
-    Assert.assertEquals(0L, (long) FutureUtils.getUnchecked(retValFromProcessor, true));
+    Assert.assertEquals(Unit.instance(), FutureUtils.getUnchecked(retValFromProcessor, true));
     return rows;
   }
 

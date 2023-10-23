@@ -321,10 +321,15 @@ public class QueryTestRunner
   public static class VerifyResults implements QueryVerifyStep
   {
     protected final BaseExecuteQuery execStep;
+    protected final boolean verifyRowSignature;
 
-    public VerifyResults(BaseExecuteQuery execStep)
+    public VerifyResults(
+        BaseExecuteQuery execStep,
+        boolean verifyRowSignature
+    )
     {
       this.execStep = execStep;
+      this.verifyRowSignature = verifyRowSignature;
     }
 
     @Override
@@ -346,8 +351,10 @@ public class QueryTestRunner
       }
 
       QueryTestBuilder builder = execStep.builder();
-      builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
-      builder.expectedResultsVerifier.verify(builder.sql, results);
+      if (verifyRowSignature) {
+        builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
+      }
+      builder.expectedResultsVerifier.verify(builder.sql, queryResults);
     }
   }
 
@@ -624,6 +631,7 @@ public class QueryTestRunner
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,
+          builder.expectedResultMatchMode,
           builder.expectedResultSignature
       );
     }
@@ -667,7 +675,9 @@ public class QueryTestRunner
         verifySteps.add(new VerifyNativeQueries(finalExecStep));
       }
       if (builder.expectedResultsVerifier != null) {
-        verifySteps.add(new VerifyResults(finalExecStep));
+        // Don't verify the row signature when MSQ is running, since the broker receives the task id, and the signature
+        // would be {TASK:STRING} instead of the expected results signature
+        verifySteps.add(new VerifyResults(finalExecStep, !config.isRunningMSQ()));
       }
 
       if (!builder.customVerifications.isEmpty()) {

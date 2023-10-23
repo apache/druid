@@ -22,8 +22,6 @@ title: "Query from deep storage"
   ~ under the License.
   -->
 
-> Query from deep storage is an [experimental feature](../development/experimental.md).
-
 Druid can query segments that are only stored in deep storage. Running a query from deep storage is slower than running queries from segments that are loaded on Historical processes, but it's a great tool for data that you either access infrequently or where the low latency results that typical Druid queries provide is not necessary. Queries from deep storage can increase the surface area of data available to query without requiring you to scale your Historical processes to accommodate more segments.
 
 ## Keep segments in deep storage only

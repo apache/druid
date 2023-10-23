@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
@@ -34,23 +36,28 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TaskLockbox.TaskLockPosse;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
@@ -524,7 +531,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -542,7 +549,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -561,7 +568,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -587,7 +594,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             highPriorityTask,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -612,7 +619,7 @@ public class TaskLockboxTest
     Assert.assertFalse(
         lockbox.doInCriticalSection(
             lowPriorityTask,
-            Collections.singletonList(interval),
+            Collections.singleton(interval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -1245,6 +1252,80 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testGetLockedIntervalsForHigherPriorityExclusiveLock()
+  {
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        75,
+        null
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+    Assert.assertTrue(conflictingIntervals.isEmpty());
+  }
+
+  @Test
+  public void testGetLockedIntervalsForLowerPriorityExclusiveLock()
+  {
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        null
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+    Assert.assertEquals(1, conflictingIntervals.size());
+    Assert.assertEquals(
+        Collections.singletonList(Intervals.of("2017/2018")),
+        conflictingIntervals.get(task.getDataSource())
+    );
+  }
+
+  @Test
+  public void testGetLockedIntervalsForLowerPriorityReplaceLock()
+  {
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        ImmutableMap.of(Tasks.TASK_LOCK_TYPE, TaskLockType.REPLACE.name())
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+    Assert.assertTrue(conflictingIntervals.isEmpty());
+  }
+
+
+  @Test
   public void testExclusiveLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
@@ -1727,6 +1808,117 @@ public class TaskLockboxTest
     validator.expectActiveLocks(conflictingLock, floorLock);
   }
 
+  @Test
+  public void testDoNotCleanUsedLockAfterSegmentAllocationFailure()
+  {
+    final Task task = NoopTask.create();
+    final Interval theInterval = Intervals.of("2023/2024");
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    final TaskLockbox testLockbox = new SegmentAllocationFailingTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(task);
+    final LockResult lockResult = testLockbox.tryLock(task, new TimeChunkLockRequest(
+        TaskLockType.SHARED,
+        task,
+        theInterval,
+        null
+    ));
+    Assert.assertTrue(lockResult.isOk());
+
+    SegmentAllocateRequest request = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.YEAR,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    try {
+      testLockbox.allocateSegments(
+          ImmutableList.of(request),
+          "DS",
+          theInterval,
+          false,
+          LockGranularity.TIME_CHUNK
+      );
+    }
+    catch (Exception e) {
+      // do nothing
+    }
+    Assert.assertFalse(testLockbox.getAllLocks().isEmpty());
+    Assert.assertEquals(
+        lockResult.getTaskLock(),
+        testLockbox.getOnlyTaskLockPosseContainingInterval(task, theInterval).get(0).getTaskLock()
+    );
+  }
+
+  @Test
+  public void testCleanUpLocksAfterSegmentAllocationFailure()
+  {
+    final Task task = NoopTask.create();
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+
+    final TaskLockbox testLockbox = new SegmentAllocationFailingTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(task);
+
+    SegmentAllocateRequest request0 = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.YEAR,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    SegmentAllocateRequest request1 = new SegmentAllocateRequest(
+        task,
+        new SegmentAllocateAction(
+            task.getDataSource(),
+            DateTimes.of("2023-01-01"),
+            Granularities.NONE,
+            Granularities.MONTH,
+            task.getId(),
+            null,
+            false,
+            null,
+            null,
+            TaskLockType.SHARED
+        ),
+        90
+    );
+
+    try {
+      testLockbox.allocateSegments(
+          ImmutableList.of(request0, request1),
+          "DS",
+          Intervals.of("2023/2024"),
+          false,
+          LockGranularity.TIME_CHUNK
+      );
+    }
+    catch (Exception e) {
+      // do nothing
+    }
+    Assert.assertTrue(testLockbox.getAllLocks().isEmpty());
+  }
+
 
   private class TaskLockboxValidator
   {
@@ -1951,6 +2143,28 @@ public class TaskLockboxTest
     {
       return task.getGroupId()
                  .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
+    }
+  }
+
+  private static class SegmentAllocationFailingTaskLockbox extends TaskLockbox
+  {
+    public SegmentAllocationFailingTaskLockbox(
+        TaskStorage taskStorage,
+        IndexerMetadataStorageCoordinator metadataStorageCoordinator
+    )
+    {
+      super(taskStorage, metadataStorageCoordinator);
+    }
+
+    @Override
+    void allocateSegmentIds(
+        String dataSource,
+        Interval interval,
+        boolean skipSegmentLineageCheck,
+        Collection<SegmentAllocationHolder> holders
+    )
+    {
+      throw new RuntimeException("This lockbox cannot allocate segemnts.");
     }
   }
 }

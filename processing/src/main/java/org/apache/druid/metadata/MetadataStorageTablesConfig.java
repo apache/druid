@@ -34,7 +34,7 @@ public class MetadataStorageTablesConfig
 
   public static MetadataStorageTablesConfig fromBase(String base)
   {
-    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null);
+    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null, null);
   }
 
   public static final String TASK_ENTRY_TYPE = "task";
@@ -56,6 +56,9 @@ public class MetadataStorageTablesConfig
 
   @JsonProperty("segments")
   private final String segmentsTable;
+
+  @JsonProperty("upgradeSegments")
+  private final String upgradeSegmentsTable;
 
   @JsonProperty("rules")
   private final String rulesTable;
@@ -90,13 +93,15 @@ public class MetadataStorageTablesConfig
       @JsonProperty("taskLog") String taskLogTable,
       @JsonProperty("taskLock") String taskLockTable,
       @JsonProperty("audit") String auditTable,
-      @JsonProperty("supervisors") String supervisorTable
+      @JsonProperty("supervisors") String supervisorTable,
+      @JsonProperty("upgradeSegments") String upgradeSegmentsTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
     this.dataSourceTable = makeTableName(dataSourceTable, "dataSource");
     this.pendingSegmentsTable = makeTableName(pendingSegmentsTable, "pendingSegments");
     this.segmentsTable = makeTableName(segmentsTable, "segments");
+    this.upgradeSegmentsTable = makeTableName(upgradeSegmentsTable, "upgradeSegments");
     this.rulesTable = makeTableName(rulesTable, "rules");
     this.configTable = makeTableName(configTable, "config");
 
@@ -140,6 +145,11 @@ public class MetadataStorageTablesConfig
   public String getSegmentsTable()
   {
     return segmentsTable;
+  }
+
+  public String getUpgradeSegmentsTable()
+  {
+    return upgradeSegmentsTable;
   }
 
   public String getRulesTable()

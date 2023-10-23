@@ -37,7 +37,8 @@ public class StringComparatorModule extends SimpleModule
         new NamedType(StringComparators.AlphanumericComparator.class, StringComparators.ALPHANUMERIC_NAME),
         new NamedType(StringComparators.StrlenComparator.class, StringComparators.STRLEN_NAME),
         new NamedType(StringComparators.NumericComparator.class, StringComparators.NUMERIC_NAME),
-        new NamedType(StringComparators.VersionComparator.class, StringComparators.VERSION_NAME)
+        new NamedType(StringComparators.VersionComparator.class, StringComparators.VERSION_NAME),
+        new NamedType(StringComparators.NaturalComparator.class, StringComparators.NATURAL_NAME)
     );
   }
 

@@ -80,12 +80,7 @@ public class PlannerContext
   /**
    * Undocumented context key, used to enable window functions.
    */
-  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
-
-  /**
-   * Undocumented context key, used to enable {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
-   */
-  public static final String CTX_ENABLE_UNNEST = "enableUnnest";
+  public static final String CTX_ENABLE_WINDOW_FNS = "enableWindowing";
 
   public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = NullHandling.replaceWithDefault();
@@ -527,13 +522,6 @@ public class PlannerContext
       // Short-circuit: feature requires context flag.
       return false;
     }
-
-    if (feature == EngineFeature.UNNEST &&
-        !QueryContexts.getAsBoolean(CTX_ENABLE_UNNEST, queryContext.get(CTX_ENABLE_UNNEST), false)) {
-      // Short-circuit: feature requires context flag.
-      return false;
-    }
-
     return engine.featureAvailable(feature, this);
   }
 

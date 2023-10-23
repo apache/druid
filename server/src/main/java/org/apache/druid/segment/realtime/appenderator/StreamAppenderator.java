@@ -72,6 +72,7 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -86,6 +87,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -152,6 +154,9 @@ public class StreamAppenderator implements Appenderator
   private final Lock commitLock = new ReentrantLock();
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
+
+  private final ConcurrentHashMap<SegmentId, Set<SegmentIdWithShardSpec>>
+      baseSegmentToUpgradedVersions = new ConcurrentHashMap<>();
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -998,7 +1003,7 @@ public class StreamAppenderator implements Appenderator
     log.debug("Shutting down immediately...");
     for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
       try {
-        segmentAnnouncer.unannounceSegment(entry.getValue().getSegment());
+        unannounceAllVersionsOfSegment(entry.getValue().getSegment());
       }
       catch (Exception e) {
         log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())
@@ -1024,6 +1029,66 @@ public class StreamAppenderator implements Appenderator
       Thread.currentThread().interrupt();
       throw new ISE("Failed to shutdown executors during close()");
     }
+  }
+
+  /**
+   * Unannounces the given base segment and all its upgraded versions.
+   */
+  private void unannounceAllVersionsOfSegment(DataSegment baseSegment) throws IOException
+  {
+    segmentAnnouncer.unannounceSegment(baseSegment);
+
+    final Set<SegmentIdWithShardSpec> upgradedVersionsOfSegment
+        = baseSegmentToUpgradedVersions.remove(baseSegment.getId());
+    if (upgradedVersionsOfSegment == null || upgradedVersionsOfSegment.isEmpty()) {
+      return;
+    }
+
+    for (SegmentIdWithShardSpec newId : upgradedVersionsOfSegment) {
+      final DataSegment newSegment = new DataSegment(
+          newId.getDataSource(),
+          newId.getInterval(),
+          newId.getVersion(),
+          baseSegment.getLoadSpec(),
+          baseSegment.getDimensions(),
+          baseSegment.getMetrics(),
+          newId.getShardSpec(),
+          baseSegment.getBinaryVersion(),
+          baseSegment.getSize()
+      );
+      segmentAnnouncer.unannounceSegment(newSegment);
+    }
+  }
+
+  public void registerNewVersionOfPendingSegment(
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
+  ) throws IOException
+  {
+    if (!sinks.containsKey(basePendingSegment) || droppingSinks.contains(basePendingSegment)) {
+      return;
+    }
+
+    // Update query mapping with SinkQuerySegmentWalker
+    ((SinkQuerySegmentWalker) texasRanger).registerNewVersionOfPendingSegment(basePendingSegment, newSegmentVersion);
+
+    // Announce segments
+    final DataSegment baseSegment = sinks.get(basePendingSegment).getSegment();
+
+    final DataSegment newSegment = new DataSegment(
+        newSegmentVersion.getDataSource(),
+        newSegmentVersion.getInterval(),
+        newSegmentVersion.getVersion(),
+        baseSegment.getLoadSpec(),
+        baseSegment.getDimensions(),
+        baseSegment.getMetrics(),
+        newSegmentVersion.getShardSpec(),
+        baseSegment.getBinaryVersion(),
+        baseSegment.getSize()
+    );
+    segmentAnnouncer.announceSegment(newSegment);
+    baseSegmentToUpgradedVersions.computeIfAbsent(basePendingSegment.asSegmentId(), id -> new HashSet<>())
+                                 .add(newSegmentVersion);
   }
 
   private void lockBasePersistDirectory()
@@ -1327,7 +1392,7 @@ public class StreamAppenderator implements Appenderator
 
             // Unannounce the segment.
             try {
-              segmentAnnouncer.unannounceSegment(sink.getSegment());
+              unannounceAllVersionsOfSegment(sink.getSegment());
             }
             catch (Exception e) {
               log.makeAlert(e, "Failed to unannounce segment[%s]", schema.getDataSource())

@@ -318,7 +318,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           continue;
         }
 
-        if (!matcher.matches()) {
+        if (!matcher.matches(false)) {
           rowsToSkip.set(theId);
         }
       }

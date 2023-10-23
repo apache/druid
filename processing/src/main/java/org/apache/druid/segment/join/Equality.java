@@ -32,11 +32,13 @@ public class Equality
 {
   private final Expr leftExpr;
   private final String rightColumn;
+  private final boolean includeNull;
 
-  public Equality(final Expr leftExpr, final String rightColumn)
+  public Equality(final Expr leftExpr, final String rightColumn, final boolean includeNull)
   {
     this.leftExpr = leftExpr;
     this.rightColumn = rightColumn;
+    this.includeNull = includeNull;
   }
 
   public Expr getLeftExpr()
@@ -49,12 +51,22 @@ public class Equality
     return rightColumn;
   }
 
+  /**
+   * Whether null is treated as a value that can be equal to itself. True for conditions using "IS NOT DISTINCT FROM",
+   * false for conditions using regular equals.
+   */
+  public boolean isIncludeNull()
+  {
+    return includeNull;
+  }
+
   @Override
   public String toString()
   {
     return "Equality{" +
            "leftExpr=" + leftExpr +
            ", rightColumn='" + rightColumn + '\'' +
+           ", includeNull=" + includeNull +
            '}';
   }
 }

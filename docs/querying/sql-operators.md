@@ -79,7 +79,9 @@ Also see the [CONCAT function](sql-scalar.md#string-functions).
 |Operator|Description|
 |--------|-----------|
 |`x = y` |Equal to|
+|`x IS NOT DISTINCT FROM y`|Equal to, considering `NULL` as a value. Never returns `NULL`.|
 |`x <> y`|Not equal to|
+|`x IS DISTINCT FROM y`|Not equal to, considering `NULL` as a value. Never returns `NULL`.|
 |`x > y` |Greater than|
 |`x >= y`|Greater than or equal to|
 |`x < y` |Less than|

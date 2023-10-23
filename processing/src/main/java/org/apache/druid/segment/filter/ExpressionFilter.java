@@ -38,7 +38,6 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.vector.BooleanVectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -92,19 +91,15 @@ public class ExpressionFilter implements Filter
     // input type information, so composed entirely of null constants or missing columns. the expression is
     // effectively constant
     if (outputType == null) {
-
-      // in sql compatible mode, this means no matches ever because null doesn't equal anything so just use the
-      // false matcher
-      if (NullHandling.sqlCompatible()) {
-        return BooleanVectorValueMatcher.of(factory.getReadableVectorInspector(), false);
+      // evaluate the expression, just in case it does actually match nulls
+      final ExprEval<?> constantEval = theExpr.eval(InputBindings.nilBindings());
+      final ConstantMatcherType constantMatcherType;
+      if (constantEval.value() == null) {
+        constantMatcherType = ConstantMatcherType.ALL_UNKNOWN;
+      } else {
+        constantMatcherType = constantEval.asBoolean() ? ConstantMatcherType.ALL_TRUE : ConstantMatcherType.ALL_FALSE;
       }
-      // however in default mode, we still need to evaluate the expression since it might end up... strange, from
-      // default values. Since it is effectively constant though, we can just do that up front and decide if it matches
-      // or not.
-      return BooleanVectorValueMatcher.of(
-          factory.getReadableVectorInspector(),
-          theExpr.eval(InputBindings.nilBindings()).asBoolean()
-      );
+      return constantMatcherType.asVectorMatcher(factory.getReadableVectorInspector());
     }
 
     // if we got here, we really have to evaluate the expressions to match
@@ -147,9 +142,13 @@ public class ExpressionFilter implements Filter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         final ExprEval eval = selector.getObject();
+
+        if (includeUnknown && eval.value() == null) {
+          return true;
+        }
 
         if (eval.type().isArray()) {
           switch (eval.elementType().getType()) {
@@ -157,6 +156,9 @@ public class ExpressionFilter implements Filter
               final Object[] lResult = eval.asArray();
               if (lResult == null) {
                 return false;
+              }
+              if (includeUnknown) {
+                return Arrays.stream(lResult).anyMatch(o -> o == null || Evals.asBoolean((long) o));
               }
 
               return Arrays.stream(lResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((long) o));
@@ -166,11 +168,19 @@ public class ExpressionFilter implements Filter
                 return false;
               }
 
+              if (includeUnknown) {
+                return Arrays.stream(sResult).anyMatch(o -> o == null || Evals.asBoolean((String) o));
+              }
+
               return Arrays.stream(sResult).anyMatch(o -> Evals.asBoolean((String) o));
             case DOUBLE:
               final Object[] dResult = eval.asArray();
               if (dResult == null) {
                 return false;
+              }
+
+              if (includeUnknown) {
+                return Arrays.stream(dResult).anyMatch(o -> o == null || Evals.asBoolean((double) o));
               }
 
               return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
@@ -287,6 +297,7 @@ public class ExpressionFilter implements Filter
    */
   private DruidPredicateFactory getPredicateFactory()
   {
+    final boolean isNullUnknown = expr.get().eval(InputBindings.nilBindings()).value() == null;
     return new DruidPredicateFactory()
     {
       @Override
@@ -334,6 +345,12 @@ public class ExpressionFilter implements Filter
       public boolean equals(Object obj)
       {
         return super.equals(obj);
+      }
+
+      @Override
+      public boolean isNullInputUnknown()
+      {
+        return isNullUnknown;
       }
     };
   }

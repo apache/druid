@@ -389,6 +389,6 @@ class ExpressionTestHelper
         )
     );
 
-    Assert.assertEquals("Result for: " + rexNode, expectedResult, matcher.matches());
+    Assert.assertEquals("Result for: " + rexNode, expectedResult, matcher.matches(false));
   }
 }

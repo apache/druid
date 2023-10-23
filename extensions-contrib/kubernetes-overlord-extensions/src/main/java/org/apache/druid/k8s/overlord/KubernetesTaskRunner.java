@@ -23,6 +23,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -60,7 +61,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -146,16 +146,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public ListenableFuture<TaskStatus> run(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))))
-                  .getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> {
+        ListenableFuture<TaskStatus> unused = exec.submit(() -> runTask(task));
+        return new KubernetesWorkItem(task);
+      }).getResult();
     }
   }
 
   protected ListenableFuture<TaskStatus> joinAsync(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))))
-                  .getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> {
+        ListenableFuture<TaskStatus> unused = exec.submit(() -> joinTask(task));
+        return new KubernetesWorkItem(task);
+      }).getResult();
     }
   }
 
@@ -172,10 +176,12 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @VisibleForTesting
   protected TaskStatus doTask(Task task, boolean run)
   {
+    TaskStatus taskStatus = TaskStatus.failure(task.getId(), "Task execution never started");
     try {
       KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
           task,
-          this::emitTaskStateMetrics
+          this::emitTaskStateMetrics,
+          listeners
       );
 
       synchronized (tasks) {
@@ -188,26 +194,28 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         workItem.setKubernetesPeonLifecycle(peonLifecycle);
       }
 
-      TaskStatus taskStatus;
       if (run) {
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
             config.getTaskLaunchTimeout().toStandardDuration().getMillis(),
-            config.getTaskTimeout().toStandardDuration().getMillis()
+            config.getTaskTimeout().toStandardDuration().getMillis(),
+            adapter.shouldUseDeepStorageForTaskPayload(task)
         );
       } else {
         taskStatus = peonLifecycle.join(
             config.getTaskTimeout().toStandardDuration().getMillis()
         );
       }
-
-      updateStatus(task, taskStatus);
-
       return taskStatus;
     }
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
+      taskStatus = TaskStatus.failure(task.getId(), "Could not start task execution");
       throw new RuntimeException(e);
+    }
+    finally {
+      updateStatus(task, taskStatus);
+      TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), TaskLocation.unknown());
     }
   }
 
@@ -241,13 +249,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public void updateStatus(Task task, TaskStatus status)
   {
-    TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
-  }
+    KubernetesWorkItem workItem = tasks.get(task.getId());
+    if (workItem != null && !workItem.getResult().isDone() && status.isComplete()) {
+      workItem.setResult(status);
+    }
 
-  @Override
-  public void updateLocation(Task task, TaskLocation location)
-  {
-    TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), location);
+    // Notify listeners even if the result is set to handle the shutdown case.
+    TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
   }
 
   @Override
@@ -309,23 +317,25 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
-    for (Job job : client.getPeonJobs()) {
-      try {
-        Task task = adapter.toTask(job);
-        restoredTasks.add(Pair.of(task, joinAsync(task)));
-      }
-      catch (IOException e) {
-        log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
-      }
-    }
-    return restoredTasks;
+    return ImmutableList.of();
   }
 
   @Override
   @LifecycleStart
   public void start()
   {
+    log.info("Starting K8sTaskRunner...");
+    // Load tasks from previously running jobs and wait for their statuses to be updated asynchronously.
+    for (Job job : client.getPeonJobs()) {
+      try {
+        joinAsync(adapter.toTask(job));
+      }
+      catch (IOException e) {
+        log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
+      }
+    }
+    log.info("Loaded %,d tasks from previous run", tasks.size());
+
     cleanupExecutor.scheduleAtFixedRate(
         () ->
             client.deleteCompletedPeonJobsOlderThan(
@@ -338,7 +348,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     );
     log.debug("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
   }
-
 
   @Override
   @LifecycleStop
@@ -415,6 +424,16 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
     log.debug("Registered listener [%s]", listener.getListenerId());
     listeners.add(listenerPair);
+
+    for (Map.Entry<String, KubernetesWorkItem> entry : tasks.entrySet()) {
+      if (entry.getValue().isRunning()) {
+        TaskRunnerUtils.notifyLocationChanged(
+            ImmutableList.of(listenerPair),
+            entry.getKey(),
+            entry.getValue().getLocation()
+        );
+      }
+    }
   }
 
   @Override

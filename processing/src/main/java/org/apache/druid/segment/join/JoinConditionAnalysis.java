@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Exprs;
@@ -121,38 +120,16 @@ public class JoinConditionAnalysis
 
     final List<Expr> exprs = Exprs.decomposeAnd(conditionExpr);
     for (Expr childExpr : exprs) {
-      final Optional<Pair<Expr, Expr>> maybeDecomposed = Exprs.decomposeEquals(childExpr);
+      final Optional<Equality> maybeEquality = Exprs.decomposeEquals(childExpr, rightPrefix);
 
-      if (!maybeDecomposed.isPresent()) {
+      if (!maybeEquality.isPresent()) {
         nonEquiConditions.add(childExpr);
       } else {
-        final Pair<Expr, Expr> decomposed = maybeDecomposed.get();
-        final Expr lhs = Objects.requireNonNull(decomposed.lhs);
-        final Expr rhs = Objects.requireNonNull(decomposed.rhs);
-
-        if (isLeftExprAndRightColumn(lhs, rhs, rightPrefix)) {
-          // rhs is a right-hand column; lhs is an expression solely of the left-hand side.
-          equiConditions.add(
-              new Equality(lhs, Objects.requireNonNull(rhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
-          );
-        } else if (isLeftExprAndRightColumn(rhs, lhs, rightPrefix)) {
-          equiConditions.add(
-              new Equality(rhs, Objects.requireNonNull(lhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
-          );
-        } else {
-          nonEquiConditions.add(childExpr);
-        }
+        equiConditions.add(maybeEquality.get());
       }
     }
 
     return new JoinConditionAnalysis(condition, rightPrefix, equiConditions, nonEquiConditions);
-  }
-
-  private static boolean isLeftExprAndRightColumn(final Expr a, final Expr b, final String rightPrefix)
-  {
-    return a.analyzeInputs().getRequiredBindings().stream().noneMatch(c -> JoinPrefixUtils.isPrefixedBy(c, rightPrefix))
-           && b.getBindingIfIdentifier() != null
-           && JoinPrefixUtils.isPrefixedBy(b.getBindingIfIdentifier(), rightPrefix);
   }
 
   /**

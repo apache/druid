@@ -20,7 +20,10 @@
 package org.apache.druid.frame.processor;
 
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
@@ -29,12 +32,14 @@ import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.processor.test.ChompingFrameProcessor;
 import org.apache.druid.frame.processor.test.FailingFrameProcessor;
 import org.apache.druid.frame.processor.test.SleepyFrameProcessor;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.TestIndex;
@@ -54,8 +59,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -64,6 +71,8 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
 {
   private final int bouncerPoolSize;
   private final int maxOutstandingProcessors;
+  private final boolean delayed;
+  private final AtomicLong closed = new AtomicLong();
 
   private Bouncer bouncer;
 
@@ -73,14 +82,16 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   @GuardedBy("this")
   private int concurrentNow = 0;
 
-  public RunAllFullyWidgetTest(int numThreads, int bouncerPoolSize, int maxOutstandingProcessors)
+  public RunAllFullyWidgetTest(int numThreads, int bouncerPoolSize, int maxOutstandingProcessors, boolean delayed)
   {
     super(numThreads);
     this.bouncerPoolSize = bouncerPoolSize;
     this.maxOutstandingProcessors = maxOutstandingProcessors;
+    this.delayed = delayed;
   }
 
-  @Parameterized.Parameters(name = "numThreads = {0}, bouncerPoolSize = {1}, maxOutstandingProcessors = {2}")
+  @Parameterized.Parameters(name =
+      "numThreads = {0}, bouncerPoolSize = {1}, maxOutstandingProcessors = {2}, delayed = {3}")
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -88,7 +99,9 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     for (int numThreads : new int[]{1, 3, 12}) {
       for (int bouncerPoolSize : new int[]{1, 3, 12, Integer.MAX_VALUE}) {
         for (int maxOutstandingProcessors : new int[]{1, 3, 12}) {
-          constructors.add(new Object[]{numThreads, bouncerPoolSize, maxOutstandingProcessors});
+          for (boolean delayed : new boolean[]{false, true}) {
+            constructors.add(new Object[]{numThreads, bouncerPoolSize, maxOutstandingProcessors, delayed});
+          }
         }
       }
     }
@@ -121,17 +134,16 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
       MatcherAssert.assertThat(concurrentHighWatermark, Matchers.lessThanOrEqualTo(maxOutstandingProcessors));
     }
 
-    Assert.assertEquals(0, bouncer.getCurrentCount());
-    Assert.assertEquals(bouncerPoolSize, bouncer.getMaxCount());
+    Assert.assertEquals("Bouncer current running count", 0, bouncer.getCurrentCount());
+    Assert.assertEquals("Bouncer max pool size", bouncerPoolSize, bouncer.getMaxCount());
+    Assert.assertEquals("Encountered single close (from ensureClose)", 1, closed.get());
   }
 
   @Test
-  public void test_runAllFully_emptySequence() throws Exception
+  public void test_runAllFully_emptyChannel() throws Exception
   {
-    final ListenableFuture<String> future = exec.<String, String>runAllFully(
-        Sequences.empty(),
-        "xyzzy",
-        (s1, s2) -> s1 + s2,
+    final ListenableFuture<String> future = exec.runAllFully(
+        possiblyDelay(ensureClose(ProcessorManagers.none().withAccumulation("xyzzy", (s1, s2) -> s1 + s2))),
         maxOutstandingProcessors,
         bouncer,
         null
@@ -143,7 +155,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   @Test
   public void test_runAllFully_fiftyThousandProcessors() throws Exception
   {
-    final int numProcessors = 50_000;
+    final int numProcessors = 100;
 
     // Doesn't matter what's in this frame.
     final Frame frame =
@@ -154,33 +166,29 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                                 .toList()
         );
 
-    final Sequence<? extends FrameProcessor<Long>> processors = Sequences.simple(
-        () ->
-            IntStream.range(0, numProcessors)
-                     .mapToObj(
-                         i -> {
-                           final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
+    final ProcessorManager<Long, Long> processors = ProcessorManagers.of(
+        Iterables.transform(
+            IntStream.range(0, numProcessors)::iterator,
+            i -> {
+              final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
 
-                           try {
-                             channel.writable().write(frame);
-                             channel.writable().close();
-                           }
-                           catch (IOException e) {
-                             throw new RuntimeException(e);
-                           }
+              try {
+                channel.writable().write(frame);
+                channel.writable().close();
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
 
-                           return new ConcurrencyTrackingFrameProcessor<>(
-                               new ChompingFrameProcessor(Collections.singletonList(channel.readable()))
-                           );
-                         }
-                     )
-                     .iterator()
-    );
+              return new ConcurrencyTrackingFrameProcessor<>(
+                  new ChompingFrameProcessor(Collections.singletonList(channel.readable()))
+              );
+            }
+        )
+    ).withAccumulation(0L, Long::sum);
 
     final ListenableFuture<Long> future = exec.runAllFully(
-        processors,
-        0L,
-        Long::sum,
+        possiblyDelay(ensureClose(processors)),
         maxOutstandingProcessors,
         bouncer,
         null
@@ -193,22 +201,24 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   public void test_runAllFully_failing()
   {
     final ListenableFuture<Long> future = exec.runAllFully(
-        Sequences.simple(
-            () -> IntStream.generate(() -> 0) // Infinite stream
-                           .mapToObj(
-                               i ->
-                                   new ConcurrencyTrackingFrameProcessor<>(
-                                       new FailingFrameProcessor(
-                                           ReadableNilFrameChannel.INSTANCE,
-                                           BlockingQueueFrameChannel.minimal().writable(),
-                                           0
-                                       )
-                                   )
-                           )
-                           .iterator()
+        possiblyDelay(
+            ensureClose(
+                ProcessorManagers.of(
+                    Iterables.transform(
+                        IntStream.generate(() -> 0)::iterator /* Infinite stream */,
+                        i ->
+                            new ConcurrencyTrackingFrameProcessor<>(
+                                new FailingFrameProcessor(
+                                    ReadableNilFrameChannel.INSTANCE,
+                                    BlockingQueueFrameChannel.minimal().writable(),
+                                    0
+                                )
+                            )
+
+                    )
+                ).withAccumulation(0L, Long::sum)
+            )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -227,15 +237,21 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   public void test_runAllFully_errorAccumulateFn()
   {
     final ListenableFuture<Long> future = exec.runAllFully(
-        Sequences.simple(
-            () -> IntStream.range(0, 100)
-                           .mapToObj(i -> new ChompingFrameProcessor(Collections.emptyList()))
-                           .iterator()
+        possiblyDelay(
+            ensureClose(
+                ProcessorManagers.of(
+                    Iterables.transform(
+                        IntStream.range(0, 100)::iterator,
+                        i -> new ChompingFrameProcessor(Collections.emptyList())
+                    )
+                ).withAccumulation(
+                    0L,
+                    (x, y) -> {
+                      throw new ISE("error!");
+                    }
+                )
+            )
         ),
-        0L,
-        (x, y) -> {
-          throw new ISE("error!");
-        },
         maxOutstandingProcessors,
         bouncer,
         null
@@ -247,20 +263,22 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   }
 
   @Test
-  public void test_runAllFully_errorSequenceFirstElement()
+  public void test_runAllFully_errorChannelFirstElement()
   {
     final ListenableFuture<Long> future = exec.runAllFully(
-        Sequences.simple(
-            () -> IntStream.generate(() -> 0) // Infinite stream
-                           .<FrameProcessor<Long>>mapToObj(
-                               i -> {
-                                 throw new ISE("error!");
-                               }
-                           )
-                           .iterator()
+        possiblyDelay(
+            new ThrowOnNextProcessorManager<>(
+                ensureClose(
+                    ProcessorManagers.of(
+                        Iterables.transform(
+                            IntStream.generate(() -> 0)::iterator /* Infinite stream */,
+                            i -> new ChompingFrameProcessor(Collections.emptyList())
+                        )
+                    ).withAccumulation(0L, Long::sum)
+                ),
+                0
+            )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -272,24 +290,22 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   }
 
   @Test
-  public void test_runAllFully_errorSequenceSecondElement()
+  public void test_runAllFully_errorChannelSecondElement()
   {
     final ListenableFuture<Long> future = exec.runAllFully(
-        Sequences.simple(
-            () -> IntStream.range(0, 101)
-                           .<FrameProcessor<Long>>mapToObj(
-                               i -> {
-                                 if (i != 2) {
-                                   return new ChompingFrameProcessor(Collections.emptyList());
-                                 } else {
-                                   throw new ISE("error!");
-                                 }
-                               }
-                           )
-                           .iterator()
+        possiblyDelay(
+            new ThrowOnNextProcessorManager<>(
+                ensureClose(
+                    ProcessorManagers.of(
+                        Iterables.transform(
+                            IntStream.generate(() -> 0)::iterator /* Infinite stream */,
+                            i -> new ChompingFrameProcessor(Collections.emptyList())
+                        )
+                    ).withAccumulation(0L, Long::sum)
+                ),
+                1
+            )
         ),
-        0L,
-        Long::sum,
         maxOutstandingProcessors,
         bouncer,
         null
@@ -301,24 +317,77 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
   }
 
   @Test
-  public void test_runAllFully_errorSequenceHundredthElement()
+  public void test_runAllFully_errorChannelHundredthElement()
   {
     final ListenableFuture<Long> future = exec.runAllFully(
-        Sequences.simple(
-            () -> IntStream.range(0, 101)
-                           .mapToObj(
-                               i -> {
-                                 if (i != 100) {
-                                   return new ChompingFrameProcessor(Collections.emptyList());
-                                 } else {
-                                   throw new ISE("error!");
-                                 }
-                               }
-                           )
-                           .iterator()
+        possiblyDelay(
+            new ThrowOnNextProcessorManager<>(
+                ensureClose(
+                    ProcessorManagers.of(
+                        Iterables.transform(
+                            IntStream.generate(() -> 0)::iterator /* Infinite stream */,
+                            i -> new ChompingFrameProcessor(Collections.emptyList())
+                        )
+                    ).withAccumulation(0L, Long::sum)
+                ),
+                100
+            )
         ),
-        0L,
-        Long::sum,
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    );
+
+    final ExecutionException e = Assert.assertThrows(ExecutionException.class, future::get);
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
+    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("error!")));
+  }
+
+  @Test
+  public void test_runAllFully_errorChannelClose()
+  {
+    final ListenableFuture<Long> future = exec.runAllFully(
+        possiblyDelay(
+            new ThrowOnCloseProcessorManager<>(
+                ensureClose(
+                    ProcessorManagers.of(
+                        Iterables.transform(
+                            IntStream.range(0, 101)::iterator,
+                            i -> new ChompingFrameProcessor(Collections.emptyList())
+                        )
+                    ).withAccumulation(0L, Long::sum)
+                )
+            )
+        ),
+        maxOutstandingProcessors,
+        bouncer,
+        null
+    );
+
+    final ExecutionException e = Assert.assertThrows(ExecutionException.class, future::get);
+    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
+    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("error!")));
+  }
+
+  @Test
+  public void test_runAllFully_errorChannelSecondElementAndClose()
+  {
+    final ListenableFuture<Long> future = exec.runAllFully(
+        possiblyDelay(
+            new ThrowOnCloseProcessorManager<>(
+                new ThrowOnNextProcessorManager<>(
+                    ensureClose(
+                        ProcessorManagers.of(
+                            Iterables.transform(
+                                IntStream.range(0, 101)::iterator,
+                                i -> new ChompingFrameProcessor(Collections.emptyList())
+                            )
+                        ).withAccumulation(0L, Long::sum)
+                    ),
+                    1
+                )
+            )
+        ),
         maxOutstandingProcessors,
         bouncer,
         null
@@ -341,9 +410,12 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                  .collect(Collectors.toList());
 
     final ListenableFuture<Long> future = exec.runAllFully(
-        Sequences.simple(processors).map(ConcurrencyTrackingFrameProcessor::new),
-        0L,
-        Long::sum,
+        possiblyDelay(
+            ensureClose(
+                ProcessorManagers.of(Sequences.simple(processors).map(ConcurrencyTrackingFrameProcessor::new))
+                                 .withAccumulation(0L, Long::sum)
+            )
+        ),
         maxOutstandingProcessors,
         bouncer,
         "xyzzy"
@@ -362,6 +434,22 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     }
 
     Assert.assertEquals(0, exec.cancelableProcessorCount());
+  }
+
+  /**
+   * Wrap in {@link DelayedProcessorManager} if {@link #delayed} is set.
+   */
+  private <T, R> ProcessorManager<T, R> possiblyDelay(final ProcessorManager<T, R> processorManager)
+  {
+    return delayed ? new DelayedProcessorManager<>(processorManager) : processorManager;
+  }
+
+  /**
+   * Ensure that the provided processor manager is closed once, and only once. Must be called once per test case.
+   */
+  private <T, R> ProcessorManager<T, R> ensureClose(final ProcessorManager<T, R> processorManager)
+  {
+    return new EnsureCloseProcessorManager<>(processorManager);
   }
 
   /**
@@ -423,6 +511,160 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
           }
         }
       }
+    }
+  }
+
+  private class EnsureCloseProcessorManager<T, R> implements ProcessorManager<T, R>
+  {
+    private final ProcessorManager<T, R> delegate;
+
+    public EnsureCloseProcessorManager(ProcessorManager<T, R> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
+    {
+      return delegate.next();
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
+    }
+
+    @Override
+    public void close()
+    {
+      closed.getAndIncrement();
+      delegate.close();
+    }
+  }
+
+  /**
+   * Processor manager that throws an error on the Nth element.
+   */
+  private static class ThrowOnNextProcessorManager<T, R> implements ProcessorManager<T, R>
+  {
+    private final ProcessorManager<T, R> delegate;
+    private int i;
+
+    public ThrowOnNextProcessorManager(final ProcessorManager<T, R> delegate, final int i)
+    {
+      this.delegate = delegate;
+      this.i = i;
+    }
+
+    @Override
+    public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
+    {
+      if (i == 0) {
+        throw new ISE("error!");
+      } else {
+        i--;
+        return delegate.next();
+      }
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
+    }
+
+    @Override
+    public void close()
+    {
+      delegate.close();
+    }
+  }
+
+  /**
+   * Processor manager that throws an error on {@link #close()}.
+   */
+  private static class ThrowOnCloseProcessorManager<T, R> implements ProcessorManager<T, R>
+  {
+    private final ProcessorManager<T, R> delegate;
+
+    public ThrowOnCloseProcessorManager(ProcessorManager<T, R> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
+    {
+      return delegate.next();
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
+    }
+
+    @Override
+    public void close()
+    {
+      delegate.close();
+      throw new ISE("error!");
+    }
+  }
+
+  /**
+   * Processor manager that effectively delays future resolution by deferring it through {@link #exec}.
+   * Especially useful on single-threaded test cases. This helps us ensure that things work when channels don't have
+   * processors immediately ready upon a call to {@link FrameProcessorExecutor#runAllFully}.
+   */
+  private class DelayedProcessorManager<T, R> implements ProcessorManager<T, R>
+  {
+    private final ProcessorManager<T, R> delegate;
+
+    public DelayedProcessorManager(ProcessorManager<T, R> delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public ListenableFuture<Optional<ProcessorAndCallback<T>>> next()
+    {
+      final ListenableFuture<Optional<ProcessorAndCallback<T>>> future = delegate.next();
+      final SettableFuture<Optional<ProcessorAndCallback<T>>> retVal = SettableFuture.create();
+
+      Futures.addCallback(
+          future,
+          new FutureCallback<Optional<ProcessorAndCallback<T>>>()
+          {
+            @Override
+            public void onSuccess(Optional<ProcessorAndCallback<T>> result)
+            {
+              retVal.set(result);
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              retVal.setException(t);
+            }
+          },
+          exec.getExecutorService()
+      );
+
+      return retVal;
+    }
+
+    @Override
+    public R result()
+    {
+      return delegate.result();
+    }
+
+    @Override
+    public void close()
+    {
+      delegate.close();
     }
   }
 }

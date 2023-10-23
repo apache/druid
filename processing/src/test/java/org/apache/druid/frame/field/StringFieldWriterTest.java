@@ -184,7 +184,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
 
     final FieldReader fieldReader = FieldReaders.create("columnNameDoesntMatterHere", ColumnType.STRING_ARRAY);
     final ColumnValueSelector<?> selector =
-        fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     return (Object[]) selector.getObject();
   }

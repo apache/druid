@@ -389,7 +389,6 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         null,
         new CacheConfig(),
         null,
-        httpClientConfig,
         new SubqueryCountStatsProvider()
     );
 
