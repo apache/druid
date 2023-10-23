@@ -231,7 +231,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
+                                           .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -258,9 +258,62 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   /**
    * Fetches all the pending segments, whose interval overlaps with the given
-   * search interval from the metadata store. Returns a Map from the
-   * pending segment ID to the sequence name.
+   * search interval and has a sequence_name that begins with one of the prefixes in sequenceNamePrefixFilter
+   * from the metadata store. Returns a Map from the pending segment ID to the sequence name.
    */
+  @VisibleForTesting
+  Map<SegmentIdWithShardSpec, String> getPendingSegmentsForIntervalWithHandle(
+      final Handle handle,
+      final String dataSource,
+      final Interval interval,
+      final Set<String> sequenceNamePrefixFilter
+  ) throws IOException
+  {
+    if (sequenceNamePrefixFilter.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    final List<String> sequenceNamePrefixes = new ArrayList<>(sequenceNamePrefixFilter);
+    final List<String> sequenceNamePrefixConditions = new ArrayList<>();
+    for (int i = 0; i < sequenceNamePrefixes.size(); i++) {
+      sequenceNamePrefixConditions.add(StringUtils.format("(sequence_name LIKE :prefix%d)", i));
+    }
+
+    String sql = "SELECT sequence_name, payload"
+                 + " FROM " + dbTables.getPendingSegmentsTable()
+                 + " WHERE dataSource = :dataSource"
+                 + " AND start < :end"
+                 + StringUtils.format(" AND %1$send%1$s > :start", connector.getQuoteString())
+                 + " AND ( " + String.join(" OR ", sequenceNamePrefixConditions) + " )";
+
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("dataSource", dataSource)
+                                             .bind("start", interval.getStart().toString())
+                                             .bind("end", interval.getEnd().toString());
+
+    for (int i = 0; i < sequenceNamePrefixes.size(); i++) {
+      query.bind(StringUtils.format("prefix%d", i), sequenceNamePrefixes.get(i) + "%");
+    }
+
+    final ResultIterator<PendingSegmentsRecord> dbSegments =
+        query.map((index, r, ctx) -> PendingSegmentsRecord.fromResultSet(r))
+             .iterator();
+
+    final Map<SegmentIdWithShardSpec, String> pendingSegmentToSequenceName = new HashMap<>();
+    while (dbSegments.hasNext()) {
+      PendingSegmentsRecord record = dbSegments.next();
+      final SegmentIdWithShardSpec identifier = jsonMapper.readValue(record.payload, SegmentIdWithShardSpec.class);
+
+      if (interval.overlaps(identifier.getInterval())) {
+        pendingSegmentToSequenceName.put(identifier, record.sequenceName);
+      }
+    }
+
+    dbSegments.close();
+
+    return pendingSegmentToSequenceName;
+  }
+
   private Map<SegmentIdWithShardSpec, String> getPendingSegmentsForIntervalWithHandle(
       final Handle handle,
       final String dataSource,
@@ -620,7 +673,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   @Override
   public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments
+      Set<DataSegment> replaceSegments,
+      Set<String> activeRealtimeSequencePrefixes
   )
   {
     if (replaceSegments.isEmpty()) {
@@ -639,7 +693,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final String datasource = replaceSegments.iterator().next().getDataSource();
     return connector.retryWithHandle(
-        handle -> upgradePendingSegments(handle, datasource, replaceIntervalToMaxId)
+        handle -> upgradePendingSegments(handle, datasource, replaceIntervalToMaxId, activeRealtimeSequencePrefixes)
     );
   }
 
@@ -658,7 +712,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegments(
       Handle handle,
       String datasource,
-      Map<Interval, DataSegment> replaceIntervalToMaxId
+      Map<Interval, DataSegment> replaceIntervalToMaxId,
+      Set<String> activeRealtimeSequencePrefixes
   ) throws IOException
   {
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> newPendingSegmentVersions = new HashMap<>();
@@ -673,12 +728,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       int currentPartitionNumber = maxSegmentId.getShardSpec().getPartitionNum();
 
       final Map<SegmentIdWithShardSpec, String> overlappingPendingSegments
-          = getPendingSegmentsForIntervalWithHandle(handle, datasource, replaceInterval);
+          = getPendingSegmentsForIntervalWithHandle(handle, datasource, replaceInterval, activeRealtimeSequencePrefixes);
 
       for (Map.Entry<SegmentIdWithShardSpec, String> overlappingPendingSegment
           : overlappingPendingSegments.entrySet()) {
         final SegmentIdWithShardSpec pendingSegmentId = overlappingPendingSegment.getKey();
         final String pendingSegmentSequence = overlappingPendingSegment.getValue();
+
         if (shouldUpgradePendingSegment(pendingSegmentId, pendingSegmentSequence, replaceInterval, replaceVersion)) {
           // Ensure unique sequence_name_prev_id_sha1 by setting
           // sequence_prev_id -> pendingSegmentId
@@ -1281,9 +1337,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Map<Interval, Set<DataSegment>> overlappingIntervalToSegments = new HashMap<>();
     for (DataSegment segment : overlappingSegments) {
       overlappingVersionToIntervals.computeIfAbsent(segment.getVersion(), v -> new HashSet<>())
-                                 .add(segment.getInterval());
+                                   .add(segment.getInterval());
       overlappingIntervalToSegments.computeIfAbsent(segment.getInterval(), i -> new HashSet<>())
-                                 .add(segment);
+                                   .add(segment);
     }
 
     final Set<DataSegment> upgradedSegments = new HashSet<>();
@@ -2275,7 +2331,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Not in the desired start state.
       return new DataStoreMetadataUpdateResult(true, false, StringUtils.format(
           "Inconsistent metadata state. This can happen if you update input topic in a spec without changing " +
-              "the supervisor name. Stored state: [%s], Target state: [%s].",
+          "the supervisor name. Stored state: [%s], Target state: [%s].",
           oldCommitMetadataFromDb,
           startMetadata
       ));
