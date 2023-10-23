@@ -178,7 +178,6 @@ public class CalciteRulesManager
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
-          CoreRules.FILTER_AGGREGATE_TRANSPOSE,
           DruidAggregateRemoveRule.toRule(),
           CoreRules.UNION_TO_DISTINCT,
           CoreRules.PROJECT_REMOVE,
