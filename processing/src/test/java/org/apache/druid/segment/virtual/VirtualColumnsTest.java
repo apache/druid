@@ -64,7 +64,11 @@ import org.mockito.quality.Strictness;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class VirtualColumnsTest extends InitializedNullHandlingTest
 {
@@ -88,6 +92,26 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     Assert.assertTrue(virtualColumns.exists("foo"));
     Assert.assertTrue(virtualColumns.exists("foo.5"));
     Assert.assertFalse(virtualColumns.exists("bar"));
+  }
+
+  @Test
+  public void testIsEmpty()
+  {
+    assertTrue(VirtualColumns.EMPTY.isEmpty());
+    assertTrue(VirtualColumns.create(Collections.emptyList()).isEmpty());
+  }
+
+  @Test
+  public void testGetColumnNames()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    List<String> colNames = ImmutableList.<String>builder()
+        .add("expr")
+        .add("expr2i")
+        .add("expr2")
+        .add("foo")
+        .build();
+    assertEquals(colNames, virtualColumns.getColumnNames());
   }
 
   @Test
