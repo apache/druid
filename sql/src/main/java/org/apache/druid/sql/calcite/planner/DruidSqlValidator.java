@@ -60,7 +60,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
         throw buildCalciteContextException(
             StringUtils.format(
-                "The query contains window functions. Please enable [%s]",
+                "The query contains window functions; To run these window functions, enable [%s] in query context.",
                 EngineFeature.WINDOW_FUNCTIONS),
             call);
       }
