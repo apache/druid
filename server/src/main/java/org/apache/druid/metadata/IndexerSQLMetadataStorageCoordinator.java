@@ -274,36 +274,25 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final List<String> sequenceNamePrefixes = new ArrayList<>(sequenceNamePrefixFilter);
-
-    StringBuilder sql = new StringBuilder("SELECT sequence_name, payload");
-    sql.append(" FROM ").append(dbTables.getPendingSegmentsTable());
-    sql.append(" WHERE dataSource = :dataSource");
-    sql.append(" AND start < :end");
-    sql.append(StringUtils.format(" AND %1$send%1$s > :start", connector.getQuoteString()));
-
-    sql.append(" AND ( ");
-
-    for (int i = 1; i < sequenceNamePrefixes.size(); i++) {
-      sql.append("(sequence_name LIKE ")
-         .append(StringUtils.format(":prefix%d", i))
-         .append(")")
-         .append(" OR ");
+    final List<String> sequenceNamePrefixConditions = new ArrayList<>();
+    for (int i = 0; i < sequenceNamePrefixes.size(); i++) {
+      sequenceNamePrefixConditions.add(StringUtils.format("(sequence_name LIKE :prefix%d)", i));
     }
 
-    sql.append("(sequence_name LIKE ")
-       .append(StringUtils.format(":prefix%d", sequenceNamePrefixes.size()))
-       .append(")");
+    String sql = "SELECT sequence_name, payload"
+                 + " FROM " + dbTables.getPendingSegmentsTable()
+                 + " WHERE dataSource = :dataSource"
+                 + " AND start < :end"
+                 + StringUtils.format(" AND %1$send%1$s > :start", connector.getQuoteString())
+                 + " AND ( " + String.join(" OR ", sequenceNamePrefixConditions) + " )";
 
-    sql.append(" )");
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("dataSource", dataSource)
+                                             .bind("start", interval.getStart().toString())
+                                             .bind("end", interval.getEnd().toString());
 
-    Query<Map<String, Object>> query =
-        handle.createQuery(sql.toString())
-              .bind("dataSource", dataSource)
-              .bind("start", interval.getStart().toString())
-              .bind("end", interval.getEnd().toString());
-
-    for (int i = 1; i <= sequenceNamePrefixes.size(); i++) {
-      query.bind(StringUtils.format("prefix%d", i), sequenceNamePrefixes.get(i - 1) + "%");
+    for (int i = 0; i < sequenceNamePrefixes.size(); i++) {
+      query.bind(StringUtils.format("prefix%d", i), sequenceNamePrefixes.get(i) + "%");
     }
 
     final ResultIterator<PendingSegmentsRecord> dbSegments =
