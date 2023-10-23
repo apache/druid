@@ -86,9 +86,9 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
         true
     );
     FrontCodedIntArrayIndexedWriter arrayWriter = new FrontCodedIntArrayIndexedWriter(
-      medium,
-      ByteOrder.nativeOrder(),
-      4
+        medium,
+        ByteOrder.nativeOrder(),
+        4
     );
 
     Path dictTempPath = temp.newFolder().toPath();
@@ -118,7 +118,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
     for (Long l : sortedValueDictionary.getSortedLongs()) {
       longWriter.write(l);
     }
-    for (Double d: sortedValueDictionary.getSortedDoubles()) {
+    for (Double d : sortedValueDictionary.getSortedDoubles()) {
       doubleWriter.write(d);
     }
 
@@ -150,9 +150,9 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
     Assert.assertEquals(3, tempDir.listFiles().length);
 
     // looking up arrays pulls in array file
-    Assert.assertEquals(12, idLookup.lookupArray(new int[]{1,2}));
-    Assert.assertEquals(13, idLookup.lookupArray(new int[]{4,5,6}));
-    Assert.assertEquals(14, idLookup.lookupArray(new int[]{10,8,9,11}));
+    Assert.assertEquals(12, idLookup.lookupArray(new int[]{1, 2}));
+    Assert.assertEquals(13, idLookup.lookupArray(new int[]{4, 5, 6}));
+    Assert.assertEquals(14, idLookup.lookupArray(new int[]{10, 8, 9, 11}));
     Assert.assertEquals(4, tempDir.listFiles().length);
 
     // close it removes all the temp files
