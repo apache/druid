@@ -333,15 +333,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final ResultIterator<PendingSegmentsRecord> dbSegments =
         handle.createQuery(
-                  StringUtils.format(
-                      // This query might fail if the year has a different number of digits
-                      // See https://github.com/apache/druid/pull/11582 for a similar issue
-                      // Using long for these timestamps instead of varchar would give correct time comparisons
-                      "SELECT sequence_name, payload FROM %1$s"
-                      + " WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
-                      dbTables.getPendingSegmentsTable(), connector.getQuoteString()
-                  )
-              )
+            StringUtils.format(
+                // This query might fail if the year has a different number of digits
+                // See https://github.com/apache/druid/pull/11582 for a similar issue
+                // Using long for these timestamps instead of varchar would give correct time comparisons
+                "SELECT sequence_name, payload FROM %1$s"
+                + " WHERE dataSource = :dataSource AND start < :end and %2$send%2$s > :start",
+                dbTables.getPendingSegmentsTable(), connector.getQuoteString()
+            )
+        )
               .bind("dataSource", dataSource)
               .bind("start", interval.getStart().toString())
               .bind("end", interval.getEnd().toString())
@@ -2238,8 +2238,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
           .collect(Collectors.joining(","));
       List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
-                                    .mapTo(String.class)
-                                    .list();
+          .mapTo(String.class)
+          .list();
       existedSegments.addAll(existIds);
     }
     return existedSegments;
@@ -2361,12 +2361,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (oldCommitMetadataBytesFromDb == null) {
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       final int numRows = handle.createStatement(
-                                    StringUtils.format(
-                                        "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
-                                        + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
-                                        dbTables.getDataSourceTable()
-                                    )
-                                )
+          StringUtils.format(
+              "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
+              + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+              dbTables.getDataSourceTable()
+          )
+      )
                                 .bind("dataSource", dataSource)
                                 .bind("created_date", DateTimes.nowUtc().toString())
                                 .bind("commit_metadata_payload", newCommitMetadataBytes)
@@ -2374,23 +2374,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                 .execute();
 
       retVal = numRows == 1
-               ? DataStoreMetadataUpdateResult.SUCCESS
-               : new DataStoreMetadataUpdateResult(
-                   true,
-                   true,
-                   "Failed to insert metadata for datasource [%s]",
-                   dataSource);
+          ? DataStoreMetadataUpdateResult.SUCCESS
+          : new DataStoreMetadataUpdateResult(
+              true,
+          true,
+          "Failed to insert metadata for datasource [%s]",
+          dataSource);
     } else {
       // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
       final int numRows = handle.createStatement(
-                                    StringUtils.format(
-                                        "UPDATE %s SET "
-                                        + "commit_metadata_payload = :new_commit_metadata_payload, "
-                                        + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
-                                        + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
-                                        dbTables.getDataSourceTable()
-                                    )
-                                )
+          StringUtils.format(
+              "UPDATE %s SET "
+              + "commit_metadata_payload = :new_commit_metadata_payload, "
+              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+              + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
+              dbTables.getDataSourceTable()
+          )
+      )
                                 .bind("dataSource", dataSource)
                                 .bind("old_commit_metadata_sha1", oldCommitMetadataSha1FromDb)
                                 .bind("new_commit_metadata_payload", newCommitMetadataBytes)
