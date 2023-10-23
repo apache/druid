@@ -788,11 +788,11 @@ public class GroupingEngine
   private static Iterator<ResultRow> summaryRowIterator(GroupByQuery q)
   {
     List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
-    Object[] values = new Object[aggSpec.size()];
+    ResultRow resultRow = ResultRow.create(q.getResultRowSizeWithPostAggregators());
     for (int i = 0; i < aggSpec.size(); i++) {
-      values[i] = aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get();
+      resultRow.set(i, aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get());
     }
-    return Collections.singleton(ResultRow.of(values)).iterator();
+    return Collections.singleton(resultRow).iterator();
   }
 
 }

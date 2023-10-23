@@ -30,6 +30,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
 /**
@@ -68,8 +69,12 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     if (call.getKind() == SqlKind.OVER) {
-      if(!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
-        throw buildCalciteContextException("XASCENDING ordering with NULLS LAST is not supported!", call);
+      if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
+        throw buildCalciteContextException(
+            StringUtils.format(
+                "The query contains window functions. Please enable [%s]",
+                EngineFeature.WINDOW_FUNCTIONS),
+            call);
       }
     }
     super.validateCall(call, scope);
