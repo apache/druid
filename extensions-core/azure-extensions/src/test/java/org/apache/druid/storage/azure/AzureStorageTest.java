@@ -19,19 +19,21 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.rest.PagedIterable;
+import com.azure.core.http.rest.PagedResponse;
+import com.azure.core.util.IterableStream;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.models.BlobItem;
 import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
-import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import com.microsoft.azure.storage.blob.ListBlobItem;
+import org.apache.druid.common.guava.SettableSupplier;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
@@ -39,27 +41,29 @@ public class AzureStorageTest
 {
 
   AzureStorage azureStorage;
-  CloudBlobClient cloudBlobClient = Mockito.mock(CloudBlobClient.class);
-  CloudBlobContainer cloudBlobContainer = Mockito.mock(CloudBlobContainer.class);
+  BlobServiceClient blobServiceClient = Mockito.mock(BlobServiceClient.class);
+  BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
+
+  PagedResponse<BlobItem> blobItemPagedResponse = Mockito.mock(PagedResponse.class);
 
   @Before
   public void setup() throws URISyntaxException, StorageException
   {
-    Mockito.doReturn(cloudBlobContainer).when(cloudBlobClient).getContainerReference(ArgumentMatchers.anyString());
-    azureStorage = new AzureStorage(() -> cloudBlobClient);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
+    azureStorage = new AzureStorage(() -> blobServiceClient);
   }
 
   @Test
   public void testListDir() throws URISyntaxException, StorageException
   {
-    List<ListBlobItem> listBlobItems = ImmutableList.of(
-        new CloudBlockBlob(new URI("azure://dummy.com/container/blobName"))
-    );
-
-    Mockito.doReturn(listBlobItems).when(cloudBlobContainer).listBlobs(
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.anyBoolean(),
-        ArgumentMatchers.any(),
+    BlobItem blobItem = new BlobItem();
+    blobItem.setName("blobName");
+    List<BlobItem> listBlobItems = ImmutableList.of(blobItem);
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(blobItemPagedResponse);
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    Mockito.doReturn(IterableStream.of(listBlobItems)).when(blobItemPagedResponse).getElements();
+    Mockito.doReturn(pagedIterable).when(blobContainerClient).listBlobs(
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
 

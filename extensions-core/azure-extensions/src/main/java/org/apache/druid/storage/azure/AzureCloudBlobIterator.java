@@ -27,7 +27,6 @@ import com.microsoft.azure.storage.ResultContinuation;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -41,7 +40,6 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
 {
   private static final Logger log = new Logger(AzureCloudBlobIterator.class);
   private final AzureStorage storage;
-  private final ListBlobItemHolderFactory blobItemDruidFactory;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
 
@@ -56,14 +54,12 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
   @AssistedInject
   AzureCloudBlobIterator(
       AzureStorage storage,
-      ListBlobItemHolderFactory blobItemDruidFactory,
       AzureAccountConfig config,
       @Assisted final Iterable<URI> prefixes,
       @Assisted final int maxListingLength
   )
   {
     this.storage = storage;
-    this.blobItemDruidFactory = blobItemDruidFactory;
     this.config = config;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;

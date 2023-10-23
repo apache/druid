@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.core.util.ClientOptions;
 import com.azure.identity.ChainedTokenCredentialBuilder;
 import com.azure.identity.ManagedIdentityCredential;
 import com.azure.identity.ManagedIdentityCredentialBuilder;
@@ -36,7 +35,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
@@ -45,11 +43,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.security.InvalidKeyException;
 import java.util.List;
 
 /**
@@ -139,8 +133,9 @@ public class AzureStorageDruidModule implements DruidModule
     }
     ChainedTokenCredentialBuilder credentialBuilder = new ChainedTokenCredentialBuilder();
     return Suppliers.memoize(() -> {
+
           BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-              .endpoint(String.format("https://%s.blob.core.windows.net", config.getAccount()));
+              .endpoint("https://" + config.getAccount() + ".blob.core.windows.net");
 
           if (config.getKey() != null) {
             clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));

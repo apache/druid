@@ -34,11 +34,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.microsoft.azure.storage.ResultContinuation;
-import com.microsoft.azure.storage.RetryExponentialRetry;
 import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.BlobRequestOptions;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -58,7 +54,6 @@ import java.util.List;
  */
 public class AzureStorage
 {
-  private static final boolean USE_FLAT_BLOB_LISTING = true;
 
   // Default value from Azure library
   private static final int DELTA_BACKOFF_MS = 30_000;
@@ -74,20 +69,13 @@ public class AzureStorage
    *
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
-  private final Supplier<CloudBlobClient> cloudBlobClient;
   private final Supplier<BlobServiceClient> blobServiceClient;
 
-  private final BlobBatchClient blobBatchClient;
-
   public AzureStorage(
-      Supplier<CloudBlobClient> cloudBlobClient,
       Supplier<BlobServiceClient> blobServiceClient
   )
   {
-    this.cloudBlobClient = cloudBlobClient;
     this.blobServiceClient = blobServiceClient;
-    this.blobBatchClient = new BlobBatchClientBuilder(blobServiceClient.get()).buildClient();
-
   }
 
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
@@ -190,6 +178,7 @@ public class AzureStorage
   public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
       throws URISyntaxException, StorageException
   {
+    BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(blobServiceClient.get()).buildClient();
     blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
   }
 
@@ -210,11 +199,7 @@ public class AzureStorage
         Duration.ofMillis(DELTA_BACKOFF_MS)
     );
 
-    blobItems.iterableByPage().forEach(page -> {
-      page.getElements().forEach(blob -> {
-          files.add(blob.getName());
-      });
-    });
+    blobItems.iterableByPage().forEach(page -> page.getElements().forEach(blob -> files.add(blob.getName())));
 
     return files;
   }
@@ -231,25 +216,10 @@ public class AzureStorage
     return getOrCreateBlobContainerClient(container).getBlobClient(blobPath).exists();
   }
 
-  /**
-   * If maxAttempts is provided, this method returns request options with retry built in.
-   * Retry backoff is exponential backoff, with maxAttempts set to the one provided
-   */
-  @Nullable
-  private BlobRequestOptions getRequestOptionsWithRetry(Integer maxAttempts)
-  {
-    if (maxAttempts == null) {
-      return null;
-    }
-    BlobRequestOptions requestOptions = new BlobRequestOptions();
-    requestOptions.setRetryPolicyFactory(new RetryExponentialRetry(DELTA_BACKOFF_MS, maxAttempts));
-    return requestOptions;
-  }
-
   @VisibleForTesting
-  CloudBlobClient getCloudBlobClient()
+  BlobServiceClient getBlobServiceClient()
   {
-    return this.cloudBlobClient.get();
+    return this.blobServiceClient.get();
   }
 
   @VisibleForTesting
@@ -258,7 +228,7 @@ public class AzureStorage
       final String prefix,
       ResultContinuation continuationToken,
       int maxResults
-  ) throws StorageException, URISyntaxException
+  )
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
     return blobContainerClient.listBlobs(
@@ -267,17 +237,7 @@ public class AzureStorage
     );
   }
 
-  private CloudBlobContainer getOrCreateCloudBlobContainer(final String containerName)
-      throws StorageException, URISyntaxException
-  {
-    CloudBlobContainer cloudBlobContainer = cloudBlobClient.get().getContainerReference(containerName);
-    cloudBlobContainer.createIfNotExists();
-
-    return cloudBlobContainer;
-  }
-
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
-      throws StorageException, URISyntaxException
   {
     BlobContainerClient blobContainerClient = blobServiceClient.get().createBlobContainerIfNotExists(containerName);
 
