@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -198,6 +199,7 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     globalDictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
+            FileUtils.getTempDir(),
             dictionaryWriter,
             longDictionaryWriter,
             doubleDictionaryWriter,
