@@ -43,7 +43,6 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.QueryTestBuilder.QueryTestConfig;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.planner.PlannerHook;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -123,7 +122,7 @@ public class QueryTestRunner
     public final List<Query<?>> recordedQueries;
     public final Set<ResourceAction> resourceActions;
     public final RuntimeException exception;
-    public final PlannerHook capture;
+    public final PlannerCaptureHook capture;
 
     public QueryResults(
         final Map<String, Object> queryContext,
@@ -131,7 +130,7 @@ public class QueryTestRunner
         final RelDataType sqlSignature,
         final List<Object[]> results,
         final List<Query<?>> recordedQueries,
-        final PlannerHook capture
+        final PlannerCaptureHook capture
     )
     {
       this.queryContext = queryContext;
@@ -535,7 +534,7 @@ public class QueryTestRunner
     private void verifyLogicalPlan(QueryResults queryResults)
     {
       String expectedPlan = execStep.builder().expectedLogicalPlan;
-      String actualPlan = visualizePlan((PlannerCaptureHook) queryResults.capture);
+      String actualPlan = visualizePlan(queryResults.capture);
       Assert.assertEquals(expectedPlan, actualPlan);
     }
 
