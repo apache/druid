@@ -54,9 +54,17 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
         (queryPlus, responseContext) -> {
           final WindowOperatorQuery query = (WindowOperatorQuery) queryPlus.getQuery();
           final List<OperatorFactory> opFactories = query.getOperators();
+          if (opFactories.isEmpty()) {
+            return runner.run(queryPlus, responseContext);
+          }
 
           Supplier<Operator> opSupplier = () -> {
-            Operator retVal = new SequenceOperator(runner.run(queryPlus, responseContext));
+            Operator retVal = new SequenceOperator(
+                runner.run(
+                    queryPlus.withQuery(query.withOperators(new ArrayList<OperatorFactory>())),
+                    responseContext
+                )
+            );
             for (OperatorFactory operatorFactory : opFactories) {
               retVal = operatorFactory.wrap(retVal);
             }
