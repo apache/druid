@@ -44,4 +44,15 @@ public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 
     return (FrameRowsAndColumns) rac.getBase();
   }
+
+//  @Test
+//  public void testSerde() throws Exception
+//  {
+//    final FrameRowsAndColumns f =
+//    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+//    Assert.assertEquals(row, objectMapper.readValue("[1, 2, 3]", ResultRow.class));
+//    Assert.assertEquals(row, objectMapper.readValue(objectMapper.writeValueAsBytes(row), ResultRow.class));
+//  }
+//
+//
 }

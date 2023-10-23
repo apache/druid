@@ -204,5 +204,17 @@ public class DruidDefaultSerializersModule extends SimpleModule
         gen.writeBinary(WireTransferable.fromRAC(value).bytesToTransfer());
       }
     });
+
+    addDeserializer(RowsAndColumns.class, new JsonDeserializer<RowsAndColumns>()
+    {
+      @Override
+      public RowsAndColumns deserialize(
+          JsonParser p,
+          DeserializationContext ctxt
+      ) throws IOException
+      {
+        throw new RuntimeException("Unimplemented!");
+      }
+    });
   }
 }
