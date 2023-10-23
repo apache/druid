@@ -56,6 +56,15 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateCall(SqlCall call, SqlValidatorScope scope)
   {
+    if (call.getKind() == SqlKind.OVER) {
+      if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
+        throw buildCalciteContextException(
+            StringUtils.format(
+                "The query contains window functions. Please enable [%s]",
+                EngineFeature.WINDOW_FUNCTIONS),
+            call);
+      }
+    }
     if (call.getKind() == SqlKind.NULLS_FIRST) {
       SqlNode op0 = call.getOperandList().get(0);
       if (op0.getKind() == SqlKind.DESCENDING) {
@@ -66,15 +75,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       SqlNode op0 = call.getOperandList().get(0);
       if (op0.getKind() != SqlKind.DESCENDING) {
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
-      }
-    }
-    if (call.getKind() == SqlKind.OVER) {
-      if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
-        throw buildCalciteContextException(
-            StringUtils.format(
-                "The query contains window functions. Please enable [%s]",
-                EngineFeature.WINDOW_FUNCTIONS),
-            call);
       }
     }
     super.validateCall(call, scope);

@@ -14277,14 +14277,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testWindowingHint()
+  public void testWindowingErrorWithoutFeatureFlag()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, false))
         .sql("SELECT dim1,ROW_NUMBER() OVER () from druid.foo")
         .run());
 
-    assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
+    assertThat(e, invalidSqlIs("The query contains window functions. Please enable [WINDOW_FUNCTIONS] (line [1], column [13])"));
   }
 
 }
