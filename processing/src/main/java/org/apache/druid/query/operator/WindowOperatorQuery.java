@@ -196,7 +196,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         getDataSource(),
-        getQuerySegmentSpec(),
+        spec,
         getContext(),
         rowSignature,
         operators,
@@ -209,6 +209,18 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         dataSource,
+        getQuerySegmentSpec(),
+        getContext(),
+        rowSignature,
+        operators,
+        leafOperators
+    );
+  }
+
+  public Query<RowsAndColumns> withOperators(List<OperatorFactory> operators)
+  {
+    return new WindowOperatorQuery(
+        getDataSource(),
         getQuerySegmentSpec(),
         getContext(),
         rowSignature,

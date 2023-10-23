@@ -1335,8 +1335,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
     }
     catch (Exception e) {
-      Assert.fail(e.getMessage());
-      return null;
+      throw new RuntimeException(e);
     }
   }
 
@@ -1514,6 +1513,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
       catch (AssertionError e) {
         log.info("sql: %s", sql);
+        log.info(resultsToString("Expected", expectedResults));
         log.info(resultsToString("Actual", queryResults.results));
         throw e;
       }

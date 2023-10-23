@@ -52,11 +52,15 @@ public class IsBooleanDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetCacheKey()
   {
-    EqualityFilter f1 = new EqualityFilter("x", ColumnType.STRING, "hello", null);
-    EqualityFilter f1_2 = new EqualityFilter("x", ColumnType.STRING, "hello", null);
-    EqualityFilter f2 = new EqualityFilter("x", ColumnType.STRING, "world", null);
-    EqualityFilter f3 = new EqualityFilter("x", ColumnType.STRING, "hello", new FilterTuning(true, null, null));
+    IsTrueDimFilter f1 = IsTrueDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "hello", null));
+    IsTrueDimFilter f1_2 = IsTrueDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "hello", null));
+    IsFalseDimFilter f1_3 = IsFalseDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "hello", null));
+    IsFalseDimFilter f1_4 = IsFalseDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "hello", null));
+    IsTrueDimFilter f2 = IsTrueDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "world", null));
+    IsTrueDimFilter f3 = IsTrueDimFilter.of(new EqualityFilter("x", ColumnType.STRING, "hello", new FilterTuning(true, null, null)));
     Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+    Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f1_3.getCacheKey()));
+    Assert.assertArrayEquals(f1_3.getCacheKey(), f1_4.getCacheKey());
     Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
     Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 

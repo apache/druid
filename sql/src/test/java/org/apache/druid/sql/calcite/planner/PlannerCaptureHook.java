@@ -23,17 +23,27 @@ import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlInsert;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 
 public class PlannerCaptureHook implements PlannerHook
 {
+  public static final String NEED_CAPTURE_HOOK = "need_capture_hook";
+
   private RelRoot relRoot;
   private SqlInsert insertNode;
+  private SqlNode sqlNode;
 
   @Override
   public void captureSql(String sql)
   {
     // Not used at present. Add a field to capture this if you need it.
+  }
+
+  @Override
+  public void captureSqlNode(SqlNode node)
+  {
+    this.sqlNode = node;
   }
 
   @Override
@@ -74,5 +84,10 @@ public class PlannerCaptureHook implements PlannerHook
   public SqlInsert insertNode()
   {
     return insertNode;
+  }
+
+  public SqlNode getSqlNode()
+  {
+    return sqlNode;
   }
 }
