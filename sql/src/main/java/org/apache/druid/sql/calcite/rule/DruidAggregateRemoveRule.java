@@ -45,7 +45,7 @@ public class DruidAggregateRemoveRule extends AggregateRemoveRule
     for (AggregateCall aggCall : aggregate.getAggCallList()) {
       final SqlAggFunction aggregation = aggCall.getAggregation();
       if (!(aggregation.getKind() == SqlKind.SUM || aggregation.getKind() == SqlKind.COUNT)) {
-        // Only allow AVG to trigger Calcite's AggregateRemoveRule
+        // Only allow SUM, COUNT and hence AVG to trigger Calcite's AggregateRemoveRule
         // intercept others from here and return
         return;
       }
