@@ -186,7 +186,9 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
           throw convertException(jp.getCodec().readValue(jp, QueryException.class));
         } else {
           String errMsg = jp.getValueAsString();
-          errMsg = errMsg.substring(0, Math.min(errMsg.length(), 192));
+          if (errMsg != null) {
+            errMsg = errMsg.substring(0, Math.min(errMsg.length(), 192));
+          }
           throw convertException(
               new IAE(
                   "Next token wasn't a START_ARRAY, was[%s] from url[%s] with value[%s]",
