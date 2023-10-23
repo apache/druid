@@ -21,10 +21,14 @@ package org.apache.druid.query.rowsandcols.concrete;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
+import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -77,10 +81,14 @@ public class FrameRowsAndColumns implements RowsAndColumns
 
   }
 
+  @SuppressWarnings("unchecked")
   @Nullable
   @Override
   public <T> T as(Class<T> clazz)
   {
+    if (StorageAdapter.class.equals(clazz)) {
+      return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
+    }
     return null;
   }
 }
