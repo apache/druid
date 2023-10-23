@@ -38,7 +38,9 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 public interface PlannerHook
 {
   void captureSql(String sql);
-  default void captureSqlNode(SqlNode node) {}
+  default void captureSqlNode(SqlNode node)
+  {
+  }
   void captureQueryRel(RelRoot rootQueryRel);
   void captureDruidRel(DruidRel<?> druidRel);
   void captureBindableRel(BindableRel bindableRel);
