@@ -19,11 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.core.http.rest.PagedResponse;
 import com.azure.storage.blob.models.BlobItem;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
-import com.microsoft.azure.storage.ResultContinuation;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
@@ -42,11 +40,8 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
   private final AzureStorage storage;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
-
-  private Iterator<PagedResponse<BlobItem>> pagedResult;
   private String currentContainer;
   private String currentPrefix;
-  private ResultContinuation continuationToken;
   private CloudBlobHolder currentBlobItem;
   private Iterator<BlobItem> blobItemIterator;
   private final AzureAccountConfig config;
@@ -63,10 +58,8 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
     this.config = config;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
-    this.pagedResult = null;
     this.currentContainer = null;
     this.currentPrefix = null;
-    this.continuationToken = null;
     this.currentBlobItem = null;
     this.blobItemIterator = null;
 
@@ -103,8 +96,6 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
     log.debug("currentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
               currentUri, currentContainer, currentPrefix
     );
-    pagedResult = null;
-    continuationToken = null;
   }
 
   private void fetchNextBatch()
@@ -116,13 +107,12 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
           currentContainer,
           currentPrefix
       );
-      pagedResult = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
+      // We don't need to use iterableByPage because the client handles this, it will fetch the next page when necessary.
+      blobItemIterator = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
           currentContainer,
           currentPrefix,
-          continuationToken,
           maxListingLength
-      ), config.getMaxTries()).iterableByPage().iterator();
-      blobItemIterator = pagedResult.next().getValue().iterator();
+      ), config.getMaxTries()).stream().iterator();
     }
     catch (Exception e) {
       throw new RE(
@@ -140,7 +130,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
    */
   private void advanceBlobItem()
   {
-    while (prefixesIterator.hasNext() || pagedResult.hasNext() || blobItemIterator.hasNext()) {
+    while (prefixesIterator.hasNext() || blobItemIterator.hasNext()) {
       while (blobItemIterator.hasNext()) {
         BlobItem blobItem = blobItemIterator.next();
         if (!blobItem.isPrefix() && blobItem.getProperties().getContentLength() > 0) {
@@ -148,9 +138,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
           return;
         }
       }
-      if (pagedResult.hasNext()) {
-        blobItemIterator = pagedResult.next().getValue().iterator();
-      } else if (prefixesIterator.hasNext()) {
+      if (prefixesIterator.hasNext()) {
         prepareNextRequest();
         fetchNextBatch();
       }

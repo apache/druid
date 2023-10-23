@@ -33,7 +33,6 @@ import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import com.microsoft.azure.storage.ResultContinuation;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -226,9 +225,8 @@ public class AzureStorage
   PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
       final String containerName,
       final String prefix,
-      ResultContinuation continuationToken,
       int maxResults
-  )
+  ) throws IOException, URISyntaxException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
     return blobContainerClient.listBlobs(
