@@ -407,7 +407,8 @@ public class CalcitePlanner implements Planner, ViewExpander
         opTab,
         catalogReader,
         getTypeFactory(),
-        validatorConfig
+        validatorConfig,
+        context.unwrapOrThrow(PlannerContext.class)
     );
   }
 

@@ -182,9 +182,12 @@ public class PlannerFactory extends PlannerToolbox
                   return DruidConformance.instance();
                 }
               };
-            } else {
-              return null;
             }
+            if (aClass.equals(PlannerContext.class)) {
+              return (C) plannerContext;
+            }
+
+            return null;
           }
         });
 
