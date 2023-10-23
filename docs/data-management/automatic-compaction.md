@@ -240,7 +240,7 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 
 ##### Update the compaction settings with the UI
 
-In the **Compaction config** for a datasource, set  **Allow concurrent compaction append tasks** to **True**.
+In the **Compaction config** for a datasource, set  **Allow concurrent compactions (experimental)** to **True**.
 
 #### Add a task lock type to your ingestion job
 
