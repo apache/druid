@@ -28,7 +28,6 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexOver;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -67,7 +66,6 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
 
@@ -278,11 +276,7 @@ public class Expressions
                                                            .lookupOperatorConversion(operator);
 
     if (conversion == null) {
-      if (rexNode instanceof RexOver && !plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
-        plannerContext.setPlanningError("Query contains a window functions; consider enabling windowing with [%s].", plannerContext.CTX_ENABLE_WINDOW_FNS);
-      } else {
-        plannerContext.setPlanningError("SQL query requires '%s' operator that is not supported.", operator.getName());
-      }
+      plannerContext.setPlanningError("SQL query requires '%s' operator that is not supported.", operator.getName());
       return null;
     } else {
 

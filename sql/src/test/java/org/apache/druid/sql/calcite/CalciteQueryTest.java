@@ -14284,7 +14284,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1,ROW_NUMBER() OVER () from druid.foo")
         .run());
 
-    assertThat(e, invalidSqlIs("The query contains window functions. Please enable [WINDOW_FUNCTIONS] (line [1], column [13])"));
+    assertThat(e, invalidSqlIs("The query contains window functions; To run these window functions, enable [WINDOW_FUNCTIONS] in query context. (line [1], column [13])"));
   }
 
 }
