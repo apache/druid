@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Injector;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -52,6 +54,7 @@ import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactor
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
+import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -363,7 +366,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
-        if (!isOrdered(sql)) {
+        if (!isOrdered(queryResults)) {
+          // in case the resultset is not ordered; order via the same comparator before comparision
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         }
@@ -377,12 +381,10 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       }
     }
 
-    private boolean isOrdered(String sql)
+    private boolean isOrdered(QueryResults queryResults)
     {
-      // FIXME: SqlToRelConverter.isOrdered(null) would be better
-      sql = sql.toLowerCase(Locale.ENGLISH).replace('\n', ' ');
-      sql = sql.substring(sql.lastIndexOf(')'));
-      return sql.contains("order");
+      SqlNode sqlNode = ((PlannerCaptureHook) queryResults.capture).getSqlNode();
+      return SqlToRelConverter.isOrdered(sqlNode);
     }
   }
 
@@ -478,6 +480,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .queryContext(ImmutableMap.of(
               PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
               QueryContexts.ENABLE_DEBUG, true)
               )
           .sql(testCase.getQueryString())
