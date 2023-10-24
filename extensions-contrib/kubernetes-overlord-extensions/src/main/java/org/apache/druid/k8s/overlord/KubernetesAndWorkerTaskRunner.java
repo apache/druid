@@ -24,7 +24,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -104,18 +103,10 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   public ListenableFuture<TaskStatus> run(Task task)
   {
     RunnerStrategy.RunnerType runnerType = runnerStrategy.getRunnerTypeForTask(task);
-    if (runnerType != null) {
-      if (RunnerStrategy.RunnerType.KUBERNETES_RUNNER_TYPE.equals(runnerType)) {
-        return kubernetesTaskRunner.run(task);
-      } else {
-        return workerTaskRunner.run(task);
-      }
+    if (RunnerStrategy.RunnerType.WORKER_RUNNER_TYPE.equals(runnerType)) {
+      return workerTaskRunner.run(task);
     } else {
-      throw DruidException.defensive()
-                          .build(
-                              "Wrong runner type configured for task type [%s]",
-                              task.getType()
-                          );
+      return kubernetesTaskRunner.run(task);
     }
   }
 

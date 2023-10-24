@@ -55,9 +55,9 @@ public class TaskTypeRunnerStrategy implements RunnerStrategy
   {
     Preconditions.checkNotNull(defaultRunner);
     workerRunnerStrategy = new WorkerRunnerStrategy();
-    defaultRunnerStrategy = RunnerType.KUBERNETES_RUNNER_TYPE.getType().equals(defaultRunner) ?
-                            kubernetesRunnerStrategy : workerRunnerStrategy;
-
+    defaultRunnerStrategy = RunnerType.WORKER_RUNNER_TYPE.getType().equals(defaultRunner) ?
+                            workerRunnerStrategy : kubernetesRunnerStrategy;
+    validate(overrides);
     this.defaultRunner = defaultRunner;
     this.overrides = overrides;
   }
@@ -84,7 +84,7 @@ public class TaskTypeRunnerStrategy implements RunnerStrategy
     }
 
     RunnerStrategy runnerStrategy = getRunnerSelectStrategy(runnerType);
-    return runnerStrategy == null ? null : runnerStrategy.getRunnerTypeForTask(task);
+    return runnerStrategy.getRunnerTypeForTask(task);
   }
 
   private RunnerStrategy getRunnerSelectStrategy(String runnerType)
@@ -93,14 +93,28 @@ public class TaskTypeRunnerStrategy implements RunnerStrategy
       return defaultRunnerStrategy;
     }
 
-    if (RunnerType.KUBERNETES_RUNNER_TYPE.getType().equals(runnerType)) {
-      return kubernetesRunnerStrategy;
-    } else if (WORKER_NAME.equals(runnerType)) {
+    if (WORKER_NAME.equals(runnerType)) {
       return workerRunnerStrategy;
     } else {
-      // means wrong configuration
-      return null;
+      return kubernetesRunnerStrategy;
     }
+  }
+
+  private void validate(Map<String, String> overrides)
+  {
+    if (overrides == null) {
+      return;
+    }
+
+    boolean hasValidRunnerType =
+        overrides.values().stream().allMatch(v -> RunnerType.WORKER_RUNNER_TYPE.getType().equals(v)
+                                                  || RunnerType.KUBERNETES_RUNNER_TYPE.getType().equals(v));
+    Preconditions.checkArgument(
+        hasValidRunnerType,
+        "Invalid config in 'overrides'. Each runner type must be either '%s' or '%s'.",
+        RunnerType.WORKER_RUNNER_TYPE.getType(),
+        RunnerType.KUBERNETES_RUNNER_TYPE.getType()
+    );
   }
 
   @Override

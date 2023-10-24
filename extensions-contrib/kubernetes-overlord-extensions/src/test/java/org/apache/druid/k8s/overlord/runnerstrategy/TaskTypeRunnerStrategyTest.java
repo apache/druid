@@ -49,4 +49,16 @@ public class TaskTypeRunnerStrategyTest extends EasyMockSupport
     Assert.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
     verifyAll();
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void test_invalidOverridesConfig_shouldThrowException()
+  {
+    new TaskTypeRunnerStrategy(
+        "k8s",
+        ImmutableMap.of(
+            "index_kafka",
+            "non_exist_runner"
+        )
+    );
+  }
 }
