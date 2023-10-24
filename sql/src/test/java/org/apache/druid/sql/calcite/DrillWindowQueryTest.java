@@ -4364,7 +4364,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @DrillTest("nestedAggs/multiWin_5")
   @Test
   public void test_nestedAggs_multiWin_5()
