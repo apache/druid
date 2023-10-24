@@ -885,7 +885,7 @@ Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
-`LOOKUP(<CHARACTER>, <CHARACTER>)`
+`LOOKUP(<CHARACTER>, <CHARACTER>[, <CHARACTER>])`
 
 **Function type:** [Scalar, string](sql-scalar.md#string-functions)
 

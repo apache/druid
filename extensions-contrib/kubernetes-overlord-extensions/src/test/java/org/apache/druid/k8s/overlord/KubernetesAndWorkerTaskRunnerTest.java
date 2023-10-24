@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -298,6 +299,37 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(workerTaskRunner.restore()).andReturn(ImmutableList.of());
     replayAll();
     Assert.assertEquals(0, runner.restore().size());
+    verifyAll();
+  }
+
+  @Test
+  public void test_getTaskLocation_kubernetes()
+  {
+    TaskLocation kubernetesTaskLocation = TaskLocation.create("host", 0, 0, false);
+    EasyMock.expect(kubernetesTaskRunner.getTaskLocation(ID)).andReturn(kubernetesTaskLocation);
+    replayAll();
+    Assert.assertEquals(kubernetesTaskLocation, runner.getTaskLocation(ID));
+    verifyAll();
+  }
+
+  @Test
+  public void test_getTaskLocation_worker()
+  {
+    TaskLocation workerTaskLocation = TaskLocation.create("host", 0, 0, false);
+    EasyMock.expect(kubernetesTaskRunner.getTaskLocation(ID)).andReturn(TaskLocation.unknown());
+    EasyMock.expect(workerTaskRunner.getTaskLocation(ID)).andReturn(workerTaskLocation);
+
+    replayAll();
+    Assert.assertEquals(workerTaskLocation, runner.getTaskLocation(ID));
+    verifyAll();
+  }
+
+  @Test
+  public void test_updateStatus()
+  {
+    kubernetesTaskRunner.updateStatus(task, TaskStatus.running(ID));
+    replayAll();
+    runner.updateStatus(task, TaskStatus.running(ID));
     verifyAll();
   }
 }

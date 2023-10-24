@@ -9,6 +9,7 @@
   "query/segment/time" : { "dimensions" : [], "type" : "timer"},
   "query/wait/time" : { "dimensions" : [], "type" : "timer"},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge"},
+  "segment/scan/active" : { "dimensions" : [], "type" : "gauge"},
   "query/segmentAndCache/time" : { "dimensions" : [], "type" : "timer" },
   "query/cpu/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer" },
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
@@ -101,6 +102,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     return viewableColumns == null ? base.getColumnNames() : viewableColumns;
   }
 
+  public RowsAndColumns getBase()
+  {
+    return base;
+  }
+
   @Override
   public int numRows()
   {
@@ -115,7 +121,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     if (viewableColumns != null && !viewableColumns.contains(name)) {
       return null;
     }
-
     maybeMaterialize();
     return base.findColumn(name);
   }
@@ -158,7 +163,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
   private void maybeMaterialize()
   {
-    if (!(interval == null && filter == null && limit == -1 && ordering == null)) {
+    if (needsMaterialization()) {
       final Pair<byte[], RowSignature> thePair = materialize();
       if (thePair == null) {
         reset(new EmptyRowsAndColumns());
@@ -166,6 +171,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         reset(new FrameRowsAndColumns(Frame.wrap(thePair.lhs), thePair.rhs));
       }
     }
+  }
+
+  private boolean needsMaterialization()
+  {
+    return interval != null || filter != null || limit != -1 || ordering != null || virtualColumns != null;
   }
 
   private Pair<byte[], RowSignature> materialize()
@@ -180,7 +190,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     } else {
       return materializeStorageAdapter(as);
     }
-
   }
 
   private void reset(RowsAndColumns rac)
@@ -200,13 +209,26 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     final Sequence<Cursor> cursors = as.makeCursors(
         filter,
         interval == null ? Intervals.ETERNITY : interval,
-        virtualColumns,
+        virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns,
         Granularities.ALL,
         false,
         null
     );
 
-    Collection<String> cols = viewableColumns == null ? base.getColumnNames() : viewableColumns;
+
+    final Collection<String> cols;
+    if (viewableColumns != null) {
+      cols = viewableColumns;
+    } else {
+      if (virtualColumns == null) {
+        cols = base.getColumnNames();
+      } else {
+        cols = ImmutableList.<String>builder()
+            .addAll(base.getColumnNames())
+            .addAll(virtualColumns.getColumnNames())
+            .build();
+      }
+    }
     AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
     FrameWriter writer = cursors.accumulate(null, (accumulated, in) -> {
@@ -222,9 +244,18 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       final RowSignature.Builder sigBob = RowSignature.builder();
 
       for (String col : cols) {
-        final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(col);
+        ColumnCapabilities capabilities;
+        capabilities = columnSelectorFactory.getColumnCapabilities(col);
         if (capabilities != null) {
           sigBob.add(col, capabilities.toColumnType());
+          continue;
+        }
+        if (virtualColumns != null) {
+          capabilities = virtualColumns.getColumnCapabilities(columnSelectorFactory, col);
+          if (capabilities != null) {
+            sigBob.add(col, capabilities.toColumnType());
+            continue;
+          }
         }
       }
       final RowSignature signature = sigBob.build();
@@ -318,7 +349,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           continue;
         }
 
-        if (!matcher.matches()) {
+        if (!matcher.matches(false)) {
           rowsToSkip.set(theId);
         }
       }
@@ -350,12 +381,12 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     final RowSignature.Builder sigBob = RowSignature.builder();
     final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
 
+
     for (String column : columnsToGenerate) {
       final Column racColumn = rac.findColumn(column);
       if (racColumn == null) {
         continue;
       }
-
       sigBob.add(column, racColumn.toAccessor().getType());
     }
 

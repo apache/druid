@@ -82,8 +82,9 @@ public interface IndexerMetadataStorageCoordinator
   Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
 
   /**
+   *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
-   * given data source from the metadata store.
+   * given data source and interval from the metadata store.
    *
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
@@ -91,10 +92,11 @@ public interface IndexerMetadataStorageCoordinator
    * if needed.
    *
    * @param dataSource The data source to query
+   * @param interval The interval to query
    *
    * @return The DataSegments and the related created_date of segments
    */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval);
 
   /**
    * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
@@ -301,6 +303,21 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Commits segments created by an APPEND task. This method also handles segment
+   * upgrade scenarios that may result from concurrent append and replace. Also
+   * commits start and end {@link DataSourceMetadata}.
+   *
+   * @see #commitAppendSegments
+   * @see #commitSegmentsAndMetadata
+   */
+  SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  );
+
+  /**
    * Commits segments created by a REPLACE task. This method also handles the
    * segment upgrade scenarios that may result from concurrent append and replace.
    * <ul>
@@ -317,6 +334,26 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
       Set<ReplaceTaskLock> locksHeldByReplaceTask
+  );
+
+  /**
+   * Creates and inserts new IDs for the pending segments hat overlap with the given
+   * replace segments being committed. The newly created pending segment IDs:
+   * <ul>
+   * <li>Have the same interval and version as that of an overlapping segment
+   * committed by the REPLACE task.</li>
+   * <li>Cannot be committed but are only used to serve realtime queries against
+   * those versions.</li>
+   * </ul>
+   *
+   * @param replaceSegments Segments being committed by a REPLACE task
+   * @param activeRealtimeSequencePrefixes Set of sequence prefixes of active and pending completion task groups
+   *                                       of the supervisor (if any) for this datasource
+   * @return Map from originally allocated pending segment to its new upgraded ID.
+   */
+  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+      Set<DataSegment> replaceSegments,
+      Set<String> activeRealtimeSequencePrefixes
   );
 
   /**
@@ -405,5 +442,4 @@ public interface IndexerMetadataStorageCoordinator
    * @return DataSegment used segment corresponding to given id
    */
   DataSegment retrieveSegmentForId(String id, boolean includeUnused);
-
 }

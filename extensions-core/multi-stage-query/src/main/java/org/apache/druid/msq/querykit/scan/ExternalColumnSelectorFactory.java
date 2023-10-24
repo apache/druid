@@ -19,10 +19,12 @@
 
 package org.apache.druid.msq.querykit.scan;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -32,6 +34,7 @@ import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -48,16 +51,19 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
 
   private final ColumnSelectorFactory delegate;
   private final InputSource inputSource;
+  private final RowSignature rowSignature;
   private final SimpleSettableOffset offset;
 
   public ExternalColumnSelectorFactory(
       final ColumnSelectorFactory delgate,
       final InputSource inputSource,
+      final RowSignature rowSignature,
       final SimpleSettableOffset offset
   )
   {
     this.delegate = delgate;
     this.inputSource = inputSource;
+    this.rowSignature = rowSignature;
     this.offset = offset;
   }
 
@@ -67,6 +73,7 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
     return new DimensionSelector()
     {
       final DimensionSelector delegateDimensionSelector = delegate.makeDimensionSelector(dimensionSpec);
+      final ExpressionType expressionType = ExpressionType.fromColumnType(dimensionSpec.getOutputType());
 
       @Override
       public IndexedInts getRow()
@@ -81,9 +88,9 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return delegateDimensionSelector.makeValueMatcher(predicate);
+        return delegateDimensionSelector.makeValueMatcher(predicateFactory);
       }
 
       @Override
@@ -97,7 +104,10 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
       public Object getObject()
       {
         try {
-          return delegateDimensionSelector.getObject();
+          if (expressionType == null) {
+            return delegateDimensionSelector.getObject();
+          }
+          return ExprEval.ofType(expressionType, delegateDimensionSelector.getObject()).value();
         }
         catch (Exception e) {
           throw createException(e, dimensionSpec.getDimension(), inputSource, offset);
@@ -144,6 +154,9 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
     return new ColumnValueSelector()
     {
       final ColumnValueSelector delegateColumnValueSelector = delegate.makeColumnValueSelector(columnName);
+      final ExpressionType expressionType = ExpressionType.fromColumnType(
+          rowSignature.getColumnType(columnName).orElse(null)
+      );
 
       @Override
       public double getDouble()
@@ -195,7 +208,10 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
       public Object getObject()
       {
         try {
-          return delegateColumnValueSelector.getObject();
+          if (expressionType == null) {
+            return delegateColumnValueSelector.getObject();
+          }
+          return ExprEval.ofType(expressionType, delegateColumnValueSelector.getObject()).value();
         }
         catch (Exception e) {
           throw createException(e, columnName, inputSource, offset);

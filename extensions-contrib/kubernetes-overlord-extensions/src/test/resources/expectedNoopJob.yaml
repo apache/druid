@@ -16,7 +16,7 @@ metadata:
 spec:
   activeDeadlineSeconds: 14400
   backoffLimit: 0
-  ttlSecondsAfterFinished: 172800
+  ttlSecondsAfterFinished: 3600
   template:
     metadata:
       labels:
@@ -42,11 +42,11 @@ spec:
               value: "/tmp"
             - name: "TASK_ID"
               value: "id"
+            - name: "LOAD_BROADCAST_SEGMENTS"
+              value: "false"
             - name: "TASK_JSON"
               valueFrom:
                 fieldRef:
                   fieldPath: "metadata.annotations['task']"
-            - name: "LOAD_BROADCAST_SEGMENTS"
-              value: "false"
           image: one
           name: primary

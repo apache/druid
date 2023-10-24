@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -235,7 +236,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
       if (castForComparison == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       final long longValue = castForComparison.asLong();
 
@@ -253,9 +254,17 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int id = dictionary.indexOf(longValue);
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -301,7 +310,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (longValue == null) {
             if (inputNull && NullHandling.sqlCompatible()) {
@@ -322,6 +331,14 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
           }
           final int id = dictionary.indexOf(longValue);
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -400,6 +417,17 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             }
           };
         }
+
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null)) {
+            return nullValueBitmap;
+          }
+          return null;
+        }
       };
     }
   }
@@ -460,6 +488,13 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               return getBitmap(rangeIterator.nextInt());
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          return nullValueBitmap;
         }
       };
     }
@@ -532,6 +567,16 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               }
             }
           };
+        }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (matcherFactory.isNullInputUnknown()) {
+            return nullValueBitmap;
+          }
+          return null;
         }
       };
     }

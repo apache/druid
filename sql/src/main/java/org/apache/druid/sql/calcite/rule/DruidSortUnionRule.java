@@ -32,8 +32,9 @@ import java.util.Collections;
  */
 public class DruidSortUnionRule extends RelOptRule
 {
-  private static final DruidSortUnionRule INSTANCE = new DruidSortUnionRule();
 
+  private static final DruidSortUnionRule INSTANCE = new DruidSortUnionRule();
+  
   private DruidSortUnionRule()
   {
     super(operand(Sort.class, operand(DruidUnionRel.class, any())));

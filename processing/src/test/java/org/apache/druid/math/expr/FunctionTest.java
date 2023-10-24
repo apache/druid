@@ -41,6 +41,9 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
@@ -952,14 +955,60 @@ public class FunctionTest extends InitializedNullHandlingTest
         ),
         expected
     );
+    // test with alias
+    assertExpr(
+        StringUtils.format(
+            "decode_base64_complex('%s', '%s')",
+            TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+            StringUtils.encodeBase64String(bytes)
+        ),
+        expected
+    );
   }
 
+  @Test
+  public void testMacrosWithMultipleAliases()
+  {
+    ExprMacroTable.ExprMacro drinkMacro = new ExprMacroTable.ExprMacro()
+    {
+      @Override
+      public Expr apply(List<Expr> args)
+      {
+        return new StringExpr("happiness");
+      }
+
+      @Override
+      public String name()
+      {
+        return "drink";
+      }
+    };
+    List<ExprMacroTable.ExprMacro> macros = new ArrayList<>();
+    macros.add(drinkMacro);
+    List<String> aliases = Arrays.asList("tea", "coffee", "chai", "chaha", "kevha", "chay");
+    for (String tea : aliases) {
+      macros.add(new ExprMacroTable.AliasExprMacro(drinkMacro, tea));
+    }
+    final ExprMacroTable exprMacroTable = new ExprMacroTable(macros);
+    final Expr happiness = new StringExpr("happiness");
+    Assert.assertEquals(happiness, Parser.parse("drink(1,2)", exprMacroTable));
+    for (String tea : aliases) {
+      Assert.assertEquals(happiness, Parser.parse(StringUtils.format("%s(1,2)", tea), exprMacroTable));
+    }
+  }
   @Test
   public void testComplexDecodeNull()
   {
     assertExpr(
         StringUtils.format(
             "complex_decode_base64('%s', null)",
+            TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
+        ),
+        null
+    );
+    assertExpr(
+        StringUtils.format(
+            "decode_base64_complex('%s', null)",
             TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
         ),
         null

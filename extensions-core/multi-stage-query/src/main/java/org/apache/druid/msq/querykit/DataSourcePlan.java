@@ -51,6 +51,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -166,6 +167,18 @@ public class DataSourcePlan
           queryKit,
           queryId,
           (QueryDataSource) dataSource,
+          maxWorkerCount,
+          minStageNumber,
+          broadcast
+      );
+    } else if (dataSource instanceof UnionDataSource) {
+      return forUnion(
+          queryKit,
+          queryId,
+          queryContext,
+          (UnionDataSource) dataSource,
+          querySegmentSpec,
+          filter,
           maxWorkerCount,
           minStageNumber,
           broadcast
@@ -455,6 +468,54 @@ public class DataSourcePlan
         inputSpecs,
         basePlan.getBroadcastInputs(),
         basePlan.getSubQueryDefBuilder().orElse(null)
+    );
+  }
+
+  private static DataSourcePlan forUnion(
+      final QueryKit queryKit,
+      final String queryId,
+      final QueryContext queryContext,
+      final UnionDataSource unionDataSource,
+      final QuerySegmentSpec querySegmentSpec,
+      @Nullable DimFilter filter,
+      final int maxWorkerCount,
+      final int minStageNumber,
+      final boolean broadcast
+  )
+  {
+    // This is done to prevent loss of generality since MSQ can plan any type of DataSource.
+    List<DataSource> children = unionDataSource.getDataSources();
+
+    final QueryDefinitionBuilder subqueryDefBuilder = QueryDefinition.builder();
+    final List<DataSource> newChildren = new ArrayList<>();
+    final List<InputSpec> inputSpecs = new ArrayList<>();
+    final IntSet broadcastInputs = new IntOpenHashSet();
+
+    for (DataSource child : children) {
+      DataSourcePlan childDataSourcePlan = forDataSource(
+          queryKit,
+          queryId,
+          queryContext,
+          child,
+          querySegmentSpec,
+          filter,
+          maxWorkerCount,
+          Math.max(minStageNumber, subqueryDefBuilder.getNextStageNumber()),
+          broadcast
+      );
+
+      int shift = inputSpecs.size();
+
+      newChildren.add(shiftInputNumbers(childDataSourcePlan.getNewDataSource(), shift));
+      inputSpecs.addAll(childDataSourcePlan.getInputSpecs());
+      childDataSourcePlan.getSubQueryDefBuilder().ifPresent(subqueryDefBuilder::addAll);
+      childDataSourcePlan.getBroadcastInputs().forEach(inp -> broadcastInputs.add(inp + shift));
+    }
+    return new DataSourcePlan(
+        new UnionDataSource(newChildren),
+        inputSpecs,
+        broadcastInputs,
+        subqueryDefBuilder
     );
   }
 

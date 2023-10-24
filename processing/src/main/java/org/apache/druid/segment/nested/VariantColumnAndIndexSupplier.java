@@ -20,6 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.error.DruidException;
@@ -325,7 +326,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
           ExpressionType.fromColumnTypeStrict(logicalType)
       );
       if (castForComparison == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       final Object[] arrayToMatch = castForComparison.asArray();
       Indexed elements;
@@ -362,7 +363,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         }
         if (ids[i] < 0) {
           if (value == null) {
-            return new AllFalseBitmapColumnIndex(bitmapFactory);
+            return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
           }
         }
       }
@@ -381,9 +382,17 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int id = dictionary.indexOf(ids) + arrayOffset;
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -406,7 +415,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
           ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
       );
       if (castForComparison == null) {
-        return new AllFalseBitmapColumnIndex(bitmapFactory);
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       Indexed elements;
       final int elementOffset;
@@ -443,10 +452,17 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int elementId = getElementId();
-
+          if (includeUnknown) {
+            if (elementId < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getElementBitmap(elementId), nullValueBitmap)
+            );
+          }
           if (elementId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }

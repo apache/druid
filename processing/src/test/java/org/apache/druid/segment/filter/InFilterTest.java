@@ -36,15 +36,14 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -58,12 +57,12 @@ import java.util.Map;
 public class InFilterTest extends BaseFilterTest
 {
   private static final List<InputRow> ROWS = ImmutableList.of(
-      makeDefaultSchemaRow("a", "", ImmutableList.of("a", "b"), "2017-07-25", 0.0, 0.0f, 0L),
-      makeDefaultSchemaRow("b", "10", ImmutableList.of(), "2017-07-25", 10.1, 10.1f, 100L),
-      makeDefaultSchemaRow("c", "2", ImmutableList.of(""), "2017-05-25", null, 5.5f, 40L),
-      makeDefaultSchemaRow("d", "1", ImmutableList.of("a"), "2020-01-25", 120.0245, 110.0f, null),
-      makeDefaultSchemaRow("e", "def", ImmutableList.of("c"), null, 60.0, null, 9001L),
-      makeDefaultSchemaRow("f", "abc", null, "2020-01-25", 765.432, 123.45f, 12345L)
+      makeDefaultSchemaRow("a", "", ImmutableList.of("a", "b"), "2017-07-25", "", 0.0, 0.0f, 0L),
+      makeDefaultSchemaRow("b", "10", ImmutableList.of(), "2017-07-25", "a", 10.1, 10.1f, 100L),
+      makeDefaultSchemaRow("c", "2", ImmutableList.of(""), "2017-05-25", null, null, 5.5f, 40L),
+      makeDefaultSchemaRow("d", "1", ImmutableList.of("a"), "2020-01-25", "b", 120.0245, 110.0f, null),
+      makeDefaultSchemaRow("e", "def", ImmutableList.of("c"), null, "c", 60.0, null, 9001L),
+      makeDefaultSchemaRow("f", "abc", null, "2020-01-25", "a", 765.432, 123.45f, 12345L)
   );
 
   public InFilterTest(
@@ -77,8 +76,6 @@ public class InFilterTest extends BaseFilterTest
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -92,6 +89,10 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(
         toInFilter("dim0"),
         ImmutableList.of()
+    );
+    assertFilterMatches(
+        NotDimFilter.of(toInFilter("dim0")),
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 
     assertFilterMatches(
@@ -113,6 +114,11 @@ public class InFilterTest extends BaseFilterTest
         toInFilter("dim0", "e", "x"),
         ImmutableList.of("e")
     );
+
+    assertFilterMatches(
+        NotDimFilter.of(toInFilter("dim0", "e", "x")),
+        ImmutableList.of("a", "b", "c", "d", "f")
+    );
   }
 
   @Test
@@ -128,22 +134,59 @@ public class InFilterTest extends BaseFilterTest
         ImmutableList.of("a")
     );
 
+    assertFilterMatches(
+        toInFilter("dim1", "-1", "ab", "de"),
+        ImmutableList.of()
+    );
+
+    assertFilterMatches(
+        toInFilter("s0", "a", "b"),
+        ImmutableList.of("b", "d", "f")
+    );
+    assertFilterMatches(
+        toInFilter("s0", "noexist"),
+        ImmutableList.of()
+    );
+
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(
           toInFilter("dim1", null, "10", "abc"),
           ImmutableList.of("a", "b", "f")
+      );
+      assertFilterMatches(
+          toInFilter("dim1", null, "10", "abc"),
+          ImmutableList.of("a", "b", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(toInFilter("dim1", "-1", "ab", "de")),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(toInFilter("s0", "a", "b")),
+          ImmutableList.of("a", "c", "e")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(toInFilter("s0", "noexist")),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
       );
     } else {
       assertFilterMatches(
           toInFilter("dim1", null, "10", "abc"),
           ImmutableList.of("b", "f")
       );
+      assertFilterMatches(
+          NotDimFilter.of(toInFilter("dim1", "-1", "ab", "de")),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(toInFilter("s0", "a", "b")),
+          ImmutableList.of("a", "e")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(toInFilter("s0", "noexist")),
+          ImmutableList.of("a", "b", "d", "e", "f")
+      );
     }
-
-    assertFilterMatches(
-        toInFilter("dim1", "-1", "ab", "de"),
-        ImmutableList.of()
-    );
   }
 
   @Test
@@ -215,6 +258,10 @@ public class InFilterTest extends BaseFilterTest
         toInFilter("dim3", null, (String) null),
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
+    assertFilterMatches(
+        NotDimFilter.of(toInFilter("dim3", null, (String) null)),
+        ImmutableList.of()
+    );
 
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(
@@ -226,16 +273,28 @@ public class InFilterTest extends BaseFilterTest
           toInFilter("dim3", ""),
           ImmutableList.of()
       );
+      assertFilterMatches(
+          NotDimFilter.of(toInFilter("dim3", "")),
+          ImmutableList.of()
+      );
     }
 
     assertFilterMatches(
         toInFilter("dim3", null, "a"),
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
+    assertFilterMatches(
+        NotDimFilter.of(toInFilter("dim3", null, "a")),
+        ImmutableList.of()
+    );
 
     assertFilterMatches(
         toInFilter("dim3", "a"),
         ImmutableList.of()
+    );
+    assertFilterMatches(
+        NotDimFilter.of(toInFilter("dim3", "a")),
+        NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 
     assertFilterMatches(
@@ -264,8 +323,16 @@ public class InFilterTest extends BaseFilterTest
           ImmutableList.of("a", "b", "c", "d", "f")
       );
       assertFilterMatchesSkipArrays(
+          NotDimFilter.of(toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b")),
+          ImmutableList.of("e")
+      );
+      assertFilterMatchesSkipArrays(
           toInFilterWithFn("dim2", yesNullFn, "YES"),
           ImmutableList.of("b", "c", "f")
+      );
+      assertFilterMatchesSkipArrays(
+          NotDimFilter.of(toInFilterWithFn("dim2", yesNullFn, "YES")),
+          ImmutableList.of("a", "d", "e")
       );
       assertFilterMatches(
           toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
@@ -281,8 +348,16 @@ public class InFilterTest extends BaseFilterTest
           ImmutableList.of("a", "b", "d", "f")
       );
       assertFilterMatchesSkipArrays(
+          NotDimFilter.of(toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b")),
+          ImmutableList.of("c", "e")
+      );
+      assertFilterMatchesSkipArrays(
           toInFilterWithFn("dim2", yesNullFn, "YES"),
           ImmutableList.of("b", "f")
+      );
+      assertFilterMatchesSkipArrays(
+          NotDimFilter.of(toInFilterWithFn("dim2", yesNullFn, "YES")),
+          ImmutableList.of("a", "c", "d", "e")
       );
       assertFilterMatches(
           toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
@@ -299,6 +374,10 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(
         toInFilterWithFn("dim3", yesNullFn, "NO"),
         ImmutableList.of()
+    );
+    assertFilterMatches(
+        NotDimFilter.of(toInFilterWithFn("dim3", yesNullFn, "NO")),
+        NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 
     assertFilterMatches(
@@ -361,6 +440,18 @@ public class InFilterTest extends BaseFilterTest
       assertFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a", "e"));
       assertFilterMatches(new InDimFilter("d0", Sets.newHashSet("0"), null), ImmutableList.of("a", "c"));
       assertFilterMatches(new InDimFilter("l0", Sets.newHashSet("0"), null), ImmutableList.of("a", "d"));
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("f0", Sets.newHashSet("0"), null)),
+          ImmutableList.of("b", "c", "d", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("d0", Sets.newHashSet("0"), null)),
+          ImmutableList.of("b", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("l0", Sets.newHashSet("0"), null)),
+          ImmutableList.of("b", "c", "e", "f")
+      );
       assertFilterMatches(new InDimFilter("f0", Collections.singleton(null), null), ImmutableList.of());
       assertFilterMatches(new InDimFilter("d0", Collections.singleton(null), null), ImmutableList.of());
       assertFilterMatches(new InDimFilter("l0", Collections.singleton(null), null), ImmutableList.of());
@@ -375,9 +466,39 @@ public class InFilterTest extends BaseFilterTest
       assertFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
       assertFilterMatches(new InDimFilter("d0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
       assertFilterMatches(new InDimFilter("l0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("f0", Sets.newHashSet("0"), null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("b", "c", "d", "f")
+          : ImmutableList.of("b", "c", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("d0", Sets.newHashSet("0"), null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("b", "d", "e", "f")
+          : ImmutableList.of("b", "c", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("l0", Sets.newHashSet("0"), null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("b", "c", "e", "f")
+          : ImmutableList.of("b", "c", "d", "e", "f")
+      );
       assertFilterMatches(new InDimFilter("f0", Collections.singleton(null), null), ImmutableList.of("e"));
       assertFilterMatches(new InDimFilter("d0", Collections.singleton(null), null), ImmutableList.of("c"));
       assertFilterMatches(new InDimFilter("l0", Collections.singleton(null), null), ImmutableList.of("d"));
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("f0", Collections.singleton(null), null)),
+          ImmutableList.of("a", "b", "c", "d", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("d0", Collections.singleton(null), null)),
+          ImmutableList.of("a", "b", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new InDimFilter("l0", Collections.singleton(null), null)),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
 
       assertFilterMatches(new InDimFilter("f0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
       assertFilterMatches(new InDimFilter("d0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
@@ -400,9 +521,8 @@ public class InFilterTest extends BaseFilterTest
     Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
     Assert.assertEquals(filter2, rewrittenFilter);
 
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
-    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
+    Throwable t = Assert.assertThrows(IAE.class, () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1")));
+    Assert.assertEquals("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0", t.getMessage());
   }
 
   @Test
@@ -425,7 +545,8 @@ public class InFilterTest extends BaseFilterTest
                       "longPredicateSupplier",
                       "floatPredicateSupplier",
                       "doublePredicateSupplier",
-                      "stringPredicateSupplier"
+                      "stringPredicateSupplier",
+                      "hasNull"
                   )
                   .verify();
   }

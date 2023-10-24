@@ -32,7 +32,7 @@ public interface DataSegmentProvider
    * Returns a supplier that fetches the segment corresponding to the provided segmentId from deep storage. The segment
    * is not actually fetched until you call {@link Supplier#get()}. Once you call this, make sure to also call
    * {@link ResourceHolder#close()}.
-   *
+   * <br>
    * It is not necessary to call {@link ResourceHolder#close()} if you never call {@link Supplier#get()}.
    */
   Supplier<ResourceHolder<Segment>> fetchSegment(

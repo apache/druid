@@ -85,7 +85,8 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
         queryJsonMapper,
         injector,
         new MSQTestTaskActionClient(queryJsonMapper),
-        workerMemoryParameters
+        workerMemoryParameters,
+        ImmutableList.of()
     );
     return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }

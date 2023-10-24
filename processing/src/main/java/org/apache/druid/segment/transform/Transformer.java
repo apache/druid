@@ -92,7 +92,7 @@ public class Transformer
 
     if (valueMatcher != null) {
       rowSupplierForValueMatcher.set(transformedRow);
-      if (!valueMatcher.matches()) {
+      if (!valueMatcher.matches(false)) {
         return null;
       }
     }
@@ -136,7 +136,7 @@ public class Transformer
         final List<Map<String, Object>> inputVals = inputRowListPlusRawValues.getRawValuesList();
         for (int i = 0; i < size; i++) {
           rowSupplierForValueMatcher.set(inputRows.get(i));
-          if (valueMatcher.matches()) {
+          if (valueMatcher.matches(false)) {
             matchedRows.add(inputRows.get(i));
             matchedVals.add(inputVals.get(i));
           }

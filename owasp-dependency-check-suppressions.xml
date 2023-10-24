@@ -758,6 +758,7 @@
     https://github.com/apache/hadoop/commit/ad49ddda0e1d9632c8c9fcdc78fca8244e1248c9 -->
     <cve>CVE-2023-1370</cve>
     <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
+    <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
@@ -800,5 +801,14 @@
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
     <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
     <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
+  </suppress>
+
+  <!-- CVE-2022-4244 is affecting plexus-utils package, plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
+  <suppress base="true">
+    <notes><![CDATA[
+   FP per issue #5973
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-interpolation@.*$</packageUrl>
+    <cve>CVE-2022-4244</cve>
   </suppress>
 </suppressions>

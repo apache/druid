@@ -36,12 +36,12 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.IterableRowsCursorHelper;
@@ -57,6 +57,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -220,24 +221,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   )
   {
     final RowSignature defaultRowSignature = resultArraySignature(query);
-    Iterator<ScanResultValue> resultSequenceIterator = new Iterator<ScanResultValue>()
-    {
-      Yielder<ScanResultValue> yielder = Yielders.each(resultSequence);
-
-      @Override
-      public boolean hasNext()
-      {
-        return !yielder.isDone();
-      }
-
-      @Override
-      public ScanResultValue next()
-      {
-        ScanResultValue scanResultValue = yielder.get();
-        yielder = yielder.next(null);
-        return scanResultValue;
-      }
-    };
+    ScanResultValueIterator resultSequenceIterator = new ScanResultValueIterator(resultSequence);
 
     Iterable<Sequence<FrameSignaturePair>> retVal = () -> new Iterator<Sequence<FrameSignaturePair>>()
     {
@@ -280,7 +264,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         );
       }
     };
-    return Optional.of(Sequences.concat(retVal));
+    return Optional.of(Sequences.concat(retVal).withBaggage(resultSequenceIterator));
   }
 
   private Sequence<FrameSignaturePair> convertScanResultValuesToFrame(
@@ -294,16 +278,22 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     Preconditions.checkNotNull(rowSignature, "'rowSignature' must be provided");
 
     List<Cursor> cursors = new ArrayList<>();
+    Closer closer = Closer.create();
 
     for (ScanResultValue scanResultValue : batch) {
       final List rows = (List) scanResultValue.getEvents();
       final Function<?, Object[]> mapper = getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames());
       final Iterable<Object[]> formattedRows = Lists.newArrayList(Iterables.transform(rows, (Function) mapper));
 
-      cursors.add(IterableRowsCursorHelper.getCursorFromIterable(
+      Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromIterable(
           formattedRows,
           rowSignature
-      ));
+      );
+      Cursor cursor = cursorAndCloseable.lhs;
+      Closeable closeable = cursorAndCloseable.rhs;
+      cursors.add(cursor);
+      // Cursors created from iterators don't have any resources, therefore this is mostly a defensive check
+      closer.register(closeable);
     }
 
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
@@ -323,7 +313,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         frameWriterFactory
     );
 
-    return frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature));
+    return frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)).withBaggage(closer);
   }
 
   @Override

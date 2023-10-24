@@ -239,15 +239,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final ValueMatcher matcher = filter.toFilter().makeMatcher(columnSelectorFactory);
 
     // This would throw an exception without InDimFilter's null-checking lambda wrapping.
-    Assert.assertFalse(matcher.matches());
+    Assert.assertFalse(matcher.matches(false));
 
     row.put("dim", "foo");
     // Now it should match.
-    Assert.assertTrue(matcher.matches());
+    Assert.assertTrue(matcher.matches(false));
 
     row.put("dim", "fox");
     // Now it *shouldn't* match.
-    Assert.assertFalse(matcher.matches());
+    Assert.assertFalse(matcher.matches(false));
   }
 
   @Test

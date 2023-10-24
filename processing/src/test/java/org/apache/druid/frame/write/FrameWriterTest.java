@@ -154,6 +154,33 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_arrayLong()
+  {
+    // ARRAY<LONG> can't be read or written for columnar frames, therefore skip the check if it encounters those
+    // parameters
+    Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
+    testWithDataset(FrameWriterTestData.TEST_ARRAYS_LONG);
+  }
+
+  @Test
+  public void test_arrayFloat()
+  {
+    // ARRAY<FLOAT> can't be read or written for columnar frames, therefore skip the check if it encounters those
+    // parameters
+    Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
+    testWithDataset(FrameWriterTestData.TEST_ARRAYS_FLOAT);
+  }
+
+  @Test
+  public void test_arrayDouble()
+  {
+    // ARRAY<DOUBLE> can't be read or written for columnar frames, therefore skip the check if it encounters those
+    // parameters
+    Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
+    testWithDataset(FrameWriterTestData.TEST_ARRAYS_DOUBLE);
+  }
+
+  @Test
   public void test_float()
   {
     testWithDataset(FrameWriterTestData.TEST_FLOATS);
@@ -226,6 +253,14 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     // Test all possible arrangements of two different types.
     for (final FrameWriterTestData.Dataset<?> dataset1 : FrameWriterTestData.DATASETS) {
       for (final FrameWriterTestData.Dataset<?> dataset2 : FrameWriterTestData.DATASETS) {
+        if (dataset1.getType().isArray() && dataset1.getType().getElementType().isNumeric()
+            || dataset2.getType().isArray() && dataset2.getType().getElementType().isNumeric()) {
+          if (inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR) {
+            // Skip the check if any of the dataset is a numerical array and any of the input or the output frame type
+            // is COLUMNAR.
+            continue;
+          }
+        }
         final RowSignature signature = makeSignature(Arrays.asList(dataset1, dataset2));
         final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2));
 
@@ -265,6 +300,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   public void test_insufficientWriteCapacity()
   {
     // Test every possible capacity, up to the amount required to write all items from every list.
+    Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
     final RowSignature signature = makeSignature(FrameWriterTestData.DATASETS);
     final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS);
     final int totalRows = rowSequence.toList().size();

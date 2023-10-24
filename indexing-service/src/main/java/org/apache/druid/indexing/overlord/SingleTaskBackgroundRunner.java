@@ -185,6 +185,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       // stopGracefully for resource cleaning
       log.info("Starting graceful shutdown of task[%s].", task.getId());
       task.stopGracefully(taskConfig);
+      task.waitForCleanupToFinish();
 
       if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         try {
