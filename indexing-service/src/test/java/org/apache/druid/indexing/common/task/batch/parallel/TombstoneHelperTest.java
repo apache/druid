@@ -36,12 +36,14 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -126,7 +128,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-02-01/2020-04-01");
     Interval replaceInterval = Intervals.of("2020-03-01/2020-03-31");
-    Interval intervalToDrop = Intervals.of("2020-03-05/2020-03-07");
+    Interval dropInterval = Intervals.of("2020-03-05/2020-03-07");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -142,7 +144,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -164,7 +166,7 @@ public class TombstoneHelperTest
         Intervals.of("2020-07-01/2020-11-01")
     );
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-01");
-    Interval intervalToDrop = Intervals.of("2020-03-01/2020-09-01");
+    Interval dropInterval = Intervals.of("2020-03-01/2020-09-01");
     Granularity replaceGranularity = Granularities.MONTH;
 
     List<DataSegment> existingUsedSegments = usedIntervals.stream().map(
@@ -179,7 +181,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -199,7 +201,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-02-01T12:12:12.121/2020-04-01T00:00:00.000");
     Interval replaceInterval = Intervals.of("2020-01-30/2020-03-31");
-    Interval intervalToDrop = Intervals.of("2020-01-30/2020-02-02");
+    Interval dropInterval = Intervals.of("2020-01-30/2020-02-02");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -215,7 +217,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -228,7 +230,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-02-01T12:12:12.121/2020-04-01T00:00:00.000");
     Interval replaceInterval = Intervals.of("2023-01-30/2023-03-31");
-    Interval intervalToDrop = Intervals.of("2023-01-30/2023-03-31");
+    Interval dropInterval = Intervals.of("2023-01-30/2023-03-31");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -244,7 +246,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -257,7 +259,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
-    Interval intervalToDrop = Intervals.of("2020-12-25/2020-12-31");
+    Interval dropInterval = Intervals.of("2020-12-25/2020-12-31");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -273,7 +275,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -296,7 +298,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
-    Interval intervalToDrop = Intervals.of("2020-01-01/2020-01-05");
+    Interval dropInterval = Intervals.of("2020-01-01/2020-01-05");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -312,7 +314,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        ImmutableList.of(intervalToDrop),
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -333,7 +335,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
-    List<Interval> intervalsToDrop = ImmutableList.of(
+    List<Interval> dropIntervals = ImmutableList.of(
         Intervals.of("2020-01-01/2020-01-06"),
         Intervals.of("2020-12-25/2020-12-31")
     );
@@ -352,7 +354,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        intervalsToDrop,
+        dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -380,7 +382,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
-    List<Interval> intervalsToDrop = ImmutableList.of(Intervals.of("2020-01-01/2020-01-05"));
+    Interval dropInterval = Intervals.of("2020-01-01/2020-01-05");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -396,7 +398,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        intervalsToDrop,
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -417,7 +419,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
-    List<Interval> intervalsToDrop = ImmutableList.of(Intervals.of("2020-12-25/2020-12-31"));
+    Interval dropInterval = Intervals.of("2020-12-25/2020-12-31");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -433,7 +435,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        intervalsToDrop,
+        ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -456,7 +458,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
-    List<Interval> intervalsToDrop = ImmutableList.of(
+    List<Interval> dropIntervals = ImmutableList.of(
         Intervals.utc(JodaUtils.MIN_INSTANT, 10000),
         Intervals.utc(100000, JodaUtils.MAX_INSTANT)
     );
@@ -475,7 +477,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        intervalsToDrop,
+        dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -490,11 +492,11 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWhenReplaceAll2() throws IOException
+  public void testTombstoneIntervalsCreatedForReplaceWithFiniteAndInfinitedropIntervals() throws IOException
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
-    List<Interval> intervalsToDrop = ImmutableList.of(
+    List<Interval> dropIntervals = ImmutableList.of(
         Intervals.of("%s/%s", Intervals.ETERNITY.getStart(), 2000),
         Intervals.of("3000-01-01/3000-01-05"),
         Intervals.of("%s/%s", 4000, Intervals.ETERNITY.getEnd())
@@ -514,7 +516,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        intervalsToDrop,
+        dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity
@@ -532,12 +534,93 @@ public class TombstoneHelperTest
     );
   }
 
+
+  @Test
+  public void testTombstoneIntervalsCreatedForReplaceWithDayOverLargeFiniteInterval() throws IOException
+  {
+    Interval usedInterval = Intervals.of("1000-01-01/9000-12-31");
+    Interval replaceInterval = Intervals.of("1000-01-01/9000-12-31");
+    List<Interval> dropIntervals = ImmutableList.of(
+        Intervals.of("1000-01-01/5000-12-31"),
+        Intervals.of("6000-01-01/9000-12-31")
+    );
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        dropIntervals,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+
+    // ((5000 - 1000) * 365) + ((9000 - 6000) * 365 * 24) ~= 2557426 days
+    Assert.assertEquals(
+        dropIntervals.stream()
+                     .mapToLong(interval -> interval.toDuration().getStandardDays())
+                     .sum(),
+        tombstoneIntervals.size()
+    );
+  }
+
+  @Test
+  public void testTombstoneIntervalsCreatedForReplaceWithHourOverLargeFiniteInterval() throws IOException
+  {
+    // Providing a larger interval with hour grain makes the test slow.
+    Interval usedInterval = Intervals.of("1900-01-01/3000-12-31");
+    Interval replaceInterval = Intervals.of("1900-01-01/3000-12-31");
+    List<Interval> dropIntervals = ImmutableList.of(
+        Intervals.of("1900-01-01/2000-11-30"),
+        Intervals.of("2500-01-01/3000-11-30")
+    );
+    Granularity replaceGranularity = Granularities.HOUR;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        dropIntervals,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+
+
+    // ((2000 - 1900) * 365 * 24) + ((3000 - 2500) * 365 * 24) ~= 5275488 hours
+    Assert.assertEquals(
+        dropIntervals.stream()
+                     .mapToLong(interval -> interval.toDuration().getStandardHours())
+                     .sum(),
+        tombstoneIntervals.size()
+    );
+  }
+
   @Test
   public void testTombstoneSegmentsForReplaceWhenLockRevoked() throws IOException
   {
     Interval usedInterval = Intervals.of("2020-02-01/2020-04-01");
     Interval replaceInterval = Intervals.of("2020-03-01/2020-03-31");
-    Interval intervalToDrop = Intervals.of("2020-03-05/2020-03-07");
+    Interval dropInterval = Intervals.of("2020-03-05/2020-03-07");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -559,7 +642,7 @@ public class TombstoneHelperTest
         ISE.class,
         () -> {
           tombstoneHelper.computeTombstoneSegmentsForReplace(
-              ImmutableList.of(intervalToDrop),
+              ImmutableList.of(dropInterval),
               ImmutableList.of(replaceInterval),
               "test",
               replaceGranularity
