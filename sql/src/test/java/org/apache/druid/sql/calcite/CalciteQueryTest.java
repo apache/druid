@@ -14275,4 +14275,40 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run());
     assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
   }
+
+  @Test
+  public void testWindowingErrorWithoutFeatureFlag()
+  {
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, false))
+        .sql("SELECT dim1,ROW_NUMBER() OVER () from druid.foo")
+        .run());
+
+    assertThat(e, invalidSqlIs("The query contains window functions; To run these window functions, enable [WINDOW_FUNCTIONS] in query context. (line [1], column [13])"));
+  }
+
+  @Test
+  public void testInGroupByWithLimitOuterGroupOrder()
+  {
+    String defaultString = useDefault ? "" : null;
+    cannotVectorize();
+
+    testBuilder()
+        .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
+        .sql("with t AS (SELECT m2, COUNT(m1) as trend_score\n"
+            + "FROM \"foo\"\n"
+            + "GROUP BY 1 \n"
+            + "LIMIT 11\n"
+            + ")\n"
+            + "select m2 , (MAX(trend_score)) from t\n"
+            + "where m2 > 2\n"
+            + "GROUP BY 1 \n"
+            + "ORDER BY 2 DESC\n"
+//            + "LIMIT 33\n"
+            )
+        .expectedResults(ImmutableList.of(
+            new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}))
+        .run();
+  }
+
 }
