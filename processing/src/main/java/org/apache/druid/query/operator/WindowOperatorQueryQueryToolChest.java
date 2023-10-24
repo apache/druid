@@ -159,9 +159,12 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
             responseContext
         );
 
-        final RowSignature rowSignature = query.getRowSignature();
         return baseSequence.flatMap(
             rac -> {
+              final RowSignature rowSignature = query.getRowSignature();
+              if(query.getOperators().size()==1) {
+                int sad=1;
+              }
               List<Object[]> results = new ArrayList<>(rac.numRows());
 
               ColumnAccessor[] accessors = new ColumnAccessor[rowSignature.size()];

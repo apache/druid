@@ -25,24 +25,30 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.util.Util;
+import org.apache.commons.collections4.CollectionUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Druid extended SQL validator. (At present, it doesn't actually
- * have any extensions yet, but it will soon.)
+ * Druid extended SQL validator. (At present, it doesn't actually have any
+ * extensions yet, but it will soon.)
  */
 class DruidSqlValidator extends BaseDruidSqlValidator
 {
+  private SqlWindow withinWindow;
+
   protected DruidSqlValidator(
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
       JavaTypeFactory typeFactory,
-      Config validatorConfig
-  )
+      Config validatorConfig)
   {
     super(opTab, catalogReader, typeFactory, validatorConfig);
   }
@@ -62,6 +68,11 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
+    if (call.getKind() == SqlKind.LAST_VALUE || call.getKind() == SqlKind.FIRST_VALUE) {
+      if (!CollectionUtils.isEmpty(withinWindow.getOrderList())) {
+        throw buildCalciteContextException("FIRST_VALUE/LAST_VALUE is not supported in ordered WINDOW-s", call);
+      }
+    }
     super.validateCall(call, scope);
   }
 
@@ -74,5 +85,30 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         pos.getColumnNum(),
         pos.getEndLineNum(),
         pos.getEndColumnNum());
+  }
+
+  @Override
+  public void validateWindow(SqlNode windowOrId, SqlValidatorScope scope, @Nullable SqlCall call)
+  {
+    // copied from SqlValidatorImpl#validateWindow
+    final SqlWindow targetWindow;
+    switch (windowOrId.getKind())
+    {
+    case IDENTIFIER:
+      targetWindow = getWindowByName((SqlIdentifier) windowOrId, scope);
+      break;
+    case WINDOW:
+      targetWindow = (SqlWindow) windowOrId;
+      break;
+    default:
+      throw Util.unexpected(windowOrId.getKind());
+    }
+
+    try {
+      withinWindow = targetWindow;
+      super.validateWindow(windowOrId, scope, call);
+    } finally {
+      withinWindow = null;
+    }
   }
 }

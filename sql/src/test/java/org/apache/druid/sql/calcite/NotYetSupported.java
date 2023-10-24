@@ -89,7 +89,8 @@ public @interface NotYetSupported
     // at least c7 is represented oddly in the parquet file
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "assertResultsEquals"),
-    UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)");
+    UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
+    FIRST_LAST_ORDERED(DruidException.class, "FIRST_VALUE/LAST_VALUE is not supported in ordered WINDOW");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;

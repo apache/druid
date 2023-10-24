@@ -1487,7 +1487,7 @@ public class DruidQuery
   @Nullable
   private WindowOperatorQuery toScanAndSortQuery()
   {
-    if (!sorting.isPureOrder()) {
+    if (sorting == null || !sorting.isPureOrder()) {
       return null;
     }
 
