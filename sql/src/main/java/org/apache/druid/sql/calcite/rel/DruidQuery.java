@@ -67,6 +67,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
@@ -989,7 +991,7 @@ public class DruidQuery
       }
     }
 
-    final WindowOperatorQuery operatorQuery = toWindowQuery(true);
+    final WindowOperatorQuery operatorQuery = toWindowQuery();
     if (operatorQuery != null) {
       return operatorQuery;
     }
@@ -1014,14 +1016,14 @@ public class DruidQuery
       return groupByQuery;
     }
 
-    final ScanQuery scanQuery = toScanQuery();
+    final ScanQuery scanQuery = toScanQuery(true);
     if (scanQuery != null) {
       return scanQuery;
     }
 
-    final WindowOperatorQuery operatorQuery2 = toWindowQuery(true);
-    if (operatorQuery2 != null) {
-      return operatorQuery;
+    final WindowOperatorQuery scanAndSortQuery = toScanAndSortQuery();
+    if (scanAndSortQuery != null) {
+      return scanAndSortQuery;
     }
 
     throw new CannotBuildQueryException("Cannot convert query parts into an actual query");
@@ -1439,9 +1441,9 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  private WindowOperatorQuery toWindowQuery(boolean windowOnly)
+  private WindowOperatorQuery toWindowQuery()
   {
-    if (windowOnly && windowing == null) {
+    if (windowing == null) {
       return null;
     }
     if (dataSource instanceof TableDataSource) {
@@ -1479,13 +1481,46 @@ public class DruidQuery
   }
 
   /**
+   * Create an OperatorQuery which runs an order on top of a scan.
+   */
+  // FIXME: could have a better name...
+  @Nullable
+  private WindowOperatorQuery toScanAndSortQuery()
+  {
+    if (!sorting.isPureOrder()) {
+      return null;
+    }
+
+    ScanQuery scan = toScanQuery(false);
+    if (scan == null) {
+      return null;
+    }
+
+    QueryDataSource newDataSource = new QueryDataSource(scan);
+
+    ArrayList<ColumnWithDirection> sortColumns = ColumnWithDirection.fromOrderBys2(sorting.getOrderBys());
+    NaiveSortOperatorFactory sortOperator = new NaiveSortOperatorFactory(sortColumns);
+
+    RowSignature signature = getOutputRowSignature();
+    return new WindowOperatorQuery(
+        newDataSource,
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        plannerContext.queryContextMap(),
+        signature,
+        Collections.singletonList(sortOperator),
+        null);
+  }
+
+  /**
    * Return this query as a Scan query, or null if this query is not compatible with Scan.
    *
    * @return query or null
    */
   @Nullable
-  private ScanQuery toScanQuery()
+  private ScanQuery toScanQuery(boolean considerSorting)
   {
+    final Sorting sorting = considerSorting ? this.sorting : null;
+
     if (grouping != null || windowing != null) {
       // Scan cannot GROUP BY or do windows.
       return null;

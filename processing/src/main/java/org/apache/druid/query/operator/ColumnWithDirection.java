@@ -21,7 +21,12 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQuery.OrderBy;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class ColumnWithDirection
@@ -34,6 +39,41 @@ public class ColumnWithDirection
   public static ColumnWithDirection descending(String column)
   {
     return new ColumnWithDirection(column, Direction.DESC);
+  }
+
+  public static ArrayList<ColumnWithDirection> fromOrderBys(List<OrderBy> orderBys)
+  {
+    ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+    for (ScanQuery.OrderBy orderBy : orderBys) {
+      ordering.add(fromOrderBy(orderBy));
+    }
+    return ordering;
+  }
+
+  public static ArrayList<ColumnWithDirection> fromOrderBys2(List<OrderByColumnSpec> orderBys)
+  {
+    ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+    for (OrderByColumnSpec orderBy : orderBys) {
+      ordering.add(fromOrderBy(orderBy));
+    }
+    return ordering;
+  }
+
+  private static ColumnWithDirection fromOrderBy(OrderByColumnSpec orderBy)
+  {
+    return new ColumnWithDirection(orderBy.getDimension(),
+        orderBy.getDirection() == OrderByColumnSpec.Direction.ASCENDING ? ColumnWithDirection.Direction.ASC
+            : ColumnWithDirection.Direction.DESC);
+
+  }
+
+  private static ColumnWithDirection fromOrderBy(ScanQuery.OrderBy orderBy)
+  {
+    return new ColumnWithDirection(
+        orderBy.getColumnName(),
+        ScanQuery.Order.DESCENDING == orderBy.getOrder()
+            ? ColumnWithDirection.Direction.DESC
+            : ColumnWithDirection.Direction.ASC);
   }
 
   public enum Direction
@@ -106,4 +146,5 @@ public class ColumnWithDirection
            ", direction=" + direction +
            '}';
   }
+
 }

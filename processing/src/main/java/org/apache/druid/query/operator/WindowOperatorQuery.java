@@ -111,17 +111,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         if (subQuery instanceof ScanQuery) {
           ScanQuery scan = (ScanQuery) subQuery;
 
-          ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
-            ordering.add(
-                new ColumnWithDirection(
-                    orderBy.getColumnName(),
-                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
-                    ? ColumnWithDirection.Direction.DESC
-                    : ColumnWithDirection.Direction.ASC
-                )
-            );
-          }
+          List<ColumnWithDirection> ordering = ColumnWithDirection.fromOrderBys(scan.getOrderBys());
 
           this.leafOperators.add(
               new ScanOperatorFactory(
@@ -129,7 +119,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                   scan.getFilter(),
                   (int) scan.getScanRowsLimit(),
                   scan.getColumns(),
-                  scan.getVirtualColumns(),
+                  scan.getVirtualColumns().isEmpty() ? null : scan.getVirtualColumns(),
                   ordering
               )
           );
