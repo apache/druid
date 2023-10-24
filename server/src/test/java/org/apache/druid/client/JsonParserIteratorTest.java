@@ -330,7 +330,7 @@ public class JsonParserIteratorTest
       JsonParserIterator<Object> iterator = new JsonParserIterator<>(
           JAVA_TYPE,
           Futures.immediateFuture(
-              mockMeshProxyResponse(nullErrMsg)
+              mockErrorResponse(nullErrMsg)
           ),
           URL,
           null,
@@ -349,7 +349,7 @@ public class JsonParserIteratorTest
       JsonParserIterator<Object> iterator = new JsonParserIterator<>(
           JAVA_TYPE,
           Futures.immediateFuture(
-              mockMeshProxyResponse(errorMessage)
+              mockErrorResponse(errorMessage)
           ),
           URL,
           null,
@@ -368,7 +368,7 @@ public class JsonParserIteratorTest
     return new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(e));
   }
 
-  private static InputStream mockMeshProxyResponse(String errMsg) throws JsonProcessingException
+  private static InputStream mockErrorResponse(String errMsg) throws JsonProcessingException
   {
     return new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(errMsg));
   }
