@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -29,13 +31,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -191,48 +193,40 @@ public class TombstoneHelper
 
         Interval overlap = intervalToDrop.overlap(usedInterval);
 
-        // No overlap of the dropped segment with the used interval due to which we donot need to generate any tombstone
+        // No overlap of the dropped segment with the used interval due to which we do not need to generate any tombstone
         if (overlap == null) {
           continue;
         }
 
-        // "overlap" might not be aligned with the if the used interval is not aligned with the granularity of
-        // the REPLACE i.e. datasource's original granularity and replace's granularity are different
-
-        // However, we align the boundaries of the overlap with the replaceGranularity manually, in the following code.
-
-        DateTime alignedIntervalStart = replaceGranularity.bucketStart(overlap.getStart());
-        long alignedIntervalStartMillis = Math.max(alignedIntervalStart.getMillis(), JodaUtils.MIN_INSTANT);
-        // If the start is aligned, then 'bucketStart()' is unchanged.
-        // Else 'bucketStart()' will return the latest timestamp less than overlap.getStart() which aligns with the REPLACE granularity.
-
-        // That extra interval that we are adding before the overlap should be contained in 'intervalToDrop' because
-        // intervalToDrop is aligned by the replaceGranularity.
-        // If the drop's interval is n, then the extra interval would start from n + 1 (where 1 denotes the replaceGranularity)
-        // The overlap's beginning would always be later than intervalToDrop (trivially,
-        // because it is the overlap) and if bucketStart floors the overlap beginning, it cannot floor it before
-        // the intervalToDrop's start
-
-        // For example, if the replace granularity is DAY, intervalsToReplace are 20/02/2023 - 24/02/2023 (always
-        // aligned with the replaceGranularity), intervalsToDrop are 22/02/2023 - 24/02/2023 (they must also be aligned with the replaceGranularity)
-        // If the relevant usedIntervals for the datasource are from 22/02/2023 01:00:00 - 23/02/2023 02:00:00, then
-        // the overlap would be 22/02/2023 01:00:00 - 23/02/2023 02:00:00. When iterating over the overlap we will get
-        // the intervals from 22/02/2023 01:00:00 - 23/02/2023 02:00:00. After aligning it would become
-        // 22/02/2023T00:00:00Z - 23/02/2023T23:59:59Z
-
-        // If the end is aligned, then we do not alter it, else we align the end by geting the earliest time later
-        // than the overlap's end which aligns with the replace granularity. Using the above-mentioned logic for the
-        // start time, we can also argue that the rounded up end would be contained in the intervalToDrop
-        DateTime alignedIntervalEnd;
-        if (replaceGranularity.bucketStart(overlap.getEnd()).equals(overlap.getEnd())) { // Check if the end is aligned
-          alignedIntervalEnd = overlap.getEnd();
+        if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
+          // Generate a tombstone covering the negative eternity interval.
+          retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketEnd(overlap.getEnd())));
+        } else if ((Intervals.ETERNITY.getEnd()).equals(overlap.getEnd())) {
+          // Generate a tombstone covering the positive eternity interval.
+          retVal.add(new Interval(replaceGranularity.bucketStart(overlap.getStart()), overlap.getEnd()));
         } else {
-          alignedIntervalEnd = replaceGranularity.bucketEnd(overlap.getEnd());
-        }
-        long alignedIntervalEndMillis = Math.min(alignedIntervalEnd.getMillis(), JodaUtils.MAX_INSTANT);
-        Interval alignedTombstoneInterval = Intervals.utc(alignedIntervalStartMillis, alignedIntervalEndMillis);
+          // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
+          // However when fetching from the iterator, the first interval is found using the bucketStart, which
+          // ensures that the interval is "rounded down" to the first timestamp that aligns with the granularity
+          // Also, the interval would always be contained inside the "intervalToDrop" because the original REPLACE
+          // is aligned by the granularity, and by extension all the elements inside the intervals to drop would
+          // also be aligned by the same granularity (since intervalsToDrop = replaceIntervals - publishIntervals, and
+          // the right-hand side is always aligned)
+          //
+          // For example, if the replace granularity is DAY, intervalsToReplace are 20/02/2023 - 24/02/2023 (always
+          // aligned with the replaceGranularity), intervalsToDrop are 22/02/2023 - 24/02/2023 (they must also be aligned with the replaceGranularity)
+          // If the relevant usedIntervals for the datasource are from 22/02/2023 01:00:00 - 23/02/2023 02:00:00, then
+          // the overlap would be 22/02/2023 01:00:00 - 23/02/2023 02:00:00. When iterating over the overlap we will get
+          // the intervals from 22/02/2023 - 23/02/2023, and 23/02/2023 - 24/02/2023
+          IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(
+              ImmutableList.of(overlap),
+              replaceGranularity
+          );
 
-        retVal.add(alignedTombstoneInterval);
+          // Helps in deduplication if required. Since all the intervals are uniformly granular, there should be no
+          // no overlap post deduplication
+          retVal.addAll(Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator()));
+        }
       }
     }
     return retVal;

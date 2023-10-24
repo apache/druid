@@ -148,7 +148,10 @@ public class TombstoneHelperTest
         replaceGranularity
     );
     Assert.assertEquals(
-        ImmutableSet.of(Intervals.of("2020-03-05/2020-03-07")),
+        ImmutableSet.of(
+            Intervals.of("2020-03-05/2020-03-06"),
+            Intervals.of("2020-03-06/2020-03-07")
+        ),
         tombstoneIntervals
     );
   }
@@ -184,7 +187,8 @@ public class TombstoneHelperTest
     Assert.assertEquals(
         ImmutableSet.of(
             Intervals.of("2020-03-01/2020-04-01"),
-            Intervals.of("2020-07-01/2020-09-01")
+            Intervals.of("2020-07-01/2020-08-01"),
+            Intervals.of("2020-08-01/2020-09-01")
         ),
         tombstoneIntervals
     );
@@ -253,7 +257,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
-    Interval intervalToDrop = Intervals.of("2020-02-01/2020-12-31");
+    Interval intervalToDrop = Intervals.of("2020-12-25/2020-12-31");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -274,7 +278,17 @@ public class TombstoneHelperTest
         "test",
         replaceGranularity
     );
-    Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-02-01/2020-12-31")), tombstoneIntervals);
+    Assert.assertEquals(
+        ImmutableSet.of(
+            Intervals.of("2020-12-25/2020-12-26"),
+            Intervals.of("2020-12-26/2020-12-27"),
+            Intervals.of("2020-12-27/2020-12-28"),
+            Intervals.of("2020-12-28/2020-12-29"),
+            Intervals.of("2020-12-29/2020-12-30"),
+            Intervals.of("2020-12-30/2020-12-31")
+        ),
+        tombstoneIntervals
+    );
   }
 
   @Test
@@ -282,7 +296,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
-    Interval intervalToDrop = Intervals.of("2020-01-01/2020-11-30");
+    Interval intervalToDrop = Intervals.of("2020-01-01/2020-01-05");
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -303,7 +317,15 @@ public class TombstoneHelperTest
         "test",
         replaceGranularity
     );
-    Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-01-01/2020-11-30")), tombstoneIntervals);
+    Assert.assertEquals(
+        ImmutableSet.of(
+            Intervals.of("2020-01-01/2020-01-02"),
+            Intervals.of("2020-01-02/2020-01-03"),
+            Intervals.of("2020-01-03/2020-01-04"),
+            Intervals.of("2020-01-04/2020-01-05")
+        ),
+        tombstoneIntervals
+    );
   }
 
   @Test
@@ -312,8 +334,8 @@ public class TombstoneHelperTest
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
     List<Interval> intervalsToDrop = ImmutableList.of(
-        Intervals.of("2020-01-01/2020-11-30"),
-        Intervals.of("2020-12-05/2020-12-30")
+        Intervals.of("2020-01-01/2020-01-06"),
+        Intervals.of("2020-12-25/2020-12-31")
     );
     Granularity replaceGranularity = Granularities.DAY;
 
@@ -336,7 +358,19 @@ public class TombstoneHelperTest
         replaceGranularity
     );
     Assert.assertEquals(
-        ImmutableSet.of(Intervals.of("2020-01-01/2020-11-30"), Intervals.of("2020-12-05/2020-12-30")),
+        ImmutableSet.of(
+            Intervals.of("2020-01-01/2020-01-02"),
+            Intervals.of("2020-01-02/2020-01-03"),
+            Intervals.of("2020-01-03/2020-01-04"),
+            Intervals.of("2020-01-04/2020-01-05"),
+            Intervals.of("2020-01-05/2020-01-06"),
+            Intervals.of("2020-12-25/2020-12-26"),
+            Intervals.of("2020-12-26/2020-12-27"),
+            Intervals.of("2020-12-27/2020-12-28"),
+            Intervals.of("2020-12-28/2020-12-29"),
+            Intervals.of("2020-12-29/2020-12-30"),
+            Intervals.of("2020-12-30/2020-12-31")
+        ),
         tombstoneIntervals
     );
   }
@@ -346,7 +380,7 @@ public class TombstoneHelperTest
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
-    List<Interval> intervalsToDrop = ImmutableList.of(Intervals.of("2020-01-01/2020-11-30"));
+    List<Interval> intervalsToDrop = ImmutableList.of(Intervals.of("2020-01-01/2020-01-05"));
     Granularity replaceGranularity = Granularities.DAY;
 
     DataSegment existingUsedSegment =
@@ -367,7 +401,54 @@ public class TombstoneHelperTest
         "test",
         replaceGranularity
     );
-    Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-01-01/2020-11-30")), tombstoneIntervals);
+    Assert.assertEquals(
+        ImmutableSet.of(
+            Intervals.of("2020-01-01/2020-01-02"),
+            Intervals.of("2020-01-02/2020-01-03"),
+            Intervals.of("2020-01-03/2020-01-04"),
+            Intervals.of("2020-01-04/2020-01-05")
+        ),
+        tombstoneIntervals
+    );
+  }
+
+  @Test
+  public void testTombstoneIntervalsCreatedForReplaceWhenExistingGranularityIsEternity2() throws IOException
+  {
+    Interval usedInterval = Intervals.ETERNITY;
+    Interval replaceInterval = Intervals.ETERNITY;
+    List<Interval> intervalsToDrop = ImmutableList.of(Intervals.of("2020-12-25/2020-12-31"));
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        intervalsToDrop,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(
+            Intervals.of("2020-12-25/2020-12-26"),
+            Intervals.of("2020-12-26/2020-12-27"),
+            Intervals.of("2020-12-27/2020-12-28"),
+            Intervals.of("2020-12-28/2020-12-29"),
+            Intervals.of("2020-12-29/2020-12-30"),
+            Intervals.of("2020-12-30/2020-12-31")
+        ),
+        tombstoneIntervals
+    );
   }
 
   @Test
@@ -403,6 +484,49 @@ public class TombstoneHelperTest
         ImmutableSet.of(
             Intervals.of("-146136543-09-08T08:23:32.096Z/1970-01-02T00:00:00.000Z"),
             Intervals.of("1970-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")
+        ),
+        tombstoneIntervals
+    );
+  }
+
+  @Test
+  public void testTombstoneIntervalsCreatedForReplaceWhenReplaceAll2() throws IOException
+  {
+    Interval usedInterval = Intervals.ETERNITY;
+    Interval replaceInterval = Intervals.ETERNITY;
+    List<Interval> intervalsToDrop = ImmutableList.of(
+        Intervals.of("%s/%s", Intervals.ETERNITY.getStart(), 2000),
+        Intervals.of("3000-01-01/3000-01-05"),
+        Intervals.of("%s/%s", 4000, Intervals.ETERNITY.getEnd())
+    );
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        intervalsToDrop,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(
+            Intervals.of("-146136543-09-08T08:23:32.096Z/2000-01-02T00:00:00.000Z"),
+            Intervals.of("3000-01-01/3000-01-02"),
+            Intervals.of("3000-01-02/3000-01-03"),
+            Intervals.of("3000-01-03/3000-01-04"),
+            Intervals.of("3000-01-04/3000-01-05"),
+            Intervals.of("4000-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")
         ),
         tombstoneIntervals
     );
