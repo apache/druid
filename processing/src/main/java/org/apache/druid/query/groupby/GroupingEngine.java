@@ -792,6 +792,14 @@ public class GroupingEngine
     for (int i = 0; i < aggSpec.size(); i++) {
       resultRow.set(i, aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get());
     }
+    Map<String, Object> map = resultRow.toMap(q);
+    for (int i = 0; i < q.getPostAggregatorSpecs().size(); i++) {
+      final PostAggregator postAggregator = q.getPostAggregatorSpecs().get(i);
+      final Object value = postAggregator.compute(map);
+
+      resultRow.set(q.getResultRowPostAggregatorStart() + i, value);
+      map.put(postAggregator.getName(), value);
+    }
     return Collections.singleton(resultRow).iterator();
   }
 
