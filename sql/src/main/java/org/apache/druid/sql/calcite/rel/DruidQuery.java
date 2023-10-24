@@ -989,7 +989,7 @@ public class DruidQuery
       }
     }
 
-    final WindowOperatorQuery operatorQuery = toWindowQuery();
+    final WindowOperatorQuery operatorQuery = toWindowQuery(true);
     if (operatorQuery != null) {
       return operatorQuery;
     }
@@ -1017,6 +1017,11 @@ public class DruidQuery
     final ScanQuery scanQuery = toScanQuery();
     if (scanQuery != null) {
       return scanQuery;
+    }
+
+    final WindowOperatorQuery operatorQuery2 = toWindowQuery(true);
+    if (operatorQuery2 != null) {
+      return operatorQuery;
     }
 
     throw new CannotBuildQueryException("Cannot convert query parts into an actual query");
@@ -1434,9 +1439,9 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  private WindowOperatorQuery toWindowQuery()
+  private WindowOperatorQuery toWindowQuery(boolean windowOnly)
   {
-    if (windowing == null) {
+    if (windowOnly && windowing == null) {
       return null;
     }
     if (dataSource instanceof TableDataSource) {
