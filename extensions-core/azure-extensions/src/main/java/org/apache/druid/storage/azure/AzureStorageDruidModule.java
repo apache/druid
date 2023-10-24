@@ -19,12 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.identity.ChainedTokenCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredential;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
 import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.CustomerProvidedKey;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -35,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.guice.Binders;
@@ -117,49 +111,47 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(AzureCloudBlobIterableFactory.class));
   }
 
+
+  @Provides
+  @LazySingleton
+  public AzureClientFactory getAzureClientFactory(final AzureAccountConfig config)
+  {
+    if (config.getKey() == null && config.getSharedAccessStorageToken() == null && config.getManagedIdentityClientId() == null) {
+      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' or 'managedIdentityClientId' in the azure config."
+          + " Please refer to azure documentation.");
+    }
+
+    /* Azure named keys and sas tokens are mutually exclusive with each other and with managed identity auth, but other forms of managed auth
+       that we support in the future are not mutually exclusive with managed identity auth, they just get added to the credential chain.
+    **/
+    if (config.getKey() != null && config.getSharedAccessStorageToken() != null ||
+        config.getKey() != null && config.getManagedIdentityClientId() != null ||
+        config.getSharedAccessStorageToken() != null && config.getManagedIdentityClientId() != null
+    ) {
+      throw new ISE("Set only one of 'key' or 'sharedAccessStorageToken' or 'managedIdentityClientId' in the azure config."
+          + " Please refer to azure documentation.");
+    }
+    return new AzureClientFactory(config);
+  }
+
   /**
-   * Creates a supplier that lazily initialize {@link CloudBlobClient}.
+   * Creates a supplier that lazily initialize {@link BlobServiceClient}.
    * This is to avoid immediate config validation but defer it until you actually use the client.
    */
   @Provides
   @LazySingleton
-  public Supplier<BlobServiceClient> getCloudBlobClient(final AzureAccountConfig config)
+  public Supplier<BlobServiceClient> getBlobServiceClient(final AzureClientFactory azureClientFactory)
   {
-    if ((config.getKey() != null && config.getSharedAccessStorageToken() != null)
-        ||
-        (config.getKey() == null && config.getSharedAccessStorageToken() == null)) {
-      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both."
-                    + " Please refer to azure documentation.");
-    }
-    ChainedTokenCredentialBuilder credentialBuilder = new ChainedTokenCredentialBuilder();
-    return Suppliers.memoize(() -> {
-
-          BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-              .endpoint("https://" + config.getAccount() + ".blob.core.windows.net");
-
-          if (config.getKey() != null) {
-            clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));
-          } else if (config.getSharedAccessStorageToken() != null) {
-            clientBuilder.sasToken(config.getSharedAccessStorageToken());
-          } else if (config.getManagedIdentityClientId() != null) {
-            ManagedIdentityCredential managedIdentityCredential = new ManagedIdentityCredentialBuilder()
-                .clientId(config.getManagedIdentityClientId())
-                .resourceId(config.getAccount())
-                .build();
-            credentialBuilder.addFirst(managedIdentityCredential);
-            clientBuilder.credential(credentialBuilder.build());
-          }
-          return clientBuilder.buildClient();
-        }
-    );
+    return Suppliers.memoize(azureClientFactory::getBlobServiceClient);
   }
 
   @Provides
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final Supplier<BlobServiceClient> blobServiceClient
+      final Supplier<BlobServiceClient> blobServiceClient,
+      final AzureClientFactory azureClientFactory
   )
   {
-    return new AzureStorage(blobServiceClient);
+    return new AzureStorage(blobServiceClient, azureClientFactory);
   }
 }

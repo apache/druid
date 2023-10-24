@@ -245,7 +245,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final long size = DATA.length;
 
     String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
-    azureStorage.uploadBlockBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.eq(azurePath));
+    azureStorage.uploadBlockBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.anyString());
     EasyMock.expectLastCall().andThrow(new URISyntaxException("", ""));
 
     replayAll();

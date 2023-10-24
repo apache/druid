@@ -100,7 +100,6 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
       AzureUtils.deleteObjectsInPath(
           azureStorage,
           inputDataConfig,
-          accountConfig,
           azureCloudBlobIterableFactory,
           segmentConfig.getContainer(),
           segmentConfig.getPrefix(),

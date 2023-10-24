@@ -108,11 +108,11 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
           currentPrefix
       );
       // We don't need to use iterableByPage because the client handles this, it will fetch the next page when necessary.
-      blobItemIterator = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
+      blobItemIterator = storage.listBlobsWithPrefixInContainerSegmented(
           currentContainer,
           currentPrefix,
           maxListingLength
-      ), config.getMaxTries()).stream().iterator();
+      ).stream().iterator();
     }
     catch (Exception e) {
       throw new RE(

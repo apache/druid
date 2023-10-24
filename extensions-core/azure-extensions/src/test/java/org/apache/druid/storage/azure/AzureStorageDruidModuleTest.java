@@ -59,6 +59,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_ACCOUNT_NAME;
   private static final String AZURE_ACCOUNT_KEY;
   private static final String AZURE_SHARED_ACCESS_TOKEN;
+  private static final String AZURE_MANAGED_CREDENTIAL_CLIENT_ID;
   private static final String AZURE_CONTAINER;
   private static final String AZURE_PREFIX;
   private static final int AZURE_MAX_LISTING_LENGTH;
@@ -76,6 +77,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
       AZURE_ACCOUNT_KEY = Base64.getUrlEncoder()
                                 .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8));
       AZURE_SHARED_ACCESS_TOKEN = "dummyToken";
+      AZURE_MANAGED_CREDENTIAL_CLIENT_ID = "clientId";
       AZURE_CONTAINER = "azureContainer1";
       AZURE_PREFIX = "azurePrefix1";
       AZURE_MAX_LISTING_LENGTH = 10;
@@ -253,12 +255,35 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testBothAccountKeyAndSAStokenSet()
+  public void testMultipleCredentialsSet()
   {
+    String message = "Set only one of 'key' or 'sharedAccessStorageToken' or 'managedIdentityClientId' in the azure config.";
     Properties properties = initializePropertes();
     properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
     expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both");
+    expectedException.expectMessage(message);
+    makeInjectorWithProperties(properties).getInstance(
+        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
+        {
+        })
+    );
+
+    properties = initializePropertes();
+    properties.setProperty("druid.azure.managedIdentityClientId", AZURE_MANAGED_CREDENTIAL_CLIENT_ID);
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage(message);
+    makeInjectorWithProperties(properties).getInstance(
+        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
+        {
+        })
+    );
+
+    properties = initializePropertes();
+    properties.remove("druid.azure.key");
+    properties.setProperty("druid.azure.managedIdentityClientId", AZURE_MANAGED_CREDENTIAL_CLIENT_ID);
+    properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage(message);
     makeInjectorWithProperties(properties).getInstance(
         Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
         {
@@ -267,12 +292,12 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testBothAccountKeyAndSAStokenUnset()
+  public void testAllCredentialsUnset()
   {
     Properties properties = initializePropertes();
     properties.remove("druid.azure.key");
     expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both");
+    expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' or 'managedIdentityClientId' in the azure config.");
     makeInjectorWithProperties(properties).getInstance(
         Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
         {

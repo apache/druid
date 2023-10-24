@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.azure;
 
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -300,6 +302,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     EqualsVerifier.forClass(AzureInputSource.class)
                   .usingGetClass()
                   .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
+                  .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
                   .withNonnullFields("storage")
                   .withNonnullFields("entityFactory")
                   .withNonnullFields("azureCloudBlobIterableFactory")

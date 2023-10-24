@@ -24,8 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
@@ -113,7 +111,6 @@ public class AzureUtils
   public static void deleteObjectsInPath(
       AzureStorage storage,
       AzureInputDataConfig config,
-      AzureAccountConfig accountConfig,
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       String bucket,
       String prefix,
@@ -131,26 +128,8 @@ public class AzureUtils
     while (iterator.hasNext()) {
       final CloudBlobHolder nextObject = iterator.next();
       if (filter.apply(nextObject)) {
-        deleteBucketKeys(storage, accountConfig.getMaxTries(), nextObject.getContainerName(), nextObject.getName());
+        storage.emptyCloudBlobDirectory(nextObject.getContainerName(), nextObject.getName());
       }
     }
-  }
-
-  private static void deleteBucketKeys(
-      AzureStorage storage,
-      int maxTries,
-      String bucket,
-      String prefix
-  ) throws Exception
-  {
-    AzureUtils.retryAzureOperation(() -> {
-      storage.emptyCloudBlobDirectory(bucket, prefix);
-      return null;
-    }, maxTries);
-  }
-
-  static <T> T retryAzureOperation(Task<T> f, int maxTries) throws Exception
-  {
-    return RetryUtils.retry(f, AZURE_RETRY, maxTries);
   }
 }

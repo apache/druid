@@ -93,13 +93,7 @@ public class AzureTaskLogs implements TaskLogs
   private void pushTaskFile(final File logFile, String taskKey)
   {
     try {
-      AzureUtils.retryAzureOperation(
-          () -> {
-            azureStorage.uploadBlockBlob(logFile, config.getContainer(), taskKey);
-            return null;
-          },
-          config.getMaxTries()
-      );
+      azureStorage.uploadBlockBlob(logFile, config.getContainer(), taskKey);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -199,7 +193,6 @@ public class AzureTaskLogs implements TaskLogs
       AzureUtils.deleteObjectsInPath(
           azureStorage,
           inputDataConfig,
-          accountConfig,
           azureCloudBlobIterableFactory,
           config.getContainer(),
           config.getPrefix(),

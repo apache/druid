@@ -29,7 +29,9 @@ import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobRange;
 import com.azure.storage.blob.models.DeleteSnapshotsOptionType;
 import com.azure.storage.blob.models.ListBlobsOptions;
+import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.options.BlobInputStreamOptions;
+import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
@@ -47,6 +49,7 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
@@ -69,12 +72,16 @@ public class AzureStorage
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
   private final Supplier<BlobServiceClient> blobServiceClient;
+  private final AzureClientFactory azureClientFactory;
+  private final ConcurrentHashMap<String, BlobContainerClient> blobContainerClients = new ConcurrentHashMap<>();
 
   public AzureStorage(
-      Supplier<BlobServiceClient> blobServiceClient
+      Supplier<BlobServiceClient> blobServiceClient,
+      AzureClientFactory azureClientFactory
   )
   {
     this.blobServiceClient = blobServiceClient;
+    this.azureClientFactory = azureClientFactory;
   }
 
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
@@ -87,7 +94,7 @@ public class AzureStorage
       throws StorageErrorException, URISyntaxException
   {
     List<String> deletedFiles = new ArrayList<>();
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
 
     // https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-list The new client uses flat listing by default.
     PagedIterable<BlobItem> blobItems = blobContainerClient.listBlobs(new ListBlobsOptions().setPrefix(virtualDirPath), Duration.ofMillis(DELTA_BACKOFF_MS));
@@ -125,15 +132,17 @@ public class AzureStorage
       Integer maxAttempts
   ) throws URISyntaxException, StorageErrorException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
     BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(blobPath).getBlockBlobClient();
 
-    // Can't figure out how to choose chunk size BlobInputStreamOptions
     if (blockBlobClient.exists()) {
       throw new RE("Reference already exists");
     }
-
-    return blockBlobClient.getBlobOutputStream();
+    BlockBlobOutputStreamOptions options = new BlockBlobOutputStreamOptions();
+    if (streamWriteSizeBytes != null) {
+      options.setParallelTransferOptions(new ParallelTransferOptions().setBlockSizeLong(streamWriteSizeBytes.longValue()));
+    }
+    return blockBlobClient.getBlobOutputStream(options);
   }
 
   // There's no need to download attributes with the new azure clients, they will get fetched as needed.
@@ -170,14 +179,15 @@ public class AzureStorage
   public InputStream getBlockBlobInputStream(long offset, Long length, final String containerName, final String blobPath, Integer maxAttempts)
       throws URISyntaxException, StorageErrorException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
     return blobContainerClient.getBlobClient(blobPath).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
   }
 
   public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
       throws URISyntaxException, StorageErrorException
   {
-    BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(blobServiceClient.get()).buildClient();
+
+    BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(getOrCreateBlobContainerClient(containerName, maxAttempts)).buildClient();
     blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
   }
 
@@ -191,7 +201,7 @@ public class AzureStorage
       throws StorageErrorException, URISyntaxException
   {
     List<String> files = new ArrayList<>();
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
 
     PagedIterable<BlobItem> blobItems = blobContainerClient.listBlobs(
         new ListBlobsOptions().setPrefix(virtualDirPath),
@@ -212,7 +222,7 @@ public class AzureStorage
   public boolean getBlockBlobExists(String container, String blobPath, Integer maxAttempts)
       throws URISyntaxException, StorageErrorException
   {
-    return getOrCreateBlobContainerClient(container).getBlobClient(blobPath).exists();
+    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(blobPath).exists();
   }
 
   @VisibleForTesting
@@ -226,7 +236,7 @@ public class AzureStorage
       final String containerName,
       final String prefix,
       int maxResults
-  ) throws IOException, URISyntaxException, StorageErrorException
+  ) throws StorageErrorException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
     return blobContainerClient.listBlobs(
@@ -237,8 +247,19 @@ public class AzureStorage
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
-    BlobContainerClient blobContainerClient = blobServiceClient.get().createBlobContainerIfNotExists(containerName);
+    return blobServiceClient.get().createBlobContainerIfNotExists(containerName);
+  }
 
+  private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
+  {
+    if (maxRetries == null) {
+      return getOrCreateBlobContainerClient(containerName);
+    }
+    BlobContainerClient blobContainerClient = blobContainerClients.computeIfAbsent(
+        containerName,
+        (key) -> azureClientFactory.getBlobContainerClient(key, maxRetries)
+    );
+    blobContainerClient.createIfNotExists();
     return blobContainerClient;
   }
 }

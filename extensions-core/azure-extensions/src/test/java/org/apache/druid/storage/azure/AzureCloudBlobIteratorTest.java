@@ -38,7 +38,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -202,7 +201,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
         EasyMock.anyString(),
         EasyMock.anyString(),
         EasyMock.anyInt()
-    )).andThrow(new URISyntaxException("", ""));
+    )).andThrow(new RuntimeException(""));
     replayAll();
     azureCloudBlobIterator = new AzureCloudBlobIterator(
         storage,

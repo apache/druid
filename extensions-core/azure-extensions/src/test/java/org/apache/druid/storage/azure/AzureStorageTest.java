@@ -21,10 +21,11 @@ package org.apache.druid.storage.azure;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.http.rest.PagedResponse;
-import com.azure.core.util.IterableStream;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobItemProperties;
 import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -35,7 +36,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.net.URISyntaxException;
-import java.util.List;
 
 public class AzureStorageTest
 {
@@ -44,25 +44,22 @@ public class AzureStorageTest
   BlobServiceClient blobServiceClient = Mockito.mock(BlobServiceClient.class);
   BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
 
-  PagedResponse<BlobItem> blobItemPagedResponse = Mockito.mock(PagedResponse.class);
+  AzureClientFactory azureClientFactory = Mockito.mock(AzureClientFactory.class);
 
   @Before
   public void setup() throws URISyntaxException, StorageException
   {
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
-    azureStorage = new AzureStorage(() -> blobServiceClient);
+    azureStorage = new AzureStorage(() -> blobServiceClient, azureClientFactory);
   }
 
   @Test
-  public void testListDir() throws URISyntaxException, StorageException
+  public void testListDir() throws URISyntaxException, StorageErrorException
   {
-    BlobItem blobItem = new BlobItem();
-    blobItem.setName("blobName");
-    List<BlobItem> listBlobItems = ImmutableList.of(blobItem);
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
-    supplier.set(blobItemPagedResponse);
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
     PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
-    Mockito.doReturn(IterableStream.of(listBlobItems)).when(blobItemPagedResponse).getElements();
     Mockito.doReturn(pagedIterable).when(blobContainerClient).listBlobs(
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
