@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.common.ArrayOfItemsSerDe;
+import org.apache.datasketches.common.ByteArrayUtil;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.quantiles.ItemsSketch;
@@ -126,22 +127,66 @@ public class QuantilesSketchKeyCollectorFactory
     }
 
     @Override
-    public byte[][] deserializeFromMemory(final Memory mem, final int numItems)
+    public byte[][] deserializeFromMemory(final Memory mem, long offsetBytes, final int numItems)
     {
       final byte[][] keys = new byte[numItems][];
-      long keyPosition = (long) Integer.BYTES * numItems;
+      final long start = offsetBytes;
+      offsetBytes += (long) Integer.BYTES * numItems;
 
       for (int i = 0; i < numItems; i++) {
-        final int keyLength = mem.getInt((long) Integer.BYTES * i);
+        final int keyLength = mem.getInt(start + Integer.BYTES * i);
         final byte[] keyBytes = new byte[keyLength];
 
-        mem.getByteArray(keyPosition, keyBytes, 0, keyLength);
+        mem.getByteArray(offsetBytes, keyBytes, 0, keyLength);
         keys[i] = keyBytes;
 
-        keyPosition += keyLength;
+        offsetBytes += keyLength;
       }
 
       return keys;
+    }
+
+    @Override
+    public byte[] serializeToByteArray(final byte[] item)
+    {
+      final byte[] bytes = new byte[Integer.BYTES + item.length];
+      ByteArrayUtil.putIntLE(bytes, 0, item.length);
+      ByteArrayUtil.copyBytes(item, 0, bytes, Integer.BYTES, item.length);
+      return bytes;
+    }
+
+    @Override
+    public byte[][] deserializeFromMemory(final Memory mem, final int numItems)
+    {
+      return deserializeFromMemory(mem, 0, numItems);
+    }
+
+    @Override
+    public int sizeOf(final byte[] item)
+    {
+      return Integer.BYTES + item.length;
+    }
+
+    @Override
+    public int sizeOf(final Memory mem, long offsetBytes, final int numItems)
+    {
+      int length = Integer.BYTES * numItems;
+      for (int i = 0; i < numItems; i++) {
+        length = mem.getInt(offsetBytes + Integer.BYTES * i);
+      }
+      return length;
+    }
+
+    @Override
+    public String toString(final byte[] item)
+    {
+      return item.toString();
+    }
+
+    @Override
+    public Class<?> getClassOfT()
+    {
+      return byte[].class;
     }
   }
 }

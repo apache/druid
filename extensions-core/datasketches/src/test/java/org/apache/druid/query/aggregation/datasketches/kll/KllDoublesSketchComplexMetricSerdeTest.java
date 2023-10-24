@@ -114,7 +114,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
     objectStrategy.fromByteBufferSafe(buf, bytes.length).toByteArray();
 
     // corrupted sketch should fail with a regular java buffer exception, not all subsets actually fail with the same
-    // index out of bounds exceptions, but at least this many do
+    // sketches exceptions, but at least this many do
     for (int subset = 3; subset < 24; subset++) {
       final byte[] garbage2 = new byte[subset];
       for (int i = 0; i < garbage2.length; i++) {
@@ -123,7 +123,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
       Assert.assertThrows(
-          IndexOutOfBoundsException.class,
+          Exception.class,
           () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).toByteArray()
       );
     }
@@ -132,7 +132,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
     Assert.assertThrows(
-        IndexOutOfBoundsException.class,
+        Exception.class,
         () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).toByteArray()
     );
   }

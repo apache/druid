@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.kll;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.kll.KllFloatsSketch;
+import org.apache.datasketches.kll.KllSketch.SketchType;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -124,7 +125,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
   @Override
   int getMaxSerializedSizeBytes(final int k, final long n)
   {
-    return KllFloatsSketch.getMaxSerializedSizeBytes(k, n, true);
+    return KllFloatsSketch.getMaxSerializedSizeBytes(k, n, SketchType.FLOATS_SKETCH, true);
   }
 
   @Override
