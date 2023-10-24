@@ -38,12 +38,13 @@ public class KubernetesAndWorkerTaskRunnerConfigTest
     );
 
     Assert.assertEquals("worker", config.getRunnerStrategy());
+    Assert.assertEquals("remote", config.getWorkerType());
   }
 
   @Test
   public void test_withDefaults()
   {
-    KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null);
+    KubernetesAndWorkerTaskRunnerConfig config = new KubernetesAndWorkerTaskRunnerConfig(null, null);
 
     Assert.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, config.getRunnerStrategy());
   }

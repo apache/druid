@@ -50,12 +50,11 @@ public class TaskTypeRunnerStrategy implements RunnerStrategy
   @JsonCreator
   public TaskTypeRunnerStrategy(
       @JsonProperty("default") String defaultRunner,
-      @JsonProperty("workerType") String workerType,
       @JsonProperty("overrides") @Nullable Map<String, String> overrides
   )
   {
     Preconditions.checkNotNull(defaultRunner);
-    workerRunnerStrategy = new WorkerRunnerStrategy(workerType);
+    workerRunnerStrategy = new WorkerRunnerStrategy();
     defaultRunnerStrategy = RunnerType.KUBERNETES_RUNNER_TYPE.getType().equals(defaultRunner) ?
                             kubernetesRunnerStrategy : workerRunnerStrategy;
 
@@ -88,12 +87,6 @@ public class TaskTypeRunnerStrategy implements RunnerStrategy
     return runnerStrategy == null ? null : runnerStrategy.getRunnerTypeForTask(task);
   }
 
-  @Override
-  public String getWorkerType()
-  {
-    return workerRunnerStrategy.getWorkerType();
-  }
-
   private RunnerStrategy getRunnerSelectStrategy(String runnerType)
   {
     if (runnerType == null) {
@@ -102,7 +95,7 @@ public class TaskTypeRunnerStrategy implements RunnerStrategy
 
     if (RunnerType.KUBERNETES_RUNNER_TYPE.getType().equals(runnerType)) {
       return kubernetesRunnerStrategy;
-    } else if ("worker".equals(runnerType)) {
+    } else if (WORKER_NAME.equals(runnerType)) {
       return workerRunnerStrategy;
     } else {
       // means wrong configuration

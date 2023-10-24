@@ -20,52 +20,24 @@
 package org.apache.druid.k8s.overlord.runnerstrategy;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.druid.indexing.common.task.Task;
 
 /**
- * Implementation of {@link RunnerStrategy} that determines the runner type based on a predefined worker type.
+ * Implementation of {@link RunnerStrategy} that always selects the Worker runner type for tasks.
  *
- * <p>This strategy uses the worker type to select the appropriate runner for executing tasks. It supports
- * different runner types, specifically those defined in {@link RunnerType}.
- *
- * <p>The worker type must be one of the supported {@link RunnerType}s, and if not explicitly provided,
- * it defaults to {@link RunnerType#WORKER_HTTPREMOTE_RUNNER_TYPE}.
+ * <p>This strategy is specific for tasks that are intended to be executed in a Worker environment.
+ * Regardless of task specifics, this strategy always returns {@link RunnerType#WORKER_RUNNER_TYPE}.
  */
 public class WorkerRunnerStrategy implements RunnerStrategy
 {
-  private static final String DEFAULT_WORKER_TASK_RUNNER_TYPE = RunnerType.WORKER_HTTPREMOTE_RUNNER_TYPE.getType();
-  private final String workerType;
-
   @JsonCreator
-  public WorkerRunnerStrategy(@JsonProperty("workerType") String workerType)
+  public WorkerRunnerStrategy()
   {
-    this.workerType = ObjectUtils.defaultIfNull(
-        workerType,
-        DEFAULT_WORKER_TASK_RUNNER_TYPE
-    );
-    Preconditions.checkArgument(
-        this.workerType.equals(RunnerType.WORKER_HTTPREMOTE_RUNNER_TYPE.getType()) ||
-        this.workerType.equals(RunnerType.WORKER_REMOTE_RUNNER_TYPE.getType()),
-        "workerType must be set to one of (%s, %s)",
-        RunnerType.WORKER_HTTPREMOTE_RUNNER_TYPE.getType(),
-        RunnerType.WORKER_REMOTE_RUNNER_TYPE.getType()
-    );
   }
 
   @Override
   public RunnerType getRunnerTypeForTask(Task task)
   {
-    return RunnerType.WORKER_HTTPREMOTE_RUNNER_TYPE.getType().equals(workerType)
-           ? RunnerType.WORKER_HTTPREMOTE_RUNNER_TYPE
-           : RunnerType.WORKER_REMOTE_RUNNER_TYPE;
-  }
-
-  @Override
-  public String getWorkerType()
-  {
-    return workerType;
+    return RunnerType.WORKER_RUNNER_TYPE;
   }
 }

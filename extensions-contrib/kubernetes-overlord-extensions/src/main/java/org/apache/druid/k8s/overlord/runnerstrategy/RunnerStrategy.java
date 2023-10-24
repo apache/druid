@@ -22,15 +22,13 @@ package org.apache.druid.k8s.overlord.runnerstrategy;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
-import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerFactory;
 
 /**
- * Strategy interface for selecting the appropriate runner based on the task spec or specific context conditions.
+ * Strategy interface for selecting the appropriate runner type based on the task spec or specific context conditions.
  *
  * <p>This interface is part of a strategy pattern and is implemented by different classes that handle
- * the logic of selecting a runner based on various criteria. Each task submitted to the system
+ * the logic of selecting a runner type based on various criteria. Each task submitted to the system
  * will pass through the strategy implementation to determine the correct runner for execution.
  *
  * <p>The strategy uses {@link RunnerType} as a standardized way of referring to and managing different types of runners.
@@ -43,6 +41,8 @@ import org.apache.druid.k8s.overlord.KubernetesTaskRunnerFactory;
 })
 public interface RunnerStrategy
 {
+  String WORKER_NAME = "worker";
+
   /**
    * Enumerates the available runner types, each associated with a specific method of task execution.
    * These runner types are used by the strategies to make decisions and by the system to route tasks appropriately.
@@ -50,8 +50,7 @@ public interface RunnerStrategy
   enum RunnerType
   {
     KUBERNETES_RUNNER_TYPE(KubernetesTaskRunnerFactory.TYPE_NAME),
-    WORKER_REMOTE_RUNNER_TYPE(RemoteTaskRunnerFactory.TYPE_NAME),
-    WORKER_HTTPREMOTE_RUNNER_TYPE(HttpRemoteTaskRunnerFactory.TYPE_NAME);
+    WORKER_RUNNER_TYPE(WORKER_NAME);
 
     private final String type;
 
@@ -73,15 +72,4 @@ public interface RunnerStrategy
    * @return The runner type deemed most suitable for executing the task.
    */
   RunnerType getRunnerTypeForTask(Task task);
-
-  /**
-   * Provides the worker type being used in the strategy, if applicable. This default method returns null,
-   * and it should be overridden by strategies that use specific worker types.
-   *
-   * @return The type of the worker associated with the strategy, or null if no specific worker type is used.
-   */
-  default String getWorkerType()
-  {
-    return null;
-  }
 }

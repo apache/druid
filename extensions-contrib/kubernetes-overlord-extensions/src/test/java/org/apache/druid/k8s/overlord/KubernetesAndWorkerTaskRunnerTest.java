@@ -96,7 +96,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new WorkerRunnerStrategy(null)
+        new WorkerRunnerStrategy()
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -109,7 +109,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_runOnKubernetesOrWorkerBasedOnStrategy() throws ExecutionException, InterruptedException
   {
-    TaskTypeRunnerStrategy runnerStrategy = new TaskTypeRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
+    TaskTypeRunnerStrategy runnerStrategy = new TaskTypeRunnerStrategy("k8s", ImmutableMap.of("index_kafka", "worker"));
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,

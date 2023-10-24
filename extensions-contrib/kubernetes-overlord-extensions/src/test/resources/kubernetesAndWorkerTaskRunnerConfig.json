@@ -1,3 +1,4 @@
 {
-  "runnerStrategy.type": "worker"
+  "runnerStrategy.type": "worker",
+  "runnerStrategy.workerType": "remote"
 }

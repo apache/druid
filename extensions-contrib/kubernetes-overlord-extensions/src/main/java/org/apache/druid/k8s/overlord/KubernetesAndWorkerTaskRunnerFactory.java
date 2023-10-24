@@ -34,6 +34,7 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   private final KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
   private final HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
   private final RemoteTaskRunnerFactory remoteTaskRunnerFactory;
+  private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
   private final RunnerStrategy runnerStrategy;
 
   private KubernetesAndWorkerTaskRunner runner;
@@ -43,12 +44,14 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
       KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory,
       HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory,
       RemoteTaskRunnerFactory remoteTaskRunnerFactory,
+      KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig,
       RunnerStrategy runnerStrategy
   )
   {
     this.kubernetesTaskRunnerFactory = kubernetesTaskRunnerFactory;
     this.httpRemoteTaskRunnerFactory = httpRemoteTaskRunnerFactory;
     this.remoteTaskRunnerFactory = remoteTaskRunnerFactory;
+    this.kubernetesAndWorkerTaskRunnerConfig = kubernetesAndWorkerTaskRunnerConfig;
     this.runnerStrategy = runnerStrategy;
   }
 
@@ -65,10 +68,9 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
 
   private WorkerTaskRunner getWorkerTaskRunner()
   {
-    String workerType = runnerStrategy.getWorkerType();
-    return
-        workerType == null || HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType) ?
-        httpRemoteTaskRunnerFactory.build() : remoteTaskRunnerFactory.build();
+    String workerType = kubernetesAndWorkerTaskRunnerConfig.getWorkerType();
+    return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType) ?
+           httpRemoteTaskRunnerFactory.build() : remoteTaskRunnerFactory.build();
   }
 
   @Override

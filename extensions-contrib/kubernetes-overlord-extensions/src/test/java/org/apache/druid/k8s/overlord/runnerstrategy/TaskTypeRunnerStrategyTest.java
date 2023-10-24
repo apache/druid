@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.runnerstrategy;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerFactory;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -38,14 +39,14 @@ public class TaskTypeRunnerStrategyTest extends EasyMockSupport
   @Test
   public void test_taskTypeRunnerStrategy_returnsCorrectRunnerType()
   {
-    TaskTypeRunnerStrategy runnerStrategy = new TaskTypeRunnerStrategy("k8s", null, ImmutableMap.of("index_kafka", "worker"));
+    TaskTypeRunnerStrategy runnerStrategy = new TaskTypeRunnerStrategy("k8s", ImmutableMap.of("index_kafka", "worker"));
     EasyMock.expect(task.getType()).andReturn("index_kafka");
     EasyMock.expectLastCall().once();
     EasyMock.expect(task.getType()).andReturn("compact");
     EasyMock.expectLastCall().once();
     replayAll();
-    Assert.assertEquals("httpRemote", runnerStrategy.getRunnerTypeForTask(task).getType());
-    Assert.assertEquals("k8s", runnerStrategy.getRunnerTypeForTask(task).getType());
+    Assert.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
+    Assert.assertEquals(KubernetesTaskRunnerFactory.TYPE_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
     verifyAll();
   }
 }

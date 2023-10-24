@@ -37,10 +37,7 @@ public class WorkerRunnerStrategyTest extends EasyMockSupport
   @Test
   public void test_workerRunnerStrategy_returnsCorrectRunnerType()
   {
-    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy("remote");
-    Assert.assertEquals("remote", runnerStrategy.getRunnerTypeForTask(task).getType());
-
-    runnerStrategy = new WorkerRunnerStrategy(null);
-    Assert.assertEquals("httpRemote", runnerStrategy.getRunnerTypeForTask(task).getType());
+    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy();
+    Assert.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
   }
 }

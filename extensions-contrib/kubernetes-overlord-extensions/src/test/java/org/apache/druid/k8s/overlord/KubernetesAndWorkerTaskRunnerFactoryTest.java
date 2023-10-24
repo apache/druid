@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord;
 
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
+import org.apache.druid.k8s.overlord.runnerstrategy.KubernetesRunnerStrategy;
 import org.apache.druid.k8s.overlord.runnerstrategy.WorkerRunnerStrategy;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -46,7 +47,8 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new WorkerRunnerStrategy(null)
+        new KubernetesAndWorkerTaskRunnerConfig(null, null),
+        new WorkerRunnerStrategy()
     );
 
     EasyMock.expect(httpRemoteTaskRunnerFactory.build()).andReturn(null);
@@ -64,7 +66,27 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new WorkerRunnerStrategy("remote")
+        new KubernetesAndWorkerTaskRunnerConfig(null, "remote"),
+        new WorkerRunnerStrategy()
+    );
+
+    EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
+    EasyMock.expect(kubernetesTaskRunnerFactory.build()).andReturn(null);
+
+    replayAll();
+    factory.build();
+    verifyAll();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void test_specifyIncorrectTaskRunner_shouldThrowException()
+  {
+    KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
+        kubernetesTaskRunnerFactory,
+        httpRemoteTaskRunnerFactory,
+        remoteTaskRunnerFactory,
+        new KubernetesAndWorkerTaskRunnerConfig(null, "noop"),
+        new KubernetesRunnerStrategy()
     );
 
     EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
