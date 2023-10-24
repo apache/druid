@@ -14277,17 +14277,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testWindowingErrorWithoutFeatureFlag()
-  {
-    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, false))
-        .sql("SELECT dim1,ROW_NUMBER() OVER () from druid.foo")
-        .run());
-
-    assertThat(e, invalidSqlIs("The query contains window functions; To run these window functions, enable [WINDOW_FUNCTIONS] in query context. (line [1], column [13])"));
-  }
-
-  @Test
   public void testInGroupByWithLimitOuterGroupOrder()
   {
     cannotVectorize();
