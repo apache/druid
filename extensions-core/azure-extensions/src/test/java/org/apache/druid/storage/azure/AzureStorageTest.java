@@ -29,22 +29,29 @@ import com.azure.storage.blob.models.BlobItemProperties;
 import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.net.URISyntaxException;
 
-public class AzureStorageTest
+@RunWith(EasyMockRunner.class)
+public class AzureStorageTest extends EasyMockSupport
 {
 
   AzureStorage azureStorage;
   BlobServiceClient blobServiceClient = Mockito.mock(BlobServiceClient.class);
   BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
 
-  AzureClientFactory azureClientFactory = Mockito.mock(AzureClientFactory.class);
+  @Mock
+  AzureClientFactory azureClientFactory;
 
   @Before
   public void setup() throws URISyntaxException, StorageException
@@ -66,7 +73,32 @@ public class AzureStorageTest
 
     );
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir("test", ""));
+  }
 
+  @Test
+  public void testListDir_withMaxAttempts_factoryCreatesNewContainerClient() throws URISyntaxException, StorageErrorException
+  {
+    Integer maxAttempts = 5;
+    String containerName = "test";
+    String containerName2 = "test2";
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    Mockito.doReturn(pagedIterable).when(blobContainerClient).listBlobs(
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName, maxAttempts)).andReturn(blobContainerClient).times(1);
+    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName2, maxAttempts)).andReturn(blobContainerClient).times(1);
+
+    replayAll();
+    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
+    // The second call should not trigger another call to getBlobContainerClient
+    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
+    // Requesting a different container should create another client.
+    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName2, "", maxAttempts));
+    verifyAll();
   }
 }
 

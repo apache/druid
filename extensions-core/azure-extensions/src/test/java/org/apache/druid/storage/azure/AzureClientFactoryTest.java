@@ -28,7 +28,7 @@ public class AzureClientFactoryTest
 {
   private AzureClientFactory azureClientFactory;
   private static final String ACCOUNT = "account";
-  
+
   @Test
   public void test_blobServiceClient()
   {
