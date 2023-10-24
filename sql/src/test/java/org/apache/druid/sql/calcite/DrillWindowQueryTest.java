@@ -4506,7 +4506,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.FIRST_LAST_ORDERED)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("first_val/firstValFn_33")
   @Test
   public void test_first_val_firstValFn_33()
@@ -4537,7 +4537,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("last_val/lastValFn_34")
   @Test
   public void test_last_val_lastValFn_34()
@@ -4545,7 +4545,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("last_val/lastValFn_35")
   @Test
   public void test_last_val_lastValFn_35()
@@ -4553,7 +4553,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("last_val/lastValFn_38")
   @Test
   public void test_last_val_lastValFn_38()
@@ -4561,7 +4561,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("last_val/lastValFn_39")
   @Test
   public void test_last_val_lastValFn_39()
@@ -4592,7 +4592,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_COUNT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_47")
   @Test
   public void test_ntile_func_ntileFn_47()
@@ -4600,7 +4600,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_COUNT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_48")
   @Test
   public void test_ntile_func_ntileFn_48()
@@ -4608,7 +4608,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_COUNT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_49")
   @Test
   public void test_ntile_func_ntileFn_49()
@@ -4616,7 +4616,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_COUNT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_50")
   @Test
   public void test_ntile_func_ntileFn_50()
@@ -4624,7 +4624,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_COUNT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_51")
   @Test
   public void test_ntile_func_ntileFn_51()
@@ -4632,7 +4632,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_52")
   @Test
   public void test_ntile_func_ntileFn_52()
@@ -4640,7 +4640,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_53")
   @Test
   public void test_ntile_func_ntileFn_53()
@@ -4648,7 +4648,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_54")
   @Test
   public void test_ntile_func_ntileFn_54()
@@ -4656,7 +4656,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_55")
   @Test
   public void test_ntile_func_ntileFn_55()
@@ -4664,7 +4664,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_56")
   @Test
   public void test_ntile_func_ntileFn_56()
@@ -4672,7 +4672,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_57")
   @Test
   public void test_ntile_func_ntileFn_57()
@@ -4680,7 +4680,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("ntile_func/ntileFn_58")
   @Test
   public void test_ntile_func_ntileFn_58()
