@@ -321,16 +321,16 @@ public class JsonParserIteratorTest
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    private String meshErrMsg = "pstream connect error or disconnect/reset before header";
+    private String errorMessage = "pstream connect error or disconnect/reset before header";
+    private String nullErrMsg = null;
 
     @Test
-    public void testMeshProxyError()
-        throws JsonProcessingException
+    public void testNullErrorMsg() throws JsonProcessingException
     {
       JsonParserIterator<Object> iterator = new JsonParserIterator<>(
           JAVA_TYPE,
           Futures.immediateFuture(
-              mockMeshProxyResponse(meshErrMsg)
+              mockMeshProxyResponse(nullErrMsg)
           ),
           URL,
           null,
@@ -339,7 +339,26 @@ public class JsonParserIteratorTest
       );
 
       expectedException.expect(QueryInterruptedException.class);
-      expectedException.expectMessage(meshErrMsg);
+      expectedException.expectMessage("");
+      iterator.hasNext();
+    }
+
+    @Test
+    public void testParsingError() throws JsonProcessingException
+    {
+      JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+          JAVA_TYPE,
+          Futures.immediateFuture(
+              mockMeshProxyResponse(errorMessage)
+          ),
+          URL,
+          null,
+          HOST,
+          OBJECT_MAPPER
+      );
+
+      expectedException.expect(QueryInterruptedException.class);
+      expectedException.expectMessage(errorMessage);
       iterator.hasNext();
     }
   }
