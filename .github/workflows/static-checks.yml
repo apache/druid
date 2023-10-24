@@ -185,8 +185,15 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          # cache is safe use here since we don't call mvn install
-          cache: 'maven'
+
+      # restore maven dependencies only. 'depsonly' keys are safe to restore
+      # since they don't contain any artifacts created by mvn install
+      - uses: actions/cache@v3
+        with:
+          key: maven-${{ runner.os }}-depsonly-${{ hashFiles('**/pom.xml') }}
+          path: ~/.m2/repository
+          restore-keys: |
+            maven-${{ runner.os }}-depsonly-
 
       - name: setup node
         uses: actions/setup-node@v3
