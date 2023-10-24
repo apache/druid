@@ -36,14 +36,12 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
