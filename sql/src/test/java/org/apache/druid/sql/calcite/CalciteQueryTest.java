@@ -14290,7 +14290,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByWithLimitOuterGroupOrder()
   {
-    String defaultString = useDefault ? "" : null;
     cannotVectorize();
 
     testBuilder()
@@ -14304,10 +14303,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             + "where m2 > 2\n"
             + "GROUP BY 1 \n"
             + "ORDER BY 2 DESC\n"
-//            + "LIMIT 33\n"
-            )
+        )
         .expectedResults(ImmutableList.of(
-            new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}))
+            new Object[] {3.0D, 1L},
+            new Object[] {4.0D, 1L},
+            new Object[] {5.0D, 1L},
+            new Object[] {6.0D, 1L}))
         .run();
   }
 
