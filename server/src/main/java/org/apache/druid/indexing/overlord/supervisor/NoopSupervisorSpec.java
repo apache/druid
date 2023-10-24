@@ -31,6 +31,7 @@ import org.apache.druid.server.security.ResourceAction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -184,6 +185,12 @@ public class NoopSupervisorSpec implements SupervisorSpec
       public int getActiveTaskGroupsCount()
       {
         return -1;
+      }
+
+      @Override
+      public Set<String> getActiveRealtimeSequencePrefixes()
+      {
+        return Collections.emptySet();
       }
     };
   }

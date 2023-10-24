@@ -86,14 +86,14 @@ public class QueryTestRunner
    */
   public abstract static class QueryRunStep
   {
-    private final QueryTestBuilder builder;
+    protected final QueryTestBuilder builder;
 
     public QueryRunStep(final QueryTestBuilder builder)
     {
       this.builder = builder;
     }
 
-    public QueryTestBuilder builder()
+    public final QueryTestBuilder builder()
     {
       return builder;
     }
@@ -207,12 +207,10 @@ public class QueryTestRunner
   public abstract static class BaseExecuteQuery extends QueryRunStep
   {
     protected final List<QueryResults> results = new ArrayList<>();
-    protected final boolean doCapture;
 
     public BaseExecuteQuery(QueryTestBuilder builder)
     {
       super(builder);
-      doCapture = builder.expectedLogicalPlan != null;
     }
 
     public List<QueryResults> results()
@@ -278,7 +276,7 @@ public class QueryTestRunner
     )
     {
       try {
-        final PlannerCaptureHook capture = doCapture ? new PlannerCaptureHook() : null;
+        final PlannerCaptureHook capture = getCaptureHook();
         final DirectStatement stmt = sqlStatementFactory.directStatement(query);
         stmt.setHook(capture);
         final Sequence<Object[]> results = stmt.execute().getResults();
@@ -298,6 +296,14 @@ public class QueryTestRunner
             e
         );
       }
+    }
+
+    private PlannerCaptureHook getCaptureHook()
+    {
+      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK) || builder.expectedLogicalPlan != null) {
+        return new PlannerCaptureHook();
+      }
+      return null;
     }
 
     public static Pair<RowSignature, List<Object[]>> getResults(

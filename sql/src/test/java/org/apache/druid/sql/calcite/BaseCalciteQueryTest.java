@@ -1513,6 +1513,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
       catch (AssertionError e) {
         log.info("sql: %s", sql);
+        log.info(resultsToString("Expected", expectedResults));
         log.info(resultsToString("Actual", queryResults.results));
         throw e;
       }
