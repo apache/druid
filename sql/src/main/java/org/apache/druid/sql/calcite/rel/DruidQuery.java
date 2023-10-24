@@ -1498,7 +1498,7 @@ public class DruidQuery
 
     QueryDataSource newDataSource = new QueryDataSource(scan);
 
-    ArrayList<ColumnWithDirection> sortColumns = ColumnWithDirection.fromOrderBys2(sorting.getOrderBys());
+    ArrayList<ColumnWithDirection> sortColumns = ColumnWithDirection.fromOrderBysColumnSpecs(sorting.getOrderBys());
     NaiveSortOperatorFactory sortOperator = new NaiveSortOperatorFactory(sortColumns);
 
     RowSignature signature = getOutputRowSignature();

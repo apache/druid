@@ -50,24 +50,24 @@ public class ColumnWithDirection
     return ordering;
   }
 
-  public static ArrayList<ColumnWithDirection> fromOrderBys2(List<OrderByColumnSpec> orderBys)
+  public static ArrayList<ColumnWithDirection> fromOrderBysColumnSpecs(List<OrderByColumnSpec> orderBySpecs)
   {
     ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-    for (OrderByColumnSpec orderBy : orderBys) {
-      ordering.add(fromOrderBy(orderBy));
+    for (OrderByColumnSpec orderBySpec : orderBySpecs) {
+      ordering.add(fromOrderBysColumnSpec(orderBySpec));
     }
     return ordering;
   }
 
-  private static ColumnWithDirection fromOrderBy(OrderByColumnSpec orderBy)
+  public static ColumnWithDirection fromOrderBysColumnSpec(OrderByColumnSpec orderBySpec)
   {
-    return new ColumnWithDirection(orderBy.getDimension(),
-        orderBy.getDirection() == OrderByColumnSpec.Direction.ASCENDING ? ColumnWithDirection.Direction.ASC
+    return new ColumnWithDirection(orderBySpec.getDimension(),
+        orderBySpec.getDirection() == OrderByColumnSpec.Direction.ASCENDING ? ColumnWithDirection.Direction.ASC
             : ColumnWithDirection.Direction.DESC);
 
   }
 
-  private static ColumnWithDirection fromOrderBy(ScanQuery.OrderBy orderBy)
+  public static ColumnWithDirection fromOrderBy(ScanQuery.OrderBy orderBy)
   {
     return new ColumnWithDirection(
         orderBy.getColumnName(),
