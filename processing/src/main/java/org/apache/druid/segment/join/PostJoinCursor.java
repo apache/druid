@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join;
 
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -78,6 +77,12 @@ public class PostJoinCursor implements Cursor
     }
   }
 
+  /**
+   * Matches tuples coming out of a join to a post-join condition uninterruptibly, and hence can be a long-running call.
+   * For this reason, {@link PostJoinCursor#advance()} instead calls {@link PostJoinCursor#advanceToMatch()} (unlike
+   * other cursors) that allows interruptions, thereby resolving issues where the
+   * <a href="https://github.com/apache/druid/issues/14514">CPU thread running PostJoinCursor cannot be terminated</a>
+   */
   private void advanceToMatchUninterruptibly()
   {
     if (valueMatcher != null) {
@@ -109,6 +114,8 @@ public class PostJoinCursor implements Cursor
   public void advance()
   {
     baseCursor.advance();
+    // Relies on baseCursor.advance() call inside this for BaseQuery.checkInterrupted() checks -- unlike other cursors
+    // which call advanceInterruptibly() and hence have to explicitly provision for interrupts.
     advanceToMatch();
   }
 
