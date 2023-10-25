@@ -25,7 +25,7 @@ Druid 28.0.0 adds experimental support for concurrent append and replace.
 This feature allows you to safely replace the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this is appending new data to an interval while compaction of that interval is already in progress.
 For more information, see [Concurrent append and replace](https://druid.apache.org/docs/latest/data-management/automatic-compaction#concurrent-append-and-replace).
 
-Segment locking will be deprecated and removed in favour of concurrent append and replace that is much simpler in design. With concurrent append and replace, Druid doesn't lock compaction jobs out because of active realtime ingestion.
+Segment locking will be deprecated and removed in favor of concurrent append and replace that is much simpler in design. With concurrent append and replace, Druid doesn't lock compaction jobs out because of active realtime ingestion.
 
 ### Task locks for append and replace batch ingestion jobs
 
@@ -443,7 +443,7 @@ Configure it with the following properties:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-| `druid.cache.enableTls` | Enable TLS based connection for Memcached client.  Boolean | false |
+| `druid.cache.enableTls` | Enable TLS based connection for Memcached client. Boolean | false |
 | `druid.cache.clientMode`  | Client Mode. Static mode requires the user to specify individual cluster nodes. Dynamic mode uses [AutoDiscovery](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.HowAutoDiscoveryWorks.html) feature of AWS Memcached. String. ["static"](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.Manual.html) or ["dynamic"](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.Using.ModifyApp.Java.html) | static            |
 | `druid.cache.skipTlsHostnameVerification` | Skip TLS Hostname Verification. Boolean. | true |
 
@@ -580,7 +580,7 @@ The following dependencies have had their versions bumped:
 * `word-wrap` has been upgraded to 1.2.4 [#14613](https://github.com/apache/druid/pull/14613)
 * `tough-cookie` has been upgraded to 4.1.3 [#14557](https://github.com/apache/druid/pull/14557)
 * `qs` has been upgraded to 6.5.3 [#13510](https://github.com/apache/druid/pull/13510)
-* `api-util` has been upgraded to to 2.1.3 [#14852](https://github.com/apache/druid/pull/14852)
+* `api-util` has been upgraded to 2.1.3 [#14852](https://github.com/apache/druid/pull/14852)
 * `commons-cli` has been upgraded from 1.3.1 to 1.5.0 [#14837](https://github.com/apache/druid/pull/14837)
 * `tukaani:xz` has been upgraded from 1.8 to 1.9 [#14839](https://github.com/apache/druid/pull/14839)
 * `commons-compress` has been upgraded from 1.21 to 1.23.0 [#14820](https://github.com/apache/druid/pull/14820)
