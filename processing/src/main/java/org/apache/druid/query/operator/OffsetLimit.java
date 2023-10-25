@@ -119,7 +119,7 @@ public class OffsetLimit
 
   public long getFetchToIndex(long maxIndex)
   {
-    if(maxIndex <= offset) {
+    if (maxIndex <= offset) {
       return 0;
     }
     if (hasLimit()) {

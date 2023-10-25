@@ -44,6 +44,7 @@ public class OffsetLimitTest
     assertFalse(ol.hasLimit());
     assertEquals(offset, ol.getOffset());
     assertEquals(-1, ol.getLimit());
+    assertEquals(Long.MAX_VALUE, ol.getLimitOrMax());
     assertEquals(offset, ol.getFetchFromIndex(Long.MAX_VALUE));
     assertEquals(Long.MAX_VALUE, ol.getFetchToIndex(Long.MAX_VALUE));
     assertEquals(0, ol.getFetchFromIndex(1));
@@ -59,6 +60,7 @@ public class OffsetLimitTest
     assertTrue(ol.hasLimit());
     assertEquals(0, ol.getOffset());
     assertEquals(4, ol.getLimit());
+    assertEquals(4, ol.getLimitOrMax());
     assertEquals(0, ol.getFetchFromIndex(Long.MAX_VALUE));
     assertEquals(4, ol.getFetchToIndex(Long.MAX_VALUE));
     assertEquals(0, ol.getFetchFromIndex(2));
@@ -75,12 +77,13 @@ public class OffsetLimitTest
     assertTrue(ol.hasLimit());
     assertEquals(offset, ol.getOffset());
     assertEquals(limit, ol.getLimit());
+    assertEquals(limit, ol.getLimitOrMax());
     assertEquals(offset, ol.getFetchFromIndex(Long.MAX_VALUE));
     assertEquals(offset + limit, ol.getFetchToIndex(Long.MAX_VALUE));
     assertEquals(0, ol.getFetchFromIndex(offset));
     assertEquals(0, ol.getFetchToIndex(offset));
-    assertEquals(offset, ol.getFetchFromIndex(offset+1));
-    assertEquals(offset+1, ol.getFetchToIndex(offset+1));
+    assertEquals(offset, ol.getFetchFromIndex(offset + 1));
+    assertEquals(offset + 1, ol.getFetchToIndex(offset + 1));
   }
 
   @Test(expected = IllegalArgumentException.class)
