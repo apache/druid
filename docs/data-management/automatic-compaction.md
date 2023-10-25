@@ -209,7 +209,7 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 Concurrent append and replace is an [experimental feature](../development/experimental.md) and is not currently available for SQL-based ingestion.
 :::
 
-If you enable automatic compaction, you can also use concurrent append and replace to compact data as you ingest it for streaming and legacy JSON-based batch ingestion. 
+If you enable automatic compaction, you can use concurrent append and replace to concurrently compact data as you ingest it for streaming and legacy JSON-based batch ingestion. 
 
 Setting up concurrent append and replace is a two-step process. The first is to update your datasource and the second is to update your ingestion job.
 
