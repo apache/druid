@@ -68,16 +68,16 @@ The MSQ task engine can use Amazon S3 or Azure Blog Storage to store intermediat
 
 The MSQ task engine needs the following permissions for pushing,  fetching, and removing intermediate stage results to and from S3:
 
-- `s3:GetObject` to retrieve the intermediate files. Note that `GetObject` also requires read permission on the object that gets retrieved. 
-- `s3:PutObject` to upload intermediate files.
-- `s3:AbortMultipartUpload` to cancel the upload of intermediate files
-- `s3:DeleteObject` to delete intermediate files when they're no longer needed.
+- `s3:GetObject` to retrieve the files. Note that `GetObject` also requires read permission on the object that gets retrieved. 
+- `s3:PutObject` to upload files.
+- `s3:AbortMultipartUpload` to cancel the upload of files
+- `s3:DeleteObject` to delete files when they're no longer needed. 
 
 ### Azure
 
 The MSQ task engine needs the following permissions for pushing, fetching, and removing intermediate stage results to and from Azure:
 
-- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read` to read and list the intermediate files.
-- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write` to write intermediate files.
-- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action` to create intermediate files.
-- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete intermediate files when they're no longer needed.
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read` to read and list the files in durable storage 
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write` to write the files in durable storage.
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action` to create files in durable storage.
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.
