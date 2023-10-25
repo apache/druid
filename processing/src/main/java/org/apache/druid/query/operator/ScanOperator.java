@@ -64,7 +64,7 @@ public class ScanOperator implements Operator
     this.timeRange = timeRange;
     this.filter = filter;
     this.ordering = ordering;
-    this.offsetLimit = offsetLimit;
+    this.offsetLimit = offsetLimit == null ? OffsetLimit.NONE : offsetLimit;
   }
 
   @Nullable

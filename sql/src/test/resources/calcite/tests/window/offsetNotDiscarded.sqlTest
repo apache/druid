@@ -1,0 +1,21 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    FLOOR(__time TO DAY) t,
+    COUNT(1) OVER ()
+  FROM ( select * from foo offset 3 ) f
+
+expectedOperators:
+  - { type: "naivePartition", partitionColumns: [ ] }
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - { type: "count", name: "w0" }
+
+expectedResults:
+  - [978307200000,3]
+  - [978393600000,3]
+  - [978480000000,3]
