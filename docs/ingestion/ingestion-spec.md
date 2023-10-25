@@ -530,11 +530,3 @@ You can enable front coding with all types of ingestion. For information on defi
 
 Beyond these properties, each ingestion method has its own specific tuning properties. See the documentation for each
 [ingestion method](./index.md#ingestion-methods) for details.
-
-## Context
-
-The following table outlines the configuration options for `context`:
-
-|Property|Type|Description|Required|Default|
-|-|-|-|-|-|
-| `taskLockType` | String | Set to `APPEND` or `REPLACE`. Controls whether the ingestion job uses concurrent append or concurrent replace when segments overlap. This can be used along with automatic compaction to [compact data  as you ingest it](../data-management/automatic-compaction.md#concurrent-append-and-replace). If you set this to `REPLACE`, data gets overwritten in your datasource  datasource as you ingest if there's a matching interval.  | n/a |
