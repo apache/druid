@@ -20,14 +20,18 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.operator.Operator.Signal;
+import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.junit.Test;
 
 public class NaiveSortOperatorTest
 {
-
   @Test
-  public void testDoesNotNPE()
+  public void testNoInputisHandledCorrectly()
   {
     NaiveSortOperator op = new NaiveSortOperator(
         InlineScanOperator.make(),
@@ -37,4 +41,26 @@ public class NaiveSortOperatorTest
         .withPushFn(() -> (someRac) -> Signal.GO)
         .runToCompletion(op);
   }
+
+  @Test
+  public void testSort()
+  {
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "c", new IntArrayColumn(new int[] {5, 3, 1})));
+    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "c", new IntArrayColumn(new int[] {2, 6, 4})));
+
+    NaiveSortOperator op = new NaiveSortOperator(
+        InlineScanOperator.make(rac1, rac2),
+        ImmutableList.of(ColumnWithDirection.ascending("c")));
+
+    new OperatorTestHelper()
+        .expectAndStopAfter(
+            new RowsAndColumnsHelper()
+                .expectColumn("c", new int[] {1, 2, 3, 4, 5, 6}))
+        .runToCompletion(op);
+  }
+
 }
