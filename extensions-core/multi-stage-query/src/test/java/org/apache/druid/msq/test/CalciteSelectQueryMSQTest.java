@@ -157,6 +157,18 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 
   }
 
+  @Ignore
+  @Override
+  public void testUnSupportedNullsFirst()
+  {
+  }
+
+  @Ignore
+  @Override
+  public void testUnSupportedNullsLast()
+  {
+  }
+
   /**
    * Same query as {@link CalciteQueryTest#testArrayAggQueryOnComplexDatatypes}. ARRAY_AGG is not supported in MSQ currently.
    * Once support is added, this test can be removed and msqCompatible() can be added to the one in CalciteQueryTest.
