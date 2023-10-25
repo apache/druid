@@ -88,6 +88,9 @@ When deciding whether to use `REPLACE` or `INSERT`, keep in mind that segments g
 with dimension-based pruning but those generated with `INSERT` cannot. For more information about the requirements
 for dimension-based pruning, see [Clustering](#clustering).
 
+To insert [ARRAY types](../querying/arrays.md), be sure to set context flag `"arrayIngestMode":"array"` which allows
+ARRAY types to be stored in segments. This flag is not enabled by default.
+
 For more information about the syntax, see [INSERT](./reference.md#insert).
 
 <a name="replace"></a>
@@ -192,10 +195,13 @@ To perform ingestion with rollup:
 2. Set [`finalizeAggregations: false`](reference.md#context-parameters) in your context. This causes aggregation
    functions to write their internal state to the generated segments, instead of the finalized end result, and enables
    further aggregation at query time.
-3. Wrap all multi-value strings in `MV_TO_ARRAY(...)` and set [`groupByEnableMultiValueUnnesting:
-   false`](reference.md#context-parameters) in your context. This ensures that multi-value strings are left alone and
-   remain lists, instead of being [automatically unnested](../querying/sql-data-types.md#multi-value-strings) by the
-   `GROUP BY` operator.
+3. To ingest [Druid multi-value dimensions](../querying/multi-value-dimensions.md), wrap all multi-value strings 
+   in `MV_TO_ARRAY(...)` in the grouping clause and set [`groupByEnableMultiValueUnnesting: false`](reference.md#context-parameters) in your context.
+   This ensures that multi-value strings are left alone and remain lists, instead of being [automatically unnested](../querying/sql-data-types.md#multi-value-strings) by the
+   `GROUP BY` operator. To INSERT these arrays as multi-value strings, wrap the expressions in the SELECT clause with
+   `ARRAY_TO_MV` to coerce the ARRAY back to a VARCHAR
+4. To ingest [ARRAY types](../querying/arrays.md), be sure to set context flag `"arrayIngestMode":"array"` which allows
+   ARRAY types to be stored in segments. This flag is not enabled by default.
 
 When you do all of these things, Druid understands that you intend to do an ingestion with rollup, and it writes
 rollup-related metadata into the generated segments. Other applications can then use [`segmentMetadata`

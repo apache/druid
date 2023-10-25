@@ -79,7 +79,7 @@ CLUSTERED BY channel
 
 ## INSERT with rollup
 
-This example inserts data into a table named `kttm_data` and performs data rollup. This example implements the recommendations described in [Rollup](./concepts.md#rollup).
+This example inserts data into a table named `kttm_rollup` and performs data rollup. The ARRAY inputs are stored in a [multi-value dimension](../querying/multi-value-dimensions.md). This example implements the recommendations described in [Rollup](./concepts.md#rollup).
 
 <details><summary>Show the query</summary>
 
@@ -102,7 +102,50 @@ SELECT
   agent_type,
   browser,
   browser_version,
-  MV_TO_ARRAY("language") AS "language", -- Multi-value string dimension
+  ARRAY_TO_MV(MV_TO_ARRAY("language")) AS "language", -- Multi-value string dimension
+  os,
+  city,
+  country,
+  forwarded_for AS ip_address,
+
+  COUNT(*) AS "cnt",
+  SUM(session_length) AS session_length,
+  APPROX_COUNT_DISTINCT_DS_HLL(event_type) AS unique_event_types
+FROM kttm_data
+WHERE os = 'iOS'
+GROUP BY 1, 2, 3, 4, 5, 6, MV_TO_ARRAY("language"), 8, 9, 10, 11
+PARTITIONED BY HOUR
+CLUSTERED BY browser, session
+```
+</details>
+
+## INSERT with rollup and ARRAY types
+
+This example inserts data into a table named `kttm_rollup_arrays` and performs data rollup. The ARRAY inputs are stored in an [ARRAY column](../querying/arrays.md). This example also implements the recommendations described in [Rollup](./concepts.md#rollup). Be sure to set context flag `"arrayIngestMode":"array"` which allows
+ARRAY types to be stored in segments.
+
+<details><summary>Show the query</summary>
+
+```sql
+INSERT INTO "kttm_rollup_arrays"
+
+WITH kttm_data AS (
+SELECT * FROM TABLE(
+  EXTERN(
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}',
+    '{"type":"json"}',
+    '[{"name":"timestamp","type":"string"},{"name":"agent_category","type":"string"},{"name":"agent_type","type":"string"},{"name":"browser","type":"string"},{"name":"browser_version","type":"string"},{"name":"city","type":"string"},{"name":"continent","type":"string"},{"name":"country","type":"string"},{"name":"version","type":"string"},{"name":"event_type","type":"string"},{"name":"event_subtype","type":"string"},{"name":"loaded_image","type":"string"},{"name":"adblock_list","type":"string"},{"name":"forwarded_for","type":"string"},{"name":"language","type":"array<string>"},{"name":"number","type":"long"},{"name":"os","type":"string"},{"name":"path","type":"string"},{"name":"platform","type":"string"},{"name":"referrer","type":"string"},{"name":"referrer_host","type":"string"},{"name":"region","type":"string"},{"name":"remote_address","type":"string"},{"name":"screen","type":"string"},{"name":"session","type":"string"},{"name":"session_length","type":"long"},{"name":"timezone","type":"string"},{"name":"timezone_offset","type":"long"},{"name":"window","type":"string"}]'
+  )
+))
+
+SELECT
+  FLOOR(TIME_PARSE("timestamp") TO MINUTE) AS __time,
+  session,
+  agent_category,
+  agent_type,
+  browser,
+  browser_version,
+  "language", -- array
   os,
   city,
   country,
