@@ -93,7 +93,7 @@ public class ScanOperator implements Operator
           decor.limitTimeRange(timeRange);
         }
 
-        if (offsetLimit != null) {
+        if (offsetLimit.isPresent()) {
           decor.setOffsetLimit(offsetLimit);
         }
 

@@ -32,31 +32,21 @@ public class OffsetLimit
 
   public static final OffsetLimit NONE = new OffsetLimit(0, -1);
 
-  public static OffsetLimit build(int offset, int limit)
-  {
-    if (offset == 0 && limit < 0) {
-      return null;
-    }
-    return new OffsetLimit(offset, limit);
-  }
-
   @JsonCreator
-  public OffsetLimit(
-      @JsonProperty("offset")long offset,
-      @JsonProperty("limit")long limit)
+  public OffsetLimit(long offset, long limit)
   {
     Preconditions.checkArgument(offset >= 0, "offset >= 0");
     this.offset = offset;
     this.limit = limit;
   }
 
-  @JsonProperty("offset")
+  @JsonProperty
   public long getOffset()
   {
     return offset;
   }
 
-  @JsonProperty("limit")
+  @JsonProperty
   public long getLimit()
   {
     return limit;
@@ -144,4 +134,5 @@ public class OffsetLimit
       return maxIndex;
     }
   }
+
 }

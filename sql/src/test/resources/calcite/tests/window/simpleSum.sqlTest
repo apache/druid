@@ -3,9 +3,11 @@ type: "operatorValidation"
 sql: |
   SELECT
     FLOOR(__time TO DAY) t,
-    COUNT(1) OVER ()
-  FROM ( select * from foo offset 3 ) f
-  
+    SUM(cnt) c,
+    SUM(SUM(cnt)) OVER (ORDER BY FLOOR(__time TO DAY)) cc
+  FROM foo
+  GROUP BY FLOOR(__time TO DAY)
+
 expectedOperators:
   - { type: "naivePartition", partitionColumns: [ ] }
   - type: "window"
