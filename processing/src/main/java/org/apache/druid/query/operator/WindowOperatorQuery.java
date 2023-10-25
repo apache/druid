@@ -111,7 +111,17 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
         if (subQuery instanceof ScanQuery) {
           ScanQuery scan = (ScanQuery) subQuery;
 
-          List<ColumnWithDirection> ordering = ColumnWithDirection.fromOrderBys(scan.getOrderBys());
+          ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
+            ordering.add(
+                new ColumnWithDirection(
+                    orderBy.getColumnName(),
+                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
+                    ? ColumnWithDirection.Direction.DESC
+                    : ColumnWithDirection.Direction.ASC
+                )
+            );
+          }
 
           this.leafOperators.add(
               new ScanOperatorFactory(
