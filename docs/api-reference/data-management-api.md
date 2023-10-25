@@ -23,9 +23,12 @@ sidebar_label: Data management
   ~ under the License.
   -->
 
-This topic describes the data management API endpoints for Apache Druid. This includes information on how to mark segments as used or unused and delete them from Druid.
+This topic describes the data management API endpoints for Apache Druid. 
+This includes information on how to mark segments as used or unused and delete them from Druid.
 
-In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. 
+Replace it with the information for your deployment. 
+For example, use `http://localhost:8888` for quickstart deployments.
 
 :::info
 Avoid using indexing or kill tasks and these APIs at the same time for the same datasource and time chunk.
@@ -33,15 +36,26 @@ Avoid using indexing or kill tasks and these APIs at the same time for the same 
 
 ## Segment management
 
-You can mark segments as used by sending POST requests to the datasource, but the Coordinator may subsequently mark segments as unused if they meet any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if these API requests update segments to used, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
+You can mark segments as used by sending POST requests to the datasource, but the Coordinator may subsequently mark segments as unused if they meet any configured [drop rules](../operations/rule-configuration.md#drop-rules). 
+Even if these API requests update segments to used, you still need to configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes.
 
-When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. Some segments may be terminated, while others are marked as used. Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully. 
+When you use these APIs concurrently with an indexing task or a kill task, the behavior is undefined. 
+Druid terminates some segments and marks others as used. 
+Furthermore, it is possible that all segments could be unused, yet an indexing task might still be able to read data from these segments and complete successfully. 
+
+### Segment IDs
+
+You must provide segment IDs when using many of the endpoints described in this topic. 
+For information on segment IDs, see [Segment identification](../design/segments.md#segment-identification). 
+For information on finding segment IDs in the web console, see [Segments](../operations/web-console.md#segments).
 
 ### Mark a single segment unused
 
-Marks the state of a segment as unused, using the segment ID. This is a "soft delete" of the segment from Historicals. To undo this action, mark the segments used.
+Marks the state of a segment as unused, using the segment ID. 
+This is a "soft delete" of the segment from Historicals. 
+To undo this action, mark the segments used.
 
-Note that this endpoint returns an HTTP `200 OK` response code even if the segment ID or datasource does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the segment ID or datasource doesn't exist.
 
 #### URL
 
@@ -173,9 +187,11 @@ Accept: application/json, text/plain
 
 ### Mark a group of segments unused
 
-Marks the state of a group of segments as unused, using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
+Marks the state of a group of segments as unused, using an array of segment IDs or an interval. 
+Pass the array of segment IDs or interval as a JSON object in the request body.
 
-For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. 
+Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
 #### URL 
 
@@ -261,9 +277,11 @@ Content-Length: 230
 
 ### Mark a group of segments used
 
-Marks the state of a group of segments as used, using an array of segment IDs or an interval. Pass the array of segment IDs or interval as a JSON object in the request body.
+Marks the state of a group of segments as used, using an array of segment IDs or an interval. 
+Pass the array of segment IDs or interval as a JSON object in the request body.
 
-For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
+For the interval, specify the start and end times as ISO 8601 strings to identify segments inclusive of the start time and exclusive of the end time. 
+Druid only updates the segments completely contained within the specified interval; partially overlapping segments are not affected.
 
 #### URL 
 
@@ -349,9 +367,10 @@ Content-Length: 230
 
 ### Mark all segments unused
 
-Marks the state of all segments of a datasource as unused. This action performs a "soft delete" of the segments from Historicals.
+Marks the state of all segments of a datasource as unused. 
+This action performs a "soft delete" of the segments from Historicals.
 
-Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
 
 #### URL 
 
@@ -402,9 +421,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Mark all segments used
 
-Marks the state of all unused segments of a datasource as used. The endpoint returns the number of changed segments. 
+Marks the state of all unused segments of a datasource as used. 
+The endpoint returns the number of changed segments. 
 
-Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
 
 #### URL
 
@@ -432,7 +452,8 @@ Accept: application/json, text/plain
 
 #### Sample request
 
-The following example updates all unused segments of `wikipedia_hour` to used. `wikipedia_hour` contains one unused segment eligible to be marked as used.
+The following example updates all unused segments of `wikipedia_hour` to used. 
+`wikipedia_hour` contains one unused segment eligible to be marked as used.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -473,7 +494,7 @@ Accept: application/json, text/plain
 
 The DELETE endpoint sends a [kill task](../ingestion/tasks.md) for a given interval and datasource. The interval value is an ISO 8601 string delimited by `_`. This request permanently deletes all metadata for unused segments and removes them from deep storage.
 
-Note that this endpoint returns an HTTP `200 OK` response code even if the datasource does not exist.
+Note that this endpoint returns an HTTP `200 OK` response code even if the datasource doesn't exist.
 
 This endpoint supersedes the deprecated endpoint: `DELETE /druid/coordinator/v1/datasources/:datasource?kill=true&interval=:interval`
 
