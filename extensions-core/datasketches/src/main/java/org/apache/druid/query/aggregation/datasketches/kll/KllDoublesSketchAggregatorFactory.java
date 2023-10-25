@@ -125,7 +125,7 @@ public class KllDoublesSketchAggregatorFactory extends KllSketchAggregatorFactor
   @Override
   int getMaxSerializedSizeBytes(final int k, final long n)
   {
-    return KllDoublesSketch.getMaxSerializedSizeBytes(k, n, SketchType.DOUBLES_SKETCH, true);
+    return KllSketch.getMaxSerializedSizeBytes(k, n, SketchType.DOUBLES_SKETCH, true);
   }
 
   @Override

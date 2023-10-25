@@ -125,7 +125,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
   @Override
   int getMaxSerializedSizeBytes(final int k, final long n)
   {
-    return KllFloatsSketch.getMaxSerializedSizeBytes(k, n, SketchType.FLOATS_SKETCH, true);
+    return KllSketch.getMaxSerializedSizeBytes(k, n, SketchType.FLOATS_SKETCH, true);
   }
 
   @Override
