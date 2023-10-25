@@ -1466,6 +1466,7 @@ public class DruidQuery
               null,
               null,
               null,
+              null,
               virtualColumns,
               null))
           .addAll(windowing.getOperators())
@@ -1487,7 +1488,10 @@ public class DruidQuery
   @Nullable
   private WindowOperatorQuery toScanAndSortQuery()
   {
-    if (sorting == null || !sorting.isPureOrder()) {
+    if (sorting == null
+        || sorting.getOrderBys().isEmpty()
+        || sorting.getOffsetLimit().getOffset() > 0
+        || sorting.getProjection() != null) {
       return null;
     }
 
@@ -1498,15 +1502,27 @@ public class DruidQuery
 
     QueryDataSource newDataSource = new QueryDataSource(scan);
     ArrayList<ColumnWithDirection> sortColumns = getColumnWithDriectionsFromOrderBys(sorting.getOrderBys());
-    NaiveSortOperatorFactory sortOperator = new NaiveSortOperatorFactory(sortColumns);
-
     RowSignature signature = getOutputRowSignature();
+    List<OperatorFactory> operators = new ArrayList<>();
+
+    operators.add(new NaiveSortOperatorFactory(sortColumns));
+    if (!sorting.getOffsetLimit().isNone()) {
+      operators.add(new ScanOperatorFactory(
+          null,
+          null,
+          null,
+          (int) sorting.getOffsetLimit().getLimit(),
+          null,
+          null,
+          null));
+    }
+
     return new WindowOperatorQuery(
         newDataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         signature,
-        Collections.singletonList(sortOperator),
+        operators,
         null);
   }
 

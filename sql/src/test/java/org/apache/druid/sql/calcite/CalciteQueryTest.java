@@ -14341,8 +14341,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     skipVectorize();
     cannotVectorize();
-    testQuery(
-        "with t AS (SELECT m2 as mo, COUNT(m1) as trend_score\n"
+    String sql = "with t AS (SELECT m2 as mo, COUNT(m1) as trend_score\n"
         + "FROM \"foo\"\n"
         + "GROUP BY 1\n"
         + "ORDER BY trend_score DESC\n"
@@ -14350,56 +14349,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "select mo, (MAX(trend_score)) from t\n"
         + "where mo > 2\n"
         + "GROUP BY 1 \n"
-        + "ORDER BY 2 DESC LIMIT 2\n",
-        QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(
-            new GroupByQuery.Builder()
-                .setDataSource(
-                    new TopNQueryBuilder()
-                        .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
-                        .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
-                        .threshold(10)
-                        .aggregators(aggregators(
-                            useDefault
-                            ? new CountAggregatorFactory("a0")
-                            : new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("a0"),
-                                notNull("m1")
-                            )
-                        ))
-                        .metric(new NumericTopNMetricSpec("a0"))
-                        .context(OUTER_LIMIT_CONTEXT)
-                        .build()
-                )
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(
-                    new DefaultDimensionSpec("d0", "_d0", ColumnType.DOUBLE)
-                )
-                .setDimFilter(
-                    useDefault ?
-                    bound("d0", "2", null, true, false, null, StringComparators.NUMERIC) :
-                    new RangeFilter("d0", ColumnType.LONG, 2L, null, true, false, null)
-                )
-                .setAggregatorSpecs(aggregators(
-                    new LongMaxAggregatorFactory("_a0", "a0")
-                ))
-                .setLimitSpec(
-                    DefaultLimitSpec
-                        .builder()
-                        .orderBy(new OrderByColumnSpec("_a0", Direction.DESCENDING, StringComparators.NUMERIC))
-                        .limit(2)
-                        .build()
-                )
-                .setContext(OUTER_LIMIT_CONTEXT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{3.0D, 1L},
-            new Object[]{4.0D, 1L}
-        )
-    );
+        + "ORDER BY 2 DESC LIMIT 2\n";
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {3.0D, 1L},
+        new Object[] {4.0D, 1L});
+    testBuilder()
+        .sql(sql)
+        .expectedResults(expectedResults)
+        .run();
   }
 
 }

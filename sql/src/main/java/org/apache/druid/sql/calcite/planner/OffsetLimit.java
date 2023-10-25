@@ -76,6 +76,11 @@ public class OffsetLimit
     return limit != null;
   }
 
+  public boolean isNone()
+  {
+    return !hasLimit() && !hasOffset();
+  }
+
   public long getLimit()
   {
     Preconditions.checkState(limit != null, "limit is not present");
