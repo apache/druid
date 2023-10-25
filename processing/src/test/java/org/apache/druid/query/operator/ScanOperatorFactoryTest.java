@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.operator;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
@@ -61,7 +60,7 @@ public class ScanOperatorFactoryTest
     final Builder bob = new Builder();
     bob.timeRange = Intervals.utc(0, 6);
     bob.filter = DimFilters.dimEquals("abc", "b");
-    bob.limit = OffsetLimit.limit(48);
+    bob.offsetLimit = OffsetLimit.limit(48);
     bob.projectedColumns = Arrays.asList("a", "b");
     bob.virtualColumns = VirtualColumns.EMPTY;
     bob.ordering = Collections.singletonList(ColumnWithDirection.ascending("a"));
@@ -72,20 +71,21 @@ public class ScanOperatorFactoryTest
 
     Assert.assertNotEquals(factory, bob.copy().setTimeRange(null).build());
     Assert.assertNotEquals(factory, bob.copy().setFilter(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setLimit(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setOffsetLimit(null).build());
     Assert.assertNotEquals(factory, bob.copy().setProjectedColumns(null).build());
     Assert.assertNotEquals(factory, bob.copy().setVirtualColumns(null).build());
     Assert.assertNotEquals(factory, bob.copy().setOrdering(null).build());
   }
 
   @Test
-  public void testWrappedOperatorCarriesThroughValues() throws JsonProcessingException
+  public void testWrappedOperatorCarriesThroughValues() throws Exception
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE));
 
-    Interval[] intervals = new Interval[]{Intervals.utc(0, 6), Intervals.utc(6, 13), Intervals.utc(4, 8)};
+    Interval[] intervals = new Interval[]{null, Intervals.utc(0, 6), Intervals.utc(6, 13), Intervals.utc(4, 8)};
     DimFilter[] filters = new DimFilter[]{
+        null,
         new InDimFilter("dim", ImmutableSet.of("a", "b", "c", "e", "g")),
         DimFilters.and(
             new InDimFilter("dim", ImmutableSet.of("a", "b", "g")),
@@ -97,118 +97,122 @@ public class ScanOperatorFactoryTest
         ),
         DimFilters.dimEquals("dim", "f")
     };
-    int[] limits = new int[]{100, 1000};
+    int[] offsets = new int[]{0, 10};
+    int[] limits = new int[]{-1, 100, 1000};
     List<ColumnWithDirection>[] orderings = new List[]{
+        null,
         Arrays.asList(ColumnWithDirection.descending("__time"), ColumnWithDirection.ascending("dim")),
         Collections.singletonList(ColumnWithDirection.ascending("val")),
         Collections.emptyList()
     };
     List<String>[] projections = new List[]{
+        null,
         Arrays.asList("dim", "val"),
         Collections.singletonList("dim"),
         Collections.emptyList()
     };
     VirtualColumns[] virtualCols = new VirtualColumns[]{
+        null,
+        VirtualColumns.EMPTY,
         VirtualColumns.create(Collections.singletonList(
             new ExpressionVirtualColumn("test", "2", null, TestExprMacroTable.INSTANCE)
         ))
     };
 
-    for (int i = 0; i <= intervals.length; ++i) {
-      Interval interval = (i == 0 ? null : intervals[i - 1]);
-      for (int j = 0; j <= filters.length; ++j) {
-        DimFilter filter = (j == 0 ? null : filters[j - 1]);
-        for (int k = 0; k <= limits.length; ++k) {
-          int limit = (k == 0 ? -1 : limits[k - 1]);
-          for (int l = 0; l <= orderings.length; ++l) {
-            List<ColumnWithDirection> ordering = (l == 0) ? null : orderings[l - 1];
-            for (int m = 0; m <= projections.length; ++m) {
-              List<String> projection = (m == 0) ? null : projections[m - 1];
-              for (int n = 0; n <= virtualCols.length; ++n) {
-                VirtualColumns virtual = (n == 0) ? VirtualColumns.EMPTY : virtualCols[n - 1];
+    for (Interval interval : intervals) {
+      for (DimFilter filter : filters) {
+        for (int offset : offsets) {
+          for (int limit : limits) {
+            for (List<ColumnWithDirection> ordering : orderings) {
+              for (List<String> projection : projections) {
+                for (VirtualColumns virtual : virtualCols) {
 
+                  String msg = StringUtils.format(
+                      "interval[%s], filter[%s], limit[%s], ordering[%s], projection[%s], virtual[%s]",
+                      interval,
+                      filter,
+                      OffsetLimit.build(offset, limit),
+                      ordering,
+                      projection,
+                      virtual);
 
-                String msg = StringUtils.format(
-                    "interval[%s], filter[%s], limit[%s], ordering[%s], projection[%s], virtual[%s]",
-                    interval,
-                    filter,
-                    OffsetLimit.limit(limit),
-                    ordering,
-                    projection,
-                    virtual
-                );
+                  ScanOperatorFactory factory = new ScanOperatorFactory(
+                      interval,
+                      filter,
+                      OffsetLimit.build(offset, limit),
+                      projection,
+                      virtual,
+                      ordering);
 
-                ScanOperatorFactory factory = new ScanOperatorFactory(
-                    interval,
-                    filter,
-                    OffsetLimit.limit(limit),
-                    projection,
-                    virtual,
-                    ordering
-                );
-
-                final String asString = mapper.writeValueAsString(factory);
-                final ScanOperatorFactory deserialized = mapper.readValue(asString, ScanOperatorFactory.class);
-
-                Assert.assertEquals(msg, factory, deserialized);
-                Assert.assertEquals(msg, factory.hashCode(), deserialized.hashCode());
-
-                final ScanOperator wrapped = (ScanOperator) factory.wrap(new Operator()
-                {
-                  @Nullable
-                  @Override
-                  public Closeable goOrContinue(
-                      Closeable continuationObject,
-                      Receiver receiver
-                  )
-                  {
-                    receiver.push(new TestRowsAndColumns().withAsImpl(
-                        RowsAndColumnsDecorator.class,
-                        TestRowsAndColumnsDecorator::new
-                    ));
-                    receiver.completed();
-                    return null;
-                  }
-                });
-
-                Operator.go(
-                    wrapped,
-                    new Operator.Receiver()
-                    {
-                      @Override
-                      public Operator.Signal push(RowsAndColumns inRac)
-                      {
-                        TestRowsAndColumnsDecorator.DecoratedRowsAndColumns rac =
-                            (TestRowsAndColumnsDecorator.DecoratedRowsAndColumns) inRac;
-
-                        Assert.assertEquals(msg, factory.getTimeRange(), rac.getTimeRange());
-                        Assert.assertEquals(msg, factory.getOffsetLimit(), rac.getLimit());
-                        Assert.assertEquals(msg, factory.getVirtualColumns(), rac.getVirtualColumns());
-                        validateList(msg, factory.getOrdering(), rac.getOrdering());
-                        validateList(msg, factory.getProjectedColumns(), rac.getProjectedColumns());
-
-                        Assert.assertEquals(
-                            msg,
-                            factory.getFilter() == null ? null : factory.getFilter().toFilter(),
-                            rac.getFilter()
-                        );
-
-                        return Operator.Signal.GO;
-                      }
-
-                      @Override
-                      public void completed()
-                      {
-
-                      }
-                    }
-                );
+                  testOperatorFactoryInternal(mapper, msg, factory);
+                }
               }
             }
           }
         }
       }
     }
+  }
+
+  private void testOperatorFactoryInternal(ObjectMapper mapper, String msg, ScanOperatorFactory factory)
+      throws Exception
+  {
+    final String asString = mapper.writeValueAsString(factory);
+    final ScanOperatorFactory deserialized = mapper.readValue(asString, ScanOperatorFactory.class);
+
+    Assert.assertEquals(msg, factory, deserialized);
+    Assert.assertEquals(msg, factory.hashCode(), deserialized.hashCode());
+
+    final ScanOperator wrapped = (ScanOperator) factory.wrap(new Operator()
+    {
+      @Nullable
+      @Override
+      public Closeable goOrContinue(
+          Closeable continuationObject,
+          Receiver receiver
+      )
+      {
+        receiver.push(new TestRowsAndColumns().withAsImpl(
+            RowsAndColumnsDecorator.class,
+            TestRowsAndColumnsDecorator::new
+        ));
+        receiver.completed();
+        return null;
+      }
+    });
+
+    Operator.go(
+        wrapped,
+        new Operator.Receiver()
+        {
+          @Override
+          public Operator.Signal push(RowsAndColumns inRac)
+          {
+            TestRowsAndColumnsDecorator.DecoratedRowsAndColumns rac =
+                (TestRowsAndColumnsDecorator.DecoratedRowsAndColumns) inRac;
+
+            Assert.assertEquals(msg, factory.getTimeRange(), rac.getTimeRange());
+            Assert.assertEquals(msg, factory.getOffsetLimit(), rac.getLimit());
+            Assert.assertEquals(msg, factory.getVirtualColumns(), rac.getVirtualColumns());
+            validateList(msg, factory.getOrdering(), rac.getOrdering());
+            validateList(msg, factory.getProjectedColumns(), rac.getProjectedColumns());
+
+            Assert.assertEquals(
+                msg,
+                factory.getFilter() == null ? null : factory.getFilter().toFilter(),
+                rac.getFilter()
+            );
+
+            return Operator.Signal.GO;
+          }
+
+          @Override
+          public void completed()
+          {
+
+          }
+        }
+    );
   }
 
   private static <T> void validateList(
@@ -228,7 +232,7 @@ public class ScanOperatorFactoryTest
   {
     private Interval timeRange;
     private DimFilter filter;
-    private OffsetLimit limit;
+    private OffsetLimit offsetLimit;
     private List<String> projectedColumns;
     private VirtualColumns virtualColumns;
     private List<ColumnWithDirection> ordering;
@@ -245,10 +249,9 @@ public class ScanOperatorFactoryTest
       return this;
     }
 
-    @Deprecated
-    public Builder setLimit(OffsetLimit limit)
+    public Builder setOffsetLimit(OffsetLimit limit)
     {
-      this.limit = limit;
+      this.offsetLimit = limit;
       return this;
     }
 
@@ -275,7 +278,7 @@ public class ScanOperatorFactoryTest
       Builder retVal = new Builder();
       retVal.timeRange = timeRange;
       retVal.filter = filter;
-      retVal.limit = limit;
+      retVal.offsetLimit = offsetLimit;
       retVal.projectedColumns = projectedColumns;
       retVal.virtualColumns = virtualColumns;
       retVal.ordering = ordering;
@@ -287,7 +290,7 @@ public class ScanOperatorFactoryTest
       return new ScanOperatorFactory(
           timeRange,
           filter,
-          limit,
+          offsetLimit,
           projectedColumns,
           virtualColumns,
           ordering
