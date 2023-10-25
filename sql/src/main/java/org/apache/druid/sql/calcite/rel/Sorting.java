@@ -169,17 +169,4 @@ public class Sorting
            ", offsetLimit=" + offsetLimit +
            '}';
   }
-
-  /**
-   * Decides if there is only order specified.
-   *
-   * @return true if qualifies
-   */
-  public boolean isPureOrder()
-  {
-    return !offsetLimit.hasLimit()
-        && !offsetLimit.hasOffset()
-        && projection == null
-        && !orderBys.isEmpty();
-  }
 }
