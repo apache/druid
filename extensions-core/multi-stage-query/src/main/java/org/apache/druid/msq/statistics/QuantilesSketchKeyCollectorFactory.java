@@ -134,7 +134,7 @@ public class QuantilesSketchKeyCollectorFactory
       offsetBytes += (long) Integer.BYTES * numItems;
 
       for (int i = 0; i < numItems; i++) {
-        final int keyLength = mem.getInt(start + Integer.BYTES * i);
+        final int keyLength = mem.getInt(start + (long) Integer.BYTES * i);
         final byte[] keyBytes = new byte[keyLength];
 
         mem.getByteArray(offsetBytes, keyBytes, 0, keyLength);
@@ -172,7 +172,7 @@ public class QuantilesSketchKeyCollectorFactory
     {
       int length = Integer.BYTES * numItems;
       for (int i = 0; i < numItems; i++) {
-        length = mem.getInt(offsetBytes + Integer.BYTES * i);
+        length = mem.getInt(offsetBytes + (long) Integer.BYTES * i);
       }
       return length;
     }
