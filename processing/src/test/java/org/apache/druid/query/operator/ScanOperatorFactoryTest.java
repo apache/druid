@@ -61,7 +61,7 @@ public class ScanOperatorFactoryTest
     final Builder bob = new Builder();
     bob.timeRange = Intervals.utc(0, 6);
     bob.filter = DimFilters.dimEquals("abc", "b");
-    bob.limit = OffsetLimit.limit(48);
+    bob.offsetLimit = OffsetLimit.limit(48);
     bob.projectedColumns = Arrays.asList("a", "b");
     bob.virtualColumns = VirtualColumns.EMPTY;
     bob.ordering = Collections.singletonList(ColumnWithDirection.ascending("a"));
@@ -72,7 +72,7 @@ public class ScanOperatorFactoryTest
 
     Assert.assertNotEquals(factory, bob.copy().setTimeRange(null).build());
     Assert.assertNotEquals(factory, bob.copy().setFilter(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setLimit(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setOffsetLimit(null).build());
     Assert.assertNotEquals(factory, bob.copy().setProjectedColumns(null).build());
     Assert.assertNotEquals(factory, bob.copy().setVirtualColumns(null).build());
     Assert.assertNotEquals(factory, bob.copy().setOrdering(null).build());
@@ -228,7 +228,7 @@ public class ScanOperatorFactoryTest
   {
     private Interval timeRange;
     private DimFilter filter;
-    private OffsetLimit limit;
+    private OffsetLimit offsetLimit;
     private List<String> projectedColumns;
     private VirtualColumns virtualColumns;
     private List<ColumnWithDirection> ordering;
@@ -245,10 +245,9 @@ public class ScanOperatorFactoryTest
       return this;
     }
 
-    @Deprecated
-    public Builder setLimit(OffsetLimit limit)
+    public Builder setOffsetLimit(OffsetLimit offsetLimit)
     {
-      this.limit = limit;
+      this.offsetLimit = offsetLimit;
       return this;
     }
 
@@ -275,7 +274,7 @@ public class ScanOperatorFactoryTest
       Builder retVal = new Builder();
       retVal.timeRange = timeRange;
       retVal.filter = filter;
-      retVal.limit = limit;
+      retVal.offsetLimit = offsetLimit;
       retVal.projectedColumns = projectedColumns;
       retVal.virtualColumns = virtualColumns;
       retVal.ordering = ordering;
@@ -287,7 +286,7 @@ public class ScanOperatorFactoryTest
       return new ScanOperatorFactory(
           timeRange,
           filter,
-          limit,
+          offsetLimit,
           projectedColumns,
           virtualColumns,
           ordering

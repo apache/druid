@@ -40,7 +40,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   private Interval interval;
   private Filter filter;
   private VirtualColumns virtualColumns;
-  private OffsetLimit limit;
+  private OffsetLimit offsetLimit;
   private List<ColumnWithDirection> ordering;
 
   public DefaultRowsAndColumnsDecorator(
@@ -63,7 +63,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
     this.interval = interval;
     this.filter = filter;
     this.virtualColumns = virtualColumns;
-    this.limit = limit;
+    this.offsetLimit = limit;
     this.ordering = ordering;
   }
 
@@ -114,8 +114,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   @Override
   public void setOffsetLimit(OffsetLimit offsetLimit)
   {
-    // FIXME previous implementation was setting numRows as limit
-    this.limit = offsetLimit;
+    this.offsetLimit = offsetLimit;
   }
 
   @Override
@@ -132,7 +131,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
         interval,
         filter,
         virtualColumns,
-        limit,
+        offsetLimit,
         ordering,
         columns == null ? null : new LinkedHashSet<>(columns)
     );
