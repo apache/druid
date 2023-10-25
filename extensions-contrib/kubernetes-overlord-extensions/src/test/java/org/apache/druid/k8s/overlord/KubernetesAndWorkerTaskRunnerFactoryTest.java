@@ -22,6 +22,8 @@ package org.apache.druid.k8s.overlord;
 
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
+import org.apache.druid.k8s.overlord.runnerstrategy.KubernetesRunnerStrategy;
+import org.apache.druid.k8s.overlord.runnerstrategy.WorkerRunnerStrategy;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -45,7 +47,8 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new KubernetesAndWorkerTaskRunnerConfig(null, null)
+        new KubernetesAndWorkerTaskRunnerConfig(null, null),
+        new WorkerRunnerStrategy()
     );
 
     EasyMock.expect(httpRemoteTaskRunnerFactory.build()).andReturn(null);
@@ -63,7 +66,8 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new KubernetesAndWorkerTaskRunnerConfig("remote", null)
+        new KubernetesAndWorkerTaskRunnerConfig(null, "remote"),
+        new WorkerRunnerStrategy()
     );
 
     EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
@@ -81,7 +85,8 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
         remoteTaskRunnerFactory,
-        new KubernetesAndWorkerTaskRunnerConfig("noop", null)
+        new KubernetesAndWorkerTaskRunnerConfig(null, "noop"),
+        new KubernetesRunnerStrategy()
     );
 
     EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
