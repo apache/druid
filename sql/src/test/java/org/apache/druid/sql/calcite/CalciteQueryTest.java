@@ -2725,7 +2725,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2810,7 +2810,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -4692,7 +4692,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -4724,7 +4724,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -4768,7 +4768,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
