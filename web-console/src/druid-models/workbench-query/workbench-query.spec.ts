@@ -423,7 +423,7 @@ describe('WorkbenchQuery', () => {
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
             useCache: false,
-            waitTillSegmentsLoad: true,
+            waitUntilSegmentsLoad: true,
           },
           header: true,
           query: 'INSERT INTO wiki2 SELECT * FROM wikipedia',

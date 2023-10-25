@@ -162,20 +162,20 @@ export function changeFinalizeAggregations(
     : deepDelete(context, 'finalizeAggregations');
 }
 
-// waitTillSegmentsLoad
+// waitUntilSegmentsLoad
 
-export function getWaitTillSegmentsLoad(context: QueryContext): boolean | undefined {
-  const { waitTillSegmentsLoad } = context;
-  return typeof waitTillSegmentsLoad === 'boolean' ? waitTillSegmentsLoad : undefined;
+export function getWaitUntilSegmentsLoad(context: QueryContext): boolean | undefined {
+  const { waitUntilSegmentsLoad } = context;
+  return typeof waitUntilSegmentsLoad === 'boolean' ? waitUntilSegmentsLoad : undefined;
 }
 
-export function changeWaitTillSegmentsLoad(
+export function changeWaitUntilSegmentsLoad(
   context: QueryContext,
-  waitTillSegmentsLoad: boolean | undefined,
+  waitUntilSegmentsLoad: boolean | undefined,
 ): QueryContext {
-  return typeof waitTillSegmentsLoad === 'boolean'
-    ? deepSet(context, 'waitTillSegmentsLoad', waitTillSegmentsLoad)
-    : deepDelete(context, 'waitTillSegmentsLoad');
+  return typeof waitUntilSegmentsLoad === 'boolean'
+    ? deepSet(context, 'waitUntilSegmentsLoad', waitUntilSegmentsLoad)
+    : deepDelete(context, 'waitUntilSegmentsLoad');
 }
 
 // groupByEnableMultiValueUnnesting

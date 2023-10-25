@@ -45,7 +45,7 @@ import {
   changeUseApproximateCountDistinct,
   changeUseApproximateTopN,
   changeUseCache,
-  changeWaitTillSegmentsLoad,
+  changeWaitUntilSegmentsLoad,
   getDurableShuffleStorage,
   getFinalizeAggregations,
   getGroupByEnableMultiValueUnnesting,
@@ -54,7 +54,7 @@ import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
   getUseCache,
-  getWaitTillSegmentsLoad,
+  getWaitUntilSegmentsLoad,
   summarizeIndexSpec,
 } from '../../../druid-models';
 import { deepGet, deepSet, pluralIfNeeded, tickIcon } from '../../../utils';
@@ -112,7 +112,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
 
   const maxParseExceptions = getMaxParseExceptions(queryContext);
   const finalizeAggregations = getFinalizeAggregations(queryContext);
-  const waitTillSegmentsLoad = getWaitTillSegmentsLoad(queryContext);
+  const waitUntilSegmentsLoad = getWaitUntilSegmentsLoad(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
   const selectDestination = queryContext.selectDestination ?? 'taskReport';
@@ -317,10 +317,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuTristate
                       icon={IconNames.STOPWATCH}
                       text="Wait until segments have loaded"
-                      value={waitTillSegmentsLoad}
+                      value={waitUntilSegmentsLoad}
                       undefinedEffectiveValue /* ={true} */
                       onValueChange={v =>
-                        changeQueryContext(changeWaitTillSegmentsLoad(queryContext, v))
+                        changeQueryContext(changeWaitUntilSegmentsLoad(queryContext, v))
                       }
                     />
                     <MenuTristate
