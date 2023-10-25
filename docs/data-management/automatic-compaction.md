@@ -203,28 +203,28 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 }
 ```
 
-## Concurrent compaction
+## Concurrent append and replace
 
 :::info
-Concurrent compaction is an [experimental feature](../development/experimental.md) and is not currently available for SQL-based ingestion.
+Concurrent append and replace is an [experimental feature](../development/experimental.md) and is not currently available for SQL-based ingestion.
 :::
 
-If you enable automatic compaction, you can also use concurrent compaction for streaming and legacy JSON-based batch ingestion. Concurrent compaction compacts the data as you ingest it.
+If you enable automatic compaction, you can also use concurrent append and replace to compact data as you ingest it for streaming and legacy JSON-based batch ingestion. 
 
-Setting up concurrent compaction is a two-step process. The first is to update your datasource and the second is to update your ingestion job.
+Setting up concurrent append and replace is a two-step process. The first is to update your datasource and the second is to update your ingestion job.
 
-Using concurrent compaction in the following scenarios can be beneficial:
+Using concurrent append and replace in the following scenarios can be beneficial:
 
 - If the job with an `APPEND` task and the job with a `REPLACE` task have the same segment granularity. For example, when a datasource and its streaming ingestion job have the same granularity.
 - If the job with an `APPEND` task  has a finer segment granularity than the replacing job.
 
-We do not recommend using concurrent compaction when the job with an `APPEND` task has a coarser granularity than the job with a `REPLACE` task. For example, if the `APPEND` job has a yearly granularity and the `REPLACE` job has a monthly granularity. The job that finishes second will fail.
+We do not recommend using concurrent append and replace when the job with an `APPEND` task has a coarser granularity than the job with a `REPLACE` task. For example, if the `APPEND` job has a yearly granularity and the `REPLACE` job has a monthly granularity. The job that finishes second will fail.
  
-### Configure concurrent compaction
+### Configure concurrent append and replace
 
 ##### Update the compaction settings with the API
  
- First, prepare your datasource for concurrent compaction by setting its task lock type to `REPLACE`.
+ First, prepare your datasource for concurrent append and replace by setting its task lock type to `REPLACE`.
 Add the `taskContext` like you would any other auto-compaction setting through the API:
 
 ```shell
@@ -244,7 +244,7 @@ In the **Compaction config** for a datasource, set  **Allow concurrent compactio
 
 #### Add a task lock type to your ingestion job
 
-Next, you need to configure the task lock type for your ingestion job. For streaming jobs, the context parameter goes in your supervisor spec. For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec. You can provide the context parameter through the API like any other parameter for a streaming ingestion or JSON-based batch ingestion.
+Next, you need to configure the task lock type for your ingestion job. For streaming jobs, the context parameter goes in your supervisor spec. For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec. You can provide the context parameter through the API like any other parameter for a streaming ingestion or JSON-based batch ingestion or UI.
 
 ##### Add the task lock type through the API
 
@@ -276,7 +276,10 @@ Keep in mind that `taskLockType` takes precedence over `useSharedLock`. Do not u
 
 ##### Add a task lock using the Druid console
 
-As part of the batch or streaming ingestion **Load data** wizards, you can choose **Allow concurrent append tasks** to use concurrent compaction. 
+As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, you can configure the task lock type for the ingestion during the **Publish** step:
+
+- If you set **Append to existing** to **True**, you can then set **Allow concurrent append tasks (experimental)** to **True**.
+- If you set **Append to existing** to **False**, you can then set **Allow concurrent replace tasks (experimental)** to **True**.
 
 
 ## Learn more

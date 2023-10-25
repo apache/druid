@@ -259,3 +259,11 @@ The following table outlines the configuration options for `indexSpec`:
 |`dimensionCompression`|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, `ZSTD` or `uncompressed`.|No|`LZ4`|
 |`metricCompression`|String|Compression format for primitive type metric columns. Choose from `LZ4`, `LZF`, `ZSTD`, `uncompressed` or `none`.|No|`LZ4`|
 |`longEncoding`|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|No|`longs`|
+
+## Context
+
+The following table outlines the configuration options for `context`:
+
+|Property|Type|Description|Required|Default|
+|-|-|-|-|-|
+| `taskLockType` | String | Set to `APPEND` or `REPLACE`. Controls whether the ingestion job uses concurrent append or concurrent replace when segments overlap. This can be used along with [automatic compaction](../../data-management/automatic-compaction#concurrent-append-and-replace) to compact data as you ingest it. If you set this to `REPLACE`, data gets overwritten in your datasource  datasource as you ingest if there's a matching interval.  |n/a |
