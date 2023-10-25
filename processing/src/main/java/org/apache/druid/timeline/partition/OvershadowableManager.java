@@ -37,6 +37,7 @@ import it.unimi.dsi.fastutil.shorts.ShortComparator;
 import it.unimi.dsi.fastutil.shorts.ShortComparators;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSet;
 import it.unimi.dsi.fastutil.shorts.ShortSortedSets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -406,7 +407,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
       subItr = stateMap.subMap(lowFence, false, highFence, false).descendingMap().entrySet().iterator();
     }
     catch (IllegalArgumentException e) {
-      throw new IAE("Illegal partitionId %s", highFence);
+      throw DruidException.defensive("Illegal partitionId %s", highFence);
     }
     return subItr;
   }
@@ -428,7 +429,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
       subItr = stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
     }
     catch (IllegalArgumentException e) {
-      throw new IAE("Illegal partitionId %s, please reduce number of segments per time-trunk!", lowFence);
+      throw DruidException.defensive("Illegal partitionId %s, please reduce number of segments per interval!", lowFence);
     }
     return subItr;
   }
@@ -1036,22 +1037,32 @@ class OvershadowableManager<T extends Overshadowable<T>>
            '}';
   }
 
-  @VisibleForTesting
   static class RootPartitionRange implements Comparable<RootPartitionRange>
   {
     private final int startPartitionId;
     private final int endPartitionId;
-    private static final int MAX_PARTITIONS_PER_TIMETRUNK = 65536;
+    private static final int MAX_PARTITIONS_PER_INTERVAL = 65536;
+    private static final int MAX_PARTITIONS_PER_INTERVAL_WARN = Short.MAX_VALUE;
 
     @VisibleForTesting
     static RootPartitionRange of(int startPartitionId, int endPartitionId)
     {
-      if (startPartitionId > MAX_PARTITIONS_PER_TIMETRUNK) {
+      if (startPartitionId > MAX_PARTITIONS_PER_INTERVAL_WARN) {
         log.error(
-            "PartitionId [%s] exceeding max number of Segments Druid can handle in single time-trunk [%s], please compact or reduce number of segments in time-trunk!",
+            "PartitionId [%d] exceeding max number of segments [%d] in a single interval. Please compact to reduce the number of segments in the time interval. This issue generally happens when you have late data coming into your real time ingestion or compaction has not run for some time. If you have late data coming into you real time ingestion, consider setting `lateMessageRejectionPeriod` in your supervisor tasks",
             startPartitionId,
-            MAX_PARTITIONS_PER_TIMETRUNK
+            MAX_PARTITIONS_PER_INTERVAL
         );
+      }
+      if (startPartitionId > MAX_PARTITIONS_PER_INTERVAL) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(
+                                DruidException.Category.CAPACITY_EXCEEDED)
+                            .build(
+                                "Number of segments in single interval [%s] can not exceed [%s], please contact cluster operator to compact or reduce number of segments in single interval!",
+                                startPartitionId,
+                                MAX_PARTITIONS_PER_INTERVAL
+                            );
       }
       return new RootPartitionRange(startPartitionId, endPartitionId);
     }

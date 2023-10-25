@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.timeline.partition.OvershadowableManager.RootPartitionRange;
 import org.apache.druid.timeline.partition.OvershadowableManager.State;
 import org.junit.Assert;
@@ -192,6 +193,10 @@ public class OvershadowableManagerTest
         State.VISIBLE
     );
     Assert.assertTrue(overshadowedGroups.isEmpty());
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage(
+        "Number of segments in single interval [66666] can not exceed [65536], please contact cluster operator to compact or reduce number of segments in single interval!");
+    manager.addChunk(newNonRootChunk(66666, 77777, 3, 1));
   }
 
   @Test
