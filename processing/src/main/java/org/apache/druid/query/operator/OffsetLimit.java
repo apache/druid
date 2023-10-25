@@ -21,17 +21,38 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
-public class MyOffsetLimit
+import java.util.Objects;
+
+public class OffsetLimit
 {
   protected final long offset;
   protected final long limit;
 
-  @JsonCreator
-  public MyOffsetLimit(long offset, long limit)
+  public static OffsetLimit none()
   {
+    return new OffsetLimit(0, -1);
+  }
+
+  @JsonCreator
+  public OffsetLimit(long offset, long limit)
+  {
+    Preconditions.checkArgument(offset >= 0, "offset >= 0");
     this.offset = offset;
     this.limit = limit;
+  }
+
+  @JsonProperty
+  public long getOffset()
+  {
+    return offset;
+  }
+
+  @JsonProperty
+  public long getLimit()
+  {
+    return limit;
   }
 
   public boolean isPresent()
@@ -49,21 +70,9 @@ public class MyOffsetLimit
     return limit >= 0;
   }
 
-  public static MyOffsetLimit limit(int limit2)
+  public static OffsetLimit limit(int limit2)
   {
-    return new MyOffsetLimit(0, limit2);
-  }
-
-  @JsonProperty
-  public long getOffset()
-  {
-    return offset;
-  }
-
-  @JsonProperty
-  public long getLimit()
-  {
-    return limit;
+    return new OffsetLimit(0, limit2);
   }
 
   public long getLimitOrMax()
@@ -75,8 +84,31 @@ public class MyOffsetLimit
     }
   }
 
-  public static MyOffsetLimit none()
+  @Override
+  public boolean equals(Object o)
   {
-    return new MyOffsetLimit(0, -1);
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof OffsetLimit)) {
+      return false;
+    }
+    OffsetLimit that = (OffsetLimit) o;
+    return limit == that.limit && offset == that.offset;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(limit, offset);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "OffsetLimit{" +
+        "offset=" + offset +
+        ", limit=" + limit +
+        '}';
   }
 }

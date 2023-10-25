@@ -167,4 +167,13 @@ public class OffsetLimit
            ", limit=" + limit +
            '}';
   }
+
+  public org.apache.druid.query.operator.OffsetLimit toOperatorOffsetLimit()
+  {
+    if(hasLimit()) {
+      return new org.apache.druid.query.operator.OffsetLimit(offset, limit);
+    } else {
+      return new org.apache.druid.query.operator.OffsetLimit(offset, -1);
+    }
+  }
 }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
-import org.apache.druid.query.operator.MyOffsetLimit;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumnsTestBase;
@@ -39,7 +39,7 @@ public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 
   private static FrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, MyOffsetLimit.none(), null, null);
+    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, OffsetLimit.none(), null, null);
 
     rac.numRows(); // materialize
 

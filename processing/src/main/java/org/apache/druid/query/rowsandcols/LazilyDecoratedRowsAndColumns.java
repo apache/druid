@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.MyOffsetLimit;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
@@ -74,7 +74,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   private Interval interval;
   private Filter filter;
   private VirtualColumns virtualColumns;
-  private MyOffsetLimit limit;
+  private OffsetLimit limit;
   private LinkedHashSet<String> viewableColumns;
   private List<ColumnWithDirection> ordering;
 
@@ -83,7 +83,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       Interval interval,
       Filter filter,
       VirtualColumns virtualColumns,
-      MyOffsetLimit limit,
+      OffsetLimit limit,
       List<ColumnWithDirection> ordering,
       LinkedHashSet<String> viewableColumns
   )
@@ -199,7 +199,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     interval = null;
     filter = null;
     virtualColumns = null;
-    limit = MyOffsetLimit.none();
+    limit = OffsetLimit.none();
     viewableColumns = null;
     ordering = null;
   }

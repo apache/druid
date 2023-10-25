@@ -21,7 +21,7 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.operator.MyOffsetLimit;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
@@ -75,7 +75,7 @@ public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestB
             "val * 2",
             ColumnType.LONG,
             TestExprMacroTable.INSTANCE)),
-        MyOffsetLimit.none(),
+        OffsetLimit.none(),
         null,
         null);
 

@@ -31,7 +31,7 @@ public class ScanOperatorFactory implements OperatorFactory
 {
   private final Interval timeRange;
   private final DimFilter filter;
-  private final MyOffsetLimit offsetLimit;
+  private final OffsetLimit offsetLimit;
   private final List<String> projectedColumns;
   private final VirtualColumns virtualColumns;
   private final List<ColumnWithDirection> ordering;
@@ -39,7 +39,7 @@ public class ScanOperatorFactory implements OperatorFactory
   public ScanOperatorFactory(
       @JsonProperty("timeRange") final Interval timeRange,
       @JsonProperty("filter") final DimFilter filter,
-      @JsonProperty("offsetLimit") final MyOffsetLimit offsetLimit,
+      @JsonProperty("offsetLimit") final OffsetLimit offsetLimit,
       @JsonProperty("projectedColumns") final List<String> projectedColumns,
       @JsonProperty("virtualColumns") final VirtualColumns virtualColumns,
       @JsonProperty("ordering") final List<ColumnWithDirection> ordering
@@ -66,7 +66,7 @@ public class ScanOperatorFactory implements OperatorFactory
   }
 
   @JsonProperty
-  public MyOffsetLimit getOffsetLimit()
+  public OffsetLimit getOffsetLimit()
   {
     return offsetLimit;
   }

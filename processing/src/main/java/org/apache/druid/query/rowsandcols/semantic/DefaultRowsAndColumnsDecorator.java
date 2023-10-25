@@ -21,7 +21,7 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.MyOffsetLimit;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.VirtualColumn;
@@ -40,14 +40,14 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   private Interval interval;
   private Filter filter;
   private VirtualColumns virtualColumns;
-  private MyOffsetLimit limit;
+  private OffsetLimit limit;
   private List<ColumnWithDirection> ordering;
 
   public DefaultRowsAndColumnsDecorator(
       RowsAndColumns base
   )
   {
-    this(base, null, null, null, MyOffsetLimit.none(), null);
+    this(base, null, null, null, OffsetLimit.none(), null);
   }
 
   public DefaultRowsAndColumnsDecorator(
@@ -55,7 +55,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
       Interval interval,
       Filter filter,
       VirtualColumns virtualColumns,
-      MyOffsetLimit limit,
+      OffsetLimit limit,
       List<ColumnWithDirection> ordering
   )
   {
@@ -112,7 +112,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   }
 
   @Override
-  public void setLimit(MyOffsetLimit offsetLimit)
+  public void setLimit(OffsetLimit offsetLimit)
   {
     // FIXME previous implementation was setting numRows as limit
     this.limit = offsetLimit;
