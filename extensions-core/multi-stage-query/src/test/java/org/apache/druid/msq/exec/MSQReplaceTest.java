@@ -26,8 +26,10 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
@@ -37,7 +39,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
@@ -685,6 +689,58 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
+  public void testReplaceAllOverEternitySegment()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    // Create a datasegment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.ETERNITY)
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    testIngestQuery().setSql(" REPLACE INTO foo "
+                             + "OVERWRITE ALL "
+                             + "SELECT __time, m1 "
+                             + "FROM foo "
+                             + "WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-03' "
+                             + "PARTITIONED BY MONTH")
+                     .setExpectedDataSource("foo")
+                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Collections.singletonList(Intervals.ETERNITY))
+                     .setExpectedTombstoneIntervals(
+                         ImmutableSet.of(
+                             Intervals.of("%s/%s", Intervals.ETERNITY.getStart(), "2000-01-01"),
+                             Intervals.of("%s/%s", "2000-02-01", Intervals.ETERNITY.getEnd())
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                         "foo",
+                         Intervals.of("2000-01-01T/P1M"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f},
+                             new Object[]{946771200000L, 2.0f}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
   public void testReplaceOnFoo1Range()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -992,6 +1048,52 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedResultRows(expectedResults)
                      .verifyResults();
+  }
+
+  @Test
+  public void testReplaceTombstonesWithTooManyBucketsThrowsException()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Create a datasegment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2001-01-01T/2003-01-04T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
+
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' and __time < TIMESTAMP '2002-01-01 00:00:00'"
+                         + "SELECT  __time, dim1 , count(*) as cnt "
+                         + "FROM foo "
+                         + "WHERE dim1 IS NOT NULL "
+                         + "GROUP BY 1, 2 "
+                         + "PARTITIONED by TIME_FLOOR(__time, 'PT1s') "
+                         + "CLUSTERED by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedExecutionErrorMatcher(
+                         CoreMatchers.allOf(
+                             CoreMatchers.instanceOf(ISE.class),
+                             ThrowableMessageMatcher.hasMessage(
+                                 CoreMatchers.containsString(expectedError)
+                             )
+                         )
+                     )
+                     .verifyExecutionError();
   }
 
   @Nonnull

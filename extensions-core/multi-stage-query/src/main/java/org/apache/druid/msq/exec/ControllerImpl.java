@@ -121,6 +121,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
+import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -1423,13 +1424,17 @@ public class ControllerImpl implements Controller
               intervalsToDrop,
               destination.getReplaceTimeChunks(),
               task.getDataSource(),
-              destination.getSegmentGranularity()
+              destination.getSegmentGranularity(),
+              Limits.MAX_PARTITION_BUCKETS
           );
           segmentsWithTombstones.addAll(tombstones);
           numTombstones = tombstones.size();
         }
         catch (IllegalStateException e) {
           throw new MSQException(e, InsertLockPreemptedFault.instance());
+        }
+        catch (IllegalArgumentException e) {
+          throw new MSQException(e, new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS));
         }
       }
 

@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -129,14 +130,16 @@ public class TombstoneHelper
       List<Interval> intervalsToDrop,
       List<Interval> intervalsToReplace,
       String dataSource,
-      Granularity replaceGranularity
+      Granularity replaceGranularity,
+      int maxBuckets
   ) throws IOException
   {
     Set<Interval> tombstoneIntervals = computeTombstoneIntervalsForReplace(
         intervalsToDrop,
         intervalsToReplace,
         dataSource,
-        replaceGranularity
+        replaceGranularity,
+        maxBuckets
     );
 
     final List<TaskLock> locks = taskActionClient.submit(new LockListAction());
@@ -175,6 +178,8 @@ public class TombstoneHelper
    *                           They should be aligned with the replaceGranularity
    * @param dataSource         Datasource on which the replace is to be performed
    * @param replaceGranularity Granularity of the replace query
+   * @param maxBuckets         Maximum number of partition buckets. If the number of computed tombstone buckets
+   *                           exceeds this threshold, the method will throw an error.
    * @return Intervals computed for the tombstones
    * @throws IOException
    */
@@ -182,11 +187,13 @@ public class TombstoneHelper
       List<Interval> intervalsToDrop,
       List<Interval> intervalsToReplace,
       String dataSource,
-      Granularity replaceGranularity
+      Granularity replaceGranularity,
+      int maxBuckets
   ) throws IOException
   {
     Set<Interval> retVal = new HashSet<>();
     List<Interval> usedIntervals = getExistingNonEmptyIntervalsOfDatasource(intervalsToReplace, dataSource);
+    int buckets = 0;
 
     for (Interval intervalToDrop : intervalsToDrop) {
       for (Interval usedInterval : usedIntervals) {
@@ -197,13 +204,18 @@ public class TombstoneHelper
         if (overlap == null) {
           continue;
         }
+        if (buckets > maxBuckets) {
+          throw new IAE("Cannot add more tombstone buckets than [%d].", maxBuckets);
+        }
 
         if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
           // Generate a tombstone interval covering the negative eternity interval.
-          retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketEnd(overlap.getEnd())));
+          retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketStart(overlap.getEnd())));
+          buckets += 1;
         } else if ((Intervals.ETERNITY.getEnd()).equals(overlap.getEnd())) {
           // Generate a tombstone interval covering the positive eternity interval.
           retVal.add(new Interval(replaceGranularity.bucketStart(overlap.getStart()), overlap.getEnd()));
+          buckets += 1;
         } else {
           // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
           // However when fetching from the iterator, the first interval is found using the bucketStart, which
@@ -225,7 +237,9 @@ public class TombstoneHelper
 
           // Helps in deduplication if required. Since all the intervals are uniformly granular, there should be no
           // no overlap post deduplication
-          retVal.addAll(Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator()));
+          HashSet<Interval> intervals = Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator());
+          retVal.addAll(intervals);
+          buckets += intervals.size();
         }
       }
     }
@@ -262,7 +276,7 @@ public class TombstoneHelper
 
   /**
    * Helper method to prune required tombstones. Only tombstones that cover used intervals will be created
-   * since those that not cover used intervals will be redundant.
+   * since those that do not cover used intervals will be redundant.
    * Example:
    * For a datasource having segments for 2020-01-01/2020-12-31 and 2022-01-01/2022-12-31, this method would return
    * the segment 2020-01-01/2020-12-31 if the input intervals asked for the segment between 2019 and 2021.

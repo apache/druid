@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -55,6 +56,8 @@ public class TombstoneHelperTest
 {
 
   private final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
+
+  private final int MAX_BUCKETS = 5_000;
 
   @Test
   public void noTombstonesWhenNoDataInInputIntervalAndNoExistingSegments() throws Exception
@@ -122,7 +125,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void tombstoneIntervalsCreatedForReplaceWhenReplaceIsContainedInUsedIntervals() throws Exception
+  public void tombstoneIntervalsForReplaceWhenReplaceIsContainedInUsedIntervals() throws Exception
   {
     Interval usedInterval = Intervals.of("2020-02-01/2020-04-01");
     Interval replaceInterval = Intervals.of("2020-03-01/2020-03-31");
@@ -145,7 +148,8 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -157,7 +161,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void tombstoneIntervalsCreatedForReplaceWhenThereIsAGapInUsedIntervals() throws Exception
+  public void tombstoneIntervalsForReplaceWhenThereIsAGapInUsedIntervals() throws Exception
   {
     List<Interval> usedIntervals = ImmutableList.of(
         Intervals.of("2020-02-01/2020-04-01"),
@@ -182,7 +186,8 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -195,7 +200,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void tombstoneIntervalsCreatedForReplaceWhenUsedIntervalsDonotAlign() throws Exception
+  public void tombstoneIntervalsForReplaceWhenUsedIntervalsDonotAlign() throws Exception
   {
     Interval usedInterval = Intervals.of("2020-02-01T12:12:12.121/2020-04-01T00:00:00.000");
     Interval replaceInterval = Intervals.of("2020-01-30/2020-03-31");
@@ -218,13 +223,14 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(ImmutableSet.of(Intervals.of("2020-02-01/2020-02-02")), tombstoneIntervals);
   }
 
   @Test
-  public void tombstoneIntervalsCreatedForReplaceWhenUsedIntervalsAreCompletelyDisjoint() throws Exception
+  public void tombstoneIntervalsForReplaceWhenUsedIntervalsAreCompletelyDisjoint() throws Exception
   {
     Interval usedInterval = Intervals.of("2020-02-01T12:12:12.121/2020-04-01T00:00:00.000");
     Interval replaceInterval = Intervals.of("2023-01-30/2023-03-31");
@@ -247,13 +253,14 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(ImmutableSet.of(), tombstoneIntervals);
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWhenDataLiesOnLeft() throws IOException
+  public void testTombstoneIntervalsForReplaceWhenDataLiesOnLeft() throws IOException
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
@@ -276,7 +283,8 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -292,7 +300,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWhenDataLiesOnRight() throws IOException
+  public void testTombstoneIntervalsForReplaceWhenDataLiesOnRight() throws IOException
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
@@ -315,7 +323,8 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -329,7 +338,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWhenDataLiesInMiddle() throws IOException
+  public void testTombstoneIntervalsForReplaceWhenDataLiesInMiddle() throws IOException
   {
     Interval usedInterval = Intervals.of("2020-01-01/2020-12-31");
     Interval replaceInterval = Intervals.of("2020-01-01/2020-12-31");
@@ -355,7 +364,8 @@ public class TombstoneHelperTest
         dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -376,7 +386,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWhenExistingGranularityIsEternity() throws IOException
+  public void testTombstoneIntervalsForReplaceWhenExistingGranularityIsEternity() throws IOException
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
@@ -399,7 +409,8 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -413,7 +424,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWhenExistingGranularityIsEternity2() throws IOException
+  public void testTombstoneIntervalsForReplaceWhenExistingGranularityIsEternity2() throws IOException
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
@@ -436,7 +447,8 @@ public class TombstoneHelperTest
         ImmutableList.of(dropInterval),
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
@@ -452,7 +464,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWhenReplaceAll() throws IOException
+  public void testTombstoneIntervalsForReplaceWhenReplaceAll() throws IOException
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
@@ -478,11 +490,12 @@ public class TombstoneHelperTest
         dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
-            Intervals.of("-146136543-09-08T08:23:32.096Z/1970-01-02T00:00:00.000Z"),
+            Intervals.of("-146136543-09-08T08:23:32.096Z/1970-01-01T00:00:00.000Z"),
             Intervals.of("1970-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")
         ),
         tombstoneIntervals
@@ -490,7 +503,7 @@ public class TombstoneHelperTest
   }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWithFiniteAndInfinitedropIntervals() throws IOException
+  public void testTombstoneIntervalsForReplaceWithFiniteAndInfiniteDropIntervals() throws IOException
   {
     Interval usedInterval = Intervals.ETERNITY;
     Interval replaceInterval = Intervals.ETERNITY;
@@ -517,11 +530,12 @@ public class TombstoneHelperTest
         dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        MAX_BUCKETS
     );
     Assert.assertEquals(
         ImmutableSet.of(
-            Intervals.of("-146136543-09-08T08:23:32.096Z/2000-01-02T00:00:00.000Z"),
+            Intervals.of("-146136543-09-08T08:23:32.096Z/2000-01-01T00:00:00.000Z"),
             Intervals.of("3000-01-01/3000-01-02"),
             Intervals.of("3000-01-02/3000-01-03"),
             Intervals.of("3000-01-03/3000-01-04"),
@@ -532,9 +546,43 @@ public class TombstoneHelperTest
     );
   }
 
+  @Test
+  public void testTombstoneIntervalsForReplaceOverLargeFiniteInterval() throws IOException
+  {
+    Interval usedInterval = Intervals.of("1000-01-01/9000-12-31");
+    Interval replaceInterval = Intervals.of("1000-01-01/9000-12-31");
+    List<Interval> dropIntervals = ImmutableList.of(
+        Intervals.of("1000-01-01/5000-12-31"),
+        Intervals.of("6000-01-01/9000-12-31")
+    );
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Assert.assertThrows(
+        IAE.class,
+        () -> tombstoneHelper.computeTombstoneIntervalsForReplace(
+            dropIntervals,
+            ImmutableList.of(replaceInterval),
+            "test",
+            replaceGranularity,
+            MAX_BUCKETS
+        )
+    );
+  }
 
   @Test
-  public void testTombstoneIntervalsCreatedForReplaceWithDayOverLargeFiniteInterval() throws IOException
+  public void testTombstoneIntervalsForReplaceOverLargeFiniteIntervalAndMaxBucket() throws IOException
   {
     Interval usedInterval = Intervals.of("1000-01-01/9000-12-31");
     Interval replaceInterval = Intervals.of("1000-01-01/9000-12-31");
@@ -560,54 +608,14 @@ public class TombstoneHelperTest
         dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
-        replaceGranularity
+        replaceGranularity,
+        3_000_000
     );
 
-    // ((5000 - 1000) * 365) + ((9000 - 6000) * 365 * 24) ~= 2557426 day intervals
+    // ((5000 - 1000) * 365) + ((9000 - 6000) * 365 * 24) ~= 2_557_426 day intervals
     Assert.assertEquals(
         dropIntervals.stream()
                      .mapToLong(interval -> interval.toDuration().getStandardDays())
-                     .sum(),
-        tombstoneIntervals.size()
-    );
-  }
-
-  @Test
-  public void testTombstoneIntervalsCreatedForReplaceWithHourOverLargeFiniteInterval() throws IOException
-  {
-    // Providing a larger interval with hour grain makes the test slow.
-    Interval usedInterval = Intervals.of("1900-01-01/3000-12-31");
-    Interval replaceInterval = Intervals.of("1900-01-01/3000-12-31");
-    List<Interval> dropIntervals = ImmutableList.of(
-        Intervals.of("1900-01-01/2000-11-30"),
-        Intervals.of("2500-01-01/3000-11-30")
-    );
-    Granularity replaceGranularity = Granularities.HOUR;
-
-    DataSegment existingUsedSegment =
-        DataSegment.builder()
-                   .dataSource("test")
-                   .interval(usedInterval)
-                   .version("oldVersion")
-                   .size(100)
-                   .build();
-    Assert.assertFalse(existingUsedSegment.isTombstone());
-    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
-           .thenReturn(Collections.singletonList(existingUsedSegment));
-    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
-
-    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
-        dropIntervals,
-        ImmutableList.of(replaceInterval),
-        "test",
-        replaceGranularity
-    );
-
-
-    // ((2000 - 1900) * 365 * 24) + ((3000 - 2500) * 365 * 24) ~= 5275488 hour intervals
-    Assert.assertEquals(
-        dropIntervals.stream()
-                     .mapToLong(interval -> interval.toDuration().getStandardHours())
                      .sum(),
         tombstoneIntervals.size()
     );
@@ -638,14 +646,13 @@ public class TombstoneHelperTest
 
     Assert.assertThrows(
         ISE.class,
-        () -> {
-          tombstoneHelper.computeTombstoneSegmentsForReplace(
-              ImmutableList.of(dropInterval),
-              ImmutableList.of(replaceInterval),
-              "test",
-              replaceGranularity
-          );
-        }
+        () -> tombstoneHelper.computeTombstoneSegmentsForReplace(
+            ImmutableList.of(dropInterval),
+            ImmutableList.of(replaceInterval),
+            "test",
+            replaceGranularity,
+            MAX_BUCKETS
+        )
     );
   }
 }
