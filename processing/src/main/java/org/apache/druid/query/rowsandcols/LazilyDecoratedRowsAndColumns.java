@@ -176,7 +176,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
   private boolean needsMaterialization()
   {
-    return interval != null || filter != null || limit.isPresent() || ordering != null || virtualColumns != null;
+    return interval != null || filter != null || limit != null || ordering != null || virtualColumns != null;
   }
 
   private Pair<byte[], RowSignature> materialize()
@@ -199,7 +199,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     interval = null;
     filter = null;
     virtualColumns = null;
-    limit = OffsetLimit.NONE;
+    limit = null;
     viewableColumns = null;
     ordering = null;
   }
