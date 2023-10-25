@@ -182,7 +182,7 @@ public class ScanOperatorFactoryTest
                             (TestRowsAndColumnsDecorator.DecoratedRowsAndColumns) inRac;
 
                         Assert.assertEquals(msg, factory.getTimeRange(), rac.getTimeRange());
-                        Assert.assertEquals(msg, factory.getOffsetLimit(), rac.getLimit());
+                        Assert.assertEquals(msg, factory.getOffsetLimit(), rac.getOffsetLimit());
                         Assert.assertEquals(msg, factory.getVirtualColumns(), rac.getVirtualColumns());
                         validateList(msg, factory.getOrdering(), rac.getOrdering());
                         validateList(msg, factory.getProjectedColumns(), rac.getProjectedColumns());

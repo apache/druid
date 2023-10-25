@@ -100,7 +100,7 @@ public class TestRowsAndColumnsDecorator implements RowsAndColumnsDecorator
       return virtualColumns;
     }
 
-    public OffsetLimit getLimit()
+    public OffsetLimit getOffsetLimit()
     {
       return offsetLimit;
     }
