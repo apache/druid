@@ -59,7 +59,7 @@ public class TestRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   }
 
   @Override
-  public void setLimit(OffsetLimit offsetLimit)
+  public void setOffsetLimit(OffsetLimit offsetLimit)
   {
     this.offsetLimit = offsetLimit;
   }

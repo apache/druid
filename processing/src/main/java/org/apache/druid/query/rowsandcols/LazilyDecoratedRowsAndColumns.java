@@ -403,12 +403,12 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     ).newFrameWriter(selectorFactory);
 
     rowId.set(0);
-    for (; rowId.get() < numRows && fetchRemaining>0; rowId.incrementAndGet()) {
+    for (; rowId.get() < numRows && fetchRemaining > 0; rowId.incrementAndGet()) {
       final int theId = rowId.get();
       if (rowsToSkip != null && rowsToSkip.get(theId)) {
         continue;
       }
-      if(offsetRemaining > 0) {
+      if (offsetRemaining > 0) {
         offsetRemaining--;
         continue;
       }

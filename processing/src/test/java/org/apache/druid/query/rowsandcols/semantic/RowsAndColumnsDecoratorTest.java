@@ -212,19 +212,9 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       vals.sort(comparator);
     }
 
-    if (limit .isPresent()) {
-
-      decor.setLimit(limit);
-
-      final int endIndex;
-      final int offset = (int) limit.getOffset();
-      if(limit.hasLimit()) {
-        endIndex=(int) Math.min(vals.size(), offset+limit.getLimitOrMax());
-      } else {
-        endIndex=vals.size();
-      }
-
-      vals = vals.subList(offset, endIndex);
+    if (limit.isPresent()) {
+      decor.setOffsetLimit(limit);
+      vals = vals.subList((int) limit.getOffset(), (int) limit.getFetchToIndex(vals.size()));
     }
 
     if (ordering != null) {

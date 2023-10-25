@@ -94,7 +94,7 @@ public class ScanOperator implements Operator
         }
 
         if (offsetLimit.isPresent()) {
-          decor.setLimit(offsetLimit);
+          decor.setOffsetLimit(offsetLimit);
         }
 
         if (!(ordering == null || ordering.isEmpty())) {

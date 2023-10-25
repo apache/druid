@@ -62,8 +62,7 @@ public interface RowsAndColumnsDecorator
 
   void addVirtualColumns(VirtualColumns virtualColumn);
 
-  @Deprecated
-  void setLimit(OffsetLimit offsetLimit);
+  void setOffsetLimit(OffsetLimit offsetLimit);
 
   void setOrdering(List<ColumnWithDirection> ordering);
 

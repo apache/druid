@@ -112,7 +112,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   }
 
   @Override
-  public void setLimit(OffsetLimit offsetLimit)
+  public void setOffsetLimit(OffsetLimit offsetLimit)
   {
     // FIXME previous implementation was setting numRows as limit
     this.limit = offsetLimit;
