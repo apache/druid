@@ -43,7 +43,6 @@ public class ScanOperator implements Operator
   private final Operator subOperator;
   private final Interval timeRange;
   private final Filter filter;
-  private final int offset;
   private final int limit;
   private final List<String> projectedColumns;
   private final VirtualColumns virtualColumns;
@@ -56,7 +55,6 @@ public class ScanOperator implements Operator
       Interval timeRange,
       Filter filter,
       List<ColumnWithDirection> ordering,
-      int offset,
       int limit
   )
   {
@@ -66,7 +64,6 @@ public class ScanOperator implements Operator
     this.timeRange = timeRange;
     this.filter = filter;
     this.ordering = ordering;
-    this.offset = offset;
     this.limit = limit;
   }
 

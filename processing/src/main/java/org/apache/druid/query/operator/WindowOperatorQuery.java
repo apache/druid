@@ -127,7 +127,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
               new ScanOperatorFactory(
                   null,
                   scan.getFilter(),
-                  (int) scan.getScanRowsOffset(),
                   (int) scan.getScanRowsLimit(),
                   scan.getColumns(),
                   scan.getVirtualColumns().isEmpty() ? null : scan.getVirtualColumns(),
