@@ -75,7 +75,7 @@ public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestB
             "val * 2",
             ColumnType.LONG,
             TestExprMacroTable.INSTANCE)),
-        OffsetLimit.none(),
+        OffsetLimit.NONE,
         null,
         null);
 

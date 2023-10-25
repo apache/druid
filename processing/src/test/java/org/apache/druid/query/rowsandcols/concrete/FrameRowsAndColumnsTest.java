@@ -39,7 +39,7 @@ public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 
   private static FrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, OffsetLimit.none(), null, null);
+    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, OffsetLimit.NONE, null, null);
 
     rac.numRows(); // materialize
 

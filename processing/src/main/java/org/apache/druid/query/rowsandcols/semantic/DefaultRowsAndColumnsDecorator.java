@@ -47,7 +47,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
       RowsAndColumns base
   )
   {
-    this(base, null, null, null, OffsetLimit.none(), null);
+    this(base, null, null, null, OffsetLimit.NONE, null);
   }
 
   public DefaultRowsAndColumnsDecorator(

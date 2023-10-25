@@ -199,7 +199,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     interval = null;
     filter = null;
     virtualColumns = null;
-    limit = OffsetLimit.none();
+    limit = OffsetLimit.NONE;
     viewableColumns = null;
     ordering = null;
   }

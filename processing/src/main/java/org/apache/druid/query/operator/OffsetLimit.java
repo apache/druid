@@ -30,10 +30,7 @@ public class OffsetLimit
   protected final long offset;
   protected final long limit;
 
-  public static OffsetLimit none()
-  {
-    return new OffsetLimit(0, -1);
-  }
+  public static final OffsetLimit NONE = new OffsetLimit(0, -1);
 
   @JsonCreator
   public OffsetLimit(long offset, long limit)
@@ -112,8 +109,19 @@ public class OffsetLimit
         '}';
   }
 
+  public long getFetchFromIndex(long maxIndex)
+  {
+    if (maxIndex <= offset) {
+      return 0;
+    }
+    return offset;
+  }
+
   public long getFetchToIndex(long maxIndex)
   {
+    if(maxIndex <= offset) {
+      return 0;
+    }
     if (hasLimit()) {
       long toIndex = limit + offset;
       if (limit > Long.MAX_VALUE - offset) {
