@@ -14349,10 +14349,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "select mo, (MAX(trend_score)) from t\n"
         + "where mo > 2\n"
         + "GROUP BY 1 \n"
-        + "ORDER BY 2 DESC LIMIT 2\n";
+        + "ORDER BY 2 DESC  LIMIT 2 OFFSET 1\n";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[] {3.0D, 1L},
-        new Object[] {4.0D, 1L});
+        new Object[] {4.0D, 1L},
+        new Object[] {5.0D, 1L});
     testBuilder()
         .sql(sql)
         .expectedResults(expectedResults)
