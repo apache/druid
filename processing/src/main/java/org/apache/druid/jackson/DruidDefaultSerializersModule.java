@@ -27,6 +27,9 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -37,11 +40,15 @@ import org.apache.druid.query.FrameBasedInlineDataSourceSerializer;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTimeZone;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.Channels;
 
 /**
  *
@@ -201,7 +208,29 @@ public class DruidDefaultSerializersModule extends SimpleModule
         // It would be really cool if jackson offered an output stream that would allow us to push bytes
         // through, but it doesn't right now, so we have to build a byte[] instead.  Maybe something to contribute
         // back to Jackson at some point.
-        gen.writeBinary(WireTransferable.fromRAC(value).bytesToTransfer());
+
+        if(value instanceof FrameRowsAndColumns) {
+
+          FrameRowsAndColumns frc = (FrameRowsAndColumns) value;
+
+          gen.writeObject(frc.getSignature());
+
+          Frame frame = frc.getFrame();
+          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          frame.writeTo(
+              Channels.newChannel(baos),
+              false,
+              ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+              ByteTracker.unboundedTracker()
+          );
+        gen.writeBinary(baos.toByteArray());
+//          byte[] b = new byte[] {1, 2, 3};
+//          gen.writeBinary(b);
+
+        } else {
+          throw DruidException.defensive("expected frame");
+        }
+
       }
     });
 
@@ -213,8 +242,13 @@ public class DruidDefaultSerializersModule extends SimpleModule
           DeserializationContext ctxt
       ) throws IOException
       {
-        // FIXME        use SerializerUtils
-        throw new RuntimeException("Unimplemented!");
+        RowSignature sig = p.readValueAs(RowSignature.class);
+        p.nextValue();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//        ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+        p.readBinaryValue(baos);
+//        p.readBinaryValue(baos2);
+        return new FrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig);
       }
     });
   }

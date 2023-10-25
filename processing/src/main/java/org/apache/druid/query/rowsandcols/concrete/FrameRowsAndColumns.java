@@ -21,6 +21,7 @@ package org.apache.druid.query.rowsandcols.concrete;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.FrameReader;
@@ -36,6 +37,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
@@ -108,17 +112,38 @@ public class FrameRowsAndColumns implements RowsAndColumns
       return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
     }
     if (WireTransferable.class.equals(clazz)) {
-      return (T) new WireTransferable() {
-
-        @Override
-        public byte[] bytesToTransfer()
-        {
-          throw new RuntimeException();
-          //return frame;
-        }
-
-      };
+      return (T) this;
     }
     return null;
+  }
+
+  public void writeTo(OutputStream os)
+  {
+    throw new RuntimeException("Unimplemented!");
+  }
+
+  public static FrameRowsAndColumns readFrom(InputStream is)
+  {
+    throw new RuntimeException("Unimplemented!");
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(frame, signature);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if(this == o ) {
+      return true;
+    }
+    if (!(o instanceof FrameRowsAndColumns) || o == null) {
+      return false;
+    }
+    FrameRowsAndColumns otherFrame = (FrameRowsAndColumns) o;
+
+    return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
   }
 }

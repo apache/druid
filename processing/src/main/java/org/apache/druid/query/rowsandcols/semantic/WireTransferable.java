@@ -34,4 +34,8 @@ public interface WireTransferable
   }
 
   byte[] bytesToTransfer();
+
+//
+//  void writeTo(OutputStream os);
+//  Object readFrom(InputStream is);
 }

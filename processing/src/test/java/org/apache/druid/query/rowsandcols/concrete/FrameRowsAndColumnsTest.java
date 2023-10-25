@@ -36,7 +36,7 @@ public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
     return buildFrame(input);
   };
 
-  private static FrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
+  public static FrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
     LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, Integer.MAX_VALUE, null, null);
 
