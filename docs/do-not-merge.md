@@ -19,21 +19,23 @@ Enable window functions in your query with the `enableWindowing: true` context p
 
 [#15184](https://github.com/apache/druid/pull/15184)
 
-## Concurrent compaction (experimental)
+## Concurrent append and replace (experimental)
 
-When you have automatic compaction enabled, you can use concurrent compaction to compact data as you ingest it. Concurrent compaction supports streaming ingestion and JSON-based batch ingestion.
+Druid 28.0.0 adds experimental support for concurrent append and replace.
+This feature allows you to safely replace the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this is appending new data to an interval while compaction of that interval is already in progress.
+For more information, see [Concurrent append and replace](https://druid.apache.org/docs/latest/data-management/automatic-compaction#concurrent-append-and-replace).
 
-For more information, see [Concurrent compaction](https://druid.apache.org/docs/latest/data-management/automatic-compaction#concurrent-compaction).
+Segment locking will be deprecated and removed in favour of concurrent append and replace that is much simpler in design. With concurrent append and replace, Druid doesn't lock compaction jobs out because of active realtime ingestion.
 
-### Concurrent batch APPEND and REPLACE
+### Task locks for append and replace batch ingestion jobs
 
-`APPEND` batch ingestion jobs can now share locks. This allows you to run multiple `APPEND` batch ingestion jobs against the same time internal. `REPLACE` batch ingestion jobs still require an exclusive lock. This means you can run multiple `APPEND` batch ingestion jobs and one `REPLACE` batch ingestion job for a given interval.
+Append batch ingestion jobs can now share locks. This allows you to run multiple append batch ingestion jobs against the same time internal. Replace batch ingestion jobs still require an exclusive lock. This means you can run multiple append batch ingestion jobs and one replace batch ingestion job for a given interval.
 
 [#14407](https://github.com/apache/druid/pull/14407)
 
-### Streaming ingestion with concurrent REPLACE
+### Streaming ingestion with concurrent replace
 
-Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest concurrently with compaction running with `REPLACE` locks. The segment granularity of the streaming job must be equal to or finer than that of the concurrent `REPLACE` job.
+Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest concurrently with compaction running with `REPLACE` locks. The segment granularity of the streaming job must be equal to or finer than that of the concurrent replace job.
 
 [#15039](https://github.com/apache/druid/pull/15039)
 
@@ -41,7 +43,7 @@ Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest
 
 [Query from deep storage](https://druid.apache.org/docs/latest/querying/query-deep-storage/) is no longer an experimental feature. When you query from deep storage, more data is available for queries without having to scale your Historical processes to accommodate more data. To benefit from the space saving that query from deep storage offers, configure your load rules to unload data from your Historical processes.
 
-### Result formats
+### Support for multiple result formats
 
 Query from deep storage now supports multiple result formats.
 Previously, the `/druid/v2/sql/statements/` endpoint only supported results in the `object` format. Now, results can be written in any format specified in the `resultFormat` parameter.
@@ -61,9 +63,9 @@ Druid now stops loading and moving segments as soon as they are marked as unused
 
 [#14644](https://github.com/apache/druid/pull/14644)
 
-## SQL planner upgrade
+## SQL planner improvements
 
-Druid uses Apache Calcite for SQL planning and optimization. Starting in Druid 28.0.0, the Calcite version has been upgraded from 1.21 to 1.35. As part of the upgrade, the [behavior of type inference for dynamic parameters](#dynamic-parameters) and the recommended [syntax for UNNEST](#new-syntax-for-sql-unnest) have changed.
+Druid uses Apache Calcite for SQL planning and optimization. Starting in Druid 28.0.0, the Calcite version has been upgraded from 1.21 to 1.35. This upgrade brings in many bug fixes in SQL planning from Calcite. As part of the upgrade, the [behavior of type inference for dynamic parameters](#dynamic-parameters) and the recommended [syntax for UNNEST](#new-syntax-for-sql-unnest) have changed.
 
 ### Dynamic parameters
 
@@ -103,14 +105,6 @@ Migrate to SQL-based ingestion or native ingestion if you are using Hadoop 2.x f
 
 [#14763](https://github.com/apache/druid/pull/14763)
 
-## Legacy groupBy v1 removed
-
-The groupBy v1 engine has been removed. Use the groupBy v2 engine instead.  
-If you are using groupBy v1 in native queries, you must change your queries before upgrading. Otherwise, your queries will fail.
-For more information, see [GroupBy queries](https://druid.apache.org/docs/latest/querying/groupbyquery).
-
-[#14866](https://github.com/apache/druid/pull/14866)
-
 ## JSON and auto column indexer
 
 The `json` type is now equivalent to using `auto` in native JSON-based ingestion dimension specs. Upgrade your ingestion specs to `json` to take advantage of the features and functionality of `auto`, including the following:
@@ -130,6 +124,8 @@ For more information, see [Nested column format in the upgrade notes](#nested-co
 # Additional features and improvements
 
 ## SQL compatibility
+
+Druid continues to make SQL query execution more consistent with how standard SQL behaves. However, there are feature flags available to restore the old behaviour if needed.
 
 ### Three-valued logic
 
@@ -165,19 +161,20 @@ This change may impact your query results. For more information, see [SQL compat
 
 ## SQL-based ingestion
 
-### Azure connector
+### Ability to ingest ARRAY types
 
-Added support for Microsoft's Azure storage type.
-You can now use fault tolerance and durable storage with Microsoft Azure's blob storage.
-For more information, see [Durable storage](https://druid.apache.org/docs/latest/multi-stage-query/reference#durable-storage).
+SQL-based ingestion now supports storing ARRAY typed values in [ARRAY typed columns](https://druid.apache.org/docs/latest/querying/arrays) as well as storing both VARCHAR and numeric typed arrays.
+Previously, the MSQ task engine incorrectly stored ARRAY typed values as [multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions) instead of ARRAY typed columns.
 
-[#14660](https://github.com/apache/druid/pull/14660)
+The MSQ task engine now includes the `arrayIngestMode` query context parameter, which controls how
+`ARRAY` types are stored in Druid segments.
+Set the `arrayIngestMode` query context parameter to `array` to ingest ARRAY types.
 
-### New ingestion mode for arrays
+In Druid 28.0.0, the default mode for `arrayIngestMode` is `mvd` for backwards compatibility, which only supports VARCHAR typed arrays and stores them as multi-value dimensions. This default is subject to removal in future releases.
 
-The MSQ task engine now includes an `arrayIngestMode` that determines how arrays are treated for ingestion. Previously, arrays were ingested as multi-value dimensions (MVDs). They can now be ingested as `ARRAY<STRING>` or numeric arrays instead if the ingest mode is set to `array`.
+Note that this improvement is incompatible with previous Druid versions. For information on how to migrate to the new behavior, see the [Ingestion options for ARRAY typed columns in the upgrade notes](#ingestion-options-for-array-typed-columns).
 
-The default mode is for MVDs, which is unchanged from previous releases.
+For information on inserting, filtering, and grouping behavior for `ARRAY` typed columns, see [Array columns](https://druid.apache.org/docs/latest/querying/arrays).
 
 [#15093](https://github.com/apache/druid/pull/15093)
 
@@ -187,16 +184,7 @@ Ingestion reports now include a `segmentLoadStatus` object that provides informa
 
 [#14322](https://github.com/apache/druid/pull/14322)
 
-### Other SQL-based ingestion improvements
-
-* Added a new `rowsPerPage` context parameter for the MSQ task engine.
-Use `rowsPerPage` to limit the number of rows per page. For more information on context parameters for the MSQ task engine, see [Context parameters](https://druid.apache.org/docs/latest/multi-stage-query/reference#context-parameters) [#14994](https://github.com/apache/druid/pull/14994)
-* Druid now ignores `ServiceClosedException` on `postCounters` while the controller is offline [#14707](https://github.com/apache/druid/pull/14707)
-* Improved error messages related to OVERWRITE keyword [#14870](https://github.com/apache/druid/pull/14870)
-
-## Ingestion
-
-### UNNEST functionality
+### Array flattening during ingestion
 
 You can now use UNNEST with MSQ queries. This lets you flatten and explode data during batch ingestion. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
 
@@ -204,7 +192,24 @@ You no longer need to include the context parameter `"enableUnnest": true` to ru
 
 [#14886](https://github.com/apache/druid/pull/14886)
 
-### Reset offsets for a supervisor
+### Azure connector
+
+Added support for Microsoft Azure Blob Storage.
+You can now use fault tolerance and durable storage with Microsoft Azure Blob Storage.
+For more information, see [Durable storage](https://druid.apache.org/docs/latest/multi-stage-query/reference#durable-storage).
+
+[#14660](https://github.com/apache/druid/pull/14660)
+
+### Other SQL-based ingestion improvements
+
+* Added a new `rowsPerPage` context parameter for the MSQ task engine.
+Use `rowsPerPage` to limit the number of rows per page. For more information on context parameters for the MSQ task engine, see [Context parameters](https://druid.apache.org/docs/latest/multi-stage-query/reference#context-parameters) [#14994](https://github.com/apache/druid/pull/14994)
+* Druid now ignores `ServiceClosedException` on `postCounters` while the controller is offline [#14707](https://github.com/apache/druid/pull/14707)
+* Improved error messages related to OVERWRITE keyword [#14870](https://github.com/apache/druid/pull/14870)
+
+## Streaming ingestion
+
+### Ability to reset offsets for a supervisor
 
 Added a new API endpoint `/druid/indexer/v1/supervisor/:supervisorId/resetOffsets` to reset specific partition offsets for a supervisor without resetting the entire set.
 This endpoint clears only the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading.
@@ -502,9 +507,9 @@ The API also returns unused segments if the `includeUnused` parameter is set.
 
 ### Added UI support for segment loading query context parameter
 
-The web console now supports the `waitTillSegmentsLoad` query context parameter.
+The web console now supports the `waitUntilSegmentsLoad` query context parameter.
 
-![UI for waitTillSegmentsLoad context parameter](image.png)
+![UI for waitUntilSegmentsLoad context parameter](image.png)
 
 [#15110](https://github.com/apache/druid/pull/15110)
 
@@ -761,6 +766,19 @@ Use `aggregatorMergeStrategy` instead. `aggregatorMergeStrategy` also supports t
 The paths for `druid.processing.merge.pool.*` and `druid.processing.merge.task.*` have been flattened to use `druid.processing.merge.*` instead. The legacy paths for the configs are now deprecated and will be removed in a future release. Migrate your settings to use the new paths because the old paths will be ignored in the future.
 
 [#14695](https://github.com/apache/druid/pull/14695)
+
+### Ingestion options for ARRAY typed columns
+
+Starting with Druid 28.0.0, the MSQ task engine can detect and ingest arrays as ARRAY typed columns when you set the query context parameter `arrayIngestMode` to `array`.
+The `arrayIngestMode` context parameter controls how ARRAY type values are stored in Druid segments.
+
+When you set `arrayIngestMode` to `array` (recommended for SQL compliance), the MSQ task engine stores all ARRAY typed values in [ARRAY typed columns](https://druid.apache.org/docs/latest/querying/arrays) and supports storing both VARCHAR and numeric typed arrays.
+
+For backwards compatibility, `arrayIngestMode` defaults to `mvd`. When `"arrayIngestMode":"mvd"`, Druid only supports VARCHAR typed arrays and stores them as [multi-value string columns](https://druid.apache.org/docs/latest/querying/multi-value-dimensions).
+
+When you set `arrayIngestMode` to `none`, Druid throws an exception when trying to store any type of arrays.
+
+For more information on how to ingest `ARRAY` typed columns with SQL-based ingestion, see [SQL data types](https://druid.apache.org/docs/latest/querying/sql-data-types#arrays) and [Array columns](https://druid.apache.org/docs/latest/querying/arrays).
 
 ## Incompatible changes
 
