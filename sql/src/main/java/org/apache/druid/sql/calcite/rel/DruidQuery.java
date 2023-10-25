@@ -68,6 +68,7 @@ import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.ColumnWithDirection.Direction;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
@@ -1483,7 +1484,6 @@ public class DruidQuery
   /**
    * Create an OperatorQuery which runs an order on top of a scan.
    */
-  // FIXME: could have a better name...
   @Nullable
   private WindowOperatorQuery toScanAndSortQuery()
   {
@@ -1497,8 +1497,7 @@ public class DruidQuery
     }
 
     QueryDataSource newDataSource = new QueryDataSource(scan);
-
-    ArrayList<ColumnWithDirection> sortColumns = ColumnWithDirection.fromOrderBysColumnSpecs(sorting.getOrderBys());
+    ArrayList<ColumnWithDirection> sortColumns = getColumnWithDriectionsFromOrderBys(sorting.getOrderBys());
     NaiveSortOperatorFactory sortOperator = new NaiveSortOperatorFactory(sortColumns);
 
     RowSignature signature = getOutputRowSignature();
@@ -1509,6 +1508,18 @@ public class DruidQuery
         signature,
         Collections.singletonList(sortOperator),
         null);
+  }
+
+  private ArrayList<ColumnWithDirection> getColumnWithDriectionsFromOrderBys(List<OrderByColumnSpec> orderBys)
+  {
+    ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+    for (OrderByColumnSpec orderBySpec : orderBys) {
+      Direction direction = orderBySpec.getDirection() == OrderByColumnSpec.Direction.ASCENDING
+          ? ColumnWithDirection.Direction.ASC
+          : ColumnWithDirection.Direction.DESC;
+      ordering.add(new ColumnWithDirection(orderBySpec.getDimension(), direction));
+    }
+    return ordering;
   }
 
   /**

@@ -21,12 +21,7 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.scan.ScanQuery.OrderBy;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class ColumnWithDirection
@@ -39,41 +34,6 @@ public class ColumnWithDirection
   public static ColumnWithDirection descending(String column)
   {
     return new ColumnWithDirection(column, Direction.DESC);
-  }
-
-  public static ArrayList<ColumnWithDirection> fromOrderBys(List<OrderBy> orderBys)
-  {
-    ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-    for (ScanQuery.OrderBy orderBy : orderBys) {
-      ordering.add(fromOrderBy(orderBy));
-    }
-    return ordering;
-  }
-
-  public static ArrayList<ColumnWithDirection> fromOrderBysColumnSpecs(List<OrderByColumnSpec> orderBySpecs)
-  {
-    ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-    for (OrderByColumnSpec orderBySpec : orderBySpecs) {
-      ordering.add(fromOrderBysColumnSpec(orderBySpec));
-    }
-    return ordering;
-  }
-
-  public static ColumnWithDirection fromOrderBysColumnSpec(OrderByColumnSpec orderBySpec)
-  {
-    return new ColumnWithDirection(orderBySpec.getDimension(),
-        orderBySpec.getDirection() == OrderByColumnSpec.Direction.ASCENDING ? ColumnWithDirection.Direction.ASC
-            : ColumnWithDirection.Direction.DESC);
-
-  }
-
-  public static ColumnWithDirection fromOrderBy(ScanQuery.OrderBy orderBy)
-  {
-    return new ColumnWithDirection(
-        orderBy.getColumnName(),
-        ScanQuery.Order.DESCENDING == orderBy.getOrder()
-            ? ColumnWithDirection.Direction.DESC
-            : ColumnWithDirection.Direction.ASC);
   }
 
   public enum Direction
@@ -146,5 +106,4 @@ public class ColumnWithDirection
            ", direction=" + direction +
            '}';
   }
-
 }
