@@ -1541,10 +1541,8 @@ public class DruidQuery
    * @return query or null
    */
   @Nullable
-  private ScanQuery toScanQuery(boolean considerSorting)
+  private ScanQuery toScanQuery(final boolean considerSorting)
   {
-    final Sorting sorting = considerSorting ? this.sorting : null;
-
     if (grouping != null || windowing != null) {
       // Scan cannot GROUP BY or do windows.
       return null;
@@ -1568,7 +1566,7 @@ public class DruidQuery
     long scanOffset = 0L;
     long scanLimit = 0L;
 
-    if (sorting != null) {
+    if (considerSorting && sorting != null) {
       scanOffset = sorting.getOffsetLimit().getOffset();
 
       if (sorting.getOffsetLimit().hasLimit()) {
