@@ -22,6 +22,7 @@ package org.apache.druid.storage.azure;
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.ChainedTokenCredentialBuilder;
+import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.identity.ManagedIdentityCredential;
 import com.azure.identity.ManagedIdentityCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
@@ -49,7 +50,6 @@ public class AzureClientFactory
 
   public BlobServiceClient getBlobServiceClient()
   {
-    ChainedTokenCredentialBuilder credentialBuilder = new ChainedTokenCredentialBuilder();
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
         .endpoint("https://" + config.getAccount() + ".blob.core.windows.net")
         .retryOptions(new RetryOptions(
@@ -61,12 +61,9 @@ public class AzureClientFactory
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
     } else if (config.getManagedIdentityClientId() != null) {
-      ManagedIdentityCredential managedIdentityCredential = new ManagedIdentityCredentialBuilder()
-          .clientId(config.getManagedIdentityClientId())
-          .resourceId(config.getAccount())
-          .build();
-      credentialBuilder.addFirst(managedIdentityCredential);
-      clientBuilder.credential(credentialBuilder.build());
+      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
+          .managedIdentityClientId(config.getManagedIdentityClientId());
+      clientBuilder.credential(defaultAzureCredentialBuilder.build());
     }
     return clientBuilder.buildClient();
   }
