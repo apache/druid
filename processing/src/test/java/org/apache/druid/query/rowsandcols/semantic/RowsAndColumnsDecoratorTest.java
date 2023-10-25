@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.MyOffsetLimit;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
@@ -121,7 +122,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         for (int k = 0; k <= limits.length; ++k) {
           int limit = (k == 0 ? -1 : limits[k - 1]);
           for (int l = 0; l <= orderings.length; ++l) {
-            validateDecorated(base, siggy, vals, interval, filter, limit, l == 0 ? null : orderings[l - 1]);
+            validateDecorated(base, siggy, vals, interval, filter, MyOffsetLimit.limit(limit), l == 0 ? null : orderings[l - 1]);
           }
         }
       }
@@ -134,7 +135,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       Object[][] originalVals,
       Interval interval,
       Filter filter,
-      int limit,
+      MyOffsetLimit limit,
       List<ColumnWithDirection> ordering
   )
   {
@@ -211,10 +212,19 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       vals.sort(comparator);
     }
 
-    if (limit != -1) {
+    if (limit .isPresent()) {
+
       decor.setLimit(limit);
 
-      vals = vals.subList(0, Math.min(vals.size(), limit));
+      final int endIndex;
+      final int offset = (int) limit.getOffset();
+      if(limit.hasLimit()) {
+        endIndex=(int) Math.min(vals.size(), offset+limit.getLimitOrMax());
+      } else {
+        endIndex=vals.size();
+      }
+
+      vals = vals.subList(offset, endIndex);
     }
 
     if (ordering != null) {

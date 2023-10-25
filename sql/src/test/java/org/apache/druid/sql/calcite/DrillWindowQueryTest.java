@@ -4521,7 +4521,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @DrillTest("lag_func/lag_Fn_9")
   @Test
   public void test_lag_func_lag_Fn_9()
@@ -4583,7 +4582,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @DrillTest("ntile_func/ntileFn_34")
   @Test
   public void test_ntile_func_ntileFn_34()

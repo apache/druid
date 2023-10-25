@@ -31,7 +31,7 @@ public class ScanOperatorFactory implements OperatorFactory
 {
   private final Interval timeRange;
   private final DimFilter filter;
-  private final int limit;
+  private final MyOffsetLimit offsetLimit;
   private final List<String> projectedColumns;
   private final VirtualColumns virtualColumns;
   private final List<ColumnWithDirection> ordering;
@@ -39,7 +39,7 @@ public class ScanOperatorFactory implements OperatorFactory
   public ScanOperatorFactory(
       @JsonProperty("timeRange") final Interval timeRange,
       @JsonProperty("filter") final DimFilter filter,
-      @JsonProperty("limit") final Integer limit,
+      @JsonProperty("offsetLimit") final MyOffsetLimit offsetLimit,
       @JsonProperty("projectedColumns") final List<String> projectedColumns,
       @JsonProperty("virtualColumns") final VirtualColumns virtualColumns,
       @JsonProperty("ordering") final List<ColumnWithDirection> ordering
@@ -47,7 +47,7 @@ public class ScanOperatorFactory implements OperatorFactory
   {
     this.timeRange = timeRange;
     this.filter = filter;
-    this.limit = limit == null ? -1 : limit;
+    this.offsetLimit = offsetLimit;
     this.projectedColumns = projectedColumns;
     this.virtualColumns = virtualColumns;
     this.ordering = ordering;
@@ -66,9 +66,9 @@ public class ScanOperatorFactory implements OperatorFactory
   }
 
   @JsonProperty
-  public int getLimit()
+  public MyOffsetLimit getOffsetLimit()
   {
-    return limit;
+    return offsetLimit;
   }
 
   @JsonProperty
@@ -99,7 +99,7 @@ public class ScanOperatorFactory implements OperatorFactory
         timeRange,
         filter == null ? null : filter.toFilter(),
         ordering,
-        limit
+        offsetLimit
     );
   }
 
@@ -119,7 +119,7 @@ public class ScanOperatorFactory implements OperatorFactory
       return false;
     }
     ScanOperatorFactory that = (ScanOperatorFactory) o;
-    return limit == that.limit && Objects.equals(timeRange, that.timeRange) && Objects.equals(
+    return Objects.equals(offsetLimit, that.offsetLimit) && Objects.equals(timeRange, that.timeRange) && Objects.equals(
         filter,
         that.filter
     ) && Objects.equals(projectedColumns, that.projectedColumns) && Objects.equals(
@@ -131,6 +131,6 @@ public class ScanOperatorFactory implements OperatorFactory
   @Override
   public int hashCode()
   {
-    return Objects.hash(timeRange, filter, limit, projectedColumns, virtualColumns, ordering);
+    return Objects.hash(timeRange, filter, offsetLimit, projectedColumns, virtualColumns, ordering);
   }
 }

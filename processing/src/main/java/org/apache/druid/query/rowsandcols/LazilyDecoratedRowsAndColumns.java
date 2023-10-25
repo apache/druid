@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.MyOffsetLimit;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
@@ -73,7 +74,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   private Interval interval;
   private Filter filter;
   private VirtualColumns virtualColumns;
-  private int limit;
+  private MyOffsetLimit limit;
   private LinkedHashSet<String> viewableColumns;
   private List<ColumnWithDirection> ordering;
 
@@ -82,7 +83,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       Interval interval,
       Filter filter,
       VirtualColumns virtualColumns,
-      int limit,
+      MyOffsetLimit limit,
       List<ColumnWithDirection> ordering,
       LinkedHashSet<String> viewableColumns
   )
@@ -175,7 +176,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
   private boolean needsMaterialization()
   {
-    return interval != null || filter != null || limit != -1 || ordering != null || virtualColumns != null;
+    return interval != null || filter != null || limit.isPresent() || ordering != null || virtualColumns != null;
   }
 
   private Pair<byte[], RowSignature> materialize()
@@ -198,7 +199,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     interval = null;
     filter = null;
     virtualColumns = null;
-    limit = -1;
+    limit = MyOffsetLimit.none();
     viewableColumns = null;
     ordering = null;
   }
@@ -238,7 +239,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         throw new ISE("accumulated[%s] non-null, why did we get multiple cursors?", accumulated);
       }
 
-      int theLimit = limit == -1 ? Integer.MAX_VALUE : limit;
+      long offsetRemaining = limit.getOffset();
+      long fetchRemaining = limit.getLimitOrMax();
 
       final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
       final RowSignature.Builder sigBob = RowSignature.builder();
@@ -284,12 +286,12 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       );
 
       final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      while (!in.isDoneOrInterrupted()) {
+      for (; !in.isDoneOrInterrupted() && offsetRemaining > 0; offsetRemaining--) {
+        in.advance();
+      }
+      for (; !in.isDoneOrInterrupted() && fetchRemaining > 0; fetchRemaining--) {
         frameWriter.addSelection();
         in.advance();
-        if (--theLimit <= 0) {
-          break;
-        }
       }
 
       return frameWriter;
@@ -390,12 +392,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       sigBob.add(column, racColumn.toAccessor().getType());
     }
 
-    final int limitedNumRows;
-    if (limit == -1) {
-      limitedNumRows = Integer.MAX_VALUE;
-    } else {
-      limitedNumRows = limit;
-    }
+    long offsetRemaining = limit.getOffset();
+    long fetchRemaining = limit.getLimitOrMax();
 
     final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
@@ -405,11 +403,16 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     ).newFrameWriter(selectorFactory);
 
     rowId.set(0);
-    for (; rowId.get() < numRows && frameWriter.getNumRows() < limitedNumRows; rowId.incrementAndGet()) {
+    for (; rowId.get() < numRows && fetchRemaining>0; rowId.incrementAndGet()) {
       final int theId = rowId.get();
       if (rowsToSkip != null && rowsToSkip.get(theId)) {
         continue;
       }
+      if(offsetRemaining > 0) {
+        offsetRemaining--;
+        continue;
+      }
+      fetchRemaining--;
       frameWriter.addSelection();
     }
 

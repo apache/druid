@@ -61,7 +61,7 @@ public class ScanOperatorFactoryTest
     final Builder bob = new Builder();
     bob.timeRange = Intervals.utc(0, 6);
     bob.filter = DimFilters.dimEquals("abc", "b");
-    bob.limit = 48;
+    bob.limit = MyOffsetLimit.limit(48);
     bob.projectedColumns = Arrays.asList("a", "b");
     bob.virtualColumns = VirtualColumns.EMPTY;
     bob.ordering = Collections.singletonList(ColumnWithDirection.ascending("a"));
@@ -132,7 +132,7 @@ public class ScanOperatorFactoryTest
                     "interval[%s], filter[%s], limit[%s], ordering[%s], projection[%s], virtual[%s]",
                     interval,
                     filter,
-                    limit,
+                    MyOffsetLimit.limit(limit),
                     ordering,
                     projection,
                     virtual
@@ -141,7 +141,7 @@ public class ScanOperatorFactoryTest
                 ScanOperatorFactory factory = new ScanOperatorFactory(
                     interval,
                     filter,
-                    limit,
+                    MyOffsetLimit.limit(limit),
                     projection,
                     virtual,
                     ordering
@@ -182,7 +182,7 @@ public class ScanOperatorFactoryTest
                             (TestRowsAndColumnsDecorator.DecoratedRowsAndColumns) inRac;
 
                         Assert.assertEquals(msg, factory.getTimeRange(), rac.getTimeRange());
-                        Assert.assertEquals(msg, factory.getLimit(), rac.getLimit());
+                        Assert.assertEquals(msg, factory.getOffsetLimit(), rac.getLimit());
                         Assert.assertEquals(msg, factory.getVirtualColumns(), rac.getVirtualColumns());
                         validateList(msg, factory.getOrdering(), rac.getOrdering());
                         validateList(msg, factory.getProjectedColumns(), rac.getProjectedColumns());
@@ -228,7 +228,7 @@ public class ScanOperatorFactoryTest
   {
     private Interval timeRange;
     private DimFilter filter;
-    private Integer limit;
+    private MyOffsetLimit limit;
     private List<String> projectedColumns;
     private VirtualColumns virtualColumns;
     private List<ColumnWithDirection> ordering;
@@ -245,7 +245,8 @@ public class ScanOperatorFactoryTest
       return this;
     }
 
-    public Builder setLimit(Integer limit)
+    @Deprecated
+    public Builder setLimit(MyOffsetLimit limit)
     {
       this.limit = limit;
       return this;

@@ -69,6 +69,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.ColumnWithDirection.Direction;
+import org.apache.druid.query.operator.MyOffsetLimit;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
@@ -1489,7 +1490,6 @@ public class DruidQuery
   {
     if (sorting == null
         || sorting.getOrderBys().isEmpty()
-        || sorting.getOffsetLimit().getOffset() > 0
         || sorting.getProjection() != null) {
       return null;
     }
@@ -1509,7 +1509,7 @@ public class DruidQuery
       operators.add(new ScanOperatorFactory(
           null,
           null,
-          (int) sorting.getOffsetLimit().getLimit(),
+          new MyOffsetLimit(sorting.getOffsetLimit().getOffset(),sorting.getOffsetLimit().getLimit()),
           null,
           null,
           null));
