@@ -563,7 +563,7 @@ public class TombstoneHelperTest
         replaceGranularity
     );
 
-    // ((5000 - 1000) * 365) + ((9000 - 6000) * 365 * 24) ~= 2557426 days
+    // ((5000 - 1000) * 365) + ((9000 - 6000) * 365 * 24) ~= 2557426 day intervals
     Assert.assertEquals(
         dropIntervals.stream()
                      .mapToLong(interval -> interval.toDuration().getStandardDays())
@@ -604,7 +604,7 @@ public class TombstoneHelperTest
     );
 
 
-    // ((2000 - 1900) * 365 * 24) + ((3000 - 2500) * 365 * 24) ~= 5275488 hours
+    // ((2000 - 1900) * 365 * 24) + ((3000 - 2500) * 365 * 24) ~= 5275488 hour intervals
     Assert.assertEquals(
         dropIntervals.stream()
                      .mapToLong(interval -> interval.toDuration().getStandardHours())

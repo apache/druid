@@ -199,25 +199,25 @@ public class TombstoneHelper
         }
 
         if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
-          // Generate a tombstone covering the negative eternity interval.
+          // Generate a tombstone interval covering the negative eternity interval.
           retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketEnd(overlap.getEnd())));
         } else if ((Intervals.ETERNITY.getEnd()).equals(overlap.getEnd())) {
-          // Generate a tombstone covering the positive eternity interval.
+          // Generate a tombstone interval covering the positive eternity interval.
           retVal.add(new Interval(replaceGranularity.bucketStart(overlap.getStart()), overlap.getEnd()));
         } else {
           // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
           // However when fetching from the iterator, the first interval is found using the bucketStart, which
-          // ensures that the interval is "rounded down" to the first timestamp that aligns with the granularity
+          // ensures that the interval is "rounded down" to align with the granularity.
           // Also, the interval would always be contained inside the "intervalToDrop" because the original REPLACE
           // is aligned by the granularity, and by extension all the elements inside the intervals to drop would
           // also be aligned by the same granularity (since intervalsToDrop = replaceIntervals - publishIntervals, and
           // the right-hand side is always aligned)
           //
-          // For example, if the replace granularity is DAY, intervalsToReplace are 20/02/2023 - 24/02/2023 (always
-          // aligned with the replaceGranularity), intervalsToDrop are 22/02/2023 - 24/02/2023 (they must also be aligned with the replaceGranularity)
-          // If the relevant usedIntervals for the datasource are from 22/02/2023 01:00:00 - 23/02/2023 02:00:00, then
-          // the overlap would be 22/02/2023 01:00:00 - 23/02/2023 02:00:00. When iterating over the overlap we will get
-          // the intervals from 22/02/2023 - 23/02/2023, and 23/02/2023 - 24/02/2023
+          // For example, if replaceGranularity is DAY, intervalsToReplace is [2023-02-20, 2023-02-24) (always
+          // aligned with the replaceGranularity), intervalsToDrop is [2023-02-22, 2023-02-24) (they must also be aligned with the replaceGranularity)
+          // If the usedIntervals for the datasource is from [2023-02-22T01:00:00Z, 2023-02-23T02:00:00Z), then
+          // the overlap would be [2023-02-22T01:00:00Z, 2023-02-23T02:00:00Z). When iterating over the overlap we will get
+          // the intervals from [2023-02-22, 2023-02-23) and [2023-02-23, 2023-02-24).
           IntervalsByGranularity intervalsToDropByGranularity = new IntervalsByGranularity(
               ImmutableList.of(overlap),
               replaceGranularity
