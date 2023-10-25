@@ -31,7 +31,6 @@ public class ScanOperatorFactory implements OperatorFactory
 {
   private final Interval timeRange;
   private final DimFilter filter;
-  private final int offset;
   private final int limit;
   private final List<String> projectedColumns;
   private final VirtualColumns virtualColumns;
@@ -40,7 +39,6 @@ public class ScanOperatorFactory implements OperatorFactory
   public ScanOperatorFactory(
       @JsonProperty("timeRange") final Interval timeRange,
       @JsonProperty("filter") final DimFilter filter,
-      @JsonProperty("offset") final Integer offset,
       @JsonProperty("limit") final Integer limit,
       @JsonProperty("projectedColumns") final List<String> projectedColumns,
       @JsonProperty("virtualColumns") final VirtualColumns virtualColumns,
@@ -49,10 +47,6 @@ public class ScanOperatorFactory implements OperatorFactory
   {
     this.timeRange = timeRange;
     this.filter = filter;
-    this.offset = offset == null ? 0 : offset;
-    if (this.offset != 0) {
-      throw new RuntimeException("unsupported");
-    }
     this.limit = limit == null ? -1 : limit;
     this.projectedColumns = projectedColumns;
     this.virtualColumns = virtualColumns;

@@ -1466,7 +1466,6 @@ public class DruidQuery
               null,
               null,
               null,
-              null,
               virtualColumns,
               null))
           .addAll(windowing.getOperators())
@@ -1508,7 +1507,6 @@ public class DruidQuery
     operators.add(new NaiveSortOperatorFactory(sortColumns));
     if (!sorting.getOffsetLimit().isNone()) {
       operators.add(new ScanOperatorFactory(
-          null,
           null,
           null,
           (int) sorting.getOffsetLimit().getLimit(),

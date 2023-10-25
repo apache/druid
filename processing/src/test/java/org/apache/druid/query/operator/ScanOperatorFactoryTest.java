@@ -127,13 +127,11 @@ public class ScanOperatorFactoryTest
               for (int n = 0; n <= virtualCols.length; ++n) {
                 VirtualColumns virtual = (n == 0) ? VirtualColumns.EMPTY : virtualCols[n - 1];
 
-                int offset = 0;
 
                 String msg = StringUtils.format(
                     "interval[%s], filter[%s], limit[%s], ordering[%s], projection[%s], virtual[%s]",
                     interval,
                     filter,
-                    offset,
                     limit,
                     ordering,
                     projection,
@@ -143,7 +141,6 @@ public class ScanOperatorFactoryTest
                 ScanOperatorFactory factory = new ScanOperatorFactory(
                     interval,
                     filter,
-                    offset,
                     limit,
                     projection,
                     virtual,
@@ -231,7 +228,6 @@ public class ScanOperatorFactoryTest
   {
     private Interval timeRange;
     private DimFilter filter;
-    private Integer offset;
     private Integer limit;
     private List<String> projectedColumns;
     private VirtualColumns virtualColumns;
@@ -246,12 +242,6 @@ public class ScanOperatorFactoryTest
     public Builder setFilter(DimFilter filter)
     {
       this.filter = filter;
-      return this;
-    }
-
-    public Builder setOffset(Integer offset)
-    {
-      this.offset = offset;
       return this;
     }
 
@@ -296,7 +286,6 @@ public class ScanOperatorFactoryTest
       return new ScanOperatorFactory(
           timeRange,
           filter,
-          offset,
           limit,
           projectedColumns,
           virtualColumns,
