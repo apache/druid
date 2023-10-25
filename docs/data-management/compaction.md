@@ -44,7 +44,7 @@ By default, compaction does not modify the underlying data of the segments. Howe
 
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
-## Choose your compaction type
+## Ways to run compaction
 
 Automatic compaction, also called auto-compaction, works in most use cases and should be your first option. 
 
