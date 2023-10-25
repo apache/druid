@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
@@ -38,6 +39,8 @@ import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.NaiveSortMaker;
 import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowBasedStorageAdapter;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -349,6 +352,14 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
           return rac.new MyNaiveSortMaker();
         }
     );
+
+    retVal.put(StorageAdapter.class,
+        (Function<ArrayListRowsAndColumns, StorageAdapter>) rac -> {
+          return new RowBasedStorageAdapter(
+              Sequences.simple(rac.rows),
+              rac.rowAdapter,
+              rac.rowSignature);
+        });
 
     return retVal;
   }
