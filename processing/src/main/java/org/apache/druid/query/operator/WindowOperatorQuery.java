@@ -123,13 +123,11 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
             );
           }
 
-          OffsetLimit offsetLimit=new OffsetLimit((int) scan.getScanRowsOffset(), (int) scan.getScanRowsLimit());
           this.leafOperators.add(
               new ScanOperatorFactory(
                   null,
                   scan.getFilter(),
-                  offsetLimit
-                  ,
+                  scan.getOffsetLimit(),
                   scan.getColumns(),
                   scan.getVirtualColumns().isEmpty() ? null : scan.getVirtualColumns(),
                   ordering
