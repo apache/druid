@@ -34,15 +34,15 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
           },
           Object {
             "info": <p>
-              For perfect rollup, you should use either 
+              For perfect rollup, you should use either
               <Unknown>
                 hashed
               </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
+               (partitioning based on the hash of dimensions in each row) or
               <Unknown>
                 range
               </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use
               <Unknown>
                 dynamic
               </Unknown>
@@ -85,27 +85,27 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -127,33 +127,33 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
-                 renamed to 
+                 renamed to
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -174,11 +174,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -223,11 +223,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -246,11 +246,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 Maximum number of rows to include in a partition.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -339,9 +339,9 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
             "adjustValue": [Function],
             "defaultValue": undefined,
             "info": <p>
-              Allows or forbids concurrent compactions.
+              Allows append of new data into an interval even when compaction of existing data in that interval is in progress.
             </p>,
-            "label": "Allow concurrent compactions (experimental)",
+            "label": "Allow concurrent data appends (experimental)",
             "name": "taskContext.taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],
@@ -427,15 +427,15 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
           },
           Object {
             "info": <p>
-              For perfect rollup, you should use either 
+              For perfect rollup, you should use either
               <Unknown>
                 hashed
               </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
+               (partitioning based on the hash of dimensions in each row) or
               <Unknown>
                 range
               </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use
               <Unknown>
                 dynamic
               </Unknown>
@@ -478,27 +478,27 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -520,33 +520,33 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
-                 renamed to 
+                 renamed to
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -567,11 +567,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -616,11 +616,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -639,11 +639,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 Maximum number of rows to include in a partition.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -732,9 +732,9 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
             "adjustValue": [Function],
             "defaultValue": undefined,
             "info": <p>
-              Allows or forbids concurrent compactions.
+              Allows append of new data into an interval even when compaction of existing data in that interval is in progress.
             </p>,
-            "label": "Allow concurrent compactions (experimental)",
+            "label": "Allow concurrent data appends (experimental)",
             "name": "taskContext.taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],
@@ -820,15 +820,15 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
           },
           Object {
             "info": <p>
-              For perfect rollup, you should use either 
+              For perfect rollup, you should use either
               <Unknown>
                 hashed
               </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
+               (partitioning based on the hash of dimensions in each row) or
               <Unknown>
                 range
               </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use
               <Unknown>
                 dynamic
               </Unknown>
@@ -871,27 +871,27 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -913,33 +913,33 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
-                 renamed to 
+                 renamed to
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -960,11 +960,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -1009,11 +1009,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -1032,11 +1032,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 Maximum number of rows to include in a partition.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -1125,9 +1125,9 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
             "adjustValue": [Function],
             "defaultValue": undefined,
             "info": <p>
-              Allows or forbids concurrent compactions.
+              Allows append of new data into an interval even when compaction of existing data in that interval is in progress.
             </p>,
-            "label": "Allow concurrent compactions (experimental)",
+            "label": "Allow concurrent data appends (experimental)",
             "name": "taskContext.taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],
@@ -1213,15 +1213,15 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
           },
           Object {
             "info": <p>
-              For perfect rollup, you should use either 
+              For perfect rollup, you should use either
               <Unknown>
                 hashed
               </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
+               (partitioning based on the hash of dimensions in each row) or
               <Unknown>
                 range
               </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
+               (based on several dimensions). For best-effort rollup, you should use
               <Unknown>
                 dynamic
               </Unknown>
@@ -1264,27 +1264,27 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -1306,33 +1306,33 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
-                 renamed to 
+                 renamed to
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
               </p>
               <p>
-                If 
+                If
                 <Unknown>
                   numShards
                 </Unknown>
                  is left unspecified, the Parallel task will determine
-                 
+
                 <Unknown>
                   numShards
                 </Unknown>
-                 automatically by 
+                 automatically by
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
                 .
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -1353,11 +1353,11 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   numShards
                 </Unknown>
@@ -1402,11 +1402,11 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -1425,11 +1425,11 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 Maximum number of rows to include in a partition.
               </p>
               <p>
-                Note that either 
+                Note that either
                 <Unknown>
                   targetRowsPerSegment
                 </Unknown>
-                 or 
+                 or
                 <Unknown>
                   maxRowsPerSegment
                 </Unknown>
@@ -1518,9 +1518,9 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
             "adjustValue": [Function],
             "defaultValue": undefined,
             "info": <p>
-              Allows or forbids concurrent compactions.
+              Allows append of new data into an interval even when compaction of existing data in that interval is in progress.
             </p>,
-            "label": "Allow concurrent compactions (experimental)",
+            "label": "Allow concurrent data appends (experimental)",
             "name": "taskContext.taskLockType",
             "type": "boolean",
             "valueAdjustment": [Function],

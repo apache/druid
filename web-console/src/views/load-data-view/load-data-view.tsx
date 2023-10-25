@@ -3175,7 +3175,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'context.taskLockType',
                 type: 'boolean',
                 label: `Allow concurrent ${
-                  appendToExisting ? 'append' : 'replace'
+                  appendToExisting ? 'replace' : 'append'
                 } tasks (experimental)`,
                 defaultValue: undefined,
                 valueAdjustment: v => {
@@ -3196,7 +3196,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
                   return v === (appendToExisting ? 'APPEND' : 'REPLACE');
                 },
-                info: <p>Allows or forbids concurrent tasks.</p>,
+                info: <p>Allows append of new data into an interval even when replace of existing data in that interval is in progress.</p>,
               },
             ]}
             model={spec}

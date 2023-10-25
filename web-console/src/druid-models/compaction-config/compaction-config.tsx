@@ -357,10 +357,15 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
   {
     name: 'taskContext.taskLockType',
     type: 'boolean',
-    label: 'Allow concurrent compactions (experimental)',
+    label: 'Allow concurrent data appends (experimental)',
     defaultValue: undefined,
     valueAdjustment: v => (v ? 'REPLACE' : undefined),
     adjustValue: v => v === 'REPLACE',
-    info: <p>Allows or forbids concurrent compactions.</p>,
+    info: (
+      <>
+        <p>Allows append of new data into an interval even when compaction of
+        existing data in that interval is in progress.</p>
+      </>
+    ),
   },
 ];
