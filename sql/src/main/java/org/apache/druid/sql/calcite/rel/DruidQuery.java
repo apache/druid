@@ -1466,6 +1466,7 @@ public class DruidQuery
               null,
               null,
               null,
+              null,
               virtualColumns,
               null))
           .addAll(windowing.getOperators())
@@ -1489,7 +1490,6 @@ public class DruidQuery
   {
     if (sorting == null
         || sorting.getOrderBys().isEmpty()
-        || sorting.getOffsetLimit().getOffset() > 0
         || sorting.getProjection() != null) {
       return null;
     }
@@ -1509,6 +1509,7 @@ public class DruidQuery
       operators.add(new ScanOperatorFactory(
           null,
           null,
+          (int) sorting.getOffsetLimit().getOffset(),
           (int) sorting.getOffsetLimit().getLimit(),
           null,
           null,
