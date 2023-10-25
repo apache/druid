@@ -430,8 +430,12 @@ public class FileUtils
    *
    * @throws IllegalStateException if the directory could not be created
    */
-  @SuppressForbidden(reason = "Files#createTempDirectory")
   public static File createTempDir(@Nullable final String prefix)
+  {
+    return createTempDirInLocation(getTempDir(), prefix);
+  }
+
+  public static Path getTempDir()
   {
     final String parentDirectory = System.getProperty("java.io.tmpdir");
 
@@ -439,24 +443,29 @@ public class FileUtils
       // Not expected.
       throw new ISE("System property java.io.tmpdir is not set, cannot create temporary directories");
     }
+    return new File(parentDirectory).toPath();
+  }
 
+  @SuppressForbidden(reason = "Files#createTempDirectory")
+  public static File createTempDirInLocation(final Path parentDirectory, @Nullable final String prefix)
+  {
     try {
       final Path tmpPath = Files.createTempDirectory(
-          new File(parentDirectory).toPath(),
+          parentDirectory,
           prefix == null || prefix.isEmpty() ? "druid" : prefix
       );
       return tmpPath.toFile();
     }
     catch (IOException e) {
       // Some inspection to improve error messages.
-      if (e instanceof NoSuchFileException && !new File(parentDirectory).exists()) {
-        throw new ISE("java.io.tmpdir (%s) does not exist", parentDirectory);
+      if (e instanceof NoSuchFileException && !parentDirectory.toFile().exists()) {
+        throw new ISE("Path [%s] does not exist", parentDirectory);
       } else if ((e instanceof FileSystemException && e.getMessage().contains("Read-only file system"))
                  || (e instanceof AccessDeniedException)) {
-        throw new ISE("java.io.tmpdir (%s) is not writable, check permissions", parentDirectory);
+        throw new ISE("Path [%s] is not writable, check permissions", parentDirectory);
       } else {
         // Well, maybe it was something else.
-        throw new ISE(e, "Failed to create temporary directory in java.io.tmpdir (%s)", parentDirectory);
+        throw new ISE(e, "Failed to create temporary directory in path [%s]", parentDirectory);
       }
     }
   }
