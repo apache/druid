@@ -55,7 +55,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   private final RowAdapter<RowType> rowAdapter;
   private final RowSignature rowSignature;
 
-  public RowBasedStorageAdapter(
+  RowBasedStorageAdapter(
       final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
       final RowSignature rowSignature
