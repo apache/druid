@@ -21,6 +21,9 @@ package org.apache.druid.query.operator;
 
 import org.junit.Test;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -90,5 +93,39 @@ public class OffsetLimitTest
   public void testInvalidOffset()
   {
     new OffsetLimit(-1, -1);
+  }
+
+  @Test
+  public void testNegativeLimitsAreNotDifferent()
+  {
+    OffsetLimit ol1 = new OffsetLimit(1, -1);
+    OffsetLimit ol2 = new OffsetLimit(1, -2);
+    assertEquals(ol1, ol2);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    Set<Object> set = new HashSet<>();
+
+    long[] offsets = new long[] {0, 1, 100};
+    long[] limits = new long[] {-1, 5, 10, 1000};
+    for (long offset : offsets) {
+      for (long limit : limits) {
+        OffsetLimit a = new OffsetLimit(offset, limit);
+        OffsetLimit b = new OffsetLimit(offset, limit);
+        assertEquals(a.hashCode(), b.hashCode());
+
+        set.add(new OffsetLimit(offset, limit)
+        {
+          @Override
+          public int hashCode()
+          {
+            return 0;
+          }
+        });
+      }
+    }
+    assertEquals(offsets.length * limits.length, set.size());
   }
 }

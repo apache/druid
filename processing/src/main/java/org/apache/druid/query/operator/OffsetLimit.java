@@ -39,7 +39,7 @@ public class OffsetLimit
   {
     Preconditions.checkArgument(offset >= 0, "offset >= 0");
     this.offset = offset;
-    this.limit = limit;
+    this.limit = limit < 0 ? -1 : limit;
   }
 
   @JsonProperty("offset")
