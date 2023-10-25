@@ -13949,31 +13949,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "group by 1",
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(GroupByQuery.builder()
-                                                   .setDataSource(CalciteTests.DATASOURCE3)
-                                                   .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                                                   .setGranularity(Granularities.ALL)
-                                                   .addDimension(new DefaultDimensionSpec(
-                                                       "dim1",
-                                                       "_d0",
-                                                       ColumnType.STRING
-                                                   ))
-                                                   .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
-                                                   .build()
-                        )
-                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                        .setDimensions(new DefaultDimensionSpec("_d0", "d0", ColumnType.STRING))
-                        .setAggregatorSpecs(aggregators(
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("_a0"),
-                                useDefault ?
-                                selector("a0", "0") :
-                                equality("a0", 0, ColumnType.LONG)
-                            )
-                        ))
-                        .setGranularity(Granularities.ALL)
-                        .setContext(QUERY_CONTEXT_DEFAULT)
-                        .build()
+                .setDataSource(CalciteTests.DATASOURCE3)
+                .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                .setGranularity(Granularities.ALL)
+                .addDimension(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
+                .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
+                .setPostAggregatorSpecs(ImmutableList.of(
+                    expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)")))
+                .build()
 
         ),
         useDefault ? ImmutableList.of(
@@ -14334,66 +14317,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     skipVectorize();
     cannotVectorize();
-    testQuery(
-        "with t AS (SELECT m2, COUNT(m1) as trend_score\n"
-        + "FROM \"foo\"\n"
-        + "GROUP BY 1 \n"
-        + "LIMIT 10\n"
-        + ")\n"
-        + "select m2, (MAX(trend_score)) from t\n"
-        + "where m2 > 2\n"
-        + "GROUP BY 1 \n"
-        + "ORDER BY 2 DESC",
-        QUERY_CONTEXT_DEFAULT,
-        ImmutableList.of(
-            new GroupByQuery.Builder()
-                .setDataSource(
-                    new TopNQueryBuilder()
-                        .dataSource(CalciteTests.DATASOURCE1)
-                        .intervals(querySegmentSpec(Filtration.eternity()))
-                        .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
-                        .threshold(10)
-                        .aggregators(aggregators(
-                            useDefault
-                            ? new CountAggregatorFactory("a0")
-                            : new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("a0"),
-                                notNull("m1")
-                            )
-                        ))
-                        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
-                        .context(OUTER_LIMIT_CONTEXT)
-                        .build()
-                )
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(
-                    new DefaultDimensionSpec("d0", "_d0", ColumnType.DOUBLE)
-                )
-                .setDimFilter(
-                    useDefault ?
-                    bound("d0", "2", null, true, false, null, StringComparators.NUMERIC) :
-                    new RangeFilter("d0", ColumnType.LONG, 2L, null, true, false, null)
-                )
-                .setAggregatorSpecs(aggregators(
-                    new LongMaxAggregatorFactory("_a0", "a0")
-                ))
-                .setLimitSpec(
-                    DefaultLimitSpec
-                        .builder()
-                        .orderBy(new OrderByColumnSpec("_a0", Direction.DESCENDING, StringComparators.NUMERIC))
-                        .build()
-                )
-                .setContext(OUTER_LIMIT_CONTEXT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{3.0D, 1L},
-            new Object[]{4.0D, 1L},
-            new Object[]{5.0D, 1L},
-            new Object[]{6.0D, 1L}
-        )
-    );
+
+    testBuilder()
+        .sql("with t AS (SELECT m2, COUNT(m1) as trend_score\n"
+            + "FROM \"foo\"\n"
+            + "GROUP BY 1 \n"
+            + "LIMIT 10\n"
+            + ")\n"
+            + "select m2, (MAX(trend_score)) from t\n"
+            + "where m2 > 2\n"
+            + "GROUP BY 1 \n"
+            + "ORDER BY 2 DESC")
+        .expectedResults(ImmutableList.of(
+            new Object[] {3.0D, 1L},
+            new Object[] {4.0D, 1L},
+            new Object[] {5.0D, 1L},
+            new Object[] {6.0D, 1L}))
+        .run();
   }
 
   @Test
