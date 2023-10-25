@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.Comparator;
 
 public class QuantilesSketchKeyCollectorFactory
@@ -180,7 +181,7 @@ public class QuantilesSketchKeyCollectorFactory
     @Override
     public String toString(final byte[] item)
     {
-      return item.toString();
+      return Arrays.toString(item);
     }
 
     @Override
