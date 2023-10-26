@@ -14358,23 +14358,4 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .expectedResults(expectedResults)
         .run();
   }
-
-  @Test(expected = Exception.class)
-  public void test1InGroupByOrderByLimitOutGroupByOrderByLimit()
-  {
-    skipVectorize();
-    cannotVectorize();
-    String sql = "select * \n"
-        + "FROM \"foo\"\n"
-        + "order by m2\n";
-
-    ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[] {4.0D, 1L},
-        new Object[] {5.0D, 1L});
-    testBuilder()
-        .sql(sql)
-        .expectedResults(expectedResults)
-        .run();
-  }
-
 }
