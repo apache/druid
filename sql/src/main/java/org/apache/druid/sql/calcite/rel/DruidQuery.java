@@ -985,6 +985,13 @@ public class DruidQuery
       // If there is a subquery, then we prefer the outer query to be a groupBy if possible, since this potentially
       // enables more efficient execution. (The groupBy query toolchest can handle some subqueries by itself, without
       // requiring the Broker to inline results.)
+      final TimeseriesQuery tsQuery = toTimeseriesQuery();
+      if (tsQuery != null) {
+        return tsQuery;
+      }
+
+
+
       final GroupByQuery outerQuery = toGroupByQuery();
 
       if (outerQuery != null) {
@@ -1489,9 +1496,12 @@ public class DruidQuery
   {
     if (dataSource != DruidOuterQueryRel.DUMMY_DATA_SOURCE && dataSource.isConcrete()
         && !sorting.getOrderBys().isEmpty()) {
+      List<String> orderByColumnNames = sorting.getOrderBys()
+          .stream().map(OrderByColumnSpec::getDimension)
+          .collect(Collectors.toList());
       plannerContext.setPlanningError(
           "SQL query requires order by non-time column [%s], which is not supported.",
-          sorting.getOrderBys());
+          orderByColumnNames);
       return null;
     }
 
