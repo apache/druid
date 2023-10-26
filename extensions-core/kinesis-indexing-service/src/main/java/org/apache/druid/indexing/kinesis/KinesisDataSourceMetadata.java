@@ -56,5 +56,4 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
   {
     return new KinesisDataSourceMetadata(seekableStreamSequenceNumbers);
   }
-
 }

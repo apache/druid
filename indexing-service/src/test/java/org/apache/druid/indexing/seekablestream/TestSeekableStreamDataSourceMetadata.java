@@ -45,5 +45,4 @@ public class TestSeekableStreamDataSourceMetadata extends SeekableStreamDataSour
   {
     return null;
   }
-
 }

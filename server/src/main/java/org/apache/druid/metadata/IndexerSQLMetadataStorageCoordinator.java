@@ -2062,7 +2062,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     } else {
       // Checking against the last committed metadata.
       // If the new start sequence number is greater than the end sequence number of last commit compareTo() function will return 1,
-      // 0 in all other cases. It might be because  multiple tasks are publishing the sequence at around same time.
+      // 0 in all other cases. It might be because multiple tasks are publishing the sequence at around same time.
       if (startMetadata instanceof Comparable) {
         startMetadataGreaterThanExisting = ((Comparable) startMetadata.asStartMetadata()).compareTo(oldCommitMetadataFromDb.asStartMetadata());
       }
