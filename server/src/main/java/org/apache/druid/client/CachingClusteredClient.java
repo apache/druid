@@ -845,6 +845,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
   }
 
+  /**
+   * Helper class to build a new timeline of filtered segments.
+   */
   public static class TimelineConverter<ObjectType extends Overshadowable<ObjectType>> implements UnaryOperator<TimelineLookup<String, ObjectType>>
   {
     private final Iterable<SegmentDescriptor> specs;

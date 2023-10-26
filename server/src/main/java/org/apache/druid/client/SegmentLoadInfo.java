@@ -43,12 +43,16 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
 
   public boolean addServer(DruidServerMetadata server)
   {
-    return servers.add(server);
+    synchronized (this) {
+      return servers.add(server);
+    }
   }
 
   public boolean removeServer(DruidServerMetadata server)
   {
-    return servers.remove(server);
+    synchronized (this) {
+      return servers.remove(server);
+    }
   }
 
   public boolean isEmpty()
@@ -62,7 +66,7 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   }
 
   /**
-   * Randomly return one server from the sets of {@code servers}
+   * Randomly return one server from the sets of {@code servers}.
    */
   public DruidServerMetadata pickOne()
   {

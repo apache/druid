@@ -33,6 +33,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Escalator;
@@ -43,6 +44,7 @@ import org.apache.druid.timeline.SegmentId;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -154,7 +156,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    // query all the datasource schema, which includes,
+    // query schema for all datasources, which includes,
     // datasources explicitly marked for rebuilding
     // datasources for the segments to be refreshed
     // prebuilt datasources
@@ -195,7 +197,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
     // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
-      final RowSignature rowSignature = buildDruidTable(dataSource);
+      final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
       if (rowSignature == null) {
         log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
@@ -209,21 +211,14 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)
   {
-    final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
-
     Stopwatch stopwatch = Stopwatch.createStarted();
 
+    List<DataSourceInformation> dataSourceInformations = null;
+
+    emitter.emit(ServiceMetricEvent.builder().setMetric(
+        "metadatacache/schemaPoll/count", 1));
     try {
-      emitter.emit(ServiceMetricEvent.builder().setMetric(
-          "metadatacache/schemaPoll/count", 1));
-      FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true)
-                 .forEach(dataSourceInformation -> polledDataSourceMetadata.put(
-                     dataSourceInformation.getDataSource(),
-                     dataSourceMetadataFactory.build(
-                         dataSourceInformation.getDataSource(),
-                         dataSourceInformation.getRowSignature()
-                     )
-                 ));
+      dataSourceInformations = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true);
     }
     catch (Exception e) {
       log.warn(e, "Failed to query datasource information from the Coordinator.");
@@ -234,6 +229,18 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     emitter.emit(ServiceMetricEvent.builder().setMetric(
         "metadatacache/schemaPoll/time",
         stopwatch.elapsed(TimeUnit.MILLISECONDS)));
+
+    final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
+
+    if (null != dataSourceInformations) {
+      dataSourceInformations.forEach(dataSourceInformation -> polledDataSourceMetadata.put(
+          dataSourceInformation.getDataSource(),
+          dataSourceMetadataFactory.build(
+              dataSourceInformation.getDataSource(),
+              dataSourceInformation.getRowSignature()
+          )
+      ));
+    }
 
     return polledDataSourceMetadata;
   }

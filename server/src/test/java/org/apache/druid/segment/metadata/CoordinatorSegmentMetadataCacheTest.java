@@ -114,9 +114,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     )
     {
       @Override
-      public RowSignature buildDruidTable(String dataSource)
+      public RowSignature buildDataSourceRowSignature(String dataSource)
       {
-        RowSignature table = super.buildDruidTable(dataSource);
+        RowSignature table = super.buildDataSourceRowSignature(dataSource);
         buildTableLatch.countDown();
         return table;
       }

@@ -89,9 +89,7 @@ import java.util.stream.StreamSupport;
 /**
  * An abstract class that listens for segment change events and caches segment metadata. It periodically refreshes
  * the segments, by fetching their metadata which includes schema information from sources like
- * data nodes, db (the logic is specificed in the child class) and builds table schema.
- *
- * <p>This class is generic and is parameterized by a type {@code T} that extends {@link DataSourceInformation}.</p>
+ * data nodes, tasks, metadata database and builds table schema.
  *
  * <p>This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
  * with the logic to build and cache table schema.</p>
@@ -132,7 +130,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * While it is being updated, this map is read by these two types of thread.
    *
    * - {@link #cacheExec} can iterate all {@link AvailableSegmentMetadata}s per datasource.
-   *   See {@link #buildDruidTable}.
+   *   See {@link #buildDataSourceRowSignature}.
    * - Query threads can create a snapshot of the entire map for processing queries on the system table.
    *   See {@link #getSegmentMetadataSnapshot()}.
    *
@@ -792,7 +790,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
   @VisibleForTesting
   @Nullable
-  public RowSignature buildDruidTable(final String dataSource)
+  public RowSignature buildDataSourceRowSignature(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 

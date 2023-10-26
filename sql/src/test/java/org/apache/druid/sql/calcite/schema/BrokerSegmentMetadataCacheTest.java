@@ -138,9 +138,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     )
     {
       @Override
-      public RowSignature buildDruidTable(String dataSource)
+      public RowSignature buildDataSourceRowSignature(String dataSource)
       {
-        RowSignature table = super.buildDruidTable(dataSource);
+        RowSignature table = super.buildDataSourceRowSignature(dataSource);
         buildTableLatch.countDown();
         return table;
       }

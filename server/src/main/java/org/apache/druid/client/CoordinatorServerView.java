@@ -59,6 +59,9 @@ public class CoordinatorServerView implements InventoryView
   private final Object lock = new Object();
   private final Map<SegmentId, SegmentLoadInfo> segmentLoadInfos;
   private final Map<String, VersionedIntervalTimeline<String, SegmentLoadInfo>> timelines;
+
+  // Map of server and QueryRunner. This is updated when a segment is added/removed.
+  // In parallel, it is used by {@link org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker} to run queries.
   private final ConcurrentMap<String, QueryRunner> serverQueryRunners;
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks;
   private final ServerInventoryView baseView;

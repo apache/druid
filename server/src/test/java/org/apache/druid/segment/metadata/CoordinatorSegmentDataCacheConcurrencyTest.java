@@ -161,7 +161,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
    * This tests the contention between three components, {@link AbstractSegmentMetadataCache},
    * {@code InventoryView}, and {@link BrokerServerView}. It first triggers
    * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
-   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDruidTable}
+   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDataSourceRowSignature}
    * is overridden to sleep before doing real work. While refreshing
    * {@code SegmentMetadataCache}, more new segments are added to
    * {@code InventoryView}, which triggers updates of {@code BrokerServerView}.
@@ -183,7 +183,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     )
     {
       @Override
-      public RowSignature buildDruidTable(final String dataSource)
+      public RowSignature buildDataSourceRowSignature(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -194,7 +194,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
             throw new RuntimeException(e);
           }
         });
-        return super.buildDruidTable(dataSource);
+        return super.buildDataSourceRowSignature(dataSource);
       }
     };
 
@@ -269,7 +269,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
    * {@link AbstractSegmentMetadataCache#refresh} and
    * {@link AbstractSegmentMetadataCache#getSegmentMetadataSnapshot()}. It first triggers
    * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
-   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDruidTable}
+   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDataSourceRowSignature}
    * is overridden to sleep before doing real work. While refreshing
    * {@code SegmentMetadataCache}, {@code getSegmentMetadataSnapshot()} is continuously
    * called to mimic reading the segments table of SystemSchema. All these calls
@@ -289,7 +289,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     )
     {
       @Override
-      public RowSignature buildDruidTable(final String dataSource)
+      public RowSignature buildDataSourceRowSignature(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -300,7 +300,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
             throw new RuntimeException(e);
           }
         });
-        return super.buildDruidTable(dataSource);
+        return super.buildDataSourceRowSignature(dataSource);
       }
     };
 
