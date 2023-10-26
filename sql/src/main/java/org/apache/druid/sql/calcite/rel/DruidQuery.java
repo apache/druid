@@ -1498,8 +1498,8 @@ public class DruidQuery
       return null;
     }
 
-    if (dataSource != DruidOuterQueryRel.DUMMY_DATA_SOURCE
-        && dataSource.isConcrete()) {
+    // Reject cases which would sort the datasource directly
+    if (dataSource != DruidOuterQueryRel.DUMMY_DATA_SOURCE && dataSource.isConcrete()) {
       List<String> orderByColumnNames = sorting.getOrderBys()
           .stream().map(OrderByColumnSpec::getDimension)
           .collect(Collectors.toList());
@@ -1508,7 +1508,6 @@ public class DruidQuery
           orderByColumnNames);
       return null;
     }
-
 
     QueryDataSource newDataSource = new QueryDataSource(scan);
     ArrayList<ColumnWithDirection> sortColumns = getColumnWithDriectionsFromOrderBys(sorting.getOrderBys());
