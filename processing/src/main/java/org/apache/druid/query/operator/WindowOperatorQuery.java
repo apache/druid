@@ -21,9 +21,7 @@ package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -32,9 +30,9 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
+
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
@@ -265,52 +263,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
            ", context=" + getContext() +
            ", rowSignature=" + rowSignature +
            ", operators=" + operators +
-           ", leafOperators=" + leafOperators +
            '}';
-  }
-
-  public static WindowOperatorQueryBuilder builder()
-  {
-    return new WindowOperatorQueryBuilder();
-  }
-
-  public static class WindowOperatorQueryBuilder extends QueryBuilderBase<WindowOperatorQueryBuilder>{
-
-    private DataSource dataSource;
-    private QuerySegmentSpec intervals = new LegacySegmentSpec(Intervals.ETERNITY);
-    private Map<String, Object> context;
-    private RowSignature rowSignature;
-    private List<OperatorFactory> operators;
-    private List<OperatorFactory> leafOperators;
-
-    @Override
-    public WindowOperatorQueryBuilder setDataSource(DataSource dataSource)
-    {
-      this.dataSource = dataSource;
-      return this;
-    }
-
-    public WindowOperatorQueryBuilder setSignature(RowSignature rowSignature)
-    {
-      this.rowSignature = rowSignature;
-      return this;
-    }
-
-    public Query<?> build()
-    {
-      return new WindowOperatorQuery(
-          dataSource,
-          intervals,
-          context,
-          rowSignature,
-          operators,
-          leafOperators);
-    }
-
-    public WindowOperatorQueryBuilder setOperators(OperatorFactory ...operators)
-    {
-      this.operators = Lists.newArrayList(operators);
-      return this;
-    }
   }
 }
