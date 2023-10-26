@@ -38,7 +38,7 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   {
     Preconditions.checkNotNull(segment, "segment");
     this.segment = segment;
-    this.servers = Sets.newConcurrentHashSet();
+    this.servers = Sets.newHashSet();
   }
 
   public boolean addServer(DruidServerMetadata server)

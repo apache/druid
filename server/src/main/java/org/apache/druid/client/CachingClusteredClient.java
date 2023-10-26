@@ -848,7 +848,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   /**
    * Helper class to build a new timeline of filtered segments.
    */
-  public static class TimelineConverter<ObjectType extends Overshadowable<ObjectType>> implements UnaryOperator<TimelineLookup<String, ObjectType>>
+  public static class TimelineConverter<T extends Overshadowable<T>> implements UnaryOperator<TimelineLookup<String, T>>
   {
     private final Iterable<SegmentDescriptor> specs;
 
@@ -858,29 +858,29 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
 
     @Override
-    public TimelineLookup<String, ObjectType> apply(TimelineLookup<String, ObjectType> timeline)
+    public TimelineLookup<String, T> apply(TimelineLookup<String, T> timeline)
     {
-      final VersionedIntervalTimeline<String, ObjectType> timeline2 =
-          new VersionedIntervalTimeline<>(Ordering.natural(), true);
-      Iterator<PartitionChunkEntry<String, ObjectType>> unfilteredIterator =
+      Iterator<PartitionChunkEntry<String, T>> unfilteredIterator =
           Iterators.transform(specs.iterator(), spec -> toChunkEntry(timeline, spec));
-      Iterator<PartitionChunkEntry<String, ObjectType>> iterator = Iterators.filter(
+      Iterator<PartitionChunkEntry<String, T>> iterator = Iterators.filter(
           unfilteredIterator,
           Objects::nonNull
       );
+      final VersionedIntervalTimeline<String, T> newTimeline =
+          new VersionedIntervalTimeline<>(Ordering.natural(), true);
       // VersionedIntervalTimeline#addAll implementation is much more efficient than calling VersionedIntervalTimeline#add
       // in a loop when there are lot of segments to be added for same interval and version.
-      timeline2.addAll(iterator);
-      return timeline2;
+      newTimeline.addAll(iterator);
+      return newTimeline;
     }
 
     @Nullable
-    private PartitionChunkEntry<String, ObjectType> toChunkEntry(
-        TimelineLookup<String, ObjectType> timeline,
+    private PartitionChunkEntry<String, T> toChunkEntry(
+        TimelineLookup<String, T> timeline,
         SegmentDescriptor spec
     )
     {
-      PartitionChunk<ObjectType> chunk = timeline.findChunk(
+      PartitionChunk<T> chunk = timeline.findChunk(
           spec.getInterval(),
           spec.getVersion(),
           spec.getPartitionNumber()

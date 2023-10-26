@@ -232,7 +232,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
     final Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = new HashMap<>();
 
-    if (null != dataSourceInformations) {
+    if (dataSourceInformations != null) {
       dataSourceInformations.forEach(dataSourceInformation -> polledDataSourceMetadata.put(
           dataSourceInformation.getDataSource(),
           dataSourceMetadataFactory.build(

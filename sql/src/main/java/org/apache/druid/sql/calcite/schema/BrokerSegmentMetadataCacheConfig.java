@@ -50,6 +50,7 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
+  // This is meant to be used when running ITs to disable table schema building in broker.
   @JsonProperty
   private boolean disableSegmentMetadataQueries = false;
 

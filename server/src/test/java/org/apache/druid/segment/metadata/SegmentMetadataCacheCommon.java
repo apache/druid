@@ -22,7 +22,6 @@ package org.apache.druid.segment.metadata;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -51,6 +50,7 @@ import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -61,7 +61,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public abstract class SegmentMetadataCacheCommon
+public abstract class SegmentMetadataCacheCommon extends InitializedNullHandlingTest
 {
   public static final String DATASOURCE1 = "foo";
   public static final String DATASOURCE2 = "foo2";
@@ -107,10 +107,6 @@ public abstract class SegmentMetadataCacheCommon
   public DataSegment segment3;
   public DataSegment segment4;
   public DataSegment segment5;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   public void setUpCommon()
   {

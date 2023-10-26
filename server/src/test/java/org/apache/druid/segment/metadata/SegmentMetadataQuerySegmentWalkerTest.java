@@ -117,7 +117,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
         new DruidServer[]{
             new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
             new DruidServer("test2", "test2", null, 10, ServerType.HISTORICAL, "bye", 0),
-            new DruidServer("test3", "test2", null, 10, ServerType.REALTIME, "bye", 0)
+            new DruidServer("test3", "test2", null, 10, ServerType.INDEXER_EXECUTOR, "bye", 0)
         };
 
     random = new Random(0);

@@ -66,7 +66,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
       "dummy2",
       null,
       0,
-      ServerType.REALTIME,
+      ServerType.INDEXER_EXECUTOR,
       "dummy",
       0
   );
@@ -113,7 +113,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
     switch (serverType) {
       case BROKER:
         return DUMMY_BROKER;
-      case REALTIME:
+      case INDEXER_EXECUTOR:
         return DUMMY_SERVER_REALTIME;
       default:
         return DUMMY_SERVER;
@@ -228,7 +228,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
   {
     if (druidServer.getType() == ServerType.BROKER) {
       return Lists.newArrayList(brokerSegments);
-    } else if (druidServer.getType() == ServerType.REALTIME) {
+    } else if (druidServer.getType() == ServerType.INDEXER_EXECUTOR) {
       return Lists.newArrayList(realtimeSegments);
     } else {
       return Lists.newArrayList(segments);

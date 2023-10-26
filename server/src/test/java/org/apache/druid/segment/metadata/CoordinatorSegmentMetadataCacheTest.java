@@ -424,7 +424,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertEquals(0L, currentMetadata.isRealtime());
 
     DruidServer realtimeServer = druidServers.stream()
-                                                      .filter(s -> s.getType().equals(ServerType.REALTIME))
+                                                      .filter(s -> s.getType().equals(ServerType.INDEXER_EXECUTOR))
                                                       .findAny()
                                                       .orElse(null);
     Assert.assertNotNull(realtimeServer);
@@ -506,7 +506,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     };
 
     DataSegment segment = newSegment(datasource, 1);
-    serverView.addSegment(segment, ServerType.REALTIME);
+    serverView.addSegment(segment, ServerType.INDEXER_EXECUTOR);
     serverView.addSegment(segment, ServerType.HISTORICAL);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
@@ -550,7 +550,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
       }
     };
 
-    serverView.addSegment(newSegment(datasource, 1), ServerType.REALTIME);
+    serverView.addSegment(newSegment(datasource, 1), ServerType.INDEXER_EXECUTOR);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
     Assert.assertEquals(7, schema.getTotalSegments());
@@ -641,11 +641,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     };
 
     DataSegment segment = newSegment(datasource, 1);
-    serverView.addSegment(segment, ServerType.REALTIME);
+    serverView.addSegment(segment, ServerType.INDEXER_EXECUTOR);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(Sets.newHashSet(segment.getId()), Sets.newHashSet(datasource));
 
-    serverView.removeSegment(segment, ServerType.REALTIME);
+    serverView.removeSegment(segment, ServerType.INDEXER_EXECUTOR);
     Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
 
     Assert.assertEquals(6, schema.getTotalSegments());
@@ -700,12 +700,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         newSegment(datasource, 1),
         newSegment(datasource, 2)
     );
-    serverView.addSegment(segments.get(0), ServerType.REALTIME);
+    serverView.addSegment(segments.get(0), ServerType.INDEXER_EXECUTOR);
     serverView.addSegment(segments.get(1), ServerType.HISTORICAL);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
 
-    serverView.removeSegment(segments.get(0), ServerType.REALTIME);
+    serverView.removeSegment(segments.get(0), ServerType.INDEXER_EXECUTOR);
     Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
 
     Assert.assertEquals(7, schema.getTotalSegments());
@@ -1073,7 +1073,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         newSegment(dataSource, 2)
     );
     serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
-    serverView.addSegment(segments.get(1), ServerType.REALTIME);
+    serverView.addSegment(segments.get(1), ServerType.INDEXER_EXECUTOR);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
 

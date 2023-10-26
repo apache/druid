@@ -860,7 +860,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         newSegment(dataSource, 2)
     );
     serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
-    serverView.addSegment(segments.get(1), ServerType.REALTIME);
+    serverView.addSegment(segments.get(1), ServerType.INDEXER_EXECUTOR);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
 

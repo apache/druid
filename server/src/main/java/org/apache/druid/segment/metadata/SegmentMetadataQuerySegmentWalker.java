@@ -135,7 +135,7 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
     final TimelineLookup<String, SegmentLoadInfo> timeline = serverView.getTimeline(
         query.getDataSource()
     );
-    if (null == timeline) {
+    if (timeline == null) {
       return Sequences.empty();
     }
 

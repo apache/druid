@@ -181,9 +181,9 @@ public class CoordinatorServerView implements InventoryView
         segmentLoadInfos.put(segmentId, segmentLoadInfo);
       }
 
-      if (null != druidClientFactory) {
+      if (druidClientFactory != null) {
         QueryRunner queryRunner = serverQueryRunners.get(server.getName());
-        if (null == queryRunner) {
+        if (queryRunner == null) {
           DruidServer inventoryValue = baseView.getInventoryValue(server.getName());
           if (inventoryValue == null) {
             log.warn(
