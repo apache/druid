@@ -91,7 +91,11 @@ public class StringEncodingStrategies
         // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
         // this provides backwards compatibility should we switch at some point in the future to always
         // writing dictionaryVersion
-        return GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper)::singleThreaded;
+        GenericIndexed<ByteBuffer> read = GenericIndexed.read(stringDictionaryBuffer,
+            GenericIndexed.UTF8_STRATEGY, mapper);
+        read.getSerializedSize();
+        System.out.println("dict:"+read.getSerializedSize());
+        return read::singleThreaded;
       } else {
         throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
       }
@@ -100,7 +104,10 @@ public class StringEncodingStrategies
       // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
       // GenericIndexed version can be correctly read
       stringDictionaryBuffer.position(dictionaryStartPosition);
-      return GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper)::singleThreaded;
+      GenericIndexed<ByteBuffer> read = GenericIndexed.read(stringDictionaryBuffer,
+          GenericIndexed.UTF8_STRATEGY, mapper);
+      System.out.println("dict:"+read.getSerializedSize());
+      return read::singleThreaded;
     }
   }
 

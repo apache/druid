@@ -326,6 +326,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
           rMultiValuedColumn = null;
         }
+        try {
+          long s = rSingleValuedColumn.getSerializedSize();
+          System.out.println("rows:" + s);
+        } catch (Exception e) {
+          System.out.println("error");
+        }
 
         final boolean hasNulls = dictionarySupplier.get().get(0) == null;
 
@@ -346,6 +352,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               bitmapSerdeFactory.getObjectStrategy(),
               builder.getFileMapper()
           );
+          System.out.println("bitmap size:" + rBitmaps.size());
         }
 
         if (buffer.hasRemaining()) {
