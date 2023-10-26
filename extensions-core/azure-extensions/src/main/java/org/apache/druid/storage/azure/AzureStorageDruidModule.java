@@ -116,8 +116,8 @@ public class AzureStorageDruidModule implements DruidModule
   @LazySingleton
   public AzureClientFactory getAzureClientFactory(final AzureAccountConfig config)
   {
-    if (config.getKey() == null && config.getSharedAccessStorageToken() == null && config.getManagedIdentityClientId() == null) {
-      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' or 'managedIdentityClientId' in the azure config."
+    if (config.getKey() == null && config.getSharedAccessStorageToken() == null && !config.getUseAzureCredentialsChain()) {
+      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config."
           + " Please refer to azure documentation.");
     }
 
@@ -125,10 +125,10 @@ public class AzureStorageDruidModule implements DruidModule
        that we support in the future are not mutually exclusive with managed identity auth, they just get added to the credential chain.
     **/
     if (config.getKey() != null && config.getSharedAccessStorageToken() != null ||
-        config.getKey() != null && config.getManagedIdentityClientId() != null ||
-        config.getSharedAccessStorageToken() != null && config.getManagedIdentityClientId() != null
+        config.getKey() != null && config.getUseAzureCredentialsChain() ||
+        config.getSharedAccessStorageToken() != null && config.getUseAzureCredentialsChain()
     ) {
-      throw new ISE("Set only one of 'key' or 'sharedAccessStorageToken' or 'managedIdentityClientId' in the azure config."
+      throw new ISE("Set only one of 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config."
           + " Please refer to azure documentation.");
     }
     return new AzureClientFactory(config);

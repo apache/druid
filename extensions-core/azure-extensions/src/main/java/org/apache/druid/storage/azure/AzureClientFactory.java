@@ -21,10 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.RetryOptions;
-import com.azure.identity.ChainedTokenCredentialBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.identity.ManagedIdentityCredential;
-import com.azure.identity.ManagedIdentityCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
@@ -60,7 +57,8 @@ public class AzureClientFactory
       clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
-    } else if (config.getManagedIdentityClientId() != null) {
+    } else if (config.getUseAzureCredentialsChain()) {
+      // We might not use the managed identity client id in the credential chain but we can just set it here and it will no-op.
       DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
           .managedIdentityClientId(config.getManagedIdentityClientId());
       clientBuilder.credential(defaultAzureCredentialBuilder.build());
@@ -70,7 +68,6 @@ public class AzureClientFactory
 
   public BlobContainerClient getBlobContainerClient(String containerName, Integer maxRetries)
   {
-    ChainedTokenCredentialBuilder credentialBuilder = new ChainedTokenCredentialBuilder();
     BlobContainerClientBuilder clientBuilder = new BlobContainerClientBuilder()
         .endpoint("https://" + config.getAccount() + ".blob.core.windows.net")
         .containerName(containerName)
@@ -81,13 +78,11 @@ public class AzureClientFactory
       clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
-    } else if (config.getManagedIdentityClientId() != null) {
-      ManagedIdentityCredential managedIdentityCredential = new ManagedIdentityCredentialBuilder()
-          .clientId(config.getManagedIdentityClientId())
-          .resourceId(config.getAccount())
-          .build();
-      credentialBuilder.addFirst(managedIdentityCredential);
-      clientBuilder.credential(credentialBuilder.build());
+    } else if (config.getUseAzureCredentialsChain()) {
+      // We might not use the managed identity client id in the credential chain but we can just set it here and it will no-op.
+      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
+          .managedIdentityClientId(config.getManagedIdentityClientId());
+      clientBuilder.credential(defaultAzureCredentialBuilder.build());
     }
     return clientBuilder.buildClient();
   }

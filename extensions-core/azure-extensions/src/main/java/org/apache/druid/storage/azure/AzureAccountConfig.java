@@ -49,6 +49,9 @@ public class AzureAccountConfig
   @JsonProperty
   private String managedIdentityClientId;
 
+  @JsonProperty
+  private Boolean useAzureCredentialsChain = Boolean.FALSE;
+
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
   {
@@ -96,6 +99,12 @@ public class AzureAccountConfig
   {
     return sharedAccessStorageToken;
   }
+
+  public Boolean getUseAzureCredentialsChain()
+  {
+    return useAzureCredentialsChain;
+  }
+
   public String getManagedIdentityClientId()
   {
     return managedIdentityClientId;
