@@ -123,6 +123,12 @@ public class OffsetLimitTest
           {
             return 0;
           }
+
+          @Override
+          public boolean equals(Object o)
+          {
+            return super.equals(o);
+          }
         });
       }
     }
