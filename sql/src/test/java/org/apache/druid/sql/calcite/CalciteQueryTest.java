@@ -97,7 +97,6 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -14280,31 +14279,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInGroupByWithLimitOuterGroupOrder()
-  {
-    cannotVectorize();
-
-    testBuilder()
-        .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true))
-        .sql("with t AS (SELECT m2, COUNT(m1) as trend_score\n"
-            + "FROM \"foo\"\n"
-            + "GROUP BY 1 \n"
-            + "LIMIT 11\n"
-            + ")\n"
-            + "select m2 , (MAX(trend_score)) from t\n"
-            + "where m2 > 2\n"
-            + "GROUP BY 1 \n"
-            + "ORDER BY 2 DESC\n"
-        )
-        .expectedResults(ImmutableList.of(
-            new Object[] {3.0D, 1L},
-            new Object[] {4.0D, 1L},
-            new Object[] {5.0D, 1L},
-            new Object[] {6.0D, 1L}))
-        .run();
-  }
-
-  @Test
   public void testWindowingErrorWithoutFeatureFlag()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
@@ -14331,6 +14305,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             + "where m2 > 2\n"
             + "GROUP BY 1 \n"
             + "ORDER BY 2 DESC")
+        .expectedQuery(
+            WindowOperatorQuery.builder()
+                .setDataSource(
+                    new TopNQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
+                        .threshold(10)
+                        .aggregators(aggregators(
+                            useDefault
+                                ? new CountAggregatorFactory("a0")
+                                : new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0"),
+                                    notNull("m1"))))
+                        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+                        .context(OUTER_LIMIT_CONTEXT)
+                        .build())
+                .setSignature(
+                    RowSignature.builder()
+                        .add("d0", ColumnType.DOUBLE)
+                        .add("a0", ColumnType.LONG)
+                        .build())
+                .setOperators(
+                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.DESC))
+                .setLeafOperators(
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                        .setOffsetLimit(0, Long.MAX_VALUE)
+                        .setFilter(range(
+                            "d0",
+                            ColumnType.LONG,
+                            2L,
+                            null,
+                            true,
+                            false))
+                        .setProjectedColumns("a0", "d0")
+                        .build())
+                .build())
         .expectedResults(ImmutableList.of(
             new Object[] {3.0D, 1L},
             new Object[] {4.0D, 1L},
@@ -14382,19 +14393,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .add("a0", ColumnType.LONG)
                         .build())
                 .setOperators(
-                    new NaiveSortOperatorFactory(
-                        Collections.<ColumnWithDirection> singletonList(
-                            new ColumnWithDirection("a0", ColumnWithDirection.Direction.DESC))),
+                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.DESC),
                     OperatorFactoryBuilders.scanOperatorFactoryBuilder()
                         .setOffsetLimit(1, 2)
                         .build())
                 .setLeafOperators(
                     OperatorFactoryBuilders.scanOperatorFactoryBuilder()
                         .setOffsetLimit(0, Long.MAX_VALUE)
-                        .setFilter(notNull("d0"))
+                        .setFilter(range(
+                            "d0",
+                            ColumnType.LONG,
+                            2L,
+                            null,
+                            true,
+                            false))
+                        .setProjectedColumns("a0", "d0")
                         .build())
                 .build()
-
         )
         .expectedResults(expectedResults)
         .run();

@@ -20,6 +20,13 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.operator.ColumnWithDirection.Direction;
+
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
@@ -36,10 +43,11 @@ public class OperatorFactoryBuilders
   {
     private OffsetLimit offsetLimit;
     private DimFilter filter;
+    private List<String> projectedColumns;
 
     public OperatorFactory build()
     {
-      return new ScanOperatorFactory(null, filter, offsetLimit, null, null, null);
+      return new ScanOperatorFactory(null, filter, offsetLimit, projectedColumns, null, null);
     }
 
     public ScanOperatorFactoryBuilder setOffsetLimit(long offset, long limit)
@@ -53,5 +61,21 @@ public class OperatorFactoryBuilders
       this.filter = filter;
       return this;
     }
+
+    public ScanOperatorFactoryBuilder setProjectedColumns(String... columns)
+    {
+      this.projectedColumns = Arrays.asList(columns);
+      return this;
+    }
+  }
+
+  public static OperatorFactory naiveSortOperator(ColumnWithDirection... colWithDirs)
+  {
+    return new NaiveSortOperatorFactory(Arrays.asList(colWithDirs));
+  }
+
+  public static OperatorFactory naiveSortOperator(String column, Direction direction)
+  {
+    return naiveSortOperator(new ColumnWithDirection(column, direction));
   }
 }

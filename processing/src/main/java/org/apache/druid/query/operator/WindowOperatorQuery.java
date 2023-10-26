@@ -247,16 +247,15 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       return false;
     }
     WindowOperatorQuery that = (WindowOperatorQuery) o;
-    return Objects.equals(rowSignature, that.rowSignature) && Objects.equals(
-        operators,
-        that.operators
-    );
+    return Objects.equals(rowSignature, that.rowSignature)
+        && Objects.equals(operators, that.operators)
+        && Objects.equals(leafOperators, that.leafOperators);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), rowSignature, operators);
+    return Objects.hash(super.hashCode(), rowSignature, operators, leafOperators);
   }
 
   @Override
