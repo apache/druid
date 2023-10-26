@@ -106,7 +106,7 @@ There are four JVM parameters that we set on all of our processes:
      - The temp directory should not be volatile tmpfs.
      - This directory should also have good read and write speed.
      - Avoid NFS mount.
-     - The `org.apache.druid.java.util.metrics.OshiSysMonitor` requires execute privileges on files in `java.io.tmpdir`. If you are using the system monitor, do not set `java.io.tmpdir` to `noexec`.
+     - The `org.apache.druid.java.util.metrics.OshiSysMonitor` and `org.apache.druid.java.util.metrics.SysMonitor` both require execute privileges on files in `java.io.tmpdir`. If you are using the system monitor, do not set `java.io.tmpdir` to `noexec`. Note that SysMonitor is deprecated. We recommend using OshiSysMonitor.
 -  `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` This allows log4j2 to handle logs for non-log4j2 components (like jetty) which use standard java logging.
 
 ### Extensions
@@ -383,6 +383,7 @@ Metric monitoring is an essential part of Druid operations.  The following monit
 |Name|Description|
 |----|-----------|
 |`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker processes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
+|`org.apache.druid.java.util.metrics.SysMonitor`| Deprecated. Use OshiSysMonitor instead. Reports on various system activities and statuses using the [SIGAR library](https://github.com/hyperic/sigar). Requires execute privileges on files in `java.io.tmpdir`. Do not set `java.io.tmpdir` to `noexec` when using `SysMonitor`.|
 |`org.apache.druid.java.util.metrics.OshiSysMonitor`|Reports on various system activities and statuses using the [OSHI JNA-based library](https://github.com/oshi/oshi). Requires execute privileges on files in `java.io.tmpdir`. Do not set `java.io.tmpdir` to `noexec` when using `OshiSysMonitor`.|
 |`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|
 |`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|
