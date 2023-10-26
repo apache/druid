@@ -20,6 +20,9 @@
 package org.apache.druid.query.operator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.lang.builder.StandardToStringStyle;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
@@ -119,13 +122,12 @@ public class ScanOperatorFactory implements OperatorFactory
       return false;
     }
     ScanOperatorFactory that = (ScanOperatorFactory) o;
-    return Objects.equals(offsetLimit, that.offsetLimit) && Objects.equals(timeRange, that.timeRange) && Objects.equals(
-        filter,
-        that.filter
-    ) && Objects.equals(projectedColumns, that.projectedColumns) && Objects.equals(
-        virtualColumns,
-        that.virtualColumns
-    ) && Objects.equals(ordering, that.ordering);
+    return Objects.equals(offsetLimit, that.offsetLimit)
+        && Objects.equals(timeRange, that.timeRange)
+        && Objects.equals(filter, that.filter)
+        && Objects.equals(projectedColumns, that.projectedColumns)
+        && Objects.equals(virtualColumns, that.virtualColumns)
+        && Objects.equals(ordering, that.ordering);
   }
 
   @Override
@@ -133,4 +135,32 @@ public class ScanOperatorFactory implements OperatorFactory
   {
     return Objects.hash(timeRange, filter, offsetLimit, projectedColumns, virtualColumns, ordering);
   }
+
+  static class MyStyle extends ToStringStyle  {
+    @Override
+    public void append(StringBuffer buffer, String fieldName, boolean value)
+    {
+      if(value) {
+        super.append(buffer, fieldName, value);
+      }
+    }
+  }
+  @Override
+  public String toString()
+  {
+    return new ToStringBuilder(this, new StandardToStringStyle())
+        .append("offsetLimit", offsetLimit)
+        .append("virtualColumns", virtualColumns)
+        .toString();
+    //    return "ScanOperatorFactory{"
+//        + "timeRange=" + timeRange +
+//        ", filter=" + filter +
+//        ", offsetLimit=" + offsetLimit
+//        + ", projectedColumns=" + projectedColumns +
+//        ", virtualColumns=" + virtualColumns +
+//        ", ordering=" + ordering
+//        + "}";
+  }
+
+
 }

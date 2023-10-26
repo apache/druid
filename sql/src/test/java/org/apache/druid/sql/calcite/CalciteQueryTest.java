@@ -96,6 +96,9 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
+import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.NaiveSortOperatorFactory;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
@@ -14353,8 +14356,63 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
         new Object[] {4.0D, 1L},
         new Object[] {5.0D, 1L});
+
     testBuilder()
         .sql(sql)
+        .expectedQuery(
+             WindowOperatorQuery.builder()
+                     .setDataSource(
+                         new TopNQueryBuilder()
+                             .dataSource(CalciteTests.DATASOURCE1)
+                             .intervals(querySegmentSpec(Filtration.eternity()))
+                             .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
+                             .threshold(10)
+                             .aggregators(aggregators(
+                                 useDefault
+                                 ? new CountAggregatorFactory("a0")
+                                 : new FilteredAggregatorFactory(
+                                     new CountAggregatorFactory("a0"),
+                                     notNull("m1")
+                                 )
+                             ))
+                             .metric(new NumericTopNMetricSpec("a0"))
+                             .context(OUTER_LIMIT_CONTEXT)
+                             .build()
+                     )
+                .setSignature(
+                    RowSignature.builder()
+                        .add("d0", ColumnType.DOUBLE)
+                        .add("a0", ColumnType.LONG)
+                        .build())
+                .setOperators(
+                    new NaiveSortOperatorFactory(
+                        Collections.<ColumnWithDirection> singletonList(
+                            new ColumnWithDirection("a0", ColumnWithDirection.Direction.DESC))))
+
+                //                     .setInterval(querySegmentSpec(Filtration.eternity()))
+//                     .setGranularity(Granularities.ALL)
+//                     .setDimensions(
+//                         new DefaultDimensionSpec("d0", "_d0", ColumnType.DOUBLE)
+//                     )
+//                     .setDimFilter(
+//                         useDefault ?
+//                         bound("d0", "2", null, true, false, null, StringComparators.NUMERIC) :
+//                         new RangeFilter("d0", ColumnType.LONG, 2L, null, true, false, null)
+//                     )
+//                     .setAggregatorSpecs(aggregators(
+//                         new LongMaxAggregatorFactory("_a0", "a0")
+//                     ))
+//                     .setLimitSpec(
+//                         DefaultLimitSpec
+//                             .builder()
+//                             .orderBy(new OrderByColumnSpec("_a0", Direction.DESCENDING, StringComparators.NUMERIC))
+//                             .limit(2)
+//                             .build()
+//                     )
+//                     .setContext(OUTER_LIMIT_CONTEXT)
+                     .build()
+
+            )
         .expectedResults(expectedResults)
         .run();
   }
