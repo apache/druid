@@ -105,5 +105,14 @@ public class ArrayOfStringsNullSafeSerde extends ArrayOfStringsSerDe
     return array;
   }
 
+  @Override
+  public int sizeOf(String item)
+  {
+    if (item == null) {
+      return Integer.BYTES;
+    } else {
+      return super.sizeOf(item);
+    }
+  }
 }
 

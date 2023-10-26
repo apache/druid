@@ -119,7 +119,8 @@ public class ArrayOfStringTuplesSerDe extends ArrayOfItemsSerDe<StringTuple>
   @Override
   public int sizeOf(final StringTuple item)
   {
-    int length = Integer.BYTES;
+    // Two integers to store number of strings in the tuple and the size of the byte array
+    int length = 2 * Integer.BYTES;
     for (final String s : item.toArray()) {
       length += STRINGS_SERDE.sizeOf(s);
     }
