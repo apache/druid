@@ -124,6 +124,9 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                 )
             );
           }
+          if (ordering.isEmpty()) {
+            ordering = null;
+          }
 
           this.leafOperators.add(
               new ScanOperatorFactory(
@@ -274,8 +277,8 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     return new WindowOperatorQueryBuilder();
   }
 
-  public static class WindowOperatorQueryBuilder extends QueryBuilderBase<WindowOperatorQueryBuilder>{
-
+  public static class WindowOperatorQueryBuilder extends QueryBuilderBase<WindowOperatorQueryBuilder>
+  {
     private DataSource dataSource;
     private QuerySegmentSpec intervals = new LegacySegmentSpec(Intervals.ETERNITY);
     private Map<String, Object> context;
@@ -307,9 +310,15 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
           leafOperators);
     }
 
-    public WindowOperatorQueryBuilder setOperators(OperatorFactory ...operators)
+    public WindowOperatorQueryBuilder setOperators(OperatorFactory... operators)
     {
       this.operators = Lists.newArrayList(operators);
+      return this;
+    }
+
+    public WindowOperatorQueryBuilder setLeafOperators(OperatorFactory... operators)
+    {
+      this.leafOperators = Lists.newArrayList(operators);
       return this;
     }
   }

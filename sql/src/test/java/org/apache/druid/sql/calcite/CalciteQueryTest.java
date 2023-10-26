@@ -14360,25 +14360,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testBuilder()
         .sql(sql)
         .expectedQuery(
-             WindowOperatorQuery.builder()
-                     .setDataSource(
-                         new TopNQueryBuilder()
-                             .dataSource(CalciteTests.DATASOURCE1)
-                             .intervals(querySegmentSpec(Filtration.eternity()))
-                             .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
-                             .threshold(10)
-                             .aggregators(aggregators(
-                                 useDefault
-                                 ? new CountAggregatorFactory("a0")
-                                 : new FilteredAggregatorFactory(
-                                     new CountAggregatorFactory("a0"),
-                                     notNull("m1")
-                                 )
-                             ))
-                             .metric(new NumericTopNMetricSpec("a0"))
-                             .context(OUTER_LIMIT_CONTEXT)
-                             .build()
-                     )
+            WindowOperatorQuery.builder()
+                .setDataSource(
+                    new TopNQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
+                        .threshold(10)
+                        .aggregators(aggregators(
+                            useDefault
+                                ? new CountAggregatorFactory("a0")
+                                : new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0"),
+                                    notNull("m1"))))
+                        .metric(new NumericTopNMetricSpec("a0"))
+                        .context(OUTER_LIMIT_CONTEXT)
+                        .build())
                 .setSignature(
                     RowSignature.builder()
                         .add("d0", ColumnType.DOUBLE)
@@ -14387,32 +14384,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setOperators(
                     new NaiveSortOperatorFactory(
                         Collections.<ColumnWithDirection> singletonList(
-                            new ColumnWithDirection("a0", ColumnWithDirection.Direction.DESC))))
+                            new ColumnWithDirection("a0", ColumnWithDirection.Direction.DESC))),
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                        .setOffsetLimit(1, 2)
+                        .build())
+                .setLeafOperators(
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                        .setOffsetLimit(0, Long.MAX_VALUE)
+                        .setFilter(notNull("d0"))
+                        .build())
+                .build()
 
-                //                     .setInterval(querySegmentSpec(Filtration.eternity()))
-//                     .setGranularity(Granularities.ALL)
-//                     .setDimensions(
-//                         new DefaultDimensionSpec("d0", "_d0", ColumnType.DOUBLE)
-//                     )
-//                     .setDimFilter(
-//                         useDefault ?
-//                         bound("d0", "2", null, true, false, null, StringComparators.NUMERIC) :
-//                         new RangeFilter("d0", ColumnType.LONG, 2L, null, true, false, null)
-//                     )
-//                     .setAggregatorSpecs(aggregators(
-//                         new LongMaxAggregatorFactory("_a0", "a0")
-//                     ))
-//                     .setLimitSpec(
-//                         DefaultLimitSpec
-//                             .builder()
-//                             .orderBy(new OrderByColumnSpec("_a0", Direction.DESCENDING, StringComparators.NUMERIC))
-//                             .limit(2)
-//                             .build()
-//                     )
-//                     .setContext(OUTER_LIMIT_CONTEXT)
-                     .build()
-
-            )
+        )
         .expectedResults(expectedResults)
         .run();
   }
