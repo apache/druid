@@ -466,14 +466,9 @@ public class EmitterTest
                 "Basic " + StringUtils.encodeBase64String(StringUtils.toUtf8("foo:bar")),
                 request.getHeaders().get(HttpHeaders.Names.AUTHORIZATION)
             );
-            Assert.assertEquals(
-                StringUtils.format(
-                    "%s\n%s\n",
-                    JSON_MAPPER.writeValueAsString(events.get(0)),
-                    JSON_MAPPER.writeValueAsString(events.get(1))
-                ),
-                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
-            );
+            String[] slices = StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString().split(System.lineSeparator());
+            Assert.assertEquals(JSON_MAPPER.readTree(JSON_MAPPER.writeValueAsString(events.get(0))), JSON_MAPPER.readTree(slices[0]));
+            Assert.assertEquals(JSON_MAPPER.readTree(JSON_MAPPER.writeValueAsString(events.get(1))), JSON_MAPPER.readTree(slices[1]));
 
             return GoHandlers.immediateFuture(okResponse());
           }
