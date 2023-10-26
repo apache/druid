@@ -70,6 +70,12 @@ public class TombstoneHelper
     return JodaUtils.condenseIntervals(pushedSegmentsIntervals);
   }
 
+  /**
+   * This method is used by the native batch engine and should be reconciled with
+   * {@link TombstoneHelper#computeTombstoneSegmentsForReplace(List, List, String, Granularity, int)} since they are
+   * functionally similar, so both the native and MSQ engines use the same logic. It will require some refactoring
+   * such that we can pass in meaningful arguments that works with both systems.
+   */
   public Set<DataSegment> computeTombstones(
       DataSchema dataSchema,
       Map<Interval, SegmentIdWithShardSpec> tombstoneIntervalsAndVersions
@@ -126,6 +132,12 @@ public class TombstoneHelper
     return retVal;
   }
 
+  /**
+   * This method is used by the MSQ engine and should be reconciled with
+   * {@link TombstoneHelper#computeTombstones(DataSchema, Map)} since they are functionally similar, so both the native
+   * and MSQ engines use the same logic. It will require some refactoring such that we can pass in meaningful arguments
+   * that works with both systems.
+   */
   public Set<DataSegment> computeTombstoneSegmentsForReplace(
       List<Interval> intervalsToDrop,
       List<Interval> intervalsToReplace,
