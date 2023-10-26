@@ -141,7 +141,7 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     {
       return withColumnAccessor(columnName, columnAccessor -> {
         if (columnAccessor == null) {
-          return DimensionSelector.constant(null);
+          return DimensionSelector.nilSelector();
         } else {
           final ColumnType type = columnAccessor.getType();
           switch (type.getType()) {
@@ -160,16 +160,22 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      return withColumnAccessor(column, columnAccessor ->
-          new ColumnCapabilitiesImpl()
+      return withColumnAccessor(column, columnAccessor -> {
+        if (columnAccessor == null) {
+          return null;
+        } else {
+          return new ColumnCapabilitiesImpl()
               .setType(columnAccessor.getType())
               .setHasMultipleValues(false)
               .setDictionaryEncoded(false)
-              .setHasBitmapIndexes(false));
+              .setHasBitmapIndexes(false);
+        }
+      });
     }
 
     private <T> T withColumnAccessor(String column, Function<ColumnAccessor, T> fn)
     {
+      @Nullable
       ColumnAccessor retVal = accessorCache.get(column);
       if (retVal == null) {
         Column racColumn = rac.findColumn(column);

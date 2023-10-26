@@ -79,7 +79,7 @@ public @interface NotYetSupported
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
     NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),
+    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
     CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
     MISSING_DESC(DruidException.class, "function signature DESC"),
     RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
