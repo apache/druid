@@ -25,6 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
@@ -78,6 +82,11 @@ import java.util.stream.Collectors;
  * ingested via MSQ. If set to 'none', arrays are not allowed to be ingested in MSQ. If set to 'array', array types
  * can be ingested as expected. If set to 'mvd', numeric arrays can not be ingested, and string arrays will be
  * ingested as MVDs (this is kept for legacy purpose).
+ *
+ * <li><b>taskLockType</b>: Temporary flag to allow MSQ to use experimental lock types. Valid values are present in
+ * {@link TaskLockType}. If the flag is not set, msq uses {@link TaskLockType#EXCLUSIVE} for replace queries and
+ * {@link TaskLockType#SHARED} for insert queries.
+ *
  * </ol>
  **/
 public class MultiStageQueryContext
@@ -105,7 +114,7 @@ public class MultiStageQueryContext
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
-  public static final String CTX_SEGMENT_LOAD_WAIT = "waitTillSegmentsLoad";
+  public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
 
@@ -349,5 +358,54 @@ public class MultiStageQueryContext
     catch (Exception e) {
       throw QueryContexts.badValueException(CTX_INDEX_SPEC, "an indexSpec", indexSpecObject);
     }
+  }
+
+  /**
+   * This method is used to validate and get the taskLockType from the queryContext.
+   * If the queryContext does not contain the taskLockType, then {@link TaskLockType#EXCLUSIVE} is used for replace queries and
+   * {@link TaskLockType#SHARED} is used for insert queries.
+   * If the queryContext contains the taskLockType, then it is validated and returned.
+   */
+  public static TaskLockType validateAndGetTaskLockType(QueryContext queryContext, boolean isReplaceQuery)
+  {
+    final TaskLockType taskLockType = QueryContexts.getAsEnum(
+        Tasks.TASK_LOCK_TYPE,
+        queryContext.getString(Tasks.TASK_LOCK_TYPE, null),
+        TaskLockType.class
+    );
+    if (taskLockType == null) {
+      if (isReplaceQuery) {
+        return TaskLockType.EXCLUSIVE;
+      } else {
+        return TaskLockType.SHARED;
+      }
+    }
+    final String appendErrorMessage = StringUtils.format(
+        " Please use [%s] key in the context parameter and use one of the TaskLock types as mentioned earlier or "
+        + "remove this key for automatic lock type selection", Tasks.TASK_LOCK_TYPE);
+
+    if (isReplaceQuery && !(taskLockType.equals(TaskLockType.EXCLUSIVE) || taskLockType.equals(TaskLockType.REPLACE))) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "TaskLock must be of type [%s] or [%s] for a REPLACE query. Found invalid type [%s] set."
+                              + appendErrorMessage,
+                              TaskLockType.EXCLUSIVE,
+                              TaskLockType.REPLACE,
+                              taskLockType
+                          );
+    }
+    if (!isReplaceQuery && !(taskLockType.equals(TaskLockType.SHARED) || taskLockType.equals(TaskLockType.APPEND))) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "TaskLock must be of type [%s] or [%s] for an INSERT query. Found invalid type [%s] set."
+                              + appendErrorMessage,
+                              TaskLockType.SHARED,
+                              TaskLockType.APPEND,
+                              taskLockType
+                          );
+    }
+    return taskLockType;
   }
 }

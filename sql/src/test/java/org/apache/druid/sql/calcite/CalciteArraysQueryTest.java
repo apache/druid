@@ -50,7 +50,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -3172,45 +3171,55 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testArrayAggGroupByArrayAggFromSubquery()
   {
     cannotVectorize();
-
+    skipVectorize();
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
-            new TopNQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .dimension(new DefaultDimensionSpec(
-                    "dim2",
-                    "d0",
-                    ColumnType.STRING
-                ))
-                .metric(new DimensionTopNMetricSpec(
-                    null,
-                    StringComparators.LEXICOGRAPHIC
-                ))
-                .filters(notNull("dim1"))
-                .threshold(5)
-                .aggregators(new ExpressionLambdaAggregatorFactory(
-                    "a0",
-                    ImmutableSet.of("dim1"),
-                    "__acc",
-                    "ARRAY<STRING>[]",
-                    "ARRAY<STRING>[]",
-                    true,
-                    true,
-                    false,
-                    "array_set_add(\"__acc\", \"dim1\")",
-                    "array_set_add_all(\"__acc\", \"a0\")",
-                    null,
-                    null,
-                    new HumanReadableBytes(1024),
-                    ExprMacroTable.nil()
-                ))
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .granularity(Granularities.ALL)
-                .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                .postAggregators(new ExpressionPostAggregator("s0", "1", null, ExprMacroTable.nil()))
-                .build()
+            GroupByQuery.builder()
+                        .setDataSource(new TopNQueryBuilder()
+                                           .dataSource(CalciteTests.DATASOURCE1)
+                                           .dimension(new DefaultDimensionSpec(
+                                               "dim2",
+                                               "d0",
+                                               ColumnType.STRING
+                                           ))
+                                           .metric(new DimensionTopNMetricSpec(
+                                               null,
+                                               StringComparators.LEXICOGRAPHIC
+                                           ))
+                                           .filters(notNull("dim1"))
+                                           .threshold(5)
+                                           .aggregators(new ExpressionLambdaAggregatorFactory(
+                                               "a0",
+                                               ImmutableSet.of("dim1"),
+                                               "__acc",
+                                               "ARRAY<STRING>[]",
+                                               "ARRAY<STRING>[]",
+                                               true,
+                                               true,
+                                               false,
+                                               "array_set_add(\"__acc\", \"dim1\")",
+                                               "array_set_add_all(\"__acc\", \"a0\")",
+                                               null,
+                                               null,
+                                               new HumanReadableBytes(1024),
+                                               ExprMacroTable.nil()
+                                           ))
+                                           .intervals(querySegmentSpec(Filtration.eternity()))
+                                           .granularity(Granularities.ALL)
+                                           .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                                           .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING),
+                            new DefaultDimensionSpec("a0", "_d1", ColumnType.STRING_ARRAY)
+                        )
+                        .setAggregatorSpecs(new CountAggregatorFactory("_a0"))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
         ),
         useDefault ?
         ImmutableList.of(
@@ -6470,7 +6479,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           expressionFilter("(\"j0.unnest\" == \"m2\")"),
                           and(
                               isNull("j0.unnest"),
-                              not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
+                              NullHandling.sqlCompatible()
+                              ? not(istrue(expressionFilter("(\"j0.unnest\" == \"m2\")")))
+                              : not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
                           )
                       ))
                   .legacy(false)

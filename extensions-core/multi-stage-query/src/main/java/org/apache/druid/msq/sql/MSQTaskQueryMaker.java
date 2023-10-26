@@ -226,12 +226,15 @@ public class MSQTaskQueryMaker implements QueryMaker
           fieldMapping.stream().map(f -> f.right).collect(Collectors.toList())
       );
 
-      destination = new DataSourceMSQDestination(
+      final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
           targetDataSource,
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks
       );
+      MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext,
+                                                        dataSourceMSQDestination.isReplaceTimeChunks());
+      destination = dataSourceMSQDestination;
     } else {
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
       if (msqSelectDestination.equals(MSQSelectDestination.TASKREPORT)) {

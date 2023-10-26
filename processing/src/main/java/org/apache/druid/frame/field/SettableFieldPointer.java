@@ -20,21 +20,31 @@
 package org.apache.druid.frame.field;
 
 /**
- * A simple {@link ReadableFieldPointer} that returns the position that was set on its object.
+ * A simple {@link ReadableFieldPointer} that returns the position and the length that was set on its object.
  */
 public class SettableFieldPointer implements ReadableFieldPointer
 {
-
   long position = 0;
+  long length = -1;
 
-  public void setPosition(long position)
+  /**
+   * Sets the position and the length to be returned when interface's methods are called.
+   */
+  public void setPositionAndLength(long position, long length)
   {
     this.position = position;
+    this.length = length;
   }
 
   @Override
   public long position()
   {
     return position;
+  }
+
+  @Override
+  public long length()
+  {
+    return length;
   }
 }

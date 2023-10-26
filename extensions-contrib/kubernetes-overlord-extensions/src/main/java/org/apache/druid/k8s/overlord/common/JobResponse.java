@@ -32,22 +32,15 @@ public class JobResponse
   private static final EmittingLogger LOGGER = new EmittingLogger(JobResponse.class);
 
   private final Job job;
-  private final PeonPhase phase;
 
-  public JobResponse(@Nullable Job job, PeonPhase phase)
+  public JobResponse(@Nullable Job job)
   {
     this.job = job;
-    this.phase = phase;
   }
 
   public Job getJob()
   {
     return job;
-  }
-
-  public PeonPhase getPhase()
-  {
-    return phase;
   }
 
   public long getJobDuration()

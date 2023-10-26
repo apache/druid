@@ -716,8 +716,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getLong());
-    Assert.assertEquals((float) DateTimes.of("2000-01-01").getMillis(), selector.getFloat(), 0.0f);
-    Assert.assertEquals((double) DateTimes.of("2000-01-01").getMillis(), selector.getDouble(), 0.0d);
+    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getFloat(), 0.0f);
+    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getDouble(), 0.0d);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getObject());
 
     CURRENT_ROW.set(ROW1);

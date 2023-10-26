@@ -17,27 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.runnerstrategy;
 
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodStatus;
-import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.apache.druid.indexing.common.task.Task;
+import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-public class PeonPhaseTest
+@RunWith(EasyMockRunner.class)
+public class WorkerRunnerStrategyTest extends EasyMockSupport
 {
+  @Mock
+  Task task;
 
   @Test
-  void testGetPhaseForToMakeCoverageHappy()
+  public void test_workerRunnerStrategy_returnsCorrectRunnerType()
   {
-    Pod pod = mock(Pod.class);
-    PodStatus status = mock(PodStatus.class);
-    when(status.getPhase()).thenReturn("Succeeded");
-    when(pod.getStatus()).thenReturn(status);
-    assertEquals(PeonPhase.UNKNOWN, PeonPhase.getPhaseFor(null));
-    assertEquals(PeonPhase.SUCCEEDED, PeonPhase.getPhaseFor(pod));
+    WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy();
+    Assert.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
   }
 }

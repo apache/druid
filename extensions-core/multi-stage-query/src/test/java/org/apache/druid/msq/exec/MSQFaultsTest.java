@@ -22,7 +22,9 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
@@ -45,6 +47,7 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -175,10 +178,10 @@ public class MSQFaultsTest extends MSQTestBase
                     .build();
 
     final String sql = "INSERT INTO foo1\n"
-                     + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
-                     + "FROM foo\n"
-                     + "PARTITIONED BY DAY\n"
-                     + "CLUSTERED BY dim1";
+                       + "SELECT TIME_PARSE(dim1) AS __time, dim1 as cnt\n"
+                       + "FROM foo\n"
+                       + "PARTITIONED BY DAY\n"
+                       + "CLUSTERED BY dim1";
 
     testIngestQuery()
         .setSql(sql)
@@ -349,8 +352,9 @@ public class MSQFaultsTest extends MSQTestBase
                 DruidException.Persona.ADMIN,
                 DruidException.Category.INVALID_INPUT,
                 "general"
-            ).expectMessageContains("SQL requires union between two tables and column names queried for each table are different "
-                              + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."))
+            ).expectMessageContains(
+                "SQL requires union between two tables and column names queried for each table are different "
+                + "Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."))
         .verifyPlanningErrors();
   }
 
@@ -372,6 +376,49 @@ public class MSQFaultsTest extends MSQTestBase
                 "general"
             ).expectMessageContains(
                 "SQL requires union between inputs that are not simple table scans and involve a filter or aliasing"))
+        .verifyPlanningErrors();
+  }
+
+  @Test
+  public void testInsertWithReplaceAndExcludeLocks()
+  {
+    for (TaskLockType taskLockType : new TaskLockType[]{TaskLockType.EXCLUSIVE, TaskLockType.REPLACE}) {
+      testLockTypes(
+          taskLockType,
+          "INSERT INTO foo1 select * from foo partitioned by day",
+          "TaskLock must be of type [SHARED] or [APPEND] for an INSERT query"
+      );
+    }
+  }
+
+  @Test
+  public void testReplaceWithAppendAndSharedLocks()
+  {
+    for (TaskLockType taskLockType : new TaskLockType[]{TaskLockType.APPEND, TaskLockType.SHARED}) {
+      testLockTypes(
+          taskLockType,
+          "REPLACE INTO foo1 overwrite ALL select * from foo partitioned by day",
+          "TaskLock must be of type [EXCLUSIVE] or [REPLACE] for a REPLACE query"
+      );
+    }
+  }
+
+  private void testLockTypes(TaskLockType contextTaskLockType, String sql, String errorMessage)
+  {
+    Map<String, Object> context = new HashMap<>(DEFAULT_MSQ_CONTEXT);
+    context.put(Tasks.TASK_LOCK_TYPE, contextTaskLockType.name());
+    testIngestQuery()
+        .setSql(
+            sql
+        )
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(
+            new DruidExceptionMatcher(
+                DruidException.Persona.USER,
+                DruidException.Category.INVALID_INPUT,
+                "general"
+            ).expectMessageContains(
+                errorMessage))
         .verifyPlanningErrors();
   }
 }

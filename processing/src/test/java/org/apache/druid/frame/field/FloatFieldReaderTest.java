@@ -89,7 +89,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultFloatValue());
 
     final ColumnValueSelector<?> readSelector =
-        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 
@@ -104,7 +104,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1f);
 
     final ColumnValueSelector<?> readSelector =
-        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        FloatFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(5.1f, readSelector.getObject());
   }
@@ -115,7 +115,8 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultFloatValue());
 
     final DimensionSelector readSelector =
-        FloatFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        FloatFieldReader.forPrimitive()
+                        .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -149,7 +150,8 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1f);
 
     final DimensionSelector readSelector =
-        FloatFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        FloatFieldReader.forPrimitive()
+                        .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -178,7 +180,7 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
     final DimensionSelector readSelector =
         FloatFieldReader.forPrimitive().makeDimensionSelector(
             memory,
-            new ConstantFieldPointer(MEMORY_POSITION),
+            new ConstantFieldPointer(MEMORY_POSITION, -1),
             new SubstringDimExtractionFn(1, null)
         );
 

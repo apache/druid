@@ -126,10 +126,10 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_makeColumnValueSelector_null()
   {
-    writeToMemory(null, MEMORY_POSITION);
+    long sz = writeToMemory(null, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     Assert.assertTrue(readSelector.isNull());
   }
@@ -137,10 +137,10 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_makeColumnValueSelector_aValue()
   {
-    writeToMemory(LONGS_ARRAY_1, MEMORY_POSITION);
+    long sz = writeToMemory(LONGS_ARRAY_1, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     assertResults(LONGS_LIST_1, readSelector.getObject());
   }
@@ -149,15 +149,15 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   public void test_makeColumnValueSelector_multipleValues()
   {
     long sz = writeToMemory(LONGS_ARRAY_1, MEMORY_POSITION);
-    writeToMemory(LONGS_ARRAY_2, MEMORY_POSITION + sz);
-    IndexArrayFieldPointer pointer = new IndexArrayFieldPointer(ImmutableList.of(MEMORY_POSITION, MEMORY_POSITION + sz));
-
+    long sz2 = writeToMemory(LONGS_ARRAY_2, MEMORY_POSITION + sz);
+    IndexArrayFieldPointer pointer = new IndexArrayFieldPointer(
+        ImmutableList.of(MEMORY_POSITION, MEMORY_POSITION + sz),
+        ImmutableList.of(sz, sz2)
+    );
 
     final ColumnValueSelector<?> readSelector = new LongArrayFieldReader().makeColumnValueSelector(memory, pointer);
-
     pointer.setPointer(0);
     assertResults(LONGS_LIST_1, readSelector.getObject());
-
     pointer.setPointer(1);
     assertResults(LONGS_LIST_2, readSelector.getObject());
   }
@@ -165,10 +165,10 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_makeColumnValueSelector_emptyArray()
   {
-    writeToMemory(new Object[]{}, MEMORY_POSITION);
+    long sz = writeToMemory(new Object[]{}, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     assertResults(Collections.emptyList(), readSelector.getObject());
   }
@@ -176,10 +176,10 @@ public class LongArrayFieldReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_makeColumnValueSelector_arrayWithSingleNullElement()
   {
-    writeToMemory(new Object[]{null}, MEMORY_POSITION);
+    long sz = writeToMemory(new Object[]{null}, MEMORY_POSITION);
 
     final ColumnValueSelector<?> readSelector =
-        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new LongArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, sz));
 
     assertResults(Collections.singletonList(null), readSelector.getObject());
   }

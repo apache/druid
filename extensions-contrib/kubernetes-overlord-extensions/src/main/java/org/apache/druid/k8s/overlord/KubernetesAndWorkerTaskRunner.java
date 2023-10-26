@@ -38,6 +38,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import javax.annotation.Nullable;
@@ -57,17 +58,17 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
 {
   private final KubernetesTaskRunner kubernetesTaskRunner;
   private final WorkerTaskRunner workerTaskRunner;
-  private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
+  private final RunnerStrategy runnerStrategy;
 
   public KubernetesAndWorkerTaskRunner(
       KubernetesTaskRunner kubernetesTaskRunner,
       WorkerTaskRunner workerTaskRunner,
-      KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig
+      RunnerStrategy runnerStrategy
   )
   {
     this.kubernetesTaskRunner = kubernetesTaskRunner;
     this.workerTaskRunner = workerTaskRunner;
-    this.kubernetesAndWorkerTaskRunnerConfig = kubernetesAndWorkerTaskRunnerConfig;
+    this.runnerStrategy = runnerStrategy;
   }
 
   @Override
@@ -101,7 +102,8 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    if (kubernetesAndWorkerTaskRunnerConfig.isSendAllTasksToWorkerTaskRunner()) {
+    RunnerStrategy.RunnerType runnerType = runnerStrategy.getRunnerTypeForTask(task);
+    if (RunnerStrategy.RunnerType.WORKER_RUNNER_TYPE.equals(runnerType)) {
       return workerTaskRunner.run(task);
     } else {
       return kubernetesTaskRunner.run(task);
@@ -282,11 +284,5 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   public void updateStatus(Task task, TaskStatus status)
   {
     kubernetesTaskRunner.updateStatus(task, status);
-  }
-
-  @Override
-  public void updateLocation(Task task, TaskLocation location)
-  {
-    kubernetesTaskRunner.updateLocation(task, location);
   }
 }
