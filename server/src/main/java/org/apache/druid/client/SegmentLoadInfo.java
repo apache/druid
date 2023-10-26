@@ -26,6 +26,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -38,7 +39,7 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   {
     Preconditions.checkNotNull(segment, "segment");
     this.segment = segment;
-    this.servers = Sets.newHashSet();
+    this.servers = new HashSet<>();
   }
 
   public boolean addServer(DruidServerMetadata server)
