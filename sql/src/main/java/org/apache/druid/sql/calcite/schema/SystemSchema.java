@@ -318,7 +318,7 @@ public class SystemSchema extends AbstractSchema
               numRows = val.getNumRows();
             }
 
-            isRealtime = Boolean.TRUE.equals(val.isRealtime()) ? 1 : 0;
+            isRealtime = val.isRealtime() ? 1 : 0;
 
             // set of segments returned from Coordinator include published and realtime segments
             // so realtime segments are not published and vice versa
