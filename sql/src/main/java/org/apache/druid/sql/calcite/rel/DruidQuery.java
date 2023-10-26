@@ -1493,6 +1493,11 @@ public class DruidQuery
       return null;
     }
 
+    ScanQuery scan = toScanQuery(false);
+    if (scan == null) {
+      return null;
+    }
+
     if (dataSource != DruidOuterQueryRel.DUMMY_DATA_SOURCE
         && dataSource.isConcrete()) {
       List<String> orderByColumnNames = sorting.getOrderBys()
@@ -1504,10 +1509,6 @@ public class DruidQuery
       return null;
     }
 
-    ScanQuery scan = toScanQuery(false);
-    if (scan == null) {
-      return null;
-    }
 
     QueryDataSource newDataSource = new QueryDataSource(scan);
     ArrayList<ColumnWithDirection> sortColumns = getColumnWithDriectionsFromOrderBys(sorting.getOrderBys());
