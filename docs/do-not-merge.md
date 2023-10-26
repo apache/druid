@@ -51,7 +51,7 @@ For more information on result parameters supported by the Druid SQL API, see [R
 
 [#14571](https://github.com/apache/druid/pull/14571)
 
-### Broadened access for queries for deep storage
+### Broadened access for queries from deep storage
 
 Users with the `STATE` permission can interact with status APIs for queries from deep storage. Previously, only the user who submitted the query could use those APIs. This enables the web console to monitor the running status of the queries. Users with the `STATE` permission can access the query results.
 
@@ -98,16 +98,9 @@ For more information, see [Stop supervisors that ingest from multiple Kafka topi
 [#14424](https://github.com/apache/druid/pull/14424)
 [#14865](https://github.com/apache/druid/pull/14865)
 
-## Hadoop 2 removed
-
-Support for Hadoop 2 has been removed.
-Migrate to SQL-based ingestion or native ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid's built-in ingestion is not possible, you must upgrade your Hadoop infrastructure to 3.x+ before upgrading to Druid 28.0.0.
-
-[#14763](https://github.com/apache/druid/pull/14763)
-
 ## JSON and auto column indexer
 
-The `json` type is now equivalent to using `auto` in native JSON-based ingestion dimension specs. Upgrade your ingestion specs to `json` to take advantage of the features and functionality of `auto`, including the following:
+The `json` column type is now equivalent to using `auto` in JSON-based batch ingestion dimension specs. Upgrade your ingestion specs to `json` to take advantage of the features and functionality of `auto`, including the following:
 
 - Type specializations including ARRAY typed columns
 - Better support for nested arrays of strings, longs, and doubles
@@ -121,15 +114,30 @@ For more information, see [Nested column format in the upgrade notes](#nested-co
 [#14955](https://github.com/apache/druid/pull/14955)
 [#14456](https://github.com/apache/druid/pull/14456)
 
+## Array flattening during ingestion
+
+The UNNEST function is no longer experimental. UNNEST lets you flatten and explode data during batch ingestion. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
+
+You no longer need to include the context parameter `"enableUnnest": true` to use UNNEST.
+
+[#14886](https://github.com/apache/druid/pull/14886)
+
+## Hadoop 2 removed
+
+Support for Hadoop 2 has been removed.
+Migrate to SQL-based ingestion or JSON-based batch ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid's built-in ingestion is not possible, you must upgrade your Hadoop infrastructure to 3.x+ before upgrading to Druid 28.0.0.
+
+[#14763](https://github.com/apache/druid/pull/14763)
+
 # Additional features and improvements
 
 ## SQL compatibility
 
-Druid continues to make SQL query execution more consistent with how standard SQL behaves. However, there are feature flags available to restore the old behaviour if needed.
+Druid continues to make SQL query execution more consistent with how standard SQL behaves. However, there are feature flags available to restore the old behavior if needed.
 
 ### Three-valued logic
 
-Druid native filters now correctly observe SQL [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL), `true`, `false`, `unknown`, instead of Druid's classic two-state logic when you set the following configuration values:
+Druid native filters now observe SQL [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) (`true`, `false`, or `unknown`) instead of Druid's classic two-state logic when you set the following configuration values:
 
 * `druid.generic.useThreeValueLogicForNativeFilters = true`
 * `druid.expressions.useStrictBooleans = true`
@@ -141,9 +149,10 @@ Druid native filters now correctly observe SQL [three-valued logic](https://en.w
 
 `druid.expressions.useStrictBooleans` is now enabled by default.
 Druid now handles booleans strictly using `1` (true) or `0` (false).
-Previously, true and false could be represented either as `true` and `false`, respectively, as well as `1` and `0`.
+Previously, true and false could be represented either as `true` and `false` as well as `1` and `0`, respectively.
+In addition, Druid now returns a null value for Boolean comparisons like `True && NULL`.
 
-If you don't explicitly configure this property in `runtime.properties`, clusters now use LONG types for any ingested boolean values, and in the output of boolean functions for transformations and query time operations.
+If you don't explicitly configure this property in `runtime.properties`, clusters now use LONG types for any ingested boolean values and in the output of boolean functions for transformations and query time operations.
 
 This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
 
@@ -152,7 +161,7 @@ This change may impact your query results. For more information, see [SQL compat
 ### NULL handling
 
 `druid.generic.useDefaultValueForNull` is now disabled by default.
-Druid now differentiates between empty records, such as `' '`, and null records.
+Druid now differentiates between empty records and null records.
 Previously, Druid might treat empty records as empty or null.
 
 This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
@@ -164,13 +173,13 @@ This change may impact your query results. For more information, see [SQL compat
 ### Ability to ingest ARRAY types
 
 SQL-based ingestion now supports storing ARRAY typed values in [ARRAY typed columns](https://druid.apache.org/docs/latest/querying/arrays) as well as storing both VARCHAR and numeric typed arrays.
-Previously, the MSQ task engine incorrectly stored ARRAY typed values as [multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions) instead of ARRAY typed columns.
+Previously, the MSQ task engine stored ARRAY typed values as [multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions) instead of ARRAY typed columns.
 
 The MSQ task engine now includes the `arrayIngestMode` query context parameter, which controls how
 `ARRAY` types are stored in Druid segments.
 Set the `arrayIngestMode` query context parameter to `array` to ingest ARRAY types.
 
-In Druid 28.0.0, the default mode for `arrayIngestMode` is `mvd` for backwards compatibility, which only supports VARCHAR typed arrays and stores them as multi-value dimensions. This default is subject to removal in future releases.
+In Druid 28.0.0, the default mode for `arrayIngestMode` is `mvd` for backwards compatibility, which only supports VARCHAR typed arrays and stores them as multi-value dimensions. This default is subject to change in future releases.
 
 Note that this improvement is incompatible with previous Druid versions. For information on how to migrate to the new behavior, see the [Ingestion options for ARRAY typed columns in the upgrade notes](#ingestion-options-for-array-typed-columns).
 
@@ -183,14 +192,6 @@ For information on inserting, filtering, and grouping behavior for `ARRAY` typed
 Ingestion reports now include a `segmentLoadStatus` object that provides information related to the ingestion, such as duration and total segments.
 
 [#14322](https://github.com/apache/druid/pull/14322)
-
-### Array flattening during ingestion
-
-You can now use UNNEST with MSQ queries. This lets you flatten and explode data during batch ingestion. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
-
-You no longer need to include the context parameter `"enableUnnest": true` to run queries involving UNNEST.
-
-[#14886](https://github.com/apache/druid/pull/14886)
 
 ### Azure connector
 
@@ -286,7 +287,7 @@ New SQL and native query functions allow you to evaluate whether two expressions
 Expressions are distinct if they have different values or if one of them is NULL.
 Expressions are not distinct if their values are the same or if both of them are NULL.
 
-Because the functions treat NULLs as known values  when used as a comparison operator, they always return true or false, even if one or both expressions are NULL.
+Because the functions treat NULLs as known values  when used as a comparison operator, they always return true or false even if one or both expressions are NULL.
 
 The following table shows the difference in behavior between the equals sign (=) and IS [NOT] DISTINCT FROM:
 
@@ -478,6 +479,7 @@ Note that this is an incompatible change to the table. For upgrade information, 
 ## Data management
 
 ### Alert message for segment assignments
+
 Improved alert message for segment assignments when an invalid tier is specified in a load rule or when no rule applies on a segment.
 
 [#14696](https://github.com/apache/druid/pull/14696)
@@ -507,27 +509,34 @@ The API also returns unused segments if the `includeUnused` parameter is set.
 
 ### Added UI support for segment loading query context parameter
 
-The web console now supports the `waitUntilSegmentsLoad` query context parameter.
+The web console supports the `waitUntilSegmentsLoad` query context parameter.
 
 ![UI for waitUntilSegmentsLoad context parameter](image.png)
 
 [#15110](https://github.com/apache/druid/pull/15110)
 
-### Added concurrent compaction switches
+### Added concurrent append and replace switches
 
-The web console now includes concurrent compaction switches.
+The web console includes concurrent append and replace switches.
 
-The following screenshot shows the concurrent compaction switch in the classic batch ingestion wizard:
+The following screenshot shows the concurrent append and replace switches in the classic batch ingestion wizard:
 ![Classic batch ingestion wizard](image-1.png)
 
-The following screenshot shows the concurrent compaction switch in the compaction configuration UI:
+The following screenshot shows the concurrent append and replace switches in the compaction configuration UI:
 ![Compaction configuration UI](image-2.png)
 
 [#15114](https://github.com/apache/druid/pull/15114)
 
+### Added UI support for ingesting from multiple Kafka topics to a single datasource
+
+The web console supports ingesting streaming data from multiple Kafka topics to a datasource using a single supervisor.
+
+![UI for Kafka multi-topic ingestion](image-3.png)
+
+[#14833](https://github.com/apache/druid/pull/14833)
+
 ### Other web console improvements
 
-* You can select to allow concurrent APPEND tasks in the web console [#15114](https://github.com/apache/druid/pull/15114)
 * You can now copy query results from the web console directly to the clipboard [#14889](https://github.com/apache/druid/pull/14889)
 * The web console now shows the execution dialog for `query_controller` tasks in the task view instead of the generic raw task details dialog. You can still access the raw task details from the ellipsis (...) menu [#14930)](https://github.com/apache/druid/pull/14930)
 * You can now select a horizontal range in the web console time chart to modify the current WHERE clause [#14929](https://github.com/apache/druid/pull/14929)
@@ -537,7 +546,6 @@ The following screenshot shows the concurrent compaction switch in the compactio
 * A warning now appears when a CSV or TSV sample contains newlines that Druid does not accept [#14783](https://github.com/apache/druid/pull/14783)
 * You can now select a format when downloading data [#14794](https://github.com/apache/druid/pull/14794)
 * Improved the clarity of cluster default rules in the retention dialog [#14793](https://github.com/apache/druid/pull/14793)
-* Enabled Kafka multi-topic ingestion from the data loader [#14833](https://github.com/apache/druid/pull/14833)
 * The web console now detects inline queries in the query text and lets you run them individually [#14810](https://github.com/apache/druid/pull/14801)
 * You can now reset specific partition offsets for a supervisor [#14863](https://github.com/apache/druid/pull/14863)
 
@@ -723,10 +731,12 @@ Starting with Druid 28.0.0, the default way Druid treats nulls and booleans has 
 For nulls, Druid now differentiates between an empty string (`''`) and a record with no data as well as between an empty numerical record and `0`.
 
 You can revert to the previous behavior by setting `druid.generic.useDefaultValueForNull` to `true`.
+This property affects both storage and querying, and must be set on all Druid service types to be available at both ingestion time and query time. Reverting this setting to the old value restores the previous behavior without reingestion.
 
-For booleans, Druid now strictly uses `1` (true) or `0` (false). Previously, true and false could be represented either as `true` or `false`, respectively, as well as `1` or `0`. In addition, Druid now returns a null value for Boolean comparisons like `True && NULL`.
+For booleans, Druid now strictly uses `1` (true) or `0` (false). Previously, true and false could be represented either as `true` and `false` as well as `1` and `0`, respectively. In addition, Druid now returns a null value for Boolean comparisons like `True && NULL`.
 
 You can revert to the previous behavior by setting `druid.expressions.useStrictBooleans` to `false`.
+This property affects both storage and querying, and must be set on all Druid service types to be available at both ingestion time and query time. Reverting this setting to the old value restores the previous behavior without reingestion.
 
 The following table illustrates some example scenarios and the impact of the changes:
 
@@ -784,7 +794,7 @@ For more information on how to ingest `ARRAY` typed columns with SQL-based inges
 
 ### Removed Hadoop 2
 
-Support for Hadoop 2 has been removed. Migrate to SQL-based ingestion or native ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid ingestion is not possible, plan to upgrade your Hadoop infrastructure.
+Support for Hadoop 2 has been removed. Migrate to SQL-based ingestion or JSON-based batch ingestion if you are using Hadoop 2.x for ingestion today. If migrating to Druid ingestion is not possible, plan to upgrade your Hadoop infrastructure.
 
 ### Removed Coordinator dynamic configs
 
