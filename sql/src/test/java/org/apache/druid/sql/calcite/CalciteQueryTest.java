@@ -5370,7 +5370,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final Map<String, String> queries = ImmutableMap.of(
         // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "SQL query requires order by non-time column [[dim1 ASC]], which is not supported.",
+        "SQL query requires order by non-time column [[dim1]], which is not supported.",
 
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
@@ -14366,8 +14366,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     String sql = "select * \n"
         + "FROM \"foo\"\n"
-        + "order by m2\n"
-;
+        + "order by m2\n";
+
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
         new Object[] {4.0D, 1L},
         new Object[] {5.0D, 1L});
