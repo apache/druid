@@ -22,21 +22,25 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
-import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
+import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -68,22 +72,26 @@ public class DruidSchemaInternRowSignatureBenchmark
 {
   private SegmentMetadataCacheForBenchmark cache;
 
-  private static class SegmentMetadataCacheForBenchmark extends CoordinatorSegmentMetadataCache
+  private static class SegmentMetadataCacheForBenchmark extends BrokerSegmentMetadataCache
   {
     public SegmentMetadataCacheForBenchmark(
         final QueryLifecycleFactory queryLifecycleFactory,
-        final CoordinatorServerView serverView,
+        final TimelineServerView serverView,
+        final SegmentManager segmentManager,
+        final JoinableFactory joinableFactory,
         final Escalator escalator,
-        final InternalQueryConfig internalQueryConfig
+        final InternalQueryConfig brokerInternalQueryConfig
     )
     {
       super(
           queryLifecycleFactory,
           serverView,
-          SegmentMetadataCacheConfig.create(),
+          BrokerSegmentMetadataCacheConfig.create(),
           escalator,
-          internalQueryConfig,
-          new NoopServiceEmitter()
+          brokerInternalQueryConfig,
+          new NoopServiceEmitter(),
+          new PhysicalDatasourceMetadataFactory(joinableFactory, segmentManager),
+          new NoopCoordinatorClient()
       );
     }
 
@@ -167,10 +175,13 @@ public class DruidSchemaInternRowSignatureBenchmark
   {
     cache = new SegmentMetadataCacheForBenchmark(
         EasyMock.mock(QueryLifecycleFactory.class),
-        EasyMock.mock(CoordinatorServerView.class),
+        EasyMock.mock(TimelineServerView.class),
+        null,
+        null,
         null,
         null
     );
+
     DruidServerMetadata serverMetadata = new DruidServerMetadata(
         "dummy",
         "dummy",
