@@ -30,8 +30,7 @@ import org.apache.druid.java.util.common.IAE;
 
 import java.util.Comparator;
 
-public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>
-{
+public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> implements Comparable<KafkaDataSourceMetadata> {
 
   @JsonCreator
   public KafkaDataSourceMetadata(
@@ -63,7 +62,7 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
   }
 
   @Override
-  public int compareTo(DataSourceMetadata other)
+  public int compareTo(KafkaDataSourceMetadata other)
   {
     if (!getClass().equals(other.getClass())) {
       throw new IAE(
@@ -72,8 +71,6 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
           other.getClass().getName()
       );
     }
-    final SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> that = (SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long>) other;
-
-    return getSeekableStreamSequenceNumbers().compareTo(that.getSeekableStreamSequenceNumbers(), Comparator.naturalOrder());
+    return getSeekableStreamSequenceNumbers().compareTo(other.getSeekableStreamSequenceNumbers(), Comparator.naturalOrder());
   }
 }

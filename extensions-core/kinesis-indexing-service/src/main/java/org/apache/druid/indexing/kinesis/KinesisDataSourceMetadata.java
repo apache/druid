@@ -57,8 +57,4 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
     return new KinesisDataSourceMetadata(seekableStreamSequenceNumbers);
   }
 
-  @Override
-  public int compareTo(DataSourceMetadata o) {
-    return 0;
-  }
 }

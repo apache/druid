@@ -2054,7 +2054,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final boolean startMetadataMatchesExisting;
-    final int startMetadataGreaterThanExisting;
+    int startMetadataGreaterThanExisting = 0;
 
     if (oldCommitMetadataFromDb == null) {
       startMetadataMatchesExisting = startMetadata.isValidStart();
@@ -2063,7 +2063,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Checking against the last committed metadata.
       // If the new start sequence number is greater than the end sequence number of last commit compareTo() function will return 1,
       // 0 in all other cases. It might be because  multiple tasks are publishing the sequence at around same time.
-      startMetadataGreaterThanExisting = startMetadata.asStartMetadata().compareTo(oldCommitMetadataFromDb.asStartMetadata());
+      if (startMetadata instanceof Comparable) {
+        startMetadataGreaterThanExisting = ((Comparable) startMetadata.asStartMetadata()).compareTo(oldCommitMetadataFromDb.asStartMetadata());
+      }
 
       // Converting the last one into start metadata for checking since only the same type of metadata can be matched.
       // Even though kafka/kinesis indexing services use different sequenceNumber types for representing
