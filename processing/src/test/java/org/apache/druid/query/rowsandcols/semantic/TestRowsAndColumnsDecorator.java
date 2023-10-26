@@ -36,7 +36,7 @@ public class TestRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   private Interval timeRange;
   private Filter filter;
   private VirtualColumns virtualColumns;
-  private OffsetLimit offsetLimit;
+  private OffsetLimit offsetLimit = OffsetLimit.NONE;
   private List<ColumnWithDirection> ordering;
   private List<String> projectedColumns;
 
