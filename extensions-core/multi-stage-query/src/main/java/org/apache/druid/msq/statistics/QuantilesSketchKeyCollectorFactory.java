@@ -93,9 +93,9 @@ public class QuantilesSketchKeyCollectorFactory
     return new QuantilesSketchKeyCollector(comparator, sketch, snapshot.getAverageKeyLength());
   }
 
-  private static class ByteRowKeySerde extends ArrayOfItemsSerDe<byte[]>
+  static class ByteRowKeySerde extends ArrayOfItemsSerDe<byte[]>
   {
-    private static final ByteRowKeySerde INSTANCE = new ByteRowKeySerde();
+    static final ByteRowKeySerde INSTANCE = new ByteRowKeySerde();
 
     private ByteRowKeySerde()
     {
@@ -173,7 +173,7 @@ public class QuantilesSketchKeyCollectorFactory
     {
       int length = Integer.BYTES * numItems;
       for (int i = 0; i < numItems; i++) {
-        length = mem.getInt(offsetBytes + (long) Integer.BYTES * i);
+        length += mem.getInt(offsetBytes + (long) Integer.BYTES * i);
       }
       return length;
     }
