@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -38,7 +39,7 @@ public class PostJoinCursor implements Cursor
   private final ColumnSelectorFactory columnSelectorFactory;
 
   @Nullable
-  private final ValueMatcher valueMatcher;
+  private ValueMatcher valueMatcher;
 
   @Nullable
   private final Filter postJoinFilter;
@@ -66,6 +67,12 @@ public class PostJoinCursor implements Cursor
     final PostJoinCursor postJoinCursor = new PostJoinCursor(baseCursor, virtualColumns, filter);
     postJoinCursor.advanceToMatch();
     return postJoinCursor;
+  }
+
+  @VisibleForTesting
+  public void setValueMatcher(@Nullable ValueMatcher valueMatcher)
+  {
+    this.valueMatcher = valueMatcher;
   }
 
   private void advanceToMatch()
