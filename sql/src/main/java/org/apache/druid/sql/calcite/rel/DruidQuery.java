@@ -1487,6 +1487,14 @@ public class DruidQuery
   @Nullable
   private WindowOperatorQuery toScanAndSortQuery()
   {
+    if (dataSource != DruidOuterQueryRel.DUMMY_DATA_SOURCE && dataSource.isConcrete()
+        && !sorting.getOrderBys().isEmpty()) {
+      plannerContext.setPlanningError(
+          "SQL query requires order by non-time column [%s], which is not supported.",
+          sorting.getOrderBys());
+      return null;
+    }
+
     if (sorting == null
         || sorting.getOrderBys().isEmpty()
         || sorting.getProjection() != null) {
