@@ -222,7 +222,7 @@ You can enable concurrent append and replace by ensuring the following:
 
 When using concurrent append and replace, keep the following in mind:
 
-- When the job with an `APPEND` task has a coarser granularity than the job with a `REPLACE` task, you shouldn't use concurrent append and replace. For example, if the `APPEND` job has a yearly granularity and the `REPLACE` job has a monthly granularity. The job that finishes second will fail. 
+- Concurrent append and replace fails if the task with `APPEND` lock uses a coarser segment granularity than the task with the `REPLACE` lock. For example, if the `APPEND` task uses a segment granularity of YEAR and the `REPLACE` task uses a segment granularity of MONTH, you should not use concurrent append and replace.
 
 -  Only a single task can hold a `REPLACE` lock on a given interval of a datasource.
   
