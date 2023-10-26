@@ -221,7 +221,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       dataSourceInformations = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourceInformation(dataSourcesToQuery), true);
     }
     catch (Exception e) {
-      log.warn(e, "Failed to query datasource information from the Coordinator.");
+      log.debug(e, "Failed to query datasource information from the Coordinator.");
       emitter.emit(ServiceMetricEvent.builder().setMetric(
           "metadatacache/schemaPoll/failed", 1));
     }
