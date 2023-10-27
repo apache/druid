@@ -122,7 +122,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
 
   private void addToTimeline(DataSegment dataSegment, DruidServer druidServer)
   {
-    if (druidServer.getMetadata().getType() == ServerType.REALTIME) {
+    if (druidServer.getMetadata().getType() == ServerType.INDEXER_EXECUTOR) {
       realtimeSegments.add(dataSegment);
     } else if (druidServer.getMetadata().getType() == ServerType.BROKER) {
       brokerSegments.add(dataSegment);
@@ -183,7 +183,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
     if (serverType == ServerType.BROKER) {
       druidServerMetadata = DUMMY_BROKER.getMetadata();
       brokerSegments.remove(segment);
-    } else if (serverType == ServerType.REALTIME) {
+    } else if (serverType == ServerType.INDEXER_EXECUTOR) {
       druidServerMetadata = DUMMY_SERVER_REALTIME.getMetadata();
       realtimeSegments.remove(segment);
     } else {
