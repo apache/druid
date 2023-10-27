@@ -215,7 +215,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
     if (limit.isPresent()) {
       decor.setOffsetLimit(limit);
       int size = vals.size();
-      vals = vals.subList((int) limit.getFetchFromIndex(size), (int) limit.getFetchToIndex(vals.size()));
+      vals = vals.subList((int) limit.getFromIndex(size), (int) limit.getToIndex(vals.size()));
     }
 
     if (ordering != null) {

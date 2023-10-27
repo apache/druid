@@ -14421,6 +14421,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     skipVectorize();
     cannotVectorize();
+    msqIncompatible();
     String sql = "with t AS (\n"
         + "SELECT  \n"
         + "    RANK() OVER (PARTITION BY m2 ORDER BY m2 ASC) \n"

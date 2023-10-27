@@ -111,7 +111,7 @@ public class OffsetLimit
         '}';
   }
 
-  public long getFetchFromIndex(long maxIndex)
+  public long getFromIndex(long maxIndex)
   {
     if (maxIndex <= offset) {
       return 0;
@@ -119,7 +119,7 @@ public class OffsetLimit
     return offset;
   }
 
-  public long getFetchToIndex(long maxIndex)
+  public long getToIndex(long maxIndex)
   {
     if (maxIndex <= offset) {
       return 0;

@@ -88,5 +88,4 @@ public class NaivePartitioningOperatorFactory implements OperatorFactory
     NaivePartitioningOperatorFactory other = (NaivePartitioningOperatorFactory) obj;
     return Objects.equals(partitionColumns, other.partitionColumns);
   }
-
 }

@@ -25,6 +25,7 @@ import org.apache.druid.query.operator.Operator.Signal;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.junit.Test;
 
@@ -43,14 +44,10 @@ public class NaiveSortOperatorTest
   }
 
   @Test
-  public void testSort()
+  public void testSortAscending()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "c", new IntArrayColumn(new int[] {5, 3, 1})));
-    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "c", new IntArrayColumn(new int[] {2, 6, 4})));
+    RowsAndColumns rac1 = racForColumn("c", new int[] {5, 3, 1});
+    RowsAndColumns rac2 = racForColumn("c", new int[] {2, 6, 4});
 
     NaiveSortOperator op = new NaiveSortOperator(
         InlineScanOperator.make(rac1, rac2),
@@ -61,6 +58,36 @@ public class NaiveSortOperatorTest
             new RowsAndColumnsHelper()
                 .expectColumn("c", new int[] {1, 2, 3, 4, 5, 6}))
         .runToCompletion(op);
+  }
+
+  @Test
+  public void testSortDescending()
+  {
+    RowsAndColumns rac1 = racForColumn("c", new int[] {5, 3, 1});
+    RowsAndColumns rac2 = racForColumn("c", new int[] {2, 6, 4});
+
+    NaiveSortOperator op = new NaiveSortOperator(
+        InlineScanOperator.make(rac1, rac2),
+        ImmutableList.of(ColumnWithDirection.descending("c")));
+
+    new OperatorTestHelper()
+        .expectAndStopAfter(
+            new RowsAndColumnsHelper()
+                .expectColumn("c", new int[] {6, 5, 4, 3, 2, 1}))
+        .runToCompletion(op);
+  }
+
+  private MapOfColumnsRowsAndColumns racForColumn(String k1, Object arr)
+  {
+    if (int.class.equals(arr.getClass().getComponentType())) {
+      return racForColumn(k1, new IntArrayColumn((int[]) arr));
+    }
+    throw new IllegalArgumentException("Not yet supported");
+  }
+
+  private MapOfColumnsRowsAndColumns racForColumn(String k1, Column v1)
+  {
+    return MapOfColumnsRowsAndColumns.fromMap(ImmutableMap.of(k1, v1));
   }
 
 }

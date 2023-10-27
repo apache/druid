@@ -19,10 +19,8 @@
 
 package org.apache.druid.query.operator;
 
+import com.google.common.testing.EqualsTester;
 import org.junit.Test;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -48,11 +46,11 @@ public class OffsetLimitTest
     assertEquals(offset, ol.getOffset());
     assertEquals(-1, ol.getLimit());
     assertEquals(Long.MAX_VALUE, ol.getLimitOrMax());
-    assertEquals(offset, ol.getFetchFromIndex(Long.MAX_VALUE));
-    assertEquals(Long.MAX_VALUE, ol.getFetchToIndex(Long.MAX_VALUE));
-    assertEquals(0, ol.getFetchFromIndex(1));
-    assertEquals(0, ol.getFetchFromIndex(offset));
-    assertEquals(0, ol.getFetchToIndex(offset));
+    assertEquals(offset, ol.getFromIndex(Long.MAX_VALUE));
+    assertEquals(Long.MAX_VALUE, ol.getToIndex(Long.MAX_VALUE));
+    assertEquals(0, ol.getFromIndex(1));
+    assertEquals(0, ol.getFromIndex(offset));
+    assertEquals(0, ol.getToIndex(offset));
   }
 
   @Test
@@ -64,10 +62,10 @@ public class OffsetLimitTest
     assertEquals(0, ol.getOffset());
     assertEquals(4, ol.getLimit());
     assertEquals(4, ol.getLimitOrMax());
-    assertEquals(0, ol.getFetchFromIndex(Long.MAX_VALUE));
-    assertEquals(4, ol.getFetchToIndex(Long.MAX_VALUE));
-    assertEquals(0, ol.getFetchFromIndex(2));
-    assertEquals(2, ol.getFetchToIndex(2));
+    assertEquals(0, ol.getFromIndex(Long.MAX_VALUE));
+    assertEquals(4, ol.getToIndex(Long.MAX_VALUE));
+    assertEquals(0, ol.getFromIndex(2));
+    assertEquals(2, ol.getToIndex(2));
   }
 
   @Test
@@ -81,12 +79,12 @@ public class OffsetLimitTest
     assertEquals(offset, ol.getOffset());
     assertEquals(limit, ol.getLimit());
     assertEquals(limit, ol.getLimitOrMax());
-    assertEquals(offset, ol.getFetchFromIndex(Long.MAX_VALUE));
-    assertEquals(offset + limit, ol.getFetchToIndex(Long.MAX_VALUE));
-    assertEquals(0, ol.getFetchFromIndex(offset));
-    assertEquals(0, ol.getFetchToIndex(offset));
-    assertEquals(offset, ol.getFetchFromIndex(offset + 1));
-    assertEquals(offset + 1, ol.getFetchToIndex(offset + 1));
+    assertEquals(offset, ol.getFromIndex(Long.MAX_VALUE));
+    assertEquals(offset + limit, ol.getToIndex(Long.MAX_VALUE));
+    assertEquals(0, ol.getFromIndex(offset));
+    assertEquals(0, ol.getToIndex(offset));
+    assertEquals(offset, ol.getFromIndex(offset + 1));
+    assertEquals(offset + 1, ol.getToIndex(offset + 1));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -106,32 +104,12 @@ public class OffsetLimitTest
   @Test
   public void testEquals()
   {
-    Set<Object> set = new HashSet<>();
-
-    long[] offsets = new long[] {0, 1, 100};
-    long[] limits = new long[] {-1, 5, 10, 1000};
-    for (long offset : offsets) {
-      for (long limit : limits) {
-        OffsetLimit a = new OffsetLimit(offset, limit);
-        OffsetLimit b = new OffsetLimit(offset, limit);
-        assertEquals(a.hashCode(), b.hashCode());
-
-        set.add(new OffsetLimit(offset, limit)
-        {
-          @Override
-          public int hashCode()
-          {
-            return 0;
-          }
-
-          @Override
-          public boolean equals(Object o)
-          {
-            return super.equals(o);
-          }
-        });
+    EqualsTester et = new EqualsTester();
+    for (long offset : new long[] {0, 1, 100}) {
+      for (long limit : new long[] {-1, 5, 10, 1000}) {
+        et.addEqualityGroup(new OffsetLimit(offset, limit), new OffsetLimit(offset, limit));
       }
     }
-    assertEquals(offsets.length * limits.length, set.size());
+    et.testEquals();
   }
 }
