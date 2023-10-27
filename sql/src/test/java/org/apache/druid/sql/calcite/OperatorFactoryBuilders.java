@@ -20,16 +20,15 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.operator.ColumnWithDirection.Direction;
-
-import java.util.Arrays;
-import java.util.List;
-
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.ColumnWithDirection.Direction;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class OperatorFactoryBuilders
 {
