@@ -33,35 +33,28 @@ public class NaiveSortOperatorFactoryTest
     ColumnWithDirection colA = new ColumnWithDirection("a", Direction.ASC);
     ColumnWithDirection colAdesc = new ColumnWithDirection("a", Direction.DESC);
     ColumnWithDirection colB = new ColumnWithDirection("b", Direction.ASC);
-    ColumnWithDirection[] colA1 = {colA};
-    ColumnWithDirection[] colA2 = {colA};
-    ColumnWithDirection[] colA3 = {colAdesc};
-    ColumnWithDirection[] colA4 = {colB};
-    ColumnWithDirection[] colA5 = {colA, colB};
-    ColumnWithDirection[] colA6 = {colB, colA};
-    ColumnWithDirection[] colA7 = {null};
-    ColumnWithDirection[] colA8 = {colA, colB, colA};
 
     new EqualsTester()
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(null),
+            new NaiveSortOperatorFactory(null))
+        .addEqualityGroup(
             naiveSortOperator())
         .addEqualityGroup(
-            naiveSortOperator(colA1),
-            naiveSortOperator(colA2))
+            naiveSortOperator(colA),
+            naiveSortOperator(colA))
         .addEqualityGroup(
-            naiveSortOperator(colA3))
+            naiveSortOperator(colAdesc))
         .addEqualityGroup(
-            naiveSortOperator(colA4))
+            naiveSortOperator(colB))
         .addEqualityGroup(
-            naiveSortOperator(colA5))
+            naiveSortOperator(colA, colB))
         .addEqualityGroup(
-            naiveSortOperator(colA6))
+            naiveSortOperator(colB, colA))
         // invalid cases; but currently allowed ones
         .addEqualityGroup(
-            naiveSortOperator(colA7))
+            naiveSortOperator((ColumnWithDirection) null))
         .addEqualityGroup(
-            naiveSortOperator(colA8))
+            naiveSortOperator(colA, colB, colA))
         .testEquals();
   }
 
