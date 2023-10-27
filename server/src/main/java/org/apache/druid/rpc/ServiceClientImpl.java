@@ -220,7 +220,16 @@ public class ServiceClientImpl implements ServiceClient
                     if (shouldTry(nextAttemptNumber) && retryPolicy.retryThrowable(t)) {
                       final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
 
-                      log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      if (log.isDebugEnabled()) {
+                        log.debug(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      } else {
+                        // We don't really need to log every retry attempt as the request handler might be starting up.
+                        // Also, we might be retrying for the same exception, and therefore we can omit the cause of retry
+                        // per retry while logging
+                        if (nextAttemptNumber > 0 && nextAttemptNumber % 10 == 0) {
+                          log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                        }
+                      }
 
                       connectExec.schedule(
                           () -> tryRequest(requestBuilder, handler, retVal, nextAttemptNumber, ImmutableSet.of()),
@@ -272,7 +281,14 @@ public class ServiceClientImpl implements ServiceClient
                   // Retryable server response (or null errorHolder, which means null result, which can happen
                   // if the HttpClient encounters an exception in the midst of response processing).
                   final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
-                  log.info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  if (log.isDebugEnabled()) {
+                    log.debug(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  } else {
+                    // If we are retrying the connection, then we can omit the reason for retrying per retry
+                    if (nextAttemptNumber > 0 && nextAttemptNumber % 10 == 0) {
+                      log.info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                    }
+                  }
                   connectExec.schedule(
                       () -> tryRequest(requestBuilder, handler, retVal, nextAttemptNumber, ImmutableSet.of()),
                       backoffMs,
