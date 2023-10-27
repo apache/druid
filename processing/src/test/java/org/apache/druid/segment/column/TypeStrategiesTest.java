@@ -696,7 +696,8 @@ public class TypeStrategiesTest
   }
 
   @Test
-  public void getComplexTypeNull() {
+  public void getComplexTypeNull()
+  {
     assertNull(TypeStrategies.getComplex(null));
   }
 }
