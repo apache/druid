@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite;
+package org.apache.druid.query;
 
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -38,7 +38,7 @@ public class OperatorFactoryBuilders
     return new ScanOperatorFactoryBuilder();
   }
 
-  static class ScanOperatorFactoryBuilder
+  public static class ScanOperatorFactoryBuilder
   {
     private OffsetLimit offsetLimit;
     private DimFilter filter;

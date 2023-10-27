@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.query.operator;
+package org.apache.druid.query;
 
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
@@ -30,7 +30,7 @@ import org.apache.druid.segment.column.RowSignature;
 import java.util.List;
 import java.util.Map;
 
-public class WindowOperatorQueryBuilder extends QueryBuilderBase<WindowOperatorQueryBuilder>
+public class WindowOperatorQueryBuilder
 {
   private DataSource dataSource;
   private QuerySegmentSpec intervals = new LegacySegmentSpec(Intervals.ETERNITY);
@@ -44,11 +44,20 @@ public class WindowOperatorQueryBuilder extends QueryBuilderBase<WindowOperatorQ
     return new WindowOperatorQueryBuilder();
   }
 
-  @Override
   public WindowOperatorQueryBuilder setDataSource(DataSource dataSource)
   {
     this.dataSource = dataSource;
     return this;
+  }
+
+  public WindowOperatorQueryBuilder setDataSource(String dataSource)
+  {
+    return setDataSource(new TableDataSource(dataSource));
+  }
+
+  public WindowOperatorQueryBuilder  setDataSource(Query<?> query)
+  {
+    return setDataSource(new QueryDataSource(query));
   }
 
   public WindowOperatorQueryBuilder setSignature(RowSignature rowSignature)
