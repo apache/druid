@@ -95,7 +95,7 @@ public class OperatorFactoryBuilders
     return new WindowOperatorFactory(processors.length == 1 ? processors[0] : new ComposingProcessor(processors));
   }
 
-  public static Processor rankProcessor(String outputColumn, String ...groupingColumns)
+  public static Processor rankProcessor(String outputColumn, String... groupingColumns)
   {
     return new WindowRankProcessor(Arrays.asList(groupingColumns), outputColumn, false);
   }
