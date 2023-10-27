@@ -19,11 +19,10 @@
 
 package org.apache.druid.query.operator;
 
-import com.google.common.collect.Lists;
 import com.google.common.testing.EqualsTester;
 import org.junit.Test;
 
-import java.util.Collections;
+import java.util.Arrays;
 
 public class NaivePartitioningOperatorFactoryTest
 {
@@ -32,17 +31,22 @@ public class NaivePartitioningOperatorFactoryTest
   {
     new EqualsTester()
         .addEqualityGroup(
-            new NaivePartitioningOperatorFactory(Collections.emptyList()),
+            naivePartitioningOperator(),
             new NaivePartitioningOperatorFactory(null))
         .addEqualityGroup(
-            new NaivePartitioningOperatorFactory(Lists.newArrayList("a")),
-            new NaivePartitioningOperatorFactory(Lists.newArrayList("a")))
+            naivePartitioningOperator("a"),
+            naivePartitioningOperator("a"))
         .addEqualityGroup(
-            new NaivePartitioningOperatorFactory(Lists.newArrayList("b")))
+            naivePartitioningOperator("b"))
         .addEqualityGroup(
-            new NaivePartitioningOperatorFactory(Lists.newArrayList("a", "b")))
+            naivePartitioningOperator("a", "b"))
         .addEqualityGroup(
-            new NaivePartitioningOperatorFactory(Lists.newArrayList("b", "a")))
+            naivePartitioningOperator("b", "a"))
         .testEquals();
+  }
+
+  private Object naivePartitioningOperator(String... columns)
+  {
+    return new NaivePartitioningOperatorFactory(Arrays.asList(columns));
   }
 }

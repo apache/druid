@@ -19,12 +19,11 @@
 
 package org.apache.druid.query.operator;
 
-import com.google.common.collect.Lists;
 import com.google.common.testing.EqualsTester;
 import org.apache.druid.query.operator.ColumnWithDirection.Direction;
 import org.junit.Test;
 
-import java.util.Collections;
+import java.util.Arrays;
 
 public class NaiveSortOperatorFactoryTest
 {
@@ -34,28 +33,40 @@ public class NaiveSortOperatorFactoryTest
     ColumnWithDirection colA = new ColumnWithDirection("a", Direction.ASC);
     ColumnWithDirection colAdesc = new ColumnWithDirection("a", Direction.DESC);
     ColumnWithDirection colB = new ColumnWithDirection("b", Direction.ASC);
+    ColumnWithDirection[] colA1 = {colA};
+    ColumnWithDirection[] colA2 = {colA};
+    ColumnWithDirection[] colA3 = {colAdesc};
+    ColumnWithDirection[] colA4 = {colB};
+    ColumnWithDirection[] colA5 = {colA, colB};
+    ColumnWithDirection[] colA6 = {colB, colA};
+    ColumnWithDirection[] colA7 = {null};
+    ColumnWithDirection[] colA8 = {colA, colB, colA};
 
     new EqualsTester()
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Collections.emptyList()),
-            new NaiveSortOperatorFactory(null))
+            new NaiveSortOperatorFactory(null),
+            naiveSortOperator())
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Lists.newArrayList(colA)),
-            new NaiveSortOperatorFactory(Lists.newArrayList(colA)))
+            naiveSortOperator(colA1),
+            naiveSortOperator(colA2))
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Lists.newArrayList(colAdesc)))
+            naiveSortOperator(colA3))
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Lists.newArrayList(colB)))
+            naiveSortOperator(colA4))
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Lists.newArrayList(colA, colB)))
+            naiveSortOperator(colA5))
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Lists.newArrayList(colB, colA)))
+            naiveSortOperator(colA6))
         // invalid cases; but currently allowed ones
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Lists.newArrayList((ColumnWithDirection) null)))
+            naiveSortOperator(colA7))
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(Lists.newArrayList(colA, colB, colA)))
+            naiveSortOperator(colA8))
         .testEquals();
   }
 
+  private Object naiveSortOperator(ColumnWithDirection... cols)
+  {
+    return new NaiveSortOperatorFactory(Arrays.asList(cols));
+  }
 }
