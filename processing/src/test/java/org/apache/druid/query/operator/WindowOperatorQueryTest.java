@@ -132,10 +132,13 @@ public class WindowOperatorQueryTest
   @Test
   public void testEquals()
   {
+
     new EqualsTester()
         .addEqualityGroup(query, query, query.withDataSource(query.getDataSource()))
         .addEqualityGroup(query.withId("11"))
         .addEqualityGroup(query.withOverriddenContext(ImmutableMap.of("john", "doe")))
+        .addEqualityGroup(query.withLeafOperators(
+            Collections.singletonList(new NaivePartitioningOperatorFactory(Collections.emptyList()))))
         .testEquals();
 
     Assert.assertNotEquals(query, query.toString());
