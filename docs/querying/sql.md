@@ -218,7 +218,7 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-When you use a top-level UNION ALL, there are certain limitations that apply. For all top-level UNION ALL queries, you can't apply a GROUP BY, ORDER BY, or any other operator to the results of the query. For any top-level UNION ALL that uses the MSQ task engine, the SQL planner attempts to plan the top-level UNION ALL as a table-level UNION ALL. Because of this, UNION ALL queries that use the MSQ task engine always behave the same as a table-level UNION ALL queries. They have the same characteristics and limitations. If the planner can't plan the query as a table-level UNION ALL, the query fails.
+Certain limitations apply when you use a top-level UNION ALL. For all top-level UNION ALL queries, you can't apply a GROUP BY, ORDER BY, or any other operator to the results of the query. For any top-level UNION ALL that uses the MSQ task engine, the SQL planner attempts to plan the top-level UNION ALL as a table-level UNION ALL. Because of this, UNION ALL queries that use the MSQ task engine always behave the same as table-level UNION ALL queries. They have the same characteristics and limitations. If the planner can't plan the query as a table-level UNION ALL, the query fails.
 
 ### Table-level
 
