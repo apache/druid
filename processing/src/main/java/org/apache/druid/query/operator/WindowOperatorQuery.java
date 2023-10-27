@@ -270,9 +270,4 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
            ", leafOperators=" + leafOperators +
            '}';
   }
-
-  public static WindowOperatorQueryBuilder builder()
-  {
-    return WindowOperatorQueryBuilder.builder();
-  }
 }

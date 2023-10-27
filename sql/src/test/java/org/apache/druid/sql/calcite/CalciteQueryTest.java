@@ -97,7 +97,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.WindowOperatorQueryBuilder;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
@@ -14306,7 +14306,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             + "GROUP BY 1 \n"
             + "ORDER BY 2 DESC")
         .expectedQuery(
-            WindowOperatorQuery.builder()
+            WindowOperatorQueryBuilder.builder()
                 .setDataSource(
                     new TopNQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
@@ -14371,7 +14371,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testBuilder()
         .sql(sql)
         .expectedQuery(
-            WindowOperatorQuery.builder()
+            WindowOperatorQueryBuilder.builder()
                 .setDataSource(
                     new TopNQueryBuilder()
                         .dataSource(CalciteTests.DATASOURCE1)
