@@ -1509,13 +1509,13 @@ public class DruidQuery
           .stream().map(OrderByColumnSpec::getDimension)
           .collect(Collectors.toList());
       plannerContext.setPlanningError(
-          "SQL query requires order by non-time column [%s], which is not supported.",
+          "SQL query requires ordering a table by non-time column [%s], which is not supported.",
           orderByColumnNames);
       return null;
     }
 
     QueryDataSource newDataSource = new QueryDataSource(scan);
-    ArrayList<ColumnWithDirection> sortColumns = getColumnWithDriectionsFromOrderBys(sorting.getOrderBys());
+    List<ColumnWithDirection> sortColumns = getColumnWithDirectionsFromOrderBys(sorting.getOrderBys());
     RowSignature signature = getOutputRowSignature();
     List<OperatorFactory> operators = new ArrayList<>();
 
@@ -1555,7 +1555,7 @@ public class DruidQuery
     return dataSource.isConcrete();
   }
 
-  private ArrayList<ColumnWithDirection> getColumnWithDriectionsFromOrderBys(List<OrderByColumnSpec> orderBys)
+  private ArrayList<ColumnWithDirection> getColumnWithDirectionsFromOrderBys(List<OrderByColumnSpec> orderBys)
   {
     ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
     for (OrderByColumnSpec orderBySpec : orderBys) {
@@ -1569,7 +1569,7 @@ public class DruidQuery
 
   /**
    * Return this query as a Scan query, or null if this query is not compatible with Scan.
-   *
+   * @param considerSorting can be used to ignore the current sorting requirements {@link #toScanAndSortQuery()} uses it to produce the non-sorted part
    * @return query or null
    */
   @Nullable
