@@ -115,7 +115,8 @@ public class Windowing
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
       final RowSignature sourceRowSignature,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final VirtualColumnRegistry virtualColumnRegistry
   )
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
@@ -172,10 +173,11 @@ public class Windowing
 
         ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
         if (maker == null) {
+
           final Aggregation aggregation = GroupByRules.translateAggregateCall(
               plannerContext,
               sourceRowSignature,
-              null,
+              virtualColumnRegistry,
               rexBuilder,
               InputAccessor.buildFor(
                   rexBuilder,
