@@ -943,10 +943,10 @@ The following table shows the dynamic configuration properties for the Coordinat
 |`maxKillTaskSlots`|Maximum number of tasks that will be allowed for kill tasks. This limit only applies for kill tasks that are spawned automatically by the coordinator's auto kill duty, which is enabled when `druid.coordinator.kill.on` is true.|`Integer.MAX_VALUE` - no limit|
 |`killPendingSegmentsSkipList`|List of data sources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated data sources or a JSON array.|none|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments allowed in the load queue of any given server. Use this parameter to load segments faster if, for example, the cluster contains slow-loading nodes or if there are too many segments to be replicated to a particular node (when faster loading is preferred to better segments distribution). The optimal value depends on the loading speed of segments, acceptable replication time and number of nodes.|500|
-|`useRoundRobinSegmentAssignment`|Boolean flag for whether segments should be assigned to historicals in a round robin fashion. When disabled, segment assignment is done using the chosen balancer strategy. When enabled, this can speed up segment assignments leaving balancing to move the segments to their optimal locations (based on the balancer strategy) lazily.|true|
-|`decommissioningNodes`|List of historical servers to decommission. Coordinator will not assign new segments to decommissioning servers, and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `maxSegmentsToMove`.|none|
-|`pauseCoordination`|Boolean flag for whether or not the coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. Duties that are paused include all classes that implement the `CoordinatorDuty` interface. Such duties include: segment balancing, segment compaction, submitting kill tasks for unused segments (if enabled), logging of used segments in the cluster, marking of newly unused or overshadowed segments, matching and execution of load/drop rules for used segments, unloading segments that are no longer marked as used from Historical servers. An example of when an admin may want to pause coordination would be if they are doing deep storage maintenance on HDFS name nodes with downtime and don't want the coordinator to be directing Historical nodes to hit the name node with API requests until maintenance is done and the deep store is declared healthy for use again.|false|
-|`replicateAfterLoadTimeout`|Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of `druid.coordinator.load.timeout`. If this is set to true, the coordinator will attempt to replicate the failed segment on a different historical server. This helps improve the segment availability if there are a few slow historicals in the cluster. However, the slow historical may still load the segment later and the Coordinator may issue drop requests if the segment is over-replicated.|false|
+|`useRoundRobinSegmentAssignment`|Boolean flag for whether segments should be assigned to Historical processes in a round robin fashion. When disabled, segment assignment is done using the chosen balancer strategy. When enabled, this can speed up segment assignments leaving balancing to move the segments to their optimal locations (based on the balancer strategy) lazily.|true|
+|`decommissioningNodes`|List of Historical servers to decommission. Coordinator will not assign new segments to decommissioning servers, and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `maxSegmentsToMove`.|none|
+|`pauseCoordination`|Boolean flag for whether or not the Coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. Duties that are paused include all classes that implement the `CoordinatorDuty` interface. Such duties include: segment balancing, segment compaction, submitting kill tasks for unused segments (if enabled), logging of used segments in the cluster, marking of newly unused or overshadowed segments, matching and execution of load/drop rules for used segments, unloading segments that are no longer marked as used from Historical servers. An example of when an admin may want to pause coordination would be if they are doing deep storage maintenance on HDFS name nodes with downtime and don't want the Coordinator to be directing Historical nodes to hit the name node with API requests until maintenance is done and the deep store is declared healthy for use again.|false|
+|`replicateAfterLoadTimeout`|Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of `druid.coordinator.load.timeout`. If this is set to true, the Coordinator will attempt to replicate the failed segment on a different historical server. This helps improve the segment availability if there are a few slow Historicals in the cluster. However, the slow Historical may still load the segment later and the Coordinator may issue drop requests if the segment is over-replicated.|false|
 
 ##### Smart segment loading
 
@@ -960,7 +960,7 @@ If you enable `smartSegmentLoading` mode, Druid ignores any value you provide fo
 |--------|--------------|-----------|
 |`useRoundRobinSegmentAssignment`|true|Speeds up segment assignment.|
 |`maxSegmentsInNodeLoadingQueue`|0|Removes the limit on load queue size.|
-|`replicationThrottleLimit`|5% of used segments, minimum value 100|Prevents aggressive replication when a historical disappears only intermittently.|
+|`replicationThrottleLimit`|5% of used segments, minimum value 100|Prevents aggressive replication when a Historical disappears only intermittently.|
 |`replicantLifetime`|60|Allows segments to wait about an hour (assuming a Coordinator period of 1 minute) in the load queue before an alert is raised. In `smartSegmentLoading` mode, load queues are not limited by size. Segments might therefore assigned to a load queue even if the corresponding server is slow to load them.|
 |`maxSegmentsToMove`|2% of used segments, minimum value 100, maximum value 1000|Ensures that some segments are always moving in the cluster to keep it well balanced. The maximum value keeps the Coordinator run times bounded.|
 |`balancerComputeThreads`|`num_cores` / 2|Ensures that there are enough threads to perform balancing computations without hogging all Coordinator resources.|
@@ -978,7 +978,7 @@ These configuration options control Coordinator lookup management. For configura
 |`druid.manager.lookups.hostUpdateTimeout`|How long to wait for a `POST` request to a particular process before considering the `POST` a failure.|`PT10S`|
 |`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure.|`PT10S`|
 |`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure.|`PT60S`|
-|`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
+|`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent `POST` and `DELETE` requests). Requests this limit will wait in a queue until a slot becomes available.|10|
 |`druid.manager.lookups.period`|Number of milliseconds between checks for configuration changes.|120000 (2 minutes)|
 
 ##### Automatic compaction dynamic configuration
@@ -1054,19 +1054,19 @@ The following table shows the supported configurations for auto-compaction.
 |-----|-----------|--------|
 |`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
 |`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to 'null', which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
+|`rollup`|Whether to enable ingestion-time rollup or not. Defaults to null, which preserves the original setting. Note that once data is rollup, individual records can no longer be recovered. |No|
 
 ###### Automatic compaction dimensionsSpec
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`dimensions`| A list of dimension names or objects. Defaults to 'null', which preserves the original dimensions. Note that setting this will cause segments manually compacted with `dimensionExclusions` to be compacted again.|No|
+|`dimensions`| A list of dimension names or objects. Defaults to null, which preserves the original dimensions. Note that setting this will cause segments manually compacted with `dimensionExclusions` to be compacted again.|No|
 
 ###### Automatic compaction transformSpec
 
 |Field|Description|Required|
 |-----|-----------|--------|
-|`filter`| The `filter` conditionally filters input rows during compaction. Only rows that pass the filter will be included in the compacted segments. Any of Druid's standard [query filters](../querying/filters.md) can be used. Defaults to 'null', which will not filter any row. |No|
+|`filter`| Conditionally filters input rows during compaction. Only rows that pass the filter will be included in the compacted segments. Any of Druid's standard [query filters](../querying/filters.md) can be used. Defaults to null, which will not filter any row. |No|
 
 ###### Automatic compaction ioConfig
 
@@ -1089,11 +1089,11 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
+|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process.|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
-|`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8090|
+|`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`.|8090|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
-|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/overlord`|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/overlord`|
 
 ##### Overlord operations
 
@@ -1115,7 +1115,7 @@ The following configs only apply if the Overlord is running in remote mode. For 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task as been assigned to a MiddleManager before throwing an error.|`PT5M`|
+|`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task has been assigned to a MiddleManager before throwing an error.|`PT5M`|
 |`druid.indexer.runner.minWorkerVersion`|The minimum MiddleManager version to send tasks to. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.worker.version`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons. |"0"|
 | `druid.indexer.runner.parallelIndexTaskSlotRatio`| The ratio of task slots available for parallel indexing supervisor tasks per worker. The specified value must be in the range `[0, 1]`. |1|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the Overlord should expect MiddleManagers to compress Znodes.|true|
@@ -1143,7 +1143,7 @@ If autoscaling is enabled, you can set these additional configs:
 |`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the Overlord tries to scale up.|`PT30S`|
 |`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
 |`druid.indexer.autoscale.workerPort`|The port that MiddleManagers will run on.|8080|
-|`druid.indexer.autoscale.workerCapacityHint`| An estimation of the number of task slots available for each worker launched by the auto scaler when there are no workers running. The auto scaler uses the worker capacity hint to launch workers with an adequate capacity to handle pending tasks. When unset or set to a value less than or equal to 0, the auto scaler scales workers equal to the value for `minNumWorkers` in autoScaler config instead. The auto scaler assumes that each worker, either a middleManager or indexer, has the same amount of task slots. Therefore, when all your workers have the same capacity (homogeneous capacity), set the value for `autoscale.workerCapacityHint` equal to `druid.worker.capacity`. If your workers have different capacities (heterogeneous capacity), set the value to the average of `druid.worker.capacity` across the workers. For example, if two workers have `druid.worker.capacity=10`, and one has `druid.worker.capacity=4`, set `autoscale.workerCapacityHint=8`. Only applies to `pendingTaskBased` provisioning strategy.|-1|
+|`druid.indexer.autoscale.workerCapacityHint`| An estimation of the number of task slots available for each worker launched by the auto scaler when there are no workers running. The auto scaler uses the worker capacity hint to launch workers with an adequate capacity to handle pending tasks. When unset or set to a value less than or equal to 0, the auto scaler scales workers equal to the value for `minNumWorkers` in autoScaler config instead. The auto scaler assumes that each worker, either a MiddleManager or indexer, has the same amount of task slots. Therefore, when all your workers have the same capacity (homogeneous capacity), set the value for `autoscale.workerCapacityHint` equal to `druid.worker.capacity`. If your workers have different capacities (heterogeneous capacity), set the value to the average of `druid.worker.capacity` across the workers. For example, if two workers have `druid.worker.capacity=10`, and one has `druid.worker.capacity=4`, set `autoscale.workerCapacityHint=8`. Only applies to `pendingTaskBased` provisioning strategy.|-1|
 
 ##### Supervisors
 
@@ -1230,7 +1230,7 @@ This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 |`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
 |`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
-Example: tasks of type "index_kafka" default to running on MiddleManagers of category `c1`, except for tasks that write to datasource "ds1," which  run on MiddleManagers of category `c2`.
+The following example shows tasks of type `index_kafka` that default to running on MiddleManagers of category `c1`, except for tasks that write to datasource `ds1`, which run on MiddleManagers of category `c2`.
 
 ```json
 {
@@ -1291,9 +1291,9 @@ its better to write a druid extension module with extending current worker selec
 |`type`|`javascript`|required; must be `javascript`|
 |`function`|String representing JavaScript function| |
 
-Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
+The following example shows a function that sends `batch_index_task` to workers `10.0.0.1` and `10.0.0.2` and all other tasks to other available workers.
 
-```
+```json
 {
   "type":"javascript",
   "function":"function (config, zkWorkers, task) {\nvar batch_workers = new java.util.ArrayList();\nbatch_workers.add(\"middleManager1_hostname:8091\");\nbatch_workers.add(\"middleManager2_hostname:8091\");\nworkers = zkWorkers.keySet().toArray();\nvar sortedWorkers = new Array()\n;for(var i = 0; i < workers.length; i++){\n sortedWorkers[i] = workers[i];\n}\nArray.prototype.sort.call(sortedWorkers,function(a, b){return zkWorkers.get(b).getCurrCapacityUsed() - zkWorkers.get(a).getCurrCapacityUsed();});\nvar minWorkerVer = config.getMinWorkerVersion();\nfor (var i = 0; i < sortedWorkers.length; i++) {\n var worker = sortedWorkers[i];\n  var zkWorker = zkWorkers.get(worker);\n  if(zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)){\n    if(task.getType() == 'index_hadoop' && batch_workers.contains(worker)){\n      return worker;\n    } else {\n      if(task.getType() != 'index_hadoop' && !batch_workers.contains(worker)){\n        return worker;\n      }\n    }\n  }\n}\nreturn null;\n}"
@@ -1301,7 +1301,7 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 ```
 
 :::info
- JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+ JavaScript-based functionality is disabled by default. Refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 :::
 
 ###### affinityConfig
@@ -1311,17 +1311,17 @@ If not provided, the default is to have no affinity.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager `host:port` values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|{}|
-|`strong`|When `true` tasks for a datasource must be assigned to affinity-mapped MiddleManagers. Tasks remain queued until a slot becomes available.  When `false`, Druid may assign tasks for a datasource to other MiddleManagers when affinity-mapped MiddleManagers are unavailable to run queued tasks.|false|
+|`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager `host:port` values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|`{}`|
+|`strong`|When `true` tasks for a datasource must be assigned to affinity-mapped MiddleManagers. Tasks remain queued until a slot becomes available. When `false`, Druid may assign tasks for a datasource to other MiddleManagers when affinity-mapped MiddleManagers are unavailable to run queued tasks.|false|
 
 ###### workerCategorySpec
 
-WorkerCategorySpec can be provided to the `equalDistributionWithCategorySpec` and `fillCapacityWithCategorySpec` strategies using the `workerCategorySpec`
+You can provide `workerCategorySpec` to the `equalDistributionWithCategorySpec` and `fillCapacityWithCategorySpec` strategies using the `workerCategorySpec`
 field. If not provided, the default is to not use it at all.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`categoryMap`|A JSON map object mapping a task type String name to a [CategoryConfig](#categoryconfig) object, by which you can specify category config for different task type.|{}|
+|`categoryMap`|A JSON map object mapping a task type String name to a [CategoryConfig](#categoryconfig) object, by which you can specify category config for different task type.|`{}`|
 |`strong`|With weak workerCategorySpec (the default), tasks for a dataSource may be assigned to other MiddleManagers if the MiddleManagers specified in `categoryMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerCategorySpec, tasks for a dataSource will only ever be assigned to their specified MiddleManagers, and will wait in the pending queue if necessary.|false|
 
 ###### CategoryConfig
@@ -1362,38 +1362,38 @@ These MiddleManager and Peon configurations can be defined in the `middleManager
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
-|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/middlemanager|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
 
 #### MiddleManager configuration
 
-Middle managers pass their configurations down to their child peons. The MiddleManager requires the following configs:
+MiddleManagers pass their configurations down to their child peons. The MiddleManager requires the following configs:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|"com.metamx", "druid", "org.apache.druid", "user.timezone", "file.encoding", "java.io.tmpdir", "hadoop"|
+|`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|`com.metamx`, `druid`, `org.apache.druid`, `user.timezone`, `file.encoding`, `java.io.tmpdir`, `hadoop`|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the MiddleManagers should compress Znodes.|true|
-|`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
+|`druid.indexer.runner.classpath`|Java classpath for the peon.|`System.getProperty("java.class.path")`|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
-|`druid.indexer.runner.javaOpts`|*DEPRECATED* A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|""|
+|`druid.indexer.runner.javaOpts`|*DEPRECATED* A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|`''`|
 |`druid.indexer.runner.javaOptsArray`|A JSON array of strings to be passed in as options to the peon's JVM. This is additive to `druid.indexer.runner.javaOpts` and is recommended for properly handling arguments which contain quotes or spaces like `["-XX:OnOutOfMemoryError=kill -9 %p"]`|`[]`|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in ZooKeeper, should be in the range of [10KiB, 2GiB). [Human-readable format](human-readable-byte.md) is supported.|512KiB|
 |`druid.indexer.runner.startPort`|Starting port used for peon processes, should be greater than 1023 and less than 65536.|8100|
 |`druid.indexer.runner.endPort`|Ending port used for peon processes, should be greater than or equal to `druid.indexer.runner.startPort` and less than 65536.|65535|
 |`druid.indexer.runner.ports`|A JSON array of integers to specify ports that used for peon processes. If provided and non-empty, ports for peon processes will be chosen from these ports. And `druid.indexer.runner.startPort/druid.indexer.runner.endPort` will be completely ignored.|`[]`|
-|`druid.worker.ip`|The IP of the worker.|localhost|
+|`druid.worker.ip`|The IP of the worker.|`localhost`|
 |`druid.worker.version`|Version identifier for the MiddleManager. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.indexer.runner.minWorkerVersion`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons.|0|
 |`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of CPUs on the machine - 1|
-|`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used.  Example: `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
-|`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir.  This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks.  The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
+|`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used. For example, `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
+|`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir. This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks. The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
 |`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`_default_worker_category`|
 
 #### Peon processing
 
-Processing properties set on the MiddleManager will be passed through to Peons.
+Processing properties set on the MiddleManager are passed through to Peons.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1430,23 +1430,24 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 
 #### Additional Peon configuration
-Although peons inherit the configurations of their parent MiddleManagers, explicit child peon configs in MiddleManager can be set by prefixing them with:
+Although Peons inherit the configurations of their parent MiddleManagers, explicit child Peon configs in MiddleManager can be set by prefixing them with:
 
 ```
 druid.indexer.fork.property
 ```
-Additional peon configs include:
+
+Additional Peon configs include:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.mode`|Choices are "local" and "remote". Setting this to local means you intend to run the peon as a standalone process (Not recommended).|remote|
+|`druid.peon.mode`|Choose from `local` and `remote`. Setting this property to `local` means you intend to run the Peon as a standalone process which is not recommended.|`remote`|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
 |`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/task`|
 |`druid.indexer.task.batchProcessingMode`| Batch ingestion tasks have three operating modes to control construction and tracking for intermediary segments: `OPEN_SEGMENTS`, `CLOSED_SEGMENTS`, and `CLOSED_SEGMENT_SINKS`. `OPEN_SEGMENTS` uses the streaming ingestion code path and performs a `mmap` on intermediary segments to build a timeline to make these segments available to realtime queries. Batch ingestion doesn't require intermediary segments, so the default mode, `CLOSED_SEGMENTS`, eliminates `mmap` of intermediary segments. `CLOSED_SEGMENTS` mode still tracks the entire set of segments in heap. The `CLOSED_SEGMENTS_SINKS` mode is the most aggressive configuration and should have the smallest memory footprint. It eliminates in-memory tracking and `mmap` of intermediary segments produced during segment creation. `CLOSED_SEGMENTS_SINKS` mode isn't as well tested as other modes so is currently considered experimental. You can use `OPEN_SEGMENTS` mode if problems occur with the 2 newer modes. |`CLOSED_SEGMENTS`|
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|`org.apache.hadoop:hadoop-client-api:3.3.6`, `org.apache.hadoop:hadoop-client-runtime:3.3.6`|
 |`druid.indexer.task.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|75000|
-|`druid.indexer.task.directoryLockTimeout`|Wait this long for zombie peons to exit before giving up on their replacements.|PT10M|
-|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on middleManager restart for restorable tasks to gracefully exit.|PT5M|
+|`druid.indexer.task.directoryLockTimeout`|Wait this long for zombie Peons to exit before giving up on their replacements.|PT10M|
+|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on MiddleManager restart for restorable tasks to gracefully exit.|PT5M|
 |`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
 |`druid.indexer.task.restoreTasksOnRestart`|If true, MiddleManagers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/input-sources.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
@@ -1454,41 +1455,32 @@ Additional peon configs include:
 |`druid.indexer.task.tmpStorageBytesPerTask`|Maximum number of bytes per task to be used to store temporary files on disk. This config is generally intended for internal usage. Attempts to set it are very likely to be overwritten by the TaskRunner that executes the task, so be sure of what you expect to happen before directly adjusting this configuration parameter. The config is documented here primarily to provide an understanding of what it means if/when someone sees that it has been set. A value of -1 disables this limit.  |-1|
 |`druid.indexer.server.maxChatRequests`|Maximum number of concurrent requests served by a task's chat handler. Set to 0 to disable limiting.|0|
 
-If the peon is running in remote mode, there must be an Overlord up and running. Peons in remote mode can set the following configurations:
+If the Peon is running in remote mode, there must be an Overlord up and running. Peons in remote mode can set the following configurations:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|PT5S|
-|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|PT1M|
+|`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|`PT5S`|
+|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|`PT1M`|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|60|
 
 ##### SegmentWriteOutMediumFactory
 
-When new segments are created, Druid temporarily stores some preprocessed data in some buffers. Currently three types of
-*medium* exist for those buffers: *temporary files*, *off-heap memory*, and *on-heap memory*.
+When new segments are created, Druid temporarily stores some preprocessed data in some buffers. 
+The following types of medium exist for the buffers:
 
-*Temporary files* (`tmpFile`) are stored under the task working directory (see `druid.worker.baseTaskDirs`
-configuration above) and thus share it's mounting properties, e. g. they could be backed by HDD, SSD or memory (tmpfs).
+* **Temporary files** (`tmpFile`) are stored under the task working directory (see `druid.worker.baseTaskDirs` configuration above) and thus share it's mounting properties. For example, they could be backed by HDD, SSD or memory (tmpfs).
 This type of medium may do unnecessary disk I/O and requires some disk space to be available.
 
-*Off-heap memory medium* (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
-This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing
-`-XX:MaxDirectMemorySize` configuration. It is not yet understood how does the required off-heap memory size relates
-to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory,
-than the configured maximum *heap* size (`-Xmx`) for the same JVM.
+* **Off-heap memory** (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
+This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing `-XX:MaxDirectMemorySize` configuration. It is not yet understood how does the required off-heap memory size relates to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory, than the configured maximum *heap* size (`-Xmx`) for the same JVM.
 
-*On-heap memory medium* (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task.
-Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is
-most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory
-effectively.
+* **On-heap memory** (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task. Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory effectively.
 
-For most types of tasks SegmentWriteOutMediumFactory could be configured per-task (see [Tasks](../ingestion/tasks.md)
-page, "TuningConfig" section), but if it's not specified for a task, or it's not supported for a particular task type,
-then the value from the configuration below is used:
+For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-task (see [Tasks](../ingestion/tasks.md) for more information), but if it's not specified for a task, or it's not supported for a particular task type, then Druid uses the value from the following configuration:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile`, `offHeapMemory`, or `onHeapMemory`, see explanation above|`tmpFile`|
+|`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile`, `offHeapMemory`, or `onHeapMemory`|`tmpFile`|
 
 ### Indexer
 
@@ -1496,11 +1488,11 @@ then the value from the configuration below is used:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
-|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/indexer|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/indexer`|
 
 #### Indexer general configuration
 
@@ -1515,12 +1507,12 @@ then the value from the configuration below is used:
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
 |`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/tasks`|
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|`org.apache.hadoop:hadoop-client-api:3.3.6`, `org.apache.hadoop:hadoop-client-runtime:3.3.6`|
-|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on Indexer restart for restorable tasks to gracefully exit.|PT5M|
+|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on Indexer restart for restorable tasks to gracefully exit.|`PT5M`|
 |`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
 |`druid.indexer.task.restoreTasksOnRestart`|If true, the Indexer will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/input-sources.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
-|`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). <br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest placeholder data for empty columns or else not query on empty columns.<br/><br/>You can overwrite this configuration by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true||`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|PT5S|
-|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|PT1M|
+|`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). <br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest placeholder data for empty columns or else not query on empty columns.<br/><br/>You can overwrite this configuration by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true||`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with Overlord.|`PT5S`|
+|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with Overlord.|`PT1M`|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with Overlord.|60|
 
 #### Indexer concurrent requests
@@ -1531,15 +1523,15 @@ Druid uses Jetty to serve HTTP requests.
 |--------|-----------|-------|
 |`druid.server.http.numThreads`|Number of threads for HTTP requests. Please see the [Indexer Server HTTP threads](../design/indexer.md#server-http-threads) documentation for more details on how the Indexer uses this configuration.|max(10, (Number of cores * 17) / 16 + 2) + 30|
 |`druid.server.http.queueSize`|Size of the worker queue used by Jetty server to temporarily store incoming client connections. If this value is set and a request is rejected by jetty because queue is full then client would observe request failure with TCP connection being closed immediately with a completely empty response from server.|Unbounded|
-|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5M|
+|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
-|`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|[]|
+|`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|`[]`|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 
 #### Indexer processing resources
@@ -1547,7 +1539,7 @@ Druid uses Jetty to serve HTTP requests.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.processing.buffer.sizeBytes`|This specifies a buffer size (less than 2GiB) for the storage of intermediate results. The computation engine in the Indexer processes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed. [Human-readable format](human-readable-byte.md) is supported.|auto (max 1GiB)|
-|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
+|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|`Integer.MAX_VALUE`|
 |`druid.processing.formatString`|Indexer processes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
@@ -1588,11 +1580,11 @@ These Historical configurations can be defined in the `historical/runtime.proper
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
-|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/historical|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/historical`|
 
 #### Historical general configuration
 
@@ -1606,11 +1598,11 @@ These Historical configurations can be defined in the `historical/runtime.proper
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.segmentCache.locations`|Segments assigned to a Historical process are first stored on the local file system (in a disk cache) and then served by the Historical process. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": "10k", "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on File.getTotalSpace() and File.getFreeSpace() methods, so enable if only if they work for your File System.| none |
+|`druid.segmentCache.locations`|Segments assigned to a Historical process are first stored on the local file system (in a disk cache) and then served by the Historical process. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": "10k", "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on `File.getTotalSpace()` and `File.getFreeSpace()` methods, so enable if only if they work for your File System.| none |
 |`druid.segmentCache.locationSelector.strategy`|The strategy used to select a location from the configured `druid.segmentCache.locations` for segment distribution. Possible values are `leastBytesUsed`, `roundRobin`, `random`, or `mostAvailableSize`. |leastBytesUsed|
 |`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a process is no longer serving a segment.|true|
 |`druid.segmentCache.dropSegmentDelayMillis`|How long a process delays before completely dropping segment.|30000 (30 seconds)|
-|`druid.segmentCache.infoDir`|Historical processes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
+|`druid.segmentCache.infoDir`|Historical processes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|`${first_location}/info_dir`|
 |`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
 |`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from deep storage. Note that the work of loading segments involves downloading segments from deep storage, decompressing them and loading them to a memory mapped location. So the work is not all I/O Bound. Depending on CPU and network load, one could possibly increase this config to a higher value.|max(1,Number of cores / 6)|
 |`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently during historical startup.|`druid.segmentCache.numLoadingThreads`|
@@ -1619,18 +1611,18 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|Number of threads to asynchronously read segment index files into null output stream on each new segment download after the historical process finishes bootstrapping. Recommended to set to 1 or 2 or leave unspecified to disable. See also `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|0|
 |`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|Number of threads to asynchronously read segment index files into null output stream during historical process bootstrap. This thread pool is terminated after historical process finishes bootstrapping. Recommended to set to half of available cores. If left unspecified, `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload` will be used. If both configs are unspecified, this feature is disabled. Preemptively loading segments into page cache helps in the sense that later when a segment is queried, it's already in page cache and only a minor page fault needs to be triggered instead of a more costly major page fault to make the query latency more consistent. Note that loading segment into page cache just does a blind loading of segment index files and will evict any existing segments from page cache at the discretion of operating system when the total segment size on local disk is larger than the page cache usable in the RAM, which roughly equals to total available RAM in the host - druid process memory including both heap and direct memory allocated - memory used by other non druid processes on the host, so it is the user's responsibility to ensure the host has enough RAM to host all the segments to avoid random evictions to fully leverage this feature.|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|
 
-In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
+In `druid.segmentCache.locations`, `freeSpacePercent` was added because the `maxSize` setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
 
 In `druid.segmentCache.locationSelector.strategy`, one of `leastBytesUsed`, `roundRobin`, `random`, or `mostAvailableSize` could be specified to represent the strategy to distribute segments across multiple segment cache locations.
 
 |Strategy|Description|
 |--------|-----------|
-|`leastBytesUsed`|selects a location which has least bytes used in absolute terms.|
-|`roundRobin`|selects a location in a round robin fashion oblivious to the bytes used or the capacity.|
-|`random`|selects a segment cache location randomly each time among the available storage locations.|
-|`mostAvailableSize`|selects a segment cache location that has most free space among the available storage locations.|
+|`leastBytesUsed`|Selects a location which has least bytes used in absolute terms.|
+|`roundRobin`|Selects a location in a round robin fashion oblivious to the bytes used or the capacity.|
+|`random`|Selects a segment cache location randomly each time among the available storage locations.|
+|`mostAvailableSize`|Selects a segment cache location that has most free space among the available storage locations.|
 
-Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the leastBytesUsed strategy or mostAvailableSize strategy, historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
+Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the `leastBytesUsed` strategy or `mostAvailableSize` strategy, Historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
 
 #### Historical query configs
 
@@ -1642,12 +1634,12 @@ Druid uses Jetty to serve HTTP requests.
 |--------|-----------|-------|
 |`druid.server.http.numThreads`|Number of threads for HTTP requests.|max(10, (Number of cores * 17) / 16 + 2) + 30|
 |`druid.server.http.queueSize`|Size of the worker queue used by Jetty server to temporarily store incoming client connections. If this value is set and a request is rejected by jetty because queue is full then client would observe request failure with TCP connection being closed immediately with a completely empty response from server.|Unbounded|
-|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5M|
+|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 
@@ -1656,7 +1648,7 @@ Druid uses Jetty to serve HTTP requests.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.processing.buffer.sizeBytes`|This specifies a buffer size (less than 2GiB), for the storage of intermediate results. The computation engine in both the Historical and Realtime processes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.  [Human-readable format](human-readable-byte.md) is supported.|auto (max 1GiB)|
-|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
+|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|`Integer.MAX_VALUE`|
 |`druid.processing.formatString`|Realtime and Historical processes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
@@ -1701,11 +1693,11 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8082|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8282|
-|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/broker|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/broker`|
 
 #### Query configuration
 
@@ -1715,11 +1707,11 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |--------|---------------|-----------|-------|
 |`druid.broker.balancer.type`|`random`, `connectionCount`|Determines how the broker balances connections to Historical processes. `random` choose randomly, `connectionCount` picks the process with the fewest number of active connections to|`random`|
 |`druid.broker.select.tier`|`highestPriority`, `lowestPriority`, `custom`|If segments are cross-replicated across tiers in a cluster, you can tell the broker to prefer to select segments in a tier with a certain priority.|`highestPriority`|
-|`druid.broker.select.tier.custom.priorities`|`An array of integer priorities.` E.g., `[-1, 0, 1, 2]`|Select servers in tiers with a custom priority list.|The config only has effect if `druid.broker.select.tier` is set to `custom`. If `druid.broker.select.tier` is set to `custom` but this config is not specified, the effect is the same as `druid.broker.select.tier` set to `highestPriority`. Any of the integers in this config can be ignored if there's no corresponding tiers with such priorities. Tiers with priorities explicitly specified in this config always have higher priority than those not and those not specified fall back to use `highestPriority` strategy among themselves.|
+|`druid.broker.select.tier.custom.priorities`|An array of integer priorities, such as `[-1, 0, 1, 2]`|Select servers in tiers with a custom priority list.|The config only has effect if `druid.broker.select.tier` is set to `custom`. If `druid.broker.select.tier` is set to `custom` but this config is not specified, the effect is the same as `druid.broker.select.tier` set to `highestPriority`. Any of the integers in this config can be ignored if there's no corresponding tiers with such priorities. Tiers with priorities explicitly specified in this config always have higher priority than those not and those not specified fall back to use `highestPriority` strategy among themselves.|
 
 ##### Query prioritization and laning
 
-*Laning strategies* allow you to control capacity utilization for heterogeneous query workloads. With laning, the broker examines and classifies a query for the purpose of assigning it to a 'lane'. Lanes have capacity limits, enforced by the broker, that can be used to ensure sufficient resources are available for other lanes or for interactive queries (with no lane), or to limit overall throughput for queries within the lane. Requests in excess of the capacity are discarded with an HTTP 429 status code.
+Laning strategies allow you to control capacity utilization for heterogeneous query workloads. With laning, the broker examines and classifies a query for the purpose of assigning it to a lane. Lanes have capacity limits, enforced by the broker, that can be used to ensure sufficient resources are available for other lanes or for interactive queries (with no lane), or to limit overall throughput for queries within the lane. Requests in excess of the capacity are discarded with an HTTP 429 status code.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1741,10 +1733,10 @@ This strategy can be enabled by setting `druid.query.scheduler.prioritization.st
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.scheduler.prioritization.periodThreshold`|ISO duration threshold for how old data can be queried before automatically adjusting query priority.|None|
-|`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|None|
-|`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|None|
-|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|None|
+|`druid.query.scheduler.prioritization.periodThreshold`|ISO duration threshold for how old data can be queried before automatically adjusting query priority.|none|
+|`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|none|
+|`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|none|
+|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|none|
 
 ##### Laning strategies
 
@@ -1774,21 +1766,21 @@ Note the following guardrails that can be set by the cluster admin to limit the 
 1. `druid.server.http.maxSubqueryRows` in broker's config to set a default for the entire cluster or `maxSubqueryRows` in the query context to set an upper limit on the number of rows a subquery can generate
 2. `druid.server.http.maxSubqueryBytes` in broker's config to set a default for the entire cluster or `maxSubqueryBytes` in the query context to set an upper limit on the number of bytes a subquery can generate
 
-Note that limiting the subquery by bytes is a newer feature therefore it is experimental as it materializes the results differently.
+Limiting the subquery by bytes is an experimental feature as it materializes the results differently.
 
-`maxSubqueryBytes` can be configured to the following values:
-1. 'disabled' - It is the default setting out of the box. It disables the subquery's from the byte based limit, and effectively disables this feature.
-2. 'auto' - Druid automatically decides the optimal byte based limit based upon the heap space available and the max number of concurrent queries.
-3. A positive long value - User can manually specify the number of bytes that the results of the subqueries of a single query can occupy on the heap.
+You can configure `maxSubqueryBytes` to the following values:
+
+* `disabled`: It is the default setting out of the box. It disables the subquery's from the byte based limit, and effectively disables this feature.
+* `auto`: Druid automatically decides the optimal byte based limit based upon the heap space available and the max number of concurrent queries.
+* A positive long value: User can manually specify the number of bytes that the results of the subqueries of a single query can occupy on the heap.
 
 Due to the conversion between the Java objects and the Frame's format, setting `maxSubqueryBytes` can become slow if the subquery starts generating
-rows in the order of magnitude of around 10 million and above. In those scenarios, disable the `maxSubqueryBytes` settings for such queries, assess the 
-number of rows that the subqueries generate and override the `maxSubqueryRows` to appropriate value.
+rows in the order of magnitude of around 10 million and above. In those scenarios, disable the `maxSubqueryBytes` settings for such queries, assess the number of rows that the subqueries generate and override the `maxSubqueryRows` to appropriate value.
 
 If you choose to modify or set any of the above limits, you must also think about the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.
 There is no formula to calculate the correct value. Trial and error is the best approach.
 
-###### 'Manual' laning strategy
+###### Manual laning strategy
 
 This laning strategy is best suited for cases where one or more external applications which query Druid are capable of manually deciding what lane a given query should belong to. Configured with a map of lane names to percent or exact max capacities, queries with a matching `lane` parameter in the [query context](../querying/query-context.md) will be subjected to those limits.
 
@@ -1805,15 +1797,15 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |--------|-----------|-------|
 |`druid.server.http.numThreads`|Number of threads for HTTP requests.|max(10, (Number of cores * 17) / 16 + 2) + 30|
 |`druid.server.http.queueSize`|Size of the worker queue used by Jetty server to temporarily store incoming client connections. If this value is set and a request is rejected by jetty because queue is full then client would observe request failure with TCP connection being closed immediately with a completely empty response from server.|Unbounded|
-|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5M|
+|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|`PT5M`|
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
-|`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used. Human-readable format is supported, see [here](human-readable-byte.md). |Long.MAX_VALUE|
+|`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used. Human-readable format is supported, see [here](human-readable-byte.md). |`Long.MAX_VALUE`|
 |`druid.server.http.maxSubqueryRows`|Maximum number of rows from all subqueries per query. Druid stores the subquery rows in temporary tables that live in the Java heap. `druid.server.http.maxSubqueryRows` is a guardrail to prevent the system from exhausting available heap. When a subquery exceeds the row limit, Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."<br /><br />It is a good practice to avoid large subqueries in Druid. However, if you choose to raise the subquery row limit, you must also increase the heap size of all Brokers, Historicals, and task Peons that process data for the subqueries to accommodate the subquery results.<br /><br />There is no formula to calculate the correct value. Trial and error is the best approach.|100000|
 |`druid.server.http.maxSubqueryBytes`|Maximum number of bytes from all subqueries per query. Since the results are stored on the Java heap, `druid.server.http.maxSubqueryBytes` is a guardrail like `druid.server.http.maxSubqueryRows` to prevent the heap space from exhausting. When a subquery exceeds the byte limit, Druid throws a resource limit exceeded exception. A negative value for the guardrail indicates that Druid won't guardrail by memory. This can be set to 'disabled' which disables the results from being limited via the byte limit, 'auto' which sets this value automatically taking free heap space into account, or a positive long value depicting the number of bytes per query's subqueries' results can occupy. This is an experimental feature for now as this materializes the results in a different format.|'disabled'|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete(Only values greater than zero are valid).|`PT30S`|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for ZooKeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 |`druid.server.http.enableHSTS`|If set to true, druid services will add strict transport security header `Strict-Transport-Security: max-age=63072000; includeSubDomains` to all HTTP responses|`false`|
@@ -1825,12 +1817,12 @@ client has the following configuration options.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
+|`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to Historical and real-time processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|20|
 |`druid.broker.http.eagerInitialization`|Indicates that http connections from Broker to Historical and Real-time processes should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with Historical and real-time processes. May be "gzip" or "identity".|`gzip`|
 |`druid.broker.http.readTimeout`|The timeout for data reads from Historical servers and real-time tasks.|`PT15M`|
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
-|`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context.md). Druid supports [human-readable](human-readable-byte.md) format. |`25MB` or 2% of maximum Broker heap size, whichever is greater.|
+|`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|max(10, ((number of cores * 17) / 16 + 2) + 30)`|
 
 ##### Retry policy
@@ -1849,7 +1841,7 @@ The broker uses processing configs for nested groupBy queries.
 |--------|-----------|-------|
 |`druid.processing.buffer.sizeBytes`|This specifies a buffer size (less than 2GiB) for the storage of intermediate results. The computation engine in both the Historical and Realtime processes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed. [Human-readable format](human-readable-byte.md) is supported.|auto (max 1GiB)|
 |`druid.processing.buffer.poolCacheInitialCount`|initializes the number of buffers allocated on the intermediate results pool. Note that pool can create more buffers if necessary.|`0`|
-|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
+|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|`Integer.MAX_VALUE`|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
@@ -1857,9 +1849,9 @@ The broker uses processing configs for nested groupBy queries.
 |`druid.processing.merge.pool.parallelism`|Size of ForkJoinPool. Note that the default configuration assumes that the value returned by `Runtime.getRuntime().availableProcessors()` represents 2 hyper-threads per physical core, and multiplies this value by `0.75` in attempt to size `1.5` times the number of _physical_ cores.|`Runtime.getRuntime().availableProcessors() * 0.75` (rounded up)|
 |`druid.processing.merge.pool.defaultMaxQueryParallelism`|Default maximum number of parallel merge tasks per query. Note that the default configuration assumes that the value returned by `Runtime.getRuntime().availableProcessors()` represents 2 hyper-threads per physical core, and multiplies this value by `0.5` in attempt to size to the number of _physical_ cores.|`Runtime.getRuntime().availableProcessors() * 0.5` (rounded up)|
 |`druid.processing.merge.pool.awaitShutdownMillis`|Time to wait for merge ForkJoinPool tasks to complete before ungracefully stopping on process shutdown in milliseconds.|`60_000`|
-|`druid.processing.merge.task.targetRunTimeMillis`|Ideal run-time of each ForkJoinPool merge task, before forking off a new task to continue merging sequences.|`100`|
-|`druid.processing.merge.task.initialYieldNumRows`|Number of rows to yield per ForkJoinPool merge task, before forking off a new task to continue merging sequences.|`16384`|
-|`druid.processing.merge.task.smallBatchNumRows`|Size of result batches to operate on in ForkJoinPool merge tasks.|`4096`|
+|`druid.processing.merge.task.targetRunTimeMillis`|Ideal run-time of each ForkJoinPool merge task, before forking off a new task to continue merging sequences.|100|
+|`druid.processing.merge.task.initialYieldNumRows`|Number of rows to yield per ForkJoinPool merge task, before forking off a new task to continue merging sequences.|16384|
+|`druid.processing.merge.task.smallBatchNumRows`|Size of result batches to operate on in ForkJoinPool merge tasks.|4096|
 
 The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + 1)`. You can
@@ -1895,11 +1887,11 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.avatica.maxRowsPerFrame`|Maximum acceptable value for the JDBC client `Statement.setFetchSize` method. This setting determines the maximum number of rows that Druid will populate in a single 'fetch' for a JDBC `ResultSet`. Set this property to -1 to enforce no row limit on the server-side and potentially return the entire set of rows on the initial statement execution. If the JDBC client calls `Statement.setFetchSize` with a value other than -1, Druid uses the lesser value of the client-provided limit and `maxRowsPerFrame`. If `maxRowsPerFrame` is smaller than `minRowsPerFrame`, then the `ResultSet` size will be fixed. To handle queries that produce results with a large number of rows, you can increase value of `druid.sql.avatica.maxRowsPerFrame` to reduce the number of fetches required to completely transfer the result set.|5,000|
 |`druid.sql.avatica.minRowsPerFrame`|Minimum acceptable value for the JDBC client `Statement.setFetchSize` method. The value for this property must greater than 0. If the JDBC client calls `Statement.setFetchSize` with a lesser value, Druid uses `minRowsPerFrame` instead. If `maxRowsPerFrame` is less than `minRowsPerFrame`, Druid uses the minimum value of the two. For handling queries which produce results with a large number of rows, you can increase this value to reduce the number of fetches required to completely transfer the result set.|100|
 |`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|4|
-|`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|PT5M|
+|`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|`PT5M`|
 |`druid.sql.avatica.fetchTimeoutMs`|Avatica fetch timeout, in milliseconds. When a request for the next batch of data takes longer than this time, Druid returns an empty result set, causing the client to poll again. This avoids HTTP timeouts for long-running queries. The default of 5 sec. is good for most cases. |5000|
 |`druid.sql.http.enable`|Whether to enable JSON over HTTP querying at `/druid/v2/sql/`.|true|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
-|`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
+|`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|`PT1M`|
 |`druid.sql.planner.metadataColumnTypeMergePolicy`|Defines how column types will be chosen when faced with differences between segments when computing the SQL schema. Options are specified as a JSON object, with valid choices of `leastRestrictive` or `latestInterval`. For `leastRestrictive`, Druid will automatically widen the type computed for the schema to a type which data across all segments can be converted into, however planned schema migrations can only take effect once all segments have been re-ingested to the new schema. With `latestInterval`, the column type in most recent time chunks defines the type for the schema. |`leastRestrictive`|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useGroupingSetForExactDistinct`|Only relevant when `useApproximateCountDistinct` is disabled. If set to true, exact distinct queries are re-written using grouping sets. Otherwise, exact distinct queries are re-written using joins. This should be set to true for group by query with multiple exact distinct aggregations. This flag can be overridden per query.|false|
@@ -1911,7 +1903,7 @@ The Druid SQL server is configured through the following properties on the Broke
 |`druid.sql.planner.authorizeSystemTablesDirectly`|If true, Druid authorizes queries against any of the system schema tables (`sys` in SQL) as `SYSTEM_TABLE` resources which require `READ` access, in addition to permissions based content filtering.|false|
 |`druid.sql.planner.useNativeQueryExplain`|If true, `EXPLAIN PLAN FOR` will return the explain plan as a JSON representation of equivalent native query(s), else it will return the original version of explain plan generated by Calcite. It can be overridden per query with `useNativeQueryExplain` context key.|true|
 |`druid.sql.planner.maxNumericInFilters`|Max limit for the amount of numeric values that can be compared for a string type dimension when the entire SQL WHERE clause of a query translates to an [OR](../querying/filters.md#or) of [Bound filter](../querying/filters.md#bound-filter). By default, Druid does not restrict the amount of numeric Bound Filters on String columns, although this situation may block other queries from running. Set this property to a smaller value to prevent Druid from running queries that have prohibitively long segment processing times. The optimal limit requires some trial and error; we recommend starting with 100.  Users who submit a query that exceeds the limit of `maxNumericInFilters` should instead rewrite their queries to use strings in the `WHERE` clause instead of numbers. For example, `WHERE someString IN (‘123’, ‘456’)`. If this value is disabled, `maxNumericInFilters` set through query context is ignored.|`-1` (disabled)|
-|`druid.sql.approxCountDistinct.function`|Implementation to use for the [`APPROX_COUNT_DISTINCT` function](../querying/sql-aggregations.md). Without extensions loaded, the only valid value is `APPROX_COUNT_DISTINCT_BUILTIN` (a HyperLogLog, or HLL, based implementation). If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be `APPROX_COUNT_DISTINCT_DS_HLL` (alternative HLL implementation) or `APPROX_COUNT_DISTINCT_DS_THETA`.<br /><br />Theta sketches use significantly more memory than HLL sketches, so you should prefer one of the two HLL implementations.|APPROX_COUNT_DISTINCT_BUILTIN|
+|`druid.sql.approxCountDistinct.function`|Implementation to use for the [`APPROX_COUNT_DISTINCT` function](../querying/sql-aggregations.md). Without extensions loaded, the only valid value is `APPROX_COUNT_DISTINCT_BUILTIN` (a HyperLogLog, or HLL, based implementation). If the [DataSketches extension](../development/extensions-core/datasketches-extension.md) is loaded, this can also be `APPROX_COUNT_DISTINCT_DS_HLL` (alternative HLL implementation) or `APPROX_COUNT_DISTINCT_DS_THETA`.<br /><br />Theta sketches use significantly more memory than HLL sketches, so you should prefer one of the two HLL implementations.|`APPROX_COUNT_DISTINCT_BUILTIN`|
 
 :::info
  Previous versions of Druid had properties named `druid.sql.planner.maxQueryCount` and `druid.sql.planner.maxSemiJoinRowsInMemory`.
@@ -1949,7 +1941,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 |`druid.broker.segment.watchedTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to only consider segments being served from a list of tiers. By default, Broker considers all tiers. This can be used to partition your dataSources in specific Historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources. This config is mutually exclusive from `druid.broker.segment.ignoredTiers` and at most one of these can be configured on a Broker.|none|
 |`druid.broker.segment.ignoredTiers`|List of strings|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. This configuration allows the Broker to ignore the segments being served from a list of tiers. By default, Broker considers all tiers. This config is mutually exclusive from `druid.broker.segment.watchedTiers` and at most one of these can be configured on a Broker.|none|
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from processes serving segments to build cache of which process is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
-|`druid.broker.segment.watchRealtimeTasks`|Boolean|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves.  When `watchRealtimeTasks` is true, the Broker watches for segment announcements from both Historicals and realtime processes. To configure a broker to exclude segments served by realtime processes, set `watchRealtimeTasks` to false. |true|
+|`druid.broker.segment.watchRealtimeTasks`|Boolean|The Broker watches segment announcements from processes that serve segments to build a cache to relate each process to the segments it serves. When `watchRealtimeTasks` is true, the Broker watches for segment announcements from both Historicals and realtime processes. To configure a broker to exclude segments served by realtime processes, set `watchRealtimeTasks` to false. |true|
 |`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
 
 ## Cache configuration
@@ -1995,7 +1987,7 @@ A highly performant local cache implementation for Druid based on [Caffeine](htt
 
 ##### Configuration
 
-Below are the configuration options known to this module:
+The following table shows the configuration options known to this module:
 
 |`runtime.properties`|Description|Default|
 |--------------------|-----------|-------|
@@ -2007,39 +1999,39 @@ Below are the configuration options known to this module:
 
 ##### `druid.cache.cacheExecutorFactory`
 
-Here are the possible values for `druid.cache.cacheExecutorFactory`, which controls how maintenance tasks are run
+The following are the possible values for `druid.cache.cacheExecutorFactory`, which controls how maintenance tasks are run:
 
 * `COMMON_FJP` (default) use the common ForkJoinPool. Should use with [JRE 8u60 or higher](https://github.com/apache/druid/pull/4810#issuecomment-329922810). Older versions of the JRE may have worse performance than newer JRE versions.
 * `SINGLE_THREAD` Use a single-threaded executor.
 * `SAME_THREAD` Cache maintenance is done eagerly.
 
 ##### Metrics
-In addition to the normal cache metrics, the caffeine cache implementation also reports the following in both `total` and `delta`
+
+In addition to the normal cache metrics, the caffeine cache implementation also reports the following in both `total` and `delta`:
 
 |Metric|Description|Normal value|
 |------|-----------|------------|
-|`query/cache/caffeine/*/requests`|Count of hits or misses|hit + miss|
-|`query/cache/caffeine/*/loadTime`|Length of time caffeine spends loading new values (unused feature)|0|
-|`query/cache/caffeine/*/evictionBytes`|Size in bytes that have been evicted from the cache|Varies, should tune cache `sizeInBytes` so that `sizeInBytes`/`evictionBytes` is approximately the rate of cache churn you desire|
-
+|`query/cache/caffeine/*/requests`|Count of hits or misses.|hit + miss|
+|`query/cache/caffeine/*/loadTime`|Length of time caffeine spends loading new values (unused feature).|0|
+|`query/cache/caffeine/*/evictionBytes`|Size in bytes that have been evicted from the cache|Varies, should tune cache `sizeInBytes` so that `sizeInBytes`/`evictionBytes` is approximately the rate of cache churn you desire.|
 
 ##### Memcached
 
 Uses memcached as cache backend. This allows all processes to share the same cache.
 
-| Property                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Default           |
-|-------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
-| `druid.cache.expiration`                  | Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).                                                                                                                                                                                                                                                                                                                                                                            | 2592000 (30 days) |
-| `druid.cache.timeout`                     | Maximum time in milliseconds to wait for a response from Memcached.                                                                                                                                                                                                                                                                                                                                                                                                             | 500               |
-| `druid.cache.hosts`                       | Comma separated list of Memcached hosts `<host:port>`. Need to specify all nodes when `druid.cache.clientMode` is set to static. Dynamic mode [automatically identifies nodes in your cluster](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.html) so just specifying the configuration endpoint and port is fine.                                                                                                                                  | none              |
-| `druid.cache.maxObjectSize`               | Maximum object size in bytes for a Memcached object.                                                                                                                                                                                                                                                                                                                                                                                                                            | 52428800 (50 MiB) |
-| `druid.cache.memcachedPrefix`             | Key prefix for all keys in Memcached.                                                                                                                                                                                                                                                                                                                                                                                                                                           | druid             |
-| `druid.cache.numConnections`              | Number of memcached connections to use.                                                                                                                                                                                                                                                                                                                                                                                                                                         | 1                 |
-| `druid.cache.protocol`                    | Memcached communication protocol. Can be binary or text.                                                                                                                                                                                                                                                                                                                                                                                                                        | binary            |
-| `druid.cache.locator`                     | Memcached locator. Can be consistent or array_mod.                                                                                                                                                                                                                                                                                                                                                                                                                              | consistent        |
-| `druid.cache.enableTls`                   | Enable TLS based connection for Memcached client.  Boolean                                                                                                                                                                                                                                                                                                                                                                                                                      | false             |
-| `druid.cache.clientMode`                  | Client Mode. Static mode requires the user to specify individual cluster nodes. Dynamic mode uses [AutoDiscovery](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.HowAutoDiscoveryWorks.html) feature of AWS Memcached. String. ["static"](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.Manual.html) or ["dynamic"](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.Using.ModifyApp.Java.html) | static            |
-| `druid.cache.skipTlsHostnameVerification` | Skip TLS Hostname Verification. Boolean.                                                                                                                                                                                                                                                                                                                                                                                                                                        | true              | 
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
+|`druid.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
+|`druid.cache.hosts`|Comma separated list of Memcached hosts `<host:port>`. Need to specify all nodes when `druid.cache.clientMode` is set to static. Dynamic mode [automatically identifies nodes in your cluster](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.html) so just specifying the configuration endpoint and port is fine.|none|
+|`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MiB)|
+|`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+|`druid.cache.numConnections`| Number of memcached connections to use.|1|
+|`druid.cache.protocol`| Memcached communication protocol. Can be binary or text.|binary|
+|`druid.cache.locator`| Memcached locator. Can be consistent or `array_mod`.|consistent|
+|`druid.cache.enableTls`|Enable TLS based connection for Memcached client. Boolean.|false|
+|`druid.cache.clientMode`|Client Mode. Static mode requires the user to specify individual cluster nodes. Dynamic mode uses [AutoDiscovery](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.HowAutoDiscoveryWorks.html) feature of AWS Memcached. String. ["static"](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.Manual.html) or ["dynamic"](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/AutoDiscovery.Using.ModifyApp.Java.html)|static|
+|`druid.cache.skipTlsHostnameVerification`|Skip TLS Hostname Verification. Boolean.|true| 
 
 #### Hybrid
 
@@ -2049,13 +2041,12 @@ This may be used to combine a local in-memory cache with a remote memcached cach
 Cache requests will first check L1 cache before checking L2.
 If there is an L1 miss and L2 hit, it will also populate L1.
 
-
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.cache.l1.type`|type of cache to use for L1 cache. See `druid.cache.type` configuration for valid types.|`caffeine`|
-|`druid.cache.l2.type`|type of cache to use for L2 cache. See `druid.cache.type` configuration for valid types.|`caffeine`|
-|`druid.cache.l1.*`|Any property valid for the given type of L1 cache can be set using this prefix. For instance, if you are using a `caffeine` L1 cache, specify `druid.cache.l1.sizeInBytes` to set its size.|defaults are the same as for the given cache type.|
-|`druid.cache.l2.*`|Prefix for L2 cache settings, see description for L1.|defaults are the same as for the given cache type.|
+|`druid.cache.l1.type`|The type of cache to use for L1 cache. See `druid.cache.type` configuration for valid types.|`caffeine`|
+|`druid.cache.l2.type`|The type of cache to use for L2 cache. See `druid.cache.type` configuration for valid types.|`caffeine`|
+|`druid.cache.l1.*`|Any property valid for the given type of L1 cache can be set using this prefix. For instance, if you are using a `caffeine` L1 cache, specify `druid.cache.l1.sizeInBytes` to set its size.|defaults are the same as for the given cache type|
+|`druid.cache.l2.*`|Prefix for L2 cache settings, see description for L1.|defaults are the same as for the given cache type|
 |`druid.cache.useL2`|A boolean indicating whether to query L2 cache, if it's a miss in L1. It makes sense to configure this to `false` on Historical processes, if L2 is a remote cache like `memcached`, and this cache also used on brokers, because in this case if a query reached Historical it means that a broker didn't find corresponding results in the same remote cache, so a query to the remote cache from Historical is guaranteed to be a miss.|`true`|
 |`druid.cache.populateL2`|A boolean indicating whether to put results into L2 cache.|`true`|
 
@@ -2065,11 +2056,8 @@ This section describes configurations that control behavior of Druid's query typ
 
 ### Overriding default query context values
 
-Any [query context general parameter](../querying/query-context.md#general-parameters) default value can be
-overridden by setting the runtime property in the format of `druid.query.default.context.{query_context_key}`.
-The `druid.query.default.context.{query_context_key}` runtime property prefix applies to all current and future
-query context keys, the same as how query context parameter passed with the query works. Note that the runtime property
-value can be overridden if value for the same key is explicitly specify in the query contexts.
+You can override any [query context general parameter](../querying/query-context.md#general-parameters) default value by setting the runtime property in the format of `druid.query.default.context.{query_context_key}`.
+The `druid.query.default.context.{query_context_key}` runtime property prefix applies to all current and future query context keys, the same as how query context parameter passed with the query works. You can override the runtime property value if the value for the same key is specified in the query contexts.
 
 The precedence chain for query context values is as follows:
 
@@ -2104,14 +2092,14 @@ context). If query does have `maxQueuedBytes` in the context, then that value is
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.query.search.maxSearchLimit`|Maximum number of search results to return.|1000|
-|`druid.query.search.searchStrategy`|Default search query strategy.|useIndexes|
+|`druid.query.search.searchStrategy`|Default search query strategy.|`useIndexes`|
 
 ### SegmentMetadata query config
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.segmentMetadata.defaultHistory`|When no interval is specified in the query, use a default interval of defaultHistory before the end time of the most recent segment, specified in ISO8601 format. This property also controls the duration of the default interval used by GET /druid/v2/datasources/{dataSourceName} interactions for retrieving datasource dimensions/metrics.|P1W|
-|`druid.query.segmentMetadata.defaultAnalysisTypes`|This can be used to set the Default Analysis Types for all segment metadata queries, this can be overridden when making the query|["cardinality", "interval", "minmax"]|
+|`druid.query.segmentMetadata.defaultHistory`|When no interval is specified in the query, use a default interval of defaultHistory before the end time of the most recent segment, specified in ISO8601 format. This property also controls the duration of the default interval used by `GET` `/druid/v2/datasources/{dataSourceName}` interactions for retrieving datasource dimensions and metrics.|`P1W`|
+|`druid.query.segmentMetadata.defaultAnalysisTypes`|This can be used to set the Default Analysis Types for all segment metadata queries, this can be overridden when making the query|`["cardinality", "interval", "minmax"]`|
 
 ### GroupBy query config
 
@@ -2152,12 +2140,12 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.|
-|`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|None|
-|`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|None|
-|`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`|None|
-|`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`|None|
-|`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`|None|
+|`groupByIsSingleThreaded`|Overrides the value of `druid.query.groupBy.singleThreaded` for this query.| |
+|`bufferGrouperInitialBuckets`|Overrides the value of `druid.query.groupBy.bufferGrouperInitialBuckets` for this query.|none|
+|`bufferGrouperMaxLoadFactor`|Overrides the value of `druid.query.groupBy.bufferGrouperMaxLoadFactor` for this query.|none|
+|`forceHashAggregation`|Overrides the value of `druid.query.groupBy.forceHashAggregation`|none|
+|`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`|none|
+|`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`|none|
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|false|
 |`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|false|
 
@@ -2173,23 +2161,23 @@ Supported query contexts:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8888|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|9088|
-|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/router|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/router`|
 
 #### Runtime configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.router.defaultBrokerServiceName`|The default Broker to connect to in case service discovery fails.|druid/broker|
+|`druid.router.defaultBrokerServiceName`|The default Broker to connect to in case service discovery fails.|`druid/broker`|
 |`druid.router.tierToBrokerMap`|Queries for a certain tier of data are routed to their appropriate Broker. This value should be an ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|`{"_default_tier": "<defaultBrokerServiceName>"}`|
-|`druid.router.defaultRule`|The default rule for all datasources.|"_default"|
-|`druid.router.pollPeriod`|How often to poll for new rules.|PT1M|
+|`druid.router.defaultRule`|The default rule for all datasources.|`_default`|
+|`druid.router.pollPeriod`|How often to poll for new rules.|`PT1M`|
 |`druid.router.sql.enable`|Enable routing of SQL queries using strategies. When`true`, the Router uses the  strategies defined in `druid.router.strategies` to determine the broker service for a given SQL query. When `false`, the Router uses the `defaultBrokerServiceName`.|`false`|
-|`druid.router.strategies`|Please see [Router Strategies](../design/router.md#router-strategies) for details.|[{"type":"timeBoundary"},{"type":"priority"}]|
-|`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.md#avatica-query-balancing).|rendezvousHash|
+|`druid.router.strategies`|Please see [Router Strategies](../design/router.md#router-strategies) for details.|`[{"type":"timeBoundary"},{"type":"priority"}]`|
+|`druid.router.avatica.balancer.type`|Class to use for balancing Avatica queries across Brokers. Please see [Avatica Query Balancing](../design/router.md#avatica-query-balancing).|`rendezvousHash`|
 |`druid.router.managementProxy.enabled`|Enables the Router's [management proxy](../design/router.md#router-as-management-proxy) functionality.|false|
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
 |`druid.router.http.eagerInitialization`|Indicates that http connections from Router to Broker should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
