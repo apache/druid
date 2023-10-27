@@ -21,6 +21,7 @@ package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.testing.EqualsTester;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
@@ -131,8 +132,12 @@ public class WindowOperatorQueryTest
   @Test
   public void testEquals()
   {
-    Assert.assertEquals(query, query);
-    Assert.assertEquals(query, query.withDataSource(query.getDataSource()));
+    new EqualsTester()
+        .addEqualityGroup(query, query, query.withDataSource(query.getDataSource()))
+        .addEqualityGroup(query.withId("11"))
+        .addEqualityGroup(query.withOverriddenContext(ImmutableMap.of("john", "doe")))
+        .testEquals();
+
     Assert.assertNotEquals(query, query.toString());
   }
 }
