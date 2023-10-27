@@ -1444,11 +1444,12 @@ public class DruidQuery
   @Nullable
   private WindowOperatorQuery toWindowQuery()
   {
-    // This is not yet supported
-    if (queryRunsOnHistorical()) {
+    if (windowing == null) {
       return null;
     }
-    if (windowing == null) {
+
+    // This is not yet supported
+    if (queryRunsOnHistorical()) {
       return null;
     }
     if (dataSource instanceof TableDataSource) {
@@ -1538,6 +1539,12 @@ public class DruidQuery
         null);
   }
 
+  /**
+   * Decides wethere there is a chance that this query runs on the historicals.
+   *
+   * It may return FALSE POSITIVES; but this method MUST return true in all
+   * cases it runs on historicals.
+   */
   private boolean queryRunsOnHistorical()
   {
     // DruidOuterQueryRel passes in a DUMMY_DATA_SOURCE

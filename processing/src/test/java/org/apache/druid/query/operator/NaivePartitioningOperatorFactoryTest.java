@@ -36,8 +36,7 @@ public class NaivePartitioningOperatorFactoryTest
             new NaivePartitioningOperatorFactory(null))
         .addEqualityGroup(
             new NaivePartitioningOperatorFactory(Lists.newArrayList("a")),
-            new NaivePartitioningOperatorFactory(Lists.newArrayList("a"))
-            )
+            new NaivePartitioningOperatorFactory(Lists.newArrayList("a")))
         .addEqualityGroup(
             new NaivePartitioningOperatorFactory(Lists.newArrayList("b")))
         .addEqualityGroup(
