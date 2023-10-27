@@ -19,13 +19,19 @@
 
 package org.apache.druid.query;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.ColumnWithDirection.Direction;
+import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
+import org.apache.druid.query.operator.window.ComposingProcessor;
+import org.apache.druid.query.operator.window.Processor;
+import org.apache.druid.query.operator.window.WindowOperatorFactory;
+import org.apache.druid.query.operator.window.ranking.WindowRankProcessor;
 
 import java.util.Arrays;
 import java.util.List;
@@ -76,5 +82,21 @@ public class OperatorFactoryBuilders
   public static OperatorFactory naiveSortOperator(String column, Direction direction)
   {
     return naiveSortOperator(new ColumnWithDirection(column, direction));
+  }
+
+  public static OperatorFactory naivePartitionOperator(String... columns)
+  {
+    return new NaivePartitioningOperatorFactory(Arrays.asList(columns));
+  }
+
+  public static WindowOperatorFactory windowOperators(Processor... processors)
+  {
+    Preconditions.checkArgument(processors.length > 0, "You must specify at least one processor!");
+    return new WindowOperatorFactory(processors.length == 1 ? processors[0] : new ComposingProcessor(processors));
+  }
+
+  public static Processor rankProcessor(String outputColumn, String ...groupingColumns)
+  {
+    return new WindowRankProcessor(Arrays.asList(groupingColumns), outputColumn, false);
   }
 }

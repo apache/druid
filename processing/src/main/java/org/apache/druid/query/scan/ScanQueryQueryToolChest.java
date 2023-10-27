@@ -198,7 +198,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           final ColumnCapabilities capabilities = virtualColumn.capabilities(c -> null, columnName);
           columnType = capabilities != null ? capabilities.toColumnType() : null;
         } else {
-          // Unknown type. In the future, it would be nice to have a way to fill these in.
           columnType = getDataSoruceColumnType(query.getDataSource(), columnName);
         }
 
@@ -218,6 +217,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         return caps.toColumnType();
       }
     }
+    // Unknown type. In the future, it would be nice to have a way to fill these in.
     return null;
   }
 

@@ -1444,9 +1444,10 @@ public class DruidQuery
   @Nullable
   private WindowOperatorQuery toWindowQuery()
   {
-     if(false && queryRunsOnHistorical()) {
-       return null;
-     }
+    // This is not yet supported
+    if (queryRunsOnHistorical()) {
+      return null;
+    }
     if (windowing == null) {
       return null;
     }
