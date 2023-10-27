@@ -22,7 +22,6 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.error.DruidException;
 import java.util.Objects;
 
 public class OffsetLimit
@@ -111,6 +110,11 @@ public class OffsetLimit
         '}';
   }
 
+  /**
+   * Returns the first row index to fetch.
+   *
+   * @param maxIndex maximal index accessible
+   */
   public long getFromIndex(long maxIndex)
   {
     if (maxIndex <= offset) {
@@ -119,6 +123,11 @@ public class OffsetLimit
     return offset;
   }
 
+  /**
+   * Returns the last row index to fetch (non-inclusive).
+   *
+   * @param maxIndex maximal index accessible
+   */
   public long getToIndex(long maxIndex)
   {
     if (maxIndex <= offset) {
@@ -126,11 +135,6 @@ public class OffsetLimit
     }
     if (hasLimit()) {
       long toIndex = limit + offset;
-      if (limit > Long.MAX_VALUE - offset) {
-        throw DruidException.defensive(
-            "Cannot compute toIndex due to overflow [%s]",
-            this);
-      }
       return Math.min(maxIndex, toIndex);
     } else {
       return maxIndex;

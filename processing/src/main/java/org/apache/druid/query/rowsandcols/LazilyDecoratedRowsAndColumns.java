@@ -239,8 +239,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         throw new ISE("accumulated[%s] non-null, why did we get multiple cursors?", accumulated);
       }
 
-      long offsetRemaining = limit.getOffset();
-      long fetchRemaining = limit.getLimitOrMax();
+      long remainingRowsToSkip = limit.getOffset();
+      long remainingRowsToFetch = limit.getLimitOrMax();
 
       final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
       final RowSignature.Builder sigBob = RowSignature.builder();
@@ -286,10 +286,10 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       );
 
       final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      for (; !in.isDoneOrInterrupted() && offsetRemaining > 0; offsetRemaining--) {
+      for (; !in.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
         in.advance();
       }
-      for (; !in.isDoneOrInterrupted() && fetchRemaining > 0; fetchRemaining--) {
+      for (; !in.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
         frameWriter.addSelection();
         in.advance();
       }
@@ -392,8 +392,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       sigBob.add(column, racColumn.toAccessor().getType());
     }
 
-    long offsetRemaining = limit.getOffset();
-    long fetchRemaining = limit.getLimitOrMax();
+    long remainingRowsToSkip = limit.getOffset();
+    long remainingRowsToFetch = limit.getLimitOrMax();
 
     final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
@@ -403,16 +403,16 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     ).newFrameWriter(selectorFactory);
 
     rowId.set(0);
-    for (; rowId.get() < numRows && fetchRemaining > 0; rowId.incrementAndGet()) {
+    for (; rowId.get() < numRows && remainingRowsToFetch > 0; rowId.incrementAndGet()) {
       final int theId = rowId.get();
       if (rowsToSkip != null && rowsToSkip.get(theId)) {
         continue;
       }
-      if (offsetRemaining > 0) {
-        offsetRemaining--;
+      if (remainingRowsToSkip > 0) {
+        remainingRowsToSkip--;
         continue;
       }
-      fetchRemaining--;
+      remainingRowsToFetch--;
       frameWriter.addSelection();
     }
 
