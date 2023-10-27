@@ -1444,6 +1444,9 @@ public class DruidQuery
   @Nullable
   private WindowOperatorQuery toWindowQuery()
   {
+     if(false && queryRunsOnHistorical()) {
+       return null;
+     }
     if (windowing == null) {
       return null;
     }
@@ -1498,8 +1501,8 @@ public class DruidQuery
       return null;
     }
 
-    // Reject cases which would sort the datasource directly
-    if (dataSource != DruidOuterQueryRel.DUMMY_DATA_SOURCE && dataSource.isConcrete()) {
+    if (queryRunsOnHistorical()) {
+      // Currently only non-time orderings of subqueries are allowed.
       List<String> orderByColumnNames = sorting.getOrderBys()
           .stream().map(OrderByColumnSpec::getDimension)
           .collect(Collectors.toList());
@@ -1532,6 +1535,16 @@ public class DruidQuery
         signature,
         operators,
         null);
+  }
+
+  private boolean queryRunsOnHistorical()
+  {
+    // DruidOuterQueryRel passes in a DUMMY_DATA_SOURCE
+    // as its an OuterQuery; in those cases we will not be running on the historical
+    if (dataSource == DruidOuterQueryRel.DUMMY_DATA_SOURCE) {
+      return false;
+    }
+    return dataSource.isConcrete();
   }
 
   private ArrayList<ColumnWithDirection> getColumnWithDriectionsFromOrderBys(List<OrderByColumnSpec> orderBys)

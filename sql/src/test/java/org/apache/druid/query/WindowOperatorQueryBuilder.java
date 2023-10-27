@@ -55,7 +55,7 @@ public class WindowOperatorQueryBuilder
     return setDataSource(new TableDataSource(dataSource));
   }
 
-  public WindowOperatorQueryBuilder  setDataSource(Query<?> query)
+  public WindowOperatorQueryBuilder setDataSource(Query<?> query)
   {
     return setDataSource(new QueryDataSource(query));
   }

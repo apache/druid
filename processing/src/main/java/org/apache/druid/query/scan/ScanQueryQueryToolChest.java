@@ -42,8 +42,10 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
@@ -197,7 +199,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           columnType = capabilities != null ? capabilities.toColumnType() : null;
         } else {
           // Unknown type. In the future, it would be nice to have a way to fill these in.
-          columnType = null;
+          columnType = getDataSoruceColumnType(query.getDataSource(), columnName);
         }
 
         builder.add(columnName, columnType);
@@ -205,6 +207,18 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
       return builder.build();
     }
+  }
+
+  private ColumnType getDataSoruceColumnType(DataSource dataSource, String columnName)
+  {
+    if (dataSource instanceof InlineDataSource) {
+      InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+      ColumnCapabilities caps = inlineDataSource.getRowSignature().getColumnCapabilities(columnName);
+      if (caps != null) {
+        return caps.toColumnType();
+      }
+    }
+    return null;
   }
 
   /**
