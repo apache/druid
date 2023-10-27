@@ -158,6 +158,74 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   }
 
   @Test
+  public void testNumberProcessorMatchingValue()
+  {
+    Double num = 2.;
+    final TestColumnValueSelector<Number> columnValueSelector = TestColumnValueSelector.of(
+            Number.class,
+            ImmutableList.of(new Number() {
+              @Override
+              public int intValue() {
+                return num.intValue();
+              }
+
+              @Override
+              public long longValue() {
+                return num.longValue();
+              }
+
+              @Override
+              public float floatValue() {
+                return num.floatValue();
+              }
+
+              @Override
+              public double doubleValue() {
+                return num;
+              }
+            }),
+            DateTimes.nowUtc()
+    );
+    columnValueSelector.advance();
+    final ValueMatcher matcher = forSelector("2").makeComplexProcessor(columnValueSelector);
+    Assert.assertTrue(matcher.matches(false));
+  }
+
+  @Test
+  public void testNumberProcessorNotMatchingValue()
+  {
+    Double num = 2.;
+    final TestColumnValueSelector<Double> columnValueSelector = TestColumnValueSelector.of(
+            Double.class,
+            ImmutableList.of(new Number() {
+              @Override
+              public int intValue() {
+                return num.intValue();
+              }
+
+              @Override
+              public long longValue() {
+                return num.longValue();
+              }
+
+              @Override
+              public float floatValue() {
+                return num.floatValue();
+              }
+
+              @Override
+              public double doubleValue() {
+                return num;
+              }
+            }),
+            DateTimes.nowUtc()
+    );
+    columnValueSelector.advance();
+    final ValueMatcher matcher = forSelector("5").makeComplexProcessor(columnValueSelector);
+    Assert.assertFalse(matcher.matches(false));
+  }
+
+  @Test
   public void testLongProcessorMatchingValue()
   {
     final TestColumnValueSelector<Long> columnValueSelector = TestColumnValueSelector.of(
