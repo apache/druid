@@ -26,56 +26,49 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 
-import javax.validation.constraints.NotNull;
+import javax.annotation.Nullable;
 
 public class KubernetesAndWorkerTaskRunnerConfig
 {
-  private static final String DEFAULT_WORKER_TASK_RUNNER_TYPE = HttpRemoteTaskRunnerFactory.TYPE_NAME;
-  /**
-   * Select which worker task runner to use in addition to the Kubernetes runner, options are httpRemote or remote.
-   */
-  @JsonProperty
-  @NotNull
-  private final String workerTaskRunnerType;
 
+  private final String RUNNER_STRATEGY_TYPE = "runnerStrategy.type";
+  private final String RUNNER_STRATEGY_WORKER_TYPE = "runnerStrategy.workerType";
   /**
-   * Whether or not to send tasks to the worker task runner instead of the Kubernetes runner.
+   * Select which runner type a task would run on, options are k8s or worker.
    */
-  @JsonProperty
-  @NotNull
-  private final boolean sendAllTasksToWorkerTaskRunner;
+  @JsonProperty(RUNNER_STRATEGY_TYPE)
+  private String runnerStrategy;
+
+  @JsonProperty(RUNNER_STRATEGY_WORKER_TYPE)
+  private String workerType;
 
   @JsonCreator
   public KubernetesAndWorkerTaskRunnerConfig(
-      @JsonProperty("workerTaskRunnerType") String workerTaskRunnerType,
-      @JsonProperty("sendAllTasksToWorkerTaskRunner") Boolean sendAllTasksToWorkerTaskRunner
+      @JsonProperty(RUNNER_STRATEGY_TYPE) @Nullable String runnerStrategy,
+      @JsonProperty(RUNNER_STRATEGY_WORKER_TYPE) @Nullable String workerType
   )
   {
-    this.workerTaskRunnerType = ObjectUtils.defaultIfNull(
-        workerTaskRunnerType,
-        DEFAULT_WORKER_TASK_RUNNER_TYPE
-    );
+    this.runnerStrategy = ObjectUtils.defaultIfNull(runnerStrategy, KubernetesTaskRunnerFactory.TYPE_NAME);
+    this.workerType = ObjectUtils.defaultIfNull(workerType, HttpRemoteTaskRunnerFactory.TYPE_NAME);
     Preconditions.checkArgument(
-        this.workerTaskRunnerType.equals(HttpRemoteTaskRunnerFactory.TYPE_NAME) ||
-        this.workerTaskRunnerType.equals(RemoteTaskRunnerFactory.TYPE_NAME),
-        "workerTaskRunnerType must be set to one of (%s, %s)",
+        this.workerType.equals(HttpRemoteTaskRunnerFactory.TYPE_NAME) ||
+        this.workerType.equals(RemoteTaskRunnerFactory.TYPE_NAME),
+        "workerType must be set to one of (%s, %s)",
         HttpRemoteTaskRunnerFactory.TYPE_NAME,
         RemoteTaskRunnerFactory.TYPE_NAME
     );
-    this.sendAllTasksToWorkerTaskRunner = ObjectUtils.defaultIfNull(
-        sendAllTasksToWorkerTaskRunner,
-        false
-    );
   }
 
-  public String getWorkerTaskRunnerType()
+  @JsonProperty(RUNNER_STRATEGY_TYPE)
+  public String getRunnerStrategy()
   {
-    return workerTaskRunnerType;
+    return runnerStrategy;
   }
 
-  public boolean isSendAllTasksToWorkerTaskRunner()
+  @JsonProperty(RUNNER_STRATEGY_WORKER_TYPE)
+  public String getWorkerType()
   {
-    return sendAllTasksToWorkerTaskRunner;
+    return workerType;
   }
 
 }

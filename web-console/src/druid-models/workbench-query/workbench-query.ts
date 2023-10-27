@@ -552,7 +552,7 @@ export class WorkbenchQuery {
       apiQuery.context.executionMode ??= 'async';
       apiQuery.context.finalizeAggregations ??= !ingestQuery;
       apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
-      apiQuery.context.waitTillSegmentsLoad ??= true;
+      apiQuery.context.waitUntilSegmentsLoad ??= true;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {
