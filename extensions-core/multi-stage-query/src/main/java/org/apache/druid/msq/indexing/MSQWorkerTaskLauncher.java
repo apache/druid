@@ -48,12 +48,10 @@ import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -117,7 +115,8 @@ public class MSQWorkerTaskLauncher
   // Mutable state accessed by mainLoop, ControllerImpl, and jetty (/liveReports) threads.
   // Tasks are added here once they are submitted for running, but before they are fully started up.
   // taskId -> taskTracker
-  private final ConcurrentMap<String, TaskTracker> taskTrackers = new ConcurrentSkipListMap<>();
+  private final ConcurrentMap<String, TaskTracker> taskTrackers = new ConcurrentSkipListMap<>(Comparator.comparingInt(
+      MSQTasks::workerFromTaskId));
 
   // Set of tasks which are issued a cancel request by the controller.
   private final Set<String> canceledWorkerTasks = ConcurrentHashMap.newKeySet();
