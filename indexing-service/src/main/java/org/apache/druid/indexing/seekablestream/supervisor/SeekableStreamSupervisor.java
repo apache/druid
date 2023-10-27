@@ -2113,13 +2113,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (int i = 0; i < results.size(); i++) {
       String taskId = futureTaskIds.get(i);
       if (results.get(i).isError() || results.get(i).valueOrThrow() == null) {
-        log.info("Task [%s] failed to respond, might need to kill it.", taskId);
-        Optional<TaskStatus> killTaskStatus = taskStorage.getStatus(taskId);
-        if (killTaskStatus.isPresent() && !killTaskStatus.get().isComplete()) {
-          // If the task completed while we were failing to chat with it, don't do anything.
-          log.info("Task [%s] failed to return status, killing task", taskId);
-          killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
-        }
+        killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
       } else if (Boolean.valueOf(false).equals(results.get(i).valueOrThrow())) {
         // "return false" above means that we want to stop the task.
         stopFutures.add(stopTask(taskId, false));

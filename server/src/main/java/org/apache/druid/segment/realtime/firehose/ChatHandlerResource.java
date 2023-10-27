@@ -74,6 +74,7 @@ public class ChatHandlerResource
       return handler.get();
     }
 
+    // Return HTTP 503 so SpecificTaskRetryPolicy retries in case the handler is not registered yet or has been registered before shutdown.
     throw new ServiceUnavailableException(StringUtils.format("Can't find chatHandler for handler[%s]", handlerId));
   }
 }
