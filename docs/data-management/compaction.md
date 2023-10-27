@@ -22,9 +22,10 @@ description: "Defines compaction and automatic compaction (auto-compaction or au
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
+  
 Query performance in Apache Druid depends on optimally sized segments. Compaction is one strategy you can use to optimize segment size for your Druid database. Compaction tasks read an existing set of segments for a given time interval and combine the data into a new "compacted" set of segments. In some cases the compacted segments are larger, but there are fewer of them. In other cases the compacted segments may be smaller. Compaction tends to increase performance because optimized segments require less per-segment processing and less memory overhead for ingestion and for querying paths.
 
-## Compaction strategies
+## Compaction guidelines
 
 There are several cases to consider compaction for segment optimization:
 
@@ -43,18 +44,20 @@ By default, compaction does not modify the underlying data of the segments. Howe
 
 Compaction does not improve performance in all situations. For example, if you rewrite your data with each ingestion task, you don't need to use compaction. See [Segment optimization](../operations/segment-optimization.md) for additional guidance to determine if compaction will help in your environment.
 
-## Types of compaction
+## Ways to run compaction
 
-You can configure the Druid Coordinator to perform automatic compaction, also called auto-compaction, for a datasource. Using its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction), the Coordinator periodically identifies segments for compaction starting from newest to oldest. When the Coordinator discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction tasks for the time interval covering those segments.
+Automatic compaction, also called auto-compaction, works in most use cases and should be your first option. 
 
-Automatic compaction works in most use cases and should be your first option. To learn more, see [Automatic compaction](../data-management/automatic-compaction.md).
+The Coordinator uses its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to periodically identify segments for compaction starting from newest to oldest. When the Coordinator discovers segments that have not been compacted or segments that were compacted with a different or changed spec, it submits compaction tasks for the time interval covering those segments.
+
+To learn more, see [Automatic compaction](../data-management/automatic-compaction.md).
 
 In cases where you require more control over compaction, you can manually submit compaction tasks. For example:
 
 - Automatic compaction is running into the limit of task slots available to it, so tasks are waiting for previous automatic compaction tasks to complete. Manual compaction can use all available task slots, therefore you can complete compaction more quickly by submitting more concurrent tasks for more intervals.
 - You want to force compaction for a specific time range or you want to compact data out of chronological order.
 
-See [Setting up a manual compaction task](#setting-up-manual-compaction) for more about manual compaction tasks.
+See [Setting up a manual compaction task](./manual-compaction.md#setting-up-manual-compaction) for more about manual compaction tasks.
 
 ## Data handling with compaction
 
@@ -101,141 +104,10 @@ Druid only rolls up the output segment when `rollup` is set for all input segmen
 See [Roll-up](../ingestion/rollup.md) for more details.
 You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.md#analysistypes).
 
-## Setting up manual compaction
-
-To perform a manual compaction, you submit a compaction task. Compaction tasks merge all segments for the defined interval according to the following syntax:
-
-```json
-{
-    "type": "compact",
-    "id": <task_id>,
-    "dataSource": <task_datasource>,
-    "ioConfig": <IO config>,
-    "dimensionsSpec": <custom dimensionsSpec>,
-    "transformSpec": <custom transformSpec>,
-    "metricsSpec": <custom metricsSpec>,
-    "tuningConfig": <parallel indexing task tuningConfig>,
-    "granularitySpec": <compaction task granularitySpec>,
-    "context": <task context>
-}
-```
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Set the value to `compact`.|Yes|
-|`id`|Task ID|No|
-|`dataSource`|Data source name to compact|Yes|
-|`ioConfig`|I/O configuration for compaction task. See [Compaction I/O configuration](#compaction-io-configuration) for details.|Yes|
-|`dimensionsSpec`|When set, the compaction task uses the specified `dimensionsSpec` rather than generating one from existing segments. See [Compaction dimensionsSpec](#compaction-dimensions-spec) for details.|No|
-|`transformSpec`|When set, the compaction task uses the specified `transformSpec` rather than using `null`. See [Compaction transformSpec](#compaction-transform-spec) for details.|No|
-|`metricsSpec`|When set, the compaction task uses the specified `metricsSpec` rather than generating one from existing segments.|No|
-|`segmentGranularity`|Deprecated. Use `granularitySpec`.|No|
-|`tuningConfig`|[Tuning configuration](../ingestion/native-batch.md#tuningconfig) for parallel indexing. `awaitSegmentAvailabilityTimeoutMillis` value is not supported for compaction tasks. Leave this parameter at the default value, 0.|No|
-|`granularitySpec`|When set, the compaction task uses the specified `granularitySpec` rather than generating one from existing segments. See [Compaction `granularitySpec`](#compaction-granularity-spec) for details.|No|
-|`context`|[Task context](../ingestion/tasks.md#context)|No|
-
-:::info
- Note: Use `granularitySpec` over `segmentGranularity` and only set one of these values. If you specify different values for these in the same compaction spec, the task fails.
-:::
-
-To control the number of result segments per time chunk, you can set [`maxRowsPerSegment`](../ingestion/native-batch.md#partitionsspec) or [`numShards`](../ingestion/../ingestion/native-batch.md#tuningconfig).
-
-:::info
- You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
-:::
-
-A compaction task internally generates an `index` or `index_parallel` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [`druid` input source](../ingestion/input-sources.md), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
-
-Compaction tasks typically fetch all [relevant segments](#compaction-io-configuration) prior to launching any subtasks, _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to maximize performance and minimize disk usage of the `compact` task:
-
-- [`granularitySpec`](#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
-- [`dimensionsSpec`](#compaction-dimensions-spec)
-- `metricsSpec`
-
-Compaction tasks exit without doing anything and issue a failure status code in either of the following cases:
-
-- If the interval you specify has no data segments loaded.
-- If the interval you specify is empty.
-
-Note that the metadata between input segments and the resulting compacted segments may differ if the metadata among the input segments differs as well. If all input segments have the same metadata, however, the resulting output segment will have the same metadata as all input segments.
-
-
-### Example compaction task
-
-The following JSON illustrates a compaction task to compact _all segments_ within the interval `2020-01-01/2021-01-01` and create new segments:
-
-```json
-{
-  "type": "compact",
-  "dataSource": "wikipedia",
-  "ioConfig": {
-    "type": "compact",
-    "inputSpec": {
-      "type": "interval",
-      "interval": "2020-01-01/2021-01-01"
-    }
-  },
-  "granularitySpec": {
-    "segmentGranularity": "day",
-    "queryGranularity": "hour"
-  }
-}
-```
-
-`granularitySpec` is an optional field.
-If you don't specify `granularitySpec`, Druid retains the original segment and query granularities when compaction is complete.
-
-### Compaction I/O configuration
-
-The compaction `ioConfig` requires specifying `inputSpec` as follows:
-
-|Field|Description|Default|Required|
-|-----|-----------|-------|--------|
-|`type`|Task type. Set the value to `compact`.|none|Yes|
-|`inputSpec`|Specification of the target [interval](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
-|`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br />- the `interval` in the `interval` type `inputSpec`.<br />- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br />If compaction fails, Druid does not change any of the existing segments.<br />**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
-|`allowNonAlignedInterval`|If `true`, the task allows an explicit [`segmentGranularity`](#compaction-granularity-spec) that is not aligned with the provided [interval](#interval-inputspec) or [segments](#segments-inputspec). This parameter is only used if [`segmentGranularity`](#compaction-granularity-spec) is explicitly provided.<br /><br />This parameter is provided for backwards compatibility. In most scenarios it should not be set, as it can lead to data being accidentally overshadowed. This parameter may be removed in a future release.|false|No|
-
-The compaction task has two kinds of `inputSpec`:
-
-#### Interval `inputSpec`
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Set the value to `interval`.|Yes|
-|`interval`|Interval to compact.|Yes|
-
-#### Segments `inputSpec`
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`type`|Task type. Set the value to `segments`.|Yes|
-|`segments`|A list of segment IDs.|Yes|
-
-### Compaction dimensions spec
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`dimensions`| A list of dimension names or objects. Cannot have the same column in both `dimensions` and `dimensionExclusions`. Defaults to `null`, which preserves the original dimensions.|No|
-|`dimensionExclusions`| The names of dimensions to exclude from compaction. Only names are supported here, not objects. This list is only used if the dimensions list is null or empty; otherwise it is ignored. Defaults to `[]`.|No|
-
-### Compaction transform spec
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`filter`| The `filter` conditionally filters input rows during compaction. Only rows that pass the filter will be included in the compacted segments. Any of Druid's standard [query filters](../querying/filters.md) can be used. Defaults to 'null', which will not filter any row. |No|
-
-### Compaction granularity spec
-
-|Field|Description|Required|
-|-----|-----------|--------|
-|`segmentGranularity`|Time chunking period for the segment granularity. Defaults to 'null', which preserves the original segment granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`queryGranularity`|The resolution of timestamp storage within each segment. Defaults to 'null', which preserves the original query granularity. Accepts all [Query granularity](../querying/granularities.md) values.|No|
-|`rollup`|Enables compaction-time rollup. To preserve the original setting, keep the default value. To enable compaction-time rollup, set the value to `true`. Once the data is rolled up, you can no longer recover individual records.|No|
-
 ## Learn more
 
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
+- [Manual compaction](./manual-compaction.md) for how to run a one-time compaction task
 - [Automatic compaction](automatic-compaction.md) for how to enable and configure automatic compaction.
 
