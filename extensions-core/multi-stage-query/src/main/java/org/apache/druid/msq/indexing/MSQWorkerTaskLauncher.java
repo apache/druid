@@ -60,6 +60,8 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -112,10 +114,10 @@ public class MSQWorkerTaskLauncher
   @GuardedBy("taskIds")
   private final IntSet fullyStartedTasks = new IntOpenHashSet();
 
-  // Mutable state accessible only to the main loop. LinkedHashMap since order of key set matters. Tasks are added
-  // here once they are submitted for running, but before they are fully started up.
+  // Mutable state accessed by mainLoop, ControllerImpl, and jetty (/liveReports) threads.
+  // Tasks are added here once they are submitted for running, but before they are fully started up.
   // taskId -> taskTracker
-  private final Map<String, TaskTracker> taskTrackers = Collections.synchronizedMap(new LinkedHashMap<>());
+  private final ConcurrentMap<String, TaskTracker> taskTrackers = new ConcurrentSkipListMap<>();
 
   // Set of tasks which are issued a cancel request by the controller.
   private final Set<String> canceledWorkerTasks = ConcurrentHashMap.newKeySet();
@@ -402,6 +404,10 @@ public class MSQWorkerTaskLauncher
       workerStats.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
                  .add(new WorkerStats(taskEntry.getKey(),
                                       taskTracker.status.getStatusCode(),
+                                      // getDuration() returns -1 for running tasks.
+                                      // It's not calculated on-the-fly here since
+                                      // taskTracker.startTimeMillis marks task
+                                      // submission time rather than the actual start.
                                       taskTracker.status.getDuration()
                  ));
     }
