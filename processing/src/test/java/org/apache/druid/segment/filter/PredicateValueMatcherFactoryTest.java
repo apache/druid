@@ -165,22 +165,26 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
             Number.class,
             ImmutableList.of(new Number() {
               @Override
-              public int intValue() {
+              public int intValue()
+              {
                 return num.intValue();
               }
 
               @Override
-              public long longValue() {
+              public long longValue()
+              {
                 return num.longValue();
               }
 
               @Override
-              public float floatValue() {
+              public float floatValue()
+              {
                 return num.floatValue();
               }
 
               @Override
-              public double doubleValue() {
+              public double doubleValue()
+              {
                 return num;
               }
             }),
@@ -199,22 +203,26 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
             Double.class,
             ImmutableList.of(new Number() {
               @Override
-              public int intValue() {
+              public int intValue()
+              {
                 return num.intValue();
               }
 
               @Override
-              public long longValue() {
+              public long longValue()
+              {
                 return num.longValue();
               }
 
               @Override
-              public float floatValue() {
+              public float floatValue()
+              {
                 return num.floatValue();
               }
 
               @Override
-              public double doubleValue() {
+              public double doubleValue()
+              {
                 return num;
               }
             }),
