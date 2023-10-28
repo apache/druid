@@ -344,7 +344,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @LifecycleStart
   public void start() throws InterruptedException
   {
-    log.info("%s waiting for initialization.", getClass().getSimpleName());
+    log.info("%s starting cache initialization.", getClass().getSimpleName());
     startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {

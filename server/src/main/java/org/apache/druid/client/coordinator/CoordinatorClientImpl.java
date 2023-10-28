@@ -37,7 +37,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -147,9 +146,6 @@ public class CoordinatorClientImpl implements CoordinatorClient
   public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> dataSources)
   {
     final String path = "/druid/coordinator/v1/metadata/dataSourceInformation";
-    if (null == dataSources) {
-      dataSources = new HashSet<>();
-    }
     return FutureUtils.transform(
         client.asyncRequest(
             new RequestBuilder(HttpMethod.POST, path)
