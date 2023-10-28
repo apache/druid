@@ -1,3 +1,0 @@
-query-filters:
-  - exclude:
-      id: java/stack-trace-exposure
