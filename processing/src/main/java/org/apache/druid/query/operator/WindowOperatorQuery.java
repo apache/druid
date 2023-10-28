@@ -234,19 +234,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     );
   }
 
-  public WindowOperatorQuery withLeafOperators(List<OperatorFactory> leafOperators)
-  {
-    return new WindowOperatorQuery(
-        getDataSource(),
-        getQuerySegmentSpec(),
-        getContext(),
-        rowSignature,
-        operators,
-        leafOperators
-    );
-  }
-
-
   @Override
   public boolean equals(Object o)
   {
