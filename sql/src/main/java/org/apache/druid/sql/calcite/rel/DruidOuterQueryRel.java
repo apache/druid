@@ -52,7 +52,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
     public boolean isConcrete()
     {
       return false;
-    };
+    }
   };
 
   private static final QueryDataSource DUMMY_QUERY_DATA_SOURCE = new QueryDataSource(

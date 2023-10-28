@@ -36,25 +36,34 @@ public class NaiveSortOperatorFactoryTest
 
     new EqualsTester()
         .addEqualityGroup(
-            new NaiveSortOperatorFactory(null))
+            new NaiveSortOperatorFactory(null)
+        )
         .addEqualityGroup(
-            naiveSortOperator())
+            naiveSortOperator()
+        )
         .addEqualityGroup(
             naiveSortOperator(colA),
-            naiveSortOperator(colA))
+            naiveSortOperator(colA)
+        )
         .addEqualityGroup(
-            naiveSortOperator(colAdesc))
+            naiveSortOperator(colAdesc)
+        )
         .addEqualityGroup(
-            naiveSortOperator(colB))
+            naiveSortOperator(colB)
+        )
         .addEqualityGroup(
-            naiveSortOperator(colA, colB))
+            naiveSortOperator(colA, colB)
+        )
         .addEqualityGroup(
-            naiveSortOperator(colB, colA))
+            naiveSortOperator(colB, colA)
+        )
         // invalid cases; but currently allowed ones
         .addEqualityGroup(
-            naiveSortOperator((ColumnWithDirection) null))
+            naiveSortOperator((ColumnWithDirection) null)
+        )
         .addEqualityGroup(
-            naiveSortOperator(colA, colB, colA))
+            naiveSortOperator(colA, colB, colA)
+        )
         .testEquals();
   }
 

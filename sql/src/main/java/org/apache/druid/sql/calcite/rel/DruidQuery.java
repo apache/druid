@@ -1510,7 +1510,8 @@ public class DruidQuery
           .collect(Collectors.toList());
       plannerContext.setPlanningError(
           "SQL query requires ordering a table by non-time column [%s], which is not supported.",
-          orderByColumnNames);
+          orderByColumnNames
+      );
       return null;
     }
 

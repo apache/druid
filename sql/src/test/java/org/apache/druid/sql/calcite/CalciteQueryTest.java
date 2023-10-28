@@ -14297,15 +14297,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testBuilder()
-        .sql("with t AS (SELECT m2, COUNT(m1) as trend_score\n"
-            + "FROM \"foo\"\n"
-            + "GROUP BY 1 \n"
-            + "LIMIT 10\n"
-            + ")\n"
-            + "select m2, (MAX(trend_score)) from t\n"
-            + "where m2 > 2\n"
-            + "GROUP BY 1 \n"
-            + "ORDER BY 2 DESC")
+        .sql(
+            "with t AS (SELECT m2, COUNT(m1) as trend_score\n"
+                + "FROM \"foo\"\n"
+                + "GROUP BY 1 \n"
+                + "LIMIT 10\n"
+                + ")\n"
+                + "select m2, (MAX(trend_score)) from t\n"
+                + "where m2 > 2\n"
+                + "GROUP BY 1 \n"
+                + "ORDER BY 2 DESC"
+        )
         .expectedQuery(
             WindowOperatorQueryBuilder.builder()
                 .setDataSource(
@@ -14314,40 +14316,55 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .intervals(querySegmentSpec(Filtration.eternity()))
                         .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
                         .threshold(10)
-                        .aggregators(aggregators(
-                            useDefault
-                                ? new CountAggregatorFactory("a0")
-                                : new FilteredAggregatorFactory(
-                                    new CountAggregatorFactory("a0"),
-                                    notNull("m1"))))
+                        .aggregators(
+                            aggregators(
+                                useDefault
+                                    ? new CountAggregatorFactory("a0")
+                                    : new FilteredAggregatorFactory(
+                                        new CountAggregatorFactory("a0"),
+                                        notNull("m1")
+                                    )
+                            )
+                        )
                         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                         .context(OUTER_LIMIT_CONTEXT)
-                        .build())
+                        .build()
+                )
                 .setSignature(
                     RowSignature.builder()
                         .add("d0", ColumnType.DOUBLE)
                         .add("a0", ColumnType.LONG)
-                        .build())
+                        .build()
+                )
                 .setOperators(
-                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.DESC))
+                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.DESC)
+                )
                 .setLeafOperators(
                     OperatorFactoryBuilders.scanOperatorFactoryBuilder()
                         .setOffsetLimit(0, Long.MAX_VALUE)
-                        .setFilter(range(
-                            "d0",
-                            ColumnType.LONG,
-                            2L,
-                            null,
-                            true,
-                            false))
+                        .setFilter(
+                            range(
+                                "d0",
+                                ColumnType.LONG,
+                                2L,
+                                null,
+                                true,
+                                false
+                            )
+                        )
                         .setProjectedColumns("a0", "d0")
-                        .build())
-                .build())
-        .expectedResults(ImmutableList.of(
-            new Object[] {3.0D, 1L},
-            new Object[] {4.0D, 1L},
-            new Object[] {5.0D, 1L},
-            new Object[] {6.0D, 1L}))
+                        .build()
+                )
+                .build()
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {3.0D, 1L},
+                new Object[] {4.0D, 1L},
+                new Object[] {5.0D, 1L},
+                new Object[] {6.0D, 1L}
+            )
+        )
         .run();
   }
 
@@ -14367,7 +14384,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "ORDER BY 2 DESC  LIMIT 2 OFFSET 1\n";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
         new Object[] {4.0D, 1L},
-        new Object[] {5.0D, 1L});
+        new Object[] {5.0D, 1L}
+    );
 
     testBuilder()
         .sql(sql)
@@ -14379,37 +14397,48 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .intervals(querySegmentSpec(Filtration.eternity()))
                         .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
                         .threshold(10)
-                        .aggregators(aggregators(
-                            useDefault
-                                ? new CountAggregatorFactory("a0")
-                                : new FilteredAggregatorFactory(
-                                    new CountAggregatorFactory("a0"),
-                                    notNull("m1"))))
+                        .aggregators(
+                            aggregators(
+                                useDefault
+                                    ? new CountAggregatorFactory("a0")
+                                    : new FilteredAggregatorFactory(
+                                        new CountAggregatorFactory("a0"),
+                                        notNull("m1")
+                                    )
+                            )
+                        )
                         .metric(new NumericTopNMetricSpec("a0"))
                         .context(OUTER_LIMIT_CONTEXT)
-                        .build())
+                        .build()
+                )
                 .setSignature(
                     RowSignature.builder()
                         .add("d0", ColumnType.DOUBLE)
                         .add("a0", ColumnType.LONG)
-                        .build())
+                        .build()
+                )
                 .setOperators(
                     OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.DESC),
                     OperatorFactoryBuilders.scanOperatorFactoryBuilder()
                         .setOffsetLimit(1, 2)
-                        .build())
+                        .build()
+                )
                 .setLeafOperators(
                     OperatorFactoryBuilders.scanOperatorFactoryBuilder()
                         .setOffsetLimit(0, Long.MAX_VALUE)
-                        .setFilter(range(
-                            "d0",
-                            ColumnType.LONG,
-                            2L,
-                            null,
-                            true,
-                            false))
+                        .setFilter(
+                            range(
+                                "d0",
+                                ColumnType.LONG,
+                                2L,
+                                null,
+                                true,
+                                false
+                            )
+                        )
                         .setProjectedColumns("a0", "d0")
-                        .build())
+                        .build()
+                )
                 .build()
         )
         .expectedResults(expectedResults)
@@ -14433,12 +14462,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + ")\n"
         + "select ranking, trend_score from t ORDER BY trend_score";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L});
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L}
+    );
 
     testBuilder()
         .sql(sql)
@@ -14455,28 +14485,37 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(
-                                            dimensions(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE),
-                                                new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)))
+                                            dimensions(
+                                                new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE),
+                                                new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)
+                                            )
+                                        )
                                         .setAggregatorSpecs(
                                             aggregators(
                                                 useDefault
                                                     ? new CountAggregatorFactory("a0")
                                                     : new FilteredAggregatorFactory(
                                                         new CountAggregatorFactory("a0"),
-                                                        notNull("m1"))))
-                                        .build())
+                                                        notNull("m1")
+                                                    )
+                                            )
+                                        )
+                                        .build()
+                                )
                                 .setOperators(
-                                      OperatorFactoryBuilders.naivePartitionOperator("d0"),
-                                      OperatorFactoryBuilders.windowOperators(
-                                          OperatorFactoryBuilders.rankProcessor("w0", "d0")
-                                          )
+                                    OperatorFactoryBuilders.naivePartitionOperator("d0"),
+                                    OperatorFactoryBuilders.windowOperators(
+                                        OperatorFactoryBuilders.rankProcessor("w0", "d0")
                                     )
+                                )
                                 .setSignature(
                                     RowSignature.builder()
                                         .add("w0", ColumnType.LONG)
                                         .add("a0", ColumnType.LONG)
-                                        .build())
-                                .build())
+                                        .build()
+                                )
+                                .build()
+                        )
                         .intervals(querySegmentSpec(Filtration.eternity()))
                         .columns("a0", "w0")
                         .context(QUERY_CONTEXT_DEFAULT)
@@ -14484,21 +14523,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .legacy(false)
                         .limit(10)
                         .build()
-
                 )
                 .setSignature(
                     RowSignature.builder()
                         .add("w0", ColumnType.LONG)
                         .add("a0", ColumnType.LONG)
-                        .build())
+                        .build()
+                )
                 .setOperators(
-                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.ASC))
+                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.ASC)
+                )
                 .setLeafOperators(
                     OperatorFactoryBuilders.scanOperatorFactoryBuilder()
                         .setOffsetLimit(0, Long.MAX_VALUE)
                         .setProjectedColumns("a0", "w0")
-                        .build())
-                .build())
+                        .build()
+                )
+                .build()
+        )
         .expectedResults(expectedResults)
         .run();
   }
