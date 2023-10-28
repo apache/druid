@@ -49,6 +49,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__subquery__")
   {
+    @Override
     public boolean isConcrete()
     {
       return false;
