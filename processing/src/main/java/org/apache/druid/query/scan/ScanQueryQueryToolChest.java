@@ -59,6 +59,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -198,7 +200,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           final ColumnCapabilities capabilities = virtualColumn.capabilities(c -> null, columnName);
           columnType = capabilities != null ? capabilities.toColumnType() : null;
         } else {
-          columnType = getDataSoruceColumnType(query.getDataSource(), columnName);
+          columnType = getDataSourceColumnType(query.getDataSource(), columnName);
         }
 
         builder.add(columnName, columnType);
@@ -208,7 +210,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     }
   }
 
-  private ColumnType getDataSoruceColumnType(DataSource dataSource, String columnName)
+  @Nullable
+  private ColumnType getDataSourceColumnType(DataSource dataSource, String columnName)
   {
     if (dataSource instanceof InlineDataSource) {
       InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
