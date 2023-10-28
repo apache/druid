@@ -46,6 +46,8 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.sleep;
 import static org.junit.Assert.assertTrue;
@@ -53,21 +55,7 @@ import static org.junit.Assert.assertTrue;
 public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
 {
 
-  public QueryableIndexSegment factSegment;
-
-  @Override
-  public void setUp() throws IOException
-  {
-
-    factSegment = new TestInfiniteQueryableIndexSegment(
-        JoinTestHelper.createFactIndexBuilder(temporaryFolder.newFolder()).buildMMappedIndex(),
-        SegmentId.dummy("facts")
-    );
-    countryIsoCodeToNameLookup = JoinTestHelper.createCountryIsoCodeToNameLookup();
-    countryNumberToNameLookup = JoinTestHelper.createCountryNumberToNameLookup();
-    countriesTable = JoinTestHelper.createCountriesIndexedTable();
-    regionsTable = JoinTestHelper.createRegionsIndexedTable();
-  }
+  public QueryableIndexSegment infiniteFactSegment;
 
   /**
    * Simulates infinite segment by using a base cursor with advance() and advanceInterruptibly()
@@ -76,12 +64,94 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
   private static class TestInfiniteQueryableIndexSegment extends QueryableIndexSegment
   {
 
+    private static class InfiniteQueryableIndexStorageAdapter extends QueryableIndexStorageAdapter
+    {
+      CountDownLatch countDownLatch;
+
+      public InfiniteQueryableIndexStorageAdapter(QueryableIndex index, CountDownLatch countDownLatch)
+      {
+        super(index);
+        this.countDownLatch = countDownLatch;
+      }
+
+      @Override
+      public Sequence<Cursor> makeCursors(
+          @Nullable Filter filter,
+          Interval interval,
+          VirtualColumns virtualColumns,
+          Granularity gran,
+          boolean descending,
+          @Nullable QueryMetrics<?> queryMetrics
+      )
+      {
+        return super.makeCursors(filter, interval, virtualColumns, gran, descending, queryMetrics)
+                    .map(cursor -> new CursorNoAdvance(cursor, countDownLatch));
+      }
+
+      private static class CursorNoAdvance implements Cursor
+      {
+        Cursor cursor;
+        CountDownLatch countDownLatch;
+
+        public CursorNoAdvance(Cursor cursor, CountDownLatch countDownLatch)
+        {
+          this.cursor = cursor;
+          this.countDownLatch = countDownLatch;
+        }
+
+        @Override
+        public ColumnSelectorFactory getColumnSelectorFactory()
+        {
+          return cursor.getColumnSelectorFactory();
+        }
+
+        @Override
+        public DateTime getTime()
+        {
+          return cursor.getTime();
+        }
+
+        @Override
+        public void advance()
+        {
+          // Do nothing to simulate infinite rows
+          countDownLatch.countDown();
+        }
+
+        @Override
+        public void advanceUninterruptibly()
+        {
+          // Do nothing to simulate infinite rows
+          countDownLatch.countDown();
+
+        }
+
+        @Override
+        public boolean isDone()
+        {
+          return cursor.isDone();
+        }
+
+        @Override
+        public boolean isDoneOrInterrupted()
+        {
+          return cursor.isDoneOrInterrupted();
+        }
+
+        @Override
+        public void reset()
+        {
+
+        }
+      }
+    }
+
     private final StorageAdapter testStorageAdaptor;
 
-    public TestInfiniteQueryableIndexSegment(QueryableIndex index, SegmentId segmentId)
+    public TestInfiniteQueryableIndexSegment(QueryableIndex index, SegmentId segmentId, CountDownLatch countDownLatch)
     {
       super(index, segmentId);
-      testStorageAdaptor = new InfiniteQueryableIndexStorageAdapter(index);
+      testStorageAdaptor = new InfiniteQueryableIndexStorageAdapter(index, countDownLatch);
     }
 
     @Override
@@ -91,79 +161,6 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
     }
   }
 
-  private static class InfiniteQueryableIndexStorageAdapter extends QueryableIndexStorageAdapter
-  {
-    public InfiniteQueryableIndexStorageAdapter(QueryableIndex index)
-    {
-      super(index);
-    }
-
-    @Override
-    public Sequence<Cursor> makeCursors(
-        @Nullable Filter filter,
-        Interval interval,
-        VirtualColumns virtualColumns,
-        Granularity gran,
-        boolean descending,
-        @Nullable QueryMetrics<?> queryMetrics
-    )
-    {
-      return super.makeCursors(filter, interval, virtualColumns, gran, descending, queryMetrics).map(
-          CursorNoAdvance::new);
-    }
-
-    private static class CursorNoAdvance implements Cursor
-    {
-      Cursor cursor;
-
-      public CursorNoAdvance(Cursor cursor)
-      {
-        this.cursor = cursor;
-      }
-
-      @Override
-      public ColumnSelectorFactory getColumnSelectorFactory()
-      {
-        return cursor.getColumnSelectorFactory();
-      }
-
-      @Override
-      public DateTime getTime()
-      {
-        return cursor.getTime();
-      }
-
-      @Override
-      public void advance()
-      {
-        // Do nothing to simulate infinite rows
-      }
-
-      @Override
-      public void advanceUninterruptibly()
-      {
-        // Do nothing to simulate infinite rows
-      }
-
-      @Override
-      public boolean isDone()
-      {
-        return cursor.isDone();
-      }
-
-      @Override
-      public boolean isDoneOrInterrupted()
-      {
-        return cursor.isDoneOrInterrupted();
-      }
-
-      @Override
-      public void reset()
-      {
-
-      }
-    }
-  }
 
   private static class ExceptionHandler implements Thread.UncaughtExceptionHandler
   {
@@ -183,22 +180,37 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
   }
 
   @Test
-  public void testAdvanceWithInterruption()
+  public void testAdvanceWithInterruption() throws IOException, InterruptedException
   {
+
+    final int rowsBeforeInterrupt = 1000;
+
+    CountDownLatch countDownLatch = new CountDownLatch(rowsBeforeInterrupt);
+
+    infiniteFactSegment = new TestInfiniteQueryableIndexSegment(
+        JoinTestHelper.createFactIndexBuilder(temporaryFolder.newFolder()).buildMMappedIndex(),
+        SegmentId.dummy("facts"),
+        countDownLatch
+    );
+
+    countriesTable = JoinTestHelper.createCountriesIndexedTable();
+
     Thread joinCursorThread = new Thread(() -> makeCursorAndAdvance());
     ExceptionHandler exceptionHandler = new ExceptionHandler();
     joinCursorThread.setUncaughtExceptionHandler(exceptionHandler);
     joinCursorThread.start();
-    try {
-      sleep(5000);
-      joinCursorThread.interrupt();
-      sleep(5000);
-    }
-    catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
 
-    assertTrue(exceptionHandler.getException() instanceof QueryInterruptedException);
+    countDownLatch.await(1, TimeUnit.SECONDS);
+    joinCursorThread.interrupt();
+
+    // Wait for a max of 1 sec for the exception to be set.
+    for (int i = 0; i < 1000; i++) {
+      if (exceptionHandler.getException() == null) {
+        sleep(1);
+      } else {
+        assertTrue(exceptionHandler.getException() instanceof QueryInterruptedException);
+      }
+    }
   }
 
   public void makeCursorAndAdvance()
@@ -215,7 +227,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
     );
 
     HashJoinSegmentStorageAdapter hashJoinSegmentStorageAdapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+        infiniteFactSegment.asStorageAdapter(),
         joinableClauses,
         joinFilterPreAnalysis
     );
@@ -229,7 +241,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         null
     ).toList());
 
-    ((PostJoinCursor)cursor).setValueMatcher(new ValueMatcher()
+    ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()
     {
       @Override
       public boolean matches(boolean includeUnknown)
