@@ -325,5 +325,6 @@ codestyle/checkstyle.xml.&#10;"/>
 
     <module name="StringLiteralEquality"/>
 
+    <module name="MissingOverride"/>
   </module>
 </module>
