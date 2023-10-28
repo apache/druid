@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
@@ -40,11 +41,14 @@ public abstract class LoadRule implements Rule
    */
   private final boolean useDefaultTierForNull;
 
+  private final boolean shouldSegmentBeLoaded;
+
   protected LoadRule(Map<String, Integer> tieredReplicants, Boolean useDefaultTierForNull)
   {
     this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
     this.tieredReplicants = handleNullTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
     validateTieredReplicants(this.tieredReplicants);
+    this.shouldSegmentBeLoaded = this.tieredReplicants.values().stream().reduce(0, Integer::sum) > 0;
   }
 
   @JsonProperty
@@ -63,6 +67,12 @@ public abstract class LoadRule implements Rule
   public void run(DataSegment segment, SegmentActionHandler handler)
   {
     handler.replicateSegment(segment, getTieredReplicants());
+  }
+
+  @JsonIgnore
+  @Override
+  public boolean shouldSegmentBeLoaded() {
+    return shouldSegmentBeLoaded;
   }
 
   /**

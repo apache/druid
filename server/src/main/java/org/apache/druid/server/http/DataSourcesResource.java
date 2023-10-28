@@ -873,16 +873,14 @@ public class DataSourcesResource
       final DateTime now = DateTimes.nowUtc();
 
       // A segment that is not eligible for load will never be handed off
-      boolean notEligibleForLoad = true;
+      boolean eligibleForLoad = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(theInterval, now)) {
-          if (rule instanceof LoadRule) {
-            notEligibleForLoad = false;
-          }
+          eligibleForLoad = rule.shouldSegmentBeLoaded();
           break;
         }
       }
-      if (notEligibleForLoad) {
+      if (!eligibleForLoad) {
         return Response.ok(true).build();
       }
 

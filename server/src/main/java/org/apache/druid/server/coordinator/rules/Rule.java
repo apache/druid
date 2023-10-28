@@ -50,4 +50,12 @@ public interface Rule
   boolean appliesTo(Interval interval, DateTime referenceTimestamp);
 
   void run(DataSegment segment, SegmentActionHandler segmentHandler);
+
+  /**
+   * @return Whether a segment that matches this rule needs to be loaded on a tier.
+   */
+  default boolean shouldSegmentBeLoaded()
+  {
+    return false;
+  }
 }
