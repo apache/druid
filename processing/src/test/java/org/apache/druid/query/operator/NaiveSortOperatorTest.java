@@ -36,7 +36,8 @@ public class NaiveSortOperatorTest
   {
     NaiveSortOperator op = new NaiveSortOperator(
         InlineScanOperator.make(),
-        ImmutableList.of(ColumnWithDirection.ascending("someColumn")));
+        ImmutableList.of(ColumnWithDirection.ascending("someColumn"))
+    );
 
     new OperatorTestHelper()
         .withPushFn(() -> (someRac) -> Signal.GO)
@@ -51,12 +52,14 @@ public class NaiveSortOperatorTest
 
     NaiveSortOperator op = new NaiveSortOperator(
         InlineScanOperator.make(rac1, rac2),
-        ImmutableList.of(ColumnWithDirection.ascending("c")));
+        ImmutableList.of(ColumnWithDirection.ascending("c"))
+    );
 
     new OperatorTestHelper()
         .expectAndStopAfter(
             new RowsAndColumnsHelper()
-                .expectColumn("c", new int[] {1, 2, 3, 4, 5, 6}))
+                .expectColumn("c", new int[] {1, 2, 3, 4, 5, 6})
+        )
         .runToCompletion(op);
   }
 
@@ -68,12 +71,14 @@ public class NaiveSortOperatorTest
 
     NaiveSortOperator op = new NaiveSortOperator(
         InlineScanOperator.make(rac1, rac2),
-        ImmutableList.of(ColumnWithDirection.descending("c")));
+        ImmutableList.of(ColumnWithDirection.descending("c"))
+    );
 
     new OperatorTestHelper()
         .expectAndStopAfter(
             new RowsAndColumnsHelper()
-                .expectColumn("c", new int[] {6, 5, 4, 3, 2, 1}))
+                .expectColumn("c", new int[] {6, 5, 4, 3, 2, 1})
+        )
         .runToCompletion(op);
   }
 

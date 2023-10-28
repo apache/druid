@@ -35,24 +35,36 @@ public class WindowOperatorFactoryTest
     new EqualsTester()
         .addEqualityGroup(
             new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("c"), "o", false)))
+                new WindowRankProcessor(Collections.singletonList("c"), "o", false)
+            )
+        )
         .addEqualityGroup(
             new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("d"), "o", false)))
+                new WindowRankProcessor(Collections.singletonList("d"), "o", false)
+            )
+        )
         .addEqualityGroup(
             new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("c"), "x", false)))
+                new WindowRankProcessor(Collections.singletonList("c"), "x", false)
+            )
+        )
         .addEqualityGroup(
             new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("c"), "x", true)))
+                new WindowRankProcessor(Collections.singletonList("c"), "x", true)
+            )
+        )
         .addEqualityGroup(
             new ComposingProcessor(
                 new WindowRankProcessor(Collections.singletonList("c"), "x", true),
-                new WindowRankProcessor(Collections.singletonList("c"), "x", true)))
+                new WindowRankProcessor(Collections.singletonList("c"), "x", true)
+            )
+        )
         .addEqualityGroup(
             new ComposingProcessor(
                 new WindowRankProcessor(Collections.singletonList("c"), "o", true),
-                new WindowRankProcessor(Collections.singletonList("c"), "x", true)))
+                new WindowRankProcessor(Collections.singletonList("c"), "x", true)
+            )
+        )
         .testEquals();
   }
 

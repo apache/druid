@@ -1522,13 +1522,16 @@ public class DruidQuery
 
     operators.add(new NaiveSortOperatorFactory(sortColumns));
     if (!sorting.getOffsetLimit().isNone()) {
-      operators.add(new ScanOperatorFactory(
-          null,
-          null,
-          sorting.getOffsetLimit().toOperatorOffsetLimit(),
-          null,
-          null,
-          null));
+      operators.add(
+          new ScanOperatorFactory(
+              null,
+              null,
+              sorting.getOffsetLimit().toOperatorOffsetLimit(),
+              null,
+              null,
+              null
+          )
+      );
     }
 
     return new WindowOperatorQuery(
@@ -1537,7 +1540,8 @@ public class DruidQuery
         plannerContext.queryContextMap(),
         signature,
         operators,
-        null);
+        null
+    );
   }
 
   private ArrayList<ColumnWithDirection> getColumnWithDirectionsFromOrderBys(List<OrderByColumnSpec> orderBys)

@@ -238,7 +238,8 @@ public class CalciteRulesManager
             preProgram,
             new LoggingProgram("After PreProgram", isDebug),
             Programs.ofRules(druidConventionRuleSet(plannerContext)),
-            new LoggingProgram("After volcano planner program", isDebug)),
+            new LoggingProgram("After volcano planner program", isDebug)
+        ),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
         Programs.sequence(
             // currently, adding logging program after every stage for easier debugging

@@ -32,16 +32,21 @@ public class NaivePartitioningOperatorFactoryTest
     new EqualsTester()
         .addEqualityGroup(
             naivePartitioningOperator(),
-            new NaivePartitioningOperatorFactory(null))
+            new NaivePartitioningOperatorFactory(null)
+        )
         .addEqualityGroup(
             naivePartitioningOperator("a"),
-            naivePartitioningOperator("a"))
+            naivePartitioningOperator("a")
+        )
         .addEqualityGroup(
-            naivePartitioningOperator("b"))
+            naivePartitioningOperator("b")
+        )
         .addEqualityGroup(
-            naivePartitioningOperator("a", "b"))
+            naivePartitioningOperator("a", "b")
+        )
         .addEqualityGroup(
-            naivePartitioningOperator("b", "a"))
+            naivePartitioningOperator("b", "a")
+        )
         .testEquals();
   }
 
