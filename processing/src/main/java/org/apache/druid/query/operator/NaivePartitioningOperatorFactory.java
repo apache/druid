@@ -68,21 +68,18 @@ public class NaivePartitioningOperatorFactory implements OperatorFactory
   }
 
   @Override
-  public int hashCode()
+  public final int hashCode()
   {
     return Objects.hash(partitionColumns);
   }
 
   @Override
-  public boolean equals(Object obj)
+  public final boolean equals(Object obj)
   {
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
+    if (obj == null || obj.getClass() != getClass()) {
       return false;
     }
     NaivePartitioningOperatorFactory other = (NaivePartitioningOperatorFactory) obj;

@@ -19,53 +19,16 @@
 
 package org.apache.druid.query.operator;
 
-import com.google.common.testing.EqualsTester;
-import org.apache.druid.query.operator.window.ComposingProcessor;
-import org.apache.druid.query.operator.window.WindowOperatorFactory;
-import org.apache.druid.query.operator.window.ranking.WindowRankProcessor;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
-
-import java.util.Collections;
 
 public class WindowOperatorFactoryTest
 {
   @Test
   public void testEquals()
   {
-    new EqualsTester()
-        .addEqualityGroup(
-            new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("c"), "o", false)
-            )
-        )
-        .addEqualityGroup(
-            new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("d"), "o", false)
-            )
-        )
-        .addEqualityGroup(
-            new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("c"), "x", false)
-            )
-        )
-        .addEqualityGroup(
-            new WindowOperatorFactory(
-                new WindowRankProcessor(Collections.singletonList("c"), "x", true)
-            )
-        )
-        .addEqualityGroup(
-            new ComposingProcessor(
-                new WindowRankProcessor(Collections.singletonList("c"), "x", true),
-                new WindowRankProcessor(Collections.singletonList("c"), "x", true)
-            )
-        )
-        .addEqualityGroup(
-            new ComposingProcessor(
-                new WindowRankProcessor(Collections.singletonList("c"), "o", true),
-                new WindowRankProcessor(Collections.singletonList("c"), "x", true)
-            )
-        )
-        .testEquals();
+    EqualsVerifier.forClass(NaivePartitioningOperatorFactory.class)
+        .usingGetClass()
+        .verify();
   }
-
 }

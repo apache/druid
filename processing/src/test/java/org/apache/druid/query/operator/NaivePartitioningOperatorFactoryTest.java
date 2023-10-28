@@ -19,39 +19,16 @@
 
 package org.apache.druid.query.operator;
 
-import com.google.common.testing.EqualsTester;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
-
-import java.util.Arrays;
 
 public class NaivePartitioningOperatorFactoryTest
 {
   @Test
   public void testEquals()
   {
-    new EqualsTester()
-        .addEqualityGroup(
-            naivePartitioningOperator(),
-            new NaivePartitioningOperatorFactory(null)
-        )
-        .addEqualityGroup(
-            naivePartitioningOperator("a"),
-            naivePartitioningOperator("a")
-        )
-        .addEqualityGroup(
-            naivePartitioningOperator("b")
-        )
-        .addEqualityGroup(
-            naivePartitioningOperator("a", "b")
-        )
-        .addEqualityGroup(
-            naivePartitioningOperator("b", "a")
-        )
-        .testEquals();
-  }
-
-  private Object naivePartitioningOperator(String... columns)
-  {
-    return new NaivePartitioningOperatorFactory(Arrays.asList(columns));
+    EqualsVerifier.forClass(NaivePartitioningOperatorFactory.class)
+        .usingGetClass()
+        .verify();
   }
 }

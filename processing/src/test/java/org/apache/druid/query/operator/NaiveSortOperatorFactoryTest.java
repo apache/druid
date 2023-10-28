@@ -19,56 +19,16 @@
 
 package org.apache.druid.query.operator;
 
-import com.google.common.testing.EqualsTester;
-import org.apache.druid.query.operator.ColumnWithDirection.Direction;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
-
-import java.util.Arrays;
 
 public class NaiveSortOperatorFactoryTest
 {
   @Test
   public void testEquals()
   {
-    ColumnWithDirection colA = new ColumnWithDirection("a", Direction.ASC);
-    ColumnWithDirection colAdesc = new ColumnWithDirection("a", Direction.DESC);
-    ColumnWithDirection colB = new ColumnWithDirection("b", Direction.ASC);
-
-    new EqualsTester()
-        .addEqualityGroup(
-            new NaiveSortOperatorFactory(null)
-        )
-        .addEqualityGroup(
-            naiveSortOperator()
-        )
-        .addEqualityGroup(
-            naiveSortOperator(colA),
-            naiveSortOperator(colA)
-        )
-        .addEqualityGroup(
-            naiveSortOperator(colAdesc)
-        )
-        .addEqualityGroup(
-            naiveSortOperator(colB)
-        )
-        .addEqualityGroup(
-            naiveSortOperator(colA, colB)
-        )
-        .addEqualityGroup(
-            naiveSortOperator(colB, colA)
-        )
-        // invalid cases; but currently allowed ones
-        .addEqualityGroup(
-            naiveSortOperator((ColumnWithDirection) null)
-        )
-        .addEqualityGroup(
-            naiveSortOperator(colA, colB, colA)
-        )
-        .testEquals();
-  }
-
-  private Object naiveSortOperator(ColumnWithDirection... cols)
-  {
-    return new NaiveSortOperatorFactory(Arrays.asList(cols));
+    EqualsVerifier.forClass(NaiveSortOperatorFactory.class)
+        .usingGetClass()
+        .verify();
   }
 }

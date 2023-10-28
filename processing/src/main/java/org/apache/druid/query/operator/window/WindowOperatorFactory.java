@@ -82,10 +82,7 @@ public class WindowOperatorFactory implements OperatorFactory
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
+    if (obj == null || obj.getClass() != getClass()) {
       return false;
     }
     WindowOperatorFactory other = (WindowOperatorFactory) obj;

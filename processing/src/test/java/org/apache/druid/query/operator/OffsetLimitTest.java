@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.operator;
 
-import com.google.common.testing.EqualsTester;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -104,12 +104,6 @@ public class OffsetLimitTest
   @Test
   public void testEquals()
   {
-    EqualsTester et = new EqualsTester();
-    for (long offset : new long[] {0, 1, 100}) {
-      for (long limit : new long[] {-1, 5, 10, 1000}) {
-        et.addEqualityGroup(new OffsetLimit(offset, limit), new OffsetLimit(offset, limit));
-      }
-    }
-    et.testEquals();
+    EqualsVerifier.forClass(OffsetLimit.class).verify();
   }
 }
