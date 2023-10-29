@@ -128,18 +128,21 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       Assert.assertEquals(1, results.recordedQueries.size());
 
       maybeDumpActualResults(results.results);
-      final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
-      for (int i = 0; i < input.expectedOperators.size(); ++i) {
-        final OperatorFactory expectedOperator = input.expectedOperators.get(i);
-        final OperatorFactory actualOperator = query.getOperators().get(i);
-        if (!expectedOperator.validateEquivalent(actualOperator)) {
-          assertEquals("Operator Mismatch, index[" + i + "]",
-              queryJackson.writeValueAsString(expectedOperator),
-              queryJackson.writeValueAsString(actualOperator));
-          fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
+      if (input.expectedOperators != null) {
+        final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
+        for (int i = 0; i < input.expectedOperators.size(); ++i) {
+          final OperatorFactory expectedOperator = input.expectedOperators.get(i);
+          final OperatorFactory actualOperator = query.getOperators().get(i);
+          if (!expectedOperator.validateEquivalent(actualOperator)) {
+            assertEquals("Operator Mismatch, index[" + i + "]",
+                queryJackson.writeValueAsString(expectedOperator),
+                queryJackson.writeValueAsString(actualOperator));
+            fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
+          }
         }
       }
-      final RowSignature outputSignature = query.getRowSignature();
+
+      final RowSignature outputSignature = results.signature;
       ColumnType[] types = new ColumnType[outputSignature.size()];
       for (int i = 0; i < outputSignature.size(); ++i) {
         types[i] = outputSignature.getColumnType(i).get();
