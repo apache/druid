@@ -49,7 +49,7 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
   public HllSketchHolder fromByteBuffer(final ByteBuffer buf, final int size)
   {
     if (size == 0 || isSafeToConvertToNullSketch(buf, size)) {
-      return HllSketchHolder.of((HllSketch) null);
+      return null;
     }
     return HllSketchHolder.of(HllSketch.wrap(Memory.wrap(buf, ByteOrder.LITTLE_ENDIAN).region(buf.position(), size)));
   }
@@ -57,6 +57,9 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
   @Override
   public byte[] toBytes(final HllSketchHolder holder)
   {
+    if (holder == null) {
+      return new byte[] {};
+    }
     HllSketch sketch = holder.getSketch();
     if (sketch == null || sketch.isEmpty()) {
       return new byte[] {};
