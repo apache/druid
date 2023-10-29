@@ -72,12 +72,16 @@ public class HllSketchHolder
   {
     this.union = union;
     this.sketch = sketch;
+
+    if (this.union == null && this.sketch == null) {
+      throw new ISE("Both union and sketch were null!");
+    }
   }
 
   @JsonValue
   public HllSketch getSketch()
   {
-    if (sketch == null && union != null) {
+    if (sketch == null) {
       sketch = union.getResult();
     }
 
@@ -86,11 +90,11 @@ public class HllSketchHolder
 
   public HllSketch getSketch(TgtHllType type)
   {
-    if (sketch == null && union != null) {
+    if (sketch == null) {
       sketch = union.getResult(type);
     }
 
-    if (sketch != null && sketch.getTgtHllType() != type) {
+    if (sketch.getTgtHllType() != type) {
       sketch = sketch.copyAs(type);
     }
 
