@@ -71,7 +71,8 @@ public abstract class LoadRule implements Rule
 
   @JsonIgnore
   @Override
-  public boolean shouldSegmentBeLoaded() {
+  public boolean shouldSegmentBeLoaded()
+  {
     return shouldSegmentBeLoaded;
   }
 
@@ -83,10 +84,16 @@ public abstract class LoadRule implements Rule
    * <li>If {@code useDefaultTierForNull} is false, returns an empty map. This causes segments to have a replication factor of 0 and not get assigned to any historical.</li>
    * </ul>
    */
-  private static Map<String, Integer> handleNullTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
+  private static Map<String, Integer> handleNullTieredReplicants(
+      final Map<String, Integer> tieredReplicants,
+      boolean useDefaultTierForNull
+  )
   {
     if (useDefaultTierForNull) {
-      return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS));
+      return Configs.valueOrDefault(
+          tieredReplicants,
+          ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+      );
     } else {
       return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of());
     }
@@ -96,10 +103,17 @@ public abstract class LoadRule implements Rule
   {
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
-        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value must not be null.", entry.getKey());
+        throw InvalidInput.exception(
+            "Invalid number of replicas for tier [%s]. Value must not be null.",
+            entry.getKey()
+        );
       }
       if (entry.getValue() < 0) {
-        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value [%d] must be positive.", entry.getKey(), entry.getValue());
+        throw InvalidInput.exception(
+            "Invalid number of replicas for tier [%s]. Value [%d] must be positive.",
+            entry.getKey(),
+            entry.getValue()
+        );
       }
     }
   }

@@ -53,7 +53,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizerMapper;
