@@ -72,6 +72,7 @@ public enum SystemField
   /**
    * Type of this system field.
    */
+  @SuppressWarnings("unused") // Not used, but still useful for signifying intent
   public ColumnType getColumnType()
   {
     return columnType;

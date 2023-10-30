@@ -29,7 +29,6 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
-import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
@@ -72,7 +71,7 @@ public class InputEntityIteratingReader implements InputSourceReader
       try {
         final InputEntity entityToRead = inputStats == null ? entity : new BytesCountingInputEntity(entity, inputStats);
         final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entityToRead, temporaryDirectory);
-        return CloseableIterators.transform(reader.read(), systemFieldDecorator);
+        return reader.read().map(systemFieldDecorator);
       }
       catch (IOException e) {
         throw new RuntimeException(entity.getUri() != null ?
