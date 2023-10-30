@@ -131,7 +131,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         @Override
         public boolean isDone()
         {
-          return cursor.isDone();
+          return false;
         }
 
         @Override
