@@ -55,7 +55,7 @@ conf/druid/overlord:
 jvm.config         runtime.properties
 ```
 
-Each directory has a `runtime.properties` file containing configuration properties for the specific Druid process corresponding to the directory, such as `historical`.
+Each directory has a `runtime.properties` file containing configuration properties for the specific Druid service corresponding to the directory, such as `historical`.
 
 The `jvm.config` files contain JVM flags such as heap sizing properties for each service.
 
@@ -96,7 +96,7 @@ The properties under this section are common configurations that should be share
 
 ### JVM configuration best practices
 
-There are four JVM parameters that we set on all of our processes:
+There are four JVM parameters that we set on all of our services:
 
 -  `-Duser.timezone=UTC`: This sets the default timezone of the JVM to UTC. We always set this and do not test with other default timezones, so local timezones might work, but they also might uncover weird and interesting bugs. To issue queries in a non-UTC timezone, see [query granularities](../querying/granularities.md#period-granularities)
 -  `-Dfile.encoding=UTF-8` This is similar to timezone, we test assuming UTF-8. Local encodings might work, but they also might result in weird and interesting bugs.
@@ -116,18 +116,18 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.extensions.directory`|The root extension directory where user can put extensions related files. Druid will load extensions stored under this directory.|`extensions` (This is a relative path to Druid's working directory)|
-|`druid.extensions.hadoopDependenciesDir`|The root hadoop dependencies directory where user can put hadoop related dependencies files. Druid will load the dependencies based on the hadoop coordinate specified in the hadoop index task.|`hadoop-dependencies` (This is a relative path to Druid's working directory|
+|`druid.extensions.hadoopDependenciesDir`|The root Hadoop dependencies directory where user can put Hadoop related dependencies files. Druid will load the dependencies based on the Hadoop coordinate specified in the Hadoop index task.|`hadoop-dependencies` (This is a relative path to Druid's working directory|
 |`druid.extensions.loadList`|A JSON array of extensions to load from extension directories by Druid. If it is not specified, its value will be `null` and Druid will load all the extensions under `druid.extensions.directory`. If its value is empty list `[]`, then no extensions will be loaded at all. It is also allowed to specify absolute path of other custom extensions not stored in the common extensions directory.|null|
 |`druid.extensions.searchCurrentClassloader`|This is a boolean flag that determines if Druid will search the main classloader for extensions. It defaults to true but can be turned off if you have reason to not automatically add all modules on the classpath.|true|
 |`druid.extensions.useExtensionClassloaderFirst`|This is a boolean flag that determines if Druid extensions should prefer loading classes from their own jars rather than jars bundled with Druid. If false, extensions must be compatible with classes provided by any jars bundled with Druid. If true, extensions may depend on conflicting versions.|false|
-|`druid.extensions.hadoopContainerDruidClasspath`|Hadoop Indexing launches hadoop jobs and this configuration provides way to explicitly set the user classpath for the hadoop job. By default this is computed automatically by druid based on the druid process classpath and set of extensions. However, sometimes you might want to be explicit to resolve dependency conflicts between druid and hadoop.|null|
-|`druid.extensions.addExtensionsToHadoopContainer`|Only applicable if `druid.extensions.hadoopContainerDruidClasspath` is provided. If set to true, then extensions specified in the loadList are added to hadoop container classpath. Note that when `druid.extensions.hadoopContainerDruidClasspath` is not provided then extensions are always added to hadoop container classpath.|false|
+|`druid.extensions.hadoopContainerDruidClasspath`|Hadoop Indexing launches Hadoop jobs and this configuration provides way to explicitly set the user classpath for the Hadoop job. By default, this is computed automatically by Druid based on the Druid service classpath and set of extensions. However, sometimes you might want to be explicit to resolve dependency conflicts between Druid and Hadoop.|null|
+|`druid.extensions.addExtensionsToHadoopContainer`|Only applicable if `druid.extensions.hadoopContainerDruidClasspath` is provided. If set to true, then extensions specified in the loadList are added to Hadoop container classpath. Note that when `druid.extensions.hadoopContainerDruidClasspath` is not provided then extensions are always added to Hadoop container classpath.|false|
 
 ### Modules
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.modules.excludeList`|A JSON array of canonical class names (e.g., `"org.apache.druid.somepackage.SomeModule"`) of module classes which shouldn't be loaded, even if they are found in extensions specified by `druid.extensions.loadList`, or in the list of core modules specified to be loaded on a particular Druid process type. Useful when some useful extension contains some module, which shouldn't be loaded on some Druid process type because some dependencies of that module couldn't be satisfied.|[]|
+|`druid.modules.excludeList`|A JSON array of canonical class names (e.g., `"org.apache.druid.somepackage.SomeModule"`) of module classes which shouldn't be loaded, even if they are found in extensions specified by `druid.extensions.loadList`, or in the list of core modules specified to be loaded on a particular Druid service type. Useful when some useful extension contains some module, which shouldn't be loaded on some Druid service type because some dependencies of that module couldn't be satisfied.|[]|
 
 ### ZooKeeper
 
@@ -158,11 +158,11 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 |--------|-----------|-------|
 |`druid.zk.paths.base`|Base ZooKeeper path.|`/druid`|
 |`druid.zk.paths.propertiesPath`|ZooKeeper properties path.|`${druid.zk.paths.base}/properties`|
-|`druid.zk.paths.announcementsPath`|Druid process announcement path.|`${druid.zk.paths.base}/announcements`|
-|`druid.zk.paths.liveSegmentsPath`|Current path for where Druid processes announce their segments.|`${druid.zk.paths.base}/segments`|
-|`druid.zk.paths.loadQueuePath`|Entries here cause Historical processes to load and drop segments.|`${druid.zk.paths.base}/loadQueue`|
+|`druid.zk.paths.announcementsPath`|Druid service announcement path.|`${druid.zk.paths.base}/announcements`|
+|`druid.zk.paths.liveSegmentsPath`|Current path for where Druid services announce their segments.|`${druid.zk.paths.base}/segments`|
+|`druid.zk.paths.loadQueuePath`|Entries here cause Historical services to load and drop segments.|`${druid.zk.paths.base}/loadQueue`|
 |`druid.zk.paths.coordinatorPath`|Used by the Coordinator for leader election.|`${druid.zk.paths.base}/coordinator`|
-|`druid.zk.paths.servedSegmentsPath`|Deprecated. Legacy path for where Druid processes announce their segments.|`${druid.zk.paths.base}/servedSegments`|
+|`druid.zk.paths.servedSegmentsPath`|Deprecated. Legacy path for where Druid services announce their segments.|`${druid.zk.paths.base}/servedSegments`|
 
 The indexing service also uses its own set of paths. These configs can be included in the common configuration.
 
@@ -192,7 +192,7 @@ The following path is used for service discovery. It is **not** affected by `dru
 |`druid.enableTlsPort`|Enable/Disable HTTPS connector.|`false`|
 
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
-and `druid.tlsPort` properties on each process. Please see `Configuration` section of individual processes to check the valid and default values for these ports.
+and `druid.tlsPort` properties on each service. Please see `Configuration` section of individual services to check the valid and default values for these ports.
 
 #### Jetty server TLS configuration
 
@@ -252,7 +252,7 @@ For configuration options for specific auth extensions, please refer to the exte
 
 ### Startup logging
 
-All processes can log debugging information on startup.
+All services can log debugging information on startup.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -263,7 +263,7 @@ Note that some sensitive information may be logged if these settings are enabled
 
 ### Request logging
 
-All processes that can serve queries can also log the query requests they see. Broker processes can additionally log the SQL requests (both from HTTP and JDBC) they see.
+All services that can serve queries can also log the query requests they see. Broker services can additionally log the SQL requests (both from HTTP and JDBC) they see.
 For an example of setting up request logging, see [Request logging](../operations/request-logging.md).
 
 |Property|Description|Default|
@@ -278,7 +278,7 @@ The `file` request logger stores daily request logs on disk.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.dir`|Historical, Realtime, and Broker processes maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in|none|
+|`druid.request.logging.dir`|Historical, Realtime, and Broker services maintain request logs of all of the requests they get (interaction is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in|none|
 |`druid.request.logging.filePattern`|[Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file|"yyyy-MM-dd'.log'"|
 | `druid.request.logging.durationToRetain`| Period to retain the request logs on disk. The period should be at least longer than `P1D`.| none
 
@@ -373,12 +373,12 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, and dy
 
 ### Enabling metrics
 
-You can configure Druid processes to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors) via [emitters](#metrics-emitters).
+You can configure Druid services to emit [metrics](../operations/metrics.md) regularly from a number of [monitors](#metrics-monitors) via [emitters](#metrics-emitters).
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`| Frequency that Druid emits metrics.|`PT1M`|
-|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a process.|none (no monitors)|
+|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a service.|none (no monitors)|
 |[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop` (metric emission disabled by default)|
 
 #### Metrics monitors
@@ -387,7 +387,7 @@ Metric monitoring is an essential part of Druid operations. The following monito
 
 |Name|Description|
 |----|-----------|
-|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker processes. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
+|`org.apache.druid.client.cache.CacheMonitor`|Emits metrics (to logs) about the segment results cache for Historical and Broker services. Reports typical cache statistics include hits, misses, rates, and size (bytes and number of entries), as well as timeouts and and errors.|
 |`org.apache.druid.java.util.metrics.SysMonitor`|Reports on various system activities and statuses using the [SIGAR library](https://github.com/hyperic/sigar). Requires execute privileges on files in `java.io.tmpdir`. Do not set `java.io.tmpdir` to `noexec` when using `SysMonitor`.|
 |`org.apache.druid.java.util.metrics.JvmMonitor`|Reports various JVM-related statistics.|
 |`org.apache.druid.java.util.metrics.JvmCpuMonitor`|Reports statistics of CPU consumption by the JVM.|
@@ -397,8 +397,8 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.java.util.metrics.CgroupCpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup.|
 |`org.apache.druid.java.util.metrics.CgroupMemoryMonitor`|Reports memory statistic as per the memory cgroup.|
 |`org.apache.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
-|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical processes. Available only on Historical processes.|
-|`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical processes. Available only on Historical processes. Not to be used when lazy loading is configured.|
+|`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services. Available only on Historical services.|
+|`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Available only on Historical services. Not to be used when lazy loading is configured.|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
 |`org.apache.druid.server.metrics.SubqueryCountStatsMonitor`|Reports how many subqueries have been materialized as rows or bytes and various other statistics related to the subquery execution|
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
@@ -407,13 +407,13 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by MiddleManager node types.|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|
 
-For example, you might configure monitors on all processes for system and JVM information within `common.runtime.properties` as follows:
+For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
 
 ```
 druid.monitoring.monitors=["org.apache.druid.java.util.metrics.SysMonitor","org.apache.druid.java.util.metrics.JvmMonitor"]
 ```
 
-You can override cluster-wide configuration by amending the `runtime.properties` of individual processes.
+You can override cluster-wide configuration by amending the `runtime.properties` of individual services.
 
 #### Metrics emitters
 
@@ -455,7 +455,7 @@ log4j config to route these logs to different sources based on the feed of the e
 
 ##### HTTP emitter module TLS overrides
 
-By default, when sending events to a TLS-enabled receiver, the HTTP Emitter uses an SSLContext obtained from the process described at [Druid's internal communication over TLS](../operations/tls-support.md), that is the same SSLContext that would be used for internal communications between Druid processes.
+By default, when sending events to a TLS-enabled receiver, the HTTP Emitter uses an SSLContext obtained from the service described at [Druid's internal communication over TLS](../operations/tls-support.md), that is the same SSLContext that would be used for internal communications between Druid services.
 
 In some use cases it may be desirable to have the HTTP Emitter use its own separate truststore configuration. For example, there may be organizational policies that prevent the TLS-enabled metrics receiver's certificate from being added to the same truststore used by Druid's internal HTTP client.
 
@@ -506,7 +506,7 @@ To use switching as emitter set `druid.emitter=switching`.
 
 ### Metadata storage
 
-These properties specify the JDBC connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.md) and [Overlord](../design/overlord.md).
+These properties specify the JDBC connection and other configuration around the metadata storage. The only services that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.md) and [Overlord](../design/overlord.md).
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -625,7 +625,7 @@ These properties do not apply to metadata storage connections.
 
 You can use the `druid.indexer` configuration to set a [long-term storage](#log-long-term-storage) location for task log files, and to set a [retention policy](#log-retention-policy).
 
-For more information about ingestion tasks and the process of generating logs, see the [task reference](../ingestion/tasks.md).
+For more information about ingestion tasks and the services of generating logs, see the [task reference](../ingestion/tasks.md).
 
 #### Log long-term storage
 
@@ -744,15 +744,15 @@ This config is used to find the [Overlord](../design/overlord.md) using Curator 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.selectors.indexing.serviceName`|The druid.service name of the Overlord process. To start the Overlord with a different name, set it with this property. |druid/overlord|
+|`druid.selectors.indexing.serviceName`|The druid.service name of the Overlord service. To start the Overlord with a different name, set it with this property. |druid/overlord|
 
 ### Coordinator discovery
 
-This config is used to find the [Coordinator](../design/coordinator.md) using Curator service discovery. This config is used by the realtime indexing processes to get information about the segments loaded in the cluster.
+This config is used to find the [Coordinator](../design/coordinator.md) using Curator service discovery. This config is used by the realtime indexing services to get information about the segments loaded in the cluster.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.selectors.coordinator.serviceName`|The druid.service name of the Coordinator process. To start the Coordinator with a different name, set it with this property. |druid/coordinator|
+|`druid.selectors.coordinator.serviceName`|The druid.service name of the Coordinator service. To start the Coordinator with a different name, set it with this property. |druid/coordinator|
 
 ### Announcing segments
 
@@ -828,7 +828,7 @@ All Druid components can communicate with each other over HTTP.
 
 ### Common endpoints configuration
 
-This section contains the configuration options for endpoints that are supported by all processes.
+This section contains the configuration options for endpoints that are supported by all services.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -836,22 +836,22 @@ This section contains the configuration options for endpoints that are supported
 
 ## Master server
 
-This section contains the configuration options for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### Coordinator
 
-For general Coordinator process information, see [Coordinator process](../design/coordinator.md).
+For general Coordinator services information, see [Coordinator service](../design/coordinator.md).
 
 #### Static Configuration
 
 These Coordinator static configurations can be defined in the `coordinator/runtime.properties` file.
 
-##### Coordinator process config
+##### Coordinator service config
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process.|`InetAddress.getLocalHost().getCanonicalHostName()`|
-|`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
+|`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
+|`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8081|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/coordinator`|
@@ -863,7 +863,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.period`|The run period for the Coordinator. The Coordinator operates by maintaining the current state of the world in memory and periodically looking at the set of "used" segments and segments being served to make decisions about whether any changes need to be made to the data topology. This property sets the delay between each of these runs.|`PT60S`|
 |`druid.coordinator.period.indexingPeriod`|How often to send compact/merge/conversion tasks to the indexing service. It's recommended to be longer than `druid.manager.segments.pollDuration`|`PT1800S` (30 mins)|
 |`druid.coordinator.startDelay`|The operation of the Coordinator works on the assumption that it has an up-to-date view of the state of the world when it runs, the current ZooKeeper interaction code, however, is written in a way that doesn’t allow the Coordinator to know for a fact that it’s done loading the current state of the world. This delay is a hack to give it enough time to believe that it has all the data.|`PT300S`|
-|`druid.coordinator.load.timeout`|The timeout duration for when the Coordinator assigns a segment to a Historical process.|`PT15M`|
+|`druid.coordinator.load.timeout`|The timeout duration for when the Coordinator assigns a segment to a Historical service.|`PT15M`|
 |`druid.coordinator.kill.pendingSegments.on`|Boolean flag for whether or not the Coordinator clean up old entries in the `pendingSegments` table of metadata store. If set to true, Coordinator will check the created time of most recently complete task. If it doesn't exist, it finds the created time of the earliest running/pending/waiting tasks. Once the created time is found, then for all datasources not in the `killPendingSegmentsSkipList` (see [Dynamic configuration](#dynamic-configuration)), Coordinator will ask the Overlord to clean up the entries 1 day or more older than the found created time in the `pendingSegments` table. This will be done periodically based on `druid.coordinator.period.indexingPeriod` specified.|true|
 |`druid.coordinator.kill.on`|Boolean flag for whether or not the Coordinator should submit kill task for unused segments, that is, permanently delete them from metadata store and deep storage. If set to true, then for all whitelisted datasources (or optionally all), Coordinator will submit tasks periodically based on `period` specified. A whitelist can be set via dynamic configuration `killDataSourceWhitelist` described later.<br /><br />When `druid.coordinator.kill.on` is true, segments are eligible for permanent deletion once their data intervals are older than `druid.coordinator.kill.durationToRetain` relative to the current time. If a segment's data interval is older than this threshold at the time it is marked unused, it is eligible for permanent deletion immediately after being marked unused.|false|
 |`druid.coordinator.kill.period`| The frequency of sending kill tasks to the indexing service. The value must be greater than or equal to `druid.coordinator.period.indexingPeriod`. Only applies if kill is turned on.|P1D (1 day)|
@@ -871,11 +871,11 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.kill.ignoreDurationToRetain`|A way to override `druid.coordinator.kill.durationToRetain` and tell the coordinator that you do not care about the end date of unused segment intervals when it comes to killing them. If true, the coordinator considers all unused segments as eligible to be killed.|false|
 |`druid.coordinator.kill.bufferPeriod`|The amount of time that a segment must be unused before it is able to be permanently removed from metadata and deep storage. This can serve as a buffer period to prevent data loss if data ends up being needed after being marked unused.|`P30D`|
 |`druid.coordinator.kill.maxSegments`|The number of unused segments to kill per kill task. This number must be greater than 0. This only applies when `druid.coordinator.kill.on=true`.|100|
-|`druid.coordinator.balancer.strategy`|Specify the type of balancing strategy for the Coordinator to use to distribute segments among the Historical processes. `cachingCost` is logically equivalent to `cost` but is more CPU-efficient on large clusters. `diskNormalized` weights the costs according to the servers' disk usage ratios - there are known issues with this strategy distributing segments unevenly across the cluster. `random` distributes segments among services randomly.|`cost`|
+|`druid.coordinator.balancer.strategy`|Specify the type of balancing strategy for the Coordinator to use to distribute segments among the Historical services. `cachingCost` is logically equivalent to `cost` but is more CPU-efficient on large clusters. `diskNormalized` weights the costs according to the servers' disk usage ratios - there are known issues with this strategy distributing segments unevenly across the cluster. `random` distributes segments among services randomly.|`cost`|
 |`druid.coordinator.balancer.cachingCost.awaitInitialization`|Whether to wait for segment view initialization before creating the `cachingCost` balancing strategy. This property is enabled only when `druid.coordinator.balancer.strategy` is `cachingCost`. If set to true, the Coordinator will not start to assign segments, until the segment view is initialized. If set to false, the Coordinator will fallback to use the `cost` balancing strategy only if the segment view is not initialized yet. It may take much time to wait for the initialization since the `cachingCost` balancing strategy involves much computing to build itself.|false|
 |`druid.coordinator.loadqueuepeon.repeatDelay`|The start and repeat delay for the `loadqueuepeon`, which manages the load and drop of segments.|`PT0.050S` (50 ms)|
-|`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator process should act like an Overlord as well. This configuration allows users to simplify a Druid cluster by not having to deploy any standalone Overlord processes. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also.|false|
-|`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord processes and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
+|`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator service should act like an Overlord as well. This configuration allows users to simplify a Druid cluster by not having to deploy any standalone Overlord services. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also.|false|
+|`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord services and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
 
 ##### Metadata management
 
@@ -909,7 +909,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than `druid.segmentCache.numLoadingThreads` config on Historical process.|1|
+|`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than `druid.segmentCache.numLoadingThreads` config on Historical service.|1|
 
 ##### Metadata retrieval
 
@@ -936,14 +936,14 @@ The following table shows the dynamic configuration properties for the Coordinat
 |`smartSegmentLoading`|Enables ["smart" segment loading mode](#smart-segment-loading) which dynamically computes the optimal values of several properties that maximize Coordinator performance.|true|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved in a Historical tier at any given time.|100|
 |`replicantLifetime`|The maximum number of Coordinator runs for which a segment can wait in the load queue of a Historical before Druid raises an alert.|15|
-|`replicationThrottleLimit`|The maximum number of segment replicas that can be assigned to a historical tier in a single Coordinator run. This property prevents Historical processes from becoming overwhelmed when loading extra replicas of segments that are already available in the cluster.|500|
+|`replicationThrottleLimit`|The maximum number of segment replicas that can be assigned to a historical tier in a single Coordinator run. This property prevents Historical services from becoming overwhelmed when loading extra replicas of segments that are already available in the cluster.|500|
 |`balancerComputeThreads`|Thread pool size for computing moving cost of segments during segment balancing. Consider increasing this if you have a lot of segments and moving segments begins to stall.|`num_cores` / 2|
 |`killDataSourceWhitelist`|List of specific data sources for which kill tasks are sent if property `druid.coordinator.kill.on` is true. This can be a list of comma-separated data source names or a JSON array.|none|
 |`killTaskSlotRatio`|Ratio of total available task slots, including autoscaling if applicable that will be allowed for kill tasks. This limit only applies for kill tasks that are spawned automatically by the coordinator's auto kill duty, which is enabled when `druid.coordinator.kill.on` is true.| 1 - all task slots can be used|
 |`maxKillTaskSlots`|Maximum number of tasks that will be allowed for kill tasks. This limit only applies for kill tasks that are spawned automatically by the coordinator's auto kill duty, which is enabled when `druid.coordinator.kill.on` is true.|`Integer.MAX_VALUE` - no limit|
 |`killPendingSegmentsSkipList`|List of data sources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated data sources or a JSON array.|none|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments allowed in the load queue of any given server. Use this parameter to load segments faster if, for example, the cluster contains slow-loading nodes or if there are too many segments to be replicated to a particular node (when faster loading is preferred to better segments distribution). The optimal value depends on the loading speed of segments, acceptable replication time and number of nodes.|500|
-|`useRoundRobinSegmentAssignment`|Boolean flag for whether segments should be assigned to Historical processes in a round robin fashion. When disabled, segment assignment is done using the chosen balancer strategy. When enabled, this can speed up segment assignments leaving balancing to move the segments to their optimal locations (based on the balancer strategy) lazily.|true|
+|`useRoundRobinSegmentAssignment`|Boolean flag for whether segments should be assigned to Historical services in a round robin fashion. When disabled, segment assignment is done using the chosen balancer strategy. When enabled, this can speed up segment assignments leaving balancing to move the segments to their optimal locations (based on the balancer strategy) lazily.|true|
 |`decommissioningNodes`|List of Historical servers to decommission. Coordinator will not assign new segments to decommissioning servers, and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by `maxSegmentsToMove`.|none|
 |`pauseCoordination`|Boolean flag for whether or not the Coordinator should execute its various duties of coordinating the cluster. Setting this to true essentially pauses all coordination work while allowing the API to remain up. Duties that are paused include all classes that implement the `CoordinatorDuty` interface. Such duties include: segment balancing, segment compaction, submitting kill tasks for unused segments (if enabled), logging of used segments in the cluster, marking of newly unused or overshadowed segments, matching and execution of load/drop rules for used segments, unloading segments that are no longer marked as used from Historical servers. An example of when an admin may want to pause coordination would be if they are doing deep storage maintenance on HDFS name nodes with downtime and don't want the Coordinator to be directing Historical nodes to hit the name node with API requests until maintenance is done and the deep store is declared healthy for use again.|false|
 |`replicateAfterLoadTimeout`|Boolean flag for whether or not additional replication is needed for segments that have failed to load due to the expiry of `druid.coordinator.load.timeout`. If this is set to true, the Coordinator will attempt to replicate the failed segment on a different historical server. This helps improve the segment availability if there are a few slow Historicals in the cluster. However, the slow Historical may still load the segment later and the Coordinator may issue drop requests if the segment is over-replicated.|false|
@@ -974,11 +974,11 @@ These configuration options control Coordinator lookup management. For configura
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.manager.lookups.hostDeleteTimeout`|How long to wait for a `DELETE` request to a particular process before considering the `DELETE` a failure.|`PT1S`|
-|`druid.manager.lookups.hostUpdateTimeout`|How long to wait for a `POST` request to a particular process before considering the `POST` a failure.|`PT10S`|
+|`druid.manager.lookups.hostDeleteTimeout`|How long to wait for a `DELETE` request to a particular service before considering the `DELETE` a failure.|`PT1S`|
+|`druid.manager.lookups.hostUpdateTimeout`|How long to wait for a `POST` request to a particular service before considering the `POST` a failure.|`PT10S`|
 |`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure.|`PT10S`|
 |`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure.|`PT60S`|
-|`druid.manager.lookups.threadPoolSize`|How many processes can be managed concurrently (concurrent `POST` and `DELETE` requests). Requests this limit will wait in a queue until a slot becomes available.|10|
+|`druid.manager.lookups.threadPoolSize`|How many services can be managed concurrently (concurrent `POST` and `DELETE` requests). Requests this limit will wait in a queue until a slot becomes available.|10|
 |`druid.manager.lookups.period`|Number of milliseconds between checks for configuration changes.|120000 (2 minutes)|
 
 ##### Automatic compaction dynamic configuration
@@ -1040,7 +1040,7 @@ The following table shows the supported configurations for auto-compaction.
 |`maxPendingPersists`|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with `maxRowsInMemory` * (2 + `maxPendingPersists`).|no (default = 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
 |`pushTimeout`|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|no (default = 0)|
 |`segmentWriteOutMediumFactory`|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](../ingestion/native-batch.md#segmentwriteoutmediumfactory).|no (default is the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)|
-|`maxNumConcurrentSubTasks`|Maximum number of worker tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](../ingestion/native-batch.md#capacity-planning) for more details.|no (default = 1)|
+|`maxNumConcurrentSubTasks`|Maximum number of worker tasks which can be run in parallel at the same time. The supervisor task would spawn worker tasks up to `maxNumConcurrentSubTasks` regardless of the current available task slots. If this value is set to 1, the Supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](../ingestion/native-batch.md#capacity-planning) for more details.|no (default = 1)|
 |`maxRetry`|Maximum number of retries on task failures.|no (default = 3)|
 |`maxNumSegmentsToMerge`|Max limit for the number of segments that a single task can merge at the same time in the second phase. Used only with `hashed` or `single_dim` partitionsSpec.|no (default = 100)|
 |`totalNumMergeTasks`|Total number of tasks to merge segments in the merge phase when `partitionsSpec` is set to `hashed` or `single_dim`.|no (default = 10)|
@@ -1079,18 +1079,18 @@ The below is a list of the supported configurations for auto-compaction.
 
 ### Overlord
 
-For general Overlord Process information, see [here](../design/overlord.md).
+For general Overlord service information, see [Overlord](../design/overlord.md).
 
 #### Overlord static configuration
 
 These Overlord static configurations can be defined in the `overlord/runtime.properties` file.
 
-##### Overlord process configs
+##### Overlord service configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process.|`InetAddress.getLocalHost().getCanonicalHostName()`|
-|`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
+|`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
+|`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`.|8090|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/overlord`|
@@ -1107,11 +1107,11 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.tasklock.batchAllocationWaitTime`|Number of milliseconds after Druid adds the first segment allocate action to a batch, until it executes the batch. Allows the batch to add more requests and improve the average segment allocation run time. This configuration takes effect only if `batchSegmentAllocation` is enabled.|500|
 |`druid.indexer.task.default.context`|Default task context that is applied to all tasks submitted to the Overlord. Any default in this config does not override neither the context values the user provides nor `druid.indexer.tasklock.forceTimeChunkLock`.|empty context|
 |`druid.indexer.queue.maxSize`|Maximum number of active tasks at one time.|`Integer.MAX_VALUE`|
-|`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself after e.g. a widespread network issue.|`PT1M`|
+|`druid.indexer.queue.startDelay`|Sleep this long before starting Overlord queue management. This can be useful to give a cluster time to re-orient itself (for example, after a widespread network issue).|`PT1M`|
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|`PT30S`|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|`PT1M`|
 
-The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord Process](../design/overlord.md).
+The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord service](../design/overlord.md).
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1350,7 +1350,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 ## Data server
 
-This section contains the configuration options for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
 
 Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
@@ -1358,12 +1358,12 @@ Configuration options for the [Indexer process](../design/indexer.md) are also p
 
 These MiddleManager and Peon configurations can be defined in the `middleManager/runtime.properties` file.
 
-#### MiddleManager process config
+#### MiddleManager service config
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
-|`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
+|`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
+|`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
@@ -1381,9 +1381,9 @@ MiddleManagers pass their configurations down to their child peons. The MiddleMa
 |`druid.indexer.runner.javaOpts`|*DEPRECATED* A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|`''`|
 |`druid.indexer.runner.javaOptsArray`|A JSON array of strings to be passed in as options to the peon's JVM. This is additive to `druid.indexer.runner.javaOpts` and is recommended for properly handling arguments which contain quotes or spaces like `["-XX:OnOutOfMemoryError=kill -9 %p"]`|`[]`|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in ZooKeeper, should be in the range of [10KiB, 2GiB). [Human-readable format](human-readable-byte.md) is supported.|512KiB|
-|`druid.indexer.runner.startPort`|Starting port used for peon processes, should be greater than 1023 and less than 65536.|8100|
-|`druid.indexer.runner.endPort`|Ending port used for peon processes, should be greater than or equal to `druid.indexer.runner.startPort` and less than 65536.|65535|
-|`druid.indexer.runner.ports`|A JSON array of integers to specify ports that used for peon processes. If provided and non-empty, ports for peon processes will be chosen from these ports. And `druid.indexer.runner.startPort/druid.indexer.runner.endPort` will be completely ignored.|`[]`|
+|`druid.indexer.runner.startPort`|Starting port used for Peon services, should be greater than 1023 and less than 65536.|8100|
+|`druid.indexer.runner.endPort`|Ending port used for Peon services, should be greater than or equal to `druid.indexer.runner.startPort` and less than 65536.|65535|
+|`druid.indexer.runner.ports`|A JSON array of integers to specify ports that used for Peon services. If provided and non-empty, ports for Peon services will be chosen from these ports. And `druid.indexer.runner.startPort/druid.indexer.runner.endPort` will be completely ignored.|`[]`|
 |`druid.worker.ip`|The IP of the worker.|`localhost`|
 |`druid.worker.version`|Version identifier for the MiddleManager. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.indexer.runner.minWorkerVersion`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons.|0|
 |`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of CPUs on the machine - 1|
@@ -1572,16 +1572,16 @@ Note that only local caches such as the `local`-type cache and `caffeine` cache 
 
 ### Historical
 
-For general Historical Process information, see [here](../design/historical.md).
+For general Historical service information, see [Historical](../design/historical.md).
 
 These Historical configurations can be defined in the `historical/runtime.properties` file.
 
-#### Historical process configuration
+#### Historical service configuration
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
-|`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
+|`druid.host`|The host for the current pservice. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
+|`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/historical`|
@@ -1590,28 +1590,28 @@ These Historical configurations can be defined in the `historical/runtime.proper
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.maxSize`|The maximum number of bytes-worth of segments that the process wants assigned to it. The Coordinator process will attempt to assign segments to a Historical process only if this property is greater than the total size of segments served by it. Since this property defines the upper limit on the total segment size that can be assigned to a Historical, it is defaulted to the sum of all `maxSize` values specified within `druid.segmentCache.locations` property. Human-readable format is supported, see [here](human-readable-byte.md). |Sum of `maxSize` values defined within `druid.segmentCache.locations`|
-|`druid.server.tier`| A string to name the distribution tier that the storage process belongs to. Many of the [rules Coordinator processes use](../operations/rule-configuration.md) to manage segments can be keyed on tiers. |  `_default_tier` |
-|`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which processes are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
+|`druid.server.maxSize`|The maximum number of bytes-worth of segments that the service wants assigned to it. The Coordinator service will attempt to assign segments to a Historical service only if this property is greater than the total size of segments served by it. Since this property defines the upper limit on the total segment size that can be assigned to a Historical, it is defaulted to the sum of all `maxSize` values specified within `druid.segmentCache.locations` property. Human-readable format is supported, see [here](human-readable-byte.md). |Sum of `maxSize` values defined within `druid.segmentCache.locations`|
+|`druid.server.tier`| A string to name the distribution tier that the storage service belongs to. Many of the [rules Coordinator services use](../operations/rule-configuration.md) to manage segments can be keyed on tiers. |  `_default_tier` |
+|`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which services are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
 
 #### Storing segments
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.segmentCache.locations`|Segments assigned to a Historical process are first stored on the local file system (in a disk cache) and then served by the Historical process. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": "10k", "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on `File.getTotalSpace()` and `File.getFreeSpace()` methods, so enable if only if they work for your File System.| none |
+|`druid.segmentCache.locations`|Segments assigned to a Historical services are first stored on the local file system (in a disk cache) and then served by the Historical services. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": "10k", "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on `File.getTotalSpace()` and `File.getFreeSpace()` methods, so enable if only if they work for your File System.| none |
 |`druid.segmentCache.locationSelector.strategy`|The strategy used to select a location from the configured `druid.segmentCache.locations` for segment distribution. Possible values are `leastBytesUsed`, `roundRobin`, `random`, or `mostAvailableSize`. |leastBytesUsed|
-|`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a process is no longer serving a segment.|true|
-|`druid.segmentCache.dropSegmentDelayMillis`|How long a process delays before completely dropping segment.|30000 (30 seconds)|
-|`druid.segmentCache.infoDir`|Historical processes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|`${first_location}/info_dir`|
+|`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a service is no longer serving a segment.|true|
+|`druid.segmentCache.dropSegmentDelayMillis`|How long a service delays before completely dropping segment.|30000 (30 seconds)|
+|`druid.segmentCache.infoDir`|Historical services keep track of the segments they are serving so that when the service is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|`${first_location}/info_dir`|
 |`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
 |`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from deep storage. Note that the work of loading segments involves downloading segments from deep storage, decompressing them and loading them to a memory mapped location. So the work is not all I/O Bound. Depending on CPU and network load, one could possibly increase this config to a higher value.|max(1,Number of cores / 6)|
 |`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently during historical startup.|`druid.segmentCache.numLoadingThreads`|
 |`druid.segmentCache.lazyLoadOnStart`|Whether or not to load segment columns metadata lazily during historical startup. When set to true, Historical startup time will be dramatically improved by deferring segment loading until the first time that segment takes part in a query, which will incur this cost instead.|false|
 |`druid.coordinator.loadqueuepeon.curator.numCallbackThreads`|Number of threads for executing callback actions associated with loading or dropping of segments. One might want to increase this number when noticing clusters are lagging behind w.r.t. balancing segments across historical nodes.|2|
-|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|Number of threads to asynchronously read segment index files into null output stream on each new segment download after the historical process finishes bootstrapping. Recommended to set to 1 or 2 or leave unspecified to disable. See also `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|0|
-|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|Number of threads to asynchronously read segment index files into null output stream during historical process bootstrap. This thread pool is terminated after historical process finishes bootstrapping. Recommended to set to half of available cores. If left unspecified, `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload` will be used. If both configs are unspecified, this feature is disabled. Preemptively loading segments into page cache helps in the sense that later when a segment is queried, it's already in page cache and only a minor page fault needs to be triggered instead of a more costly major page fault to make the query latency more consistent. Note that loading segment into page cache just does a blind loading of segment index files and will evict any existing segments from page cache at the discretion of operating system when the total segment size on local disk is larger than the page cache usable in the RAM, which roughly equals to total available RAM in the host - druid process memory including both heap and direct memory allocated - memory used by other non druid processes on the host, so it is the user's responsibility to ensure the host has enough RAM to host all the segments to avoid random evictions to fully leverage this feature.|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|
+|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|Number of threads to asynchronously read segment index files into null output stream on each new segment download after the Historical service finishes bootstrapping. Recommended to set to 1 or 2 or leave unspecified to disable. See also `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|0|
+|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnBootstrap`|Number of threads to asynchronously read segment index files into null output stream during Historical service bootstrap. This thread pool is terminated after Historical service finishes bootstrapping. Recommended to set to half of available cores. If left unspecified, `druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload` will be used. If both configs are unspecified, this feature is disabled. Preemptively loading segments into page cache helps in the sense that later when a segment is queried, it's already in page cache and only a minor page fault needs to be triggered instead of a more costly major page fault to make the query latency more consistent. Note that loading segment into page cache just does a blind loading of segment index files and will evict any existing segments from page cache at the discretion of operating system when the total segment size on local disk is larger than the page cache usable in the RAM, which roughly equals to total available RAM in the host - druid process memory including both heap and direct memory allocated - memory used by other non druid processes on the host, so it is the user's responsibility to ensure the host has enough RAM to host all the segments to avoid random evictions to fully leverage this feature.|`druid.segmentCache.numThreadsToLoadSegmentsIntoPageCacheOnDownload`|
 
-In `druid.segmentCache.locations`, `freeSpacePercent` was added because the `maxSize` setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
+In `druid.segmentCache.locations`, `freeSpacePercent` was added because the `maxSize` setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other service writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
 
 In `druid.segmentCache.locationSelector.strategy`, one of `leastBytesUsed`, `roundRobin`, `random`, or `mostAvailableSize` could be specified to represent the strategy to distribute segments across multiple segment cache locations.
 
