@@ -1580,7 +1580,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current pservice. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
+|`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
