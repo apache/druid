@@ -270,6 +270,11 @@
     </dependency>
 
     <dependency>
+    <groupId>org.apache.iceberg</groupId>
+    <artifactId>iceberg-api</artifactId>
+    <version>${iceberg.core.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-hive-metastore</artifactId>
       <version>${iceberg.core.version}</version>
@@ -715,12 +720,12 @@
       <artifactId>iceberg-parquet</artifactId>
       <version>${iceberg.core.version}</version>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>io.airlift</groupId>
-          <artifactId>aircompressor</artifactId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-column</artifactId>
+      <version>1.13.1</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
