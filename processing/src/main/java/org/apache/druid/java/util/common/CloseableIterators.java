@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
 public class CloseableIterators
 {
@@ -55,6 +56,37 @@ public class CloseableIterators
 
     final Iterator<T> innerIterator = Utils.mergeSorted(iterators, comparator);
     return wrap(innerIterator, closer);
+  }
+
+  public static <T, R> CloseableIterator<R> transform(CloseableIterator<T> iterator, Function<T, R> fn)
+  {
+    if (Function.identity().equals(fn)) {
+      //noinspection unchecked
+      return (CloseableIterator<R>) iterator;
+    }
+
+    class TransformedCloseableIterator implements CloseableIterator<R>
+    {
+      @Override
+      public boolean hasNext()
+      {
+        return iterator.hasNext();
+      }
+
+      @Override
+      public R next()
+      {
+        return fn.apply(iterator.next());
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        iterator.close();
+      }
+    }
+
+    return new TransformedCloseableIterator();
   }
 
   public static <T> CloseableIterator<T> wrap(Iterator<T> innerIterator, @Nullable Closeable closeable)

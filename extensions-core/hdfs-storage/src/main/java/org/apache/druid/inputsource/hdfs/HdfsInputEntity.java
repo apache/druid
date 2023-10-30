@@ -60,7 +60,7 @@ public class HdfsInputEntity extends RetryingInputEntity
   @Override
   protected String getPath()
   {
-    return path.getName();
+    return getUri().getPath();
   }
 
   @Override
