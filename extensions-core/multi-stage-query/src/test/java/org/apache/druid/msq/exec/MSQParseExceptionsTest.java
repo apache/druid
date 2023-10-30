@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -163,7 +164,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
         newScanQueryBuilder()
             .dataSource(
                 new ExternalDataSource(
-                    new LocalInputSource(null, null, ImmutableList.of(toRead)),
+                    new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
                     new CsvInputFormat(null, null, null, true, 0),
                     RowSignature.builder()
                                 .add("timestamp", ColumnType.STRING)
@@ -302,7 +303,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                     .createException(
                         new Exception("dummy"),
                         "v1",
-                        new LocalInputSource(null, null, ImmutableList.of(toRead)),
+                        new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
                         new SimpleAscendingOffset(Integer.MAX_VALUE)
                     )
                     .getMessage()
