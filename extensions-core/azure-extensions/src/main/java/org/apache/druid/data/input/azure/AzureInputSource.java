@@ -28,7 +28,6 @@ import com.google.common.collect.Iterators;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
 import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;

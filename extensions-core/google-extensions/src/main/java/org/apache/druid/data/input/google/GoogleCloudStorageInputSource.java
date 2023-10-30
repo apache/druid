@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
