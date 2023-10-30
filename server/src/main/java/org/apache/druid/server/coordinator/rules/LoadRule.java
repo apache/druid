@@ -69,9 +69,14 @@ public abstract class LoadRule implements Rule
     handler.replicateSegment(segment, getTieredReplicants());
   }
 
+
+  /**
+   * @return Whether a segment that matches this rule needs to be loaded on a tier.
+   *
+   * Used in making handoff decisions.
+   */
   @JsonIgnore
-  @Override
-  public boolean shouldSegmentBeLoaded()
+  public boolean shouldMatchingSegmentBeLoaded()
   {
     return shouldSegmentBeLoaded;
   }

@@ -53,6 +53,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -875,7 +876,7 @@ public class DataSourcesResource
       boolean eligibleForLoad = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(theInterval, now)) {
-          eligibleForLoad = rule.shouldSegmentBeLoaded();
+          eligibleForLoad = rule instanceof LoadRule && ((LoadRule)rule).shouldMatchingSegmentBeLoaded();
           break;
         }
       }
