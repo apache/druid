@@ -66,9 +66,7 @@ public class IndexerControllerContext implements ControllerContext
     this.injector = injector;
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
-    this.workerManager = new IndexerWorkerManagerClient(
-        overlordClient.withRetryPolicy(StandardRetryPolicy.unlimitedWithoutRetryLogging())
-    );
+    this.workerManager = new IndexerWorkerManagerClient(overlordClient);
   }
 
   @Override
