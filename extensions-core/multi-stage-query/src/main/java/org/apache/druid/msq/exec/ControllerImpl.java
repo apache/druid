@@ -47,6 +47,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.BrokerClient;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.key.ClusterBy;
@@ -69,7 +70,10 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -962,7 +966,11 @@ public class ControllerImpl implements Controller
       );
     } else {
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
-      return generateSegmentIdsWithShardSpecsForAppend(destination, partitionBoundaries, keyReader);
+      return generateSegmentIdsWithShardSpecsForAppend(
+          destination,
+          partitionBoundaries,
+          keyReader,
+          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(task.getQuerySpec().getQuery().getContext()), false));
     }
   }
 
@@ -972,7 +980,8 @@ public class ControllerImpl implements Controller
   private List<SegmentIdWithShardSpec> generateSegmentIdsWithShardSpecsForAppend(
       final DataSourceMSQDestination destination,
       final ClusterByPartitions partitionBoundaries,
-      final RowKeyReader keyReader
+      final RowKeyReader keyReader,
+      final TaskLockType taskLockType
   ) throws IOException
   {
     final Granularity segmentGranularity = destination.getSegmentGranularity();
@@ -998,7 +1007,7 @@ public class ControllerImpl implements Controller
                 false,
                 NumberedPartialShardSpec.instance(),
                 LockGranularity.TIME_CHUNK,
-                TaskLockType.SHARED
+                taskLockType
             )
         );
       }
@@ -1399,6 +1408,10 @@ public class ControllerImpl implements Controller
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
     final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
     int numTombstones = 0;
+    final TaskLockType taskLockType = MultiStageQueryContext.validateAndGetTaskLockType(
+        QueryContext.of(task.getQuerySpec().getQuery().getContext()),
+        destination.isReplaceTimeChunks()
+    );
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
@@ -1441,7 +1454,7 @@ public class ControllerImpl implements Controller
         }
         performSegmentPublish(
             context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones)
+            createOverwriteAction(taskLockType, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {
@@ -1458,13 +1471,41 @@ public class ControllerImpl implements Controller
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
-          SegmentTransactionalInsertAction.appendAction(segments, null, null)
+          createAppendAction(segments, taskLockType)
       );
     }
 
     task.emitMetric(context.emitter(), "ingest/tombstones/count", numTombstones);
     // Include tombstones in the reported segments count
     task.emitMetric(context.emitter(), "ingest/segments/count", segmentsWithTombstones.size());
+  }
+
+  private static TaskAction<SegmentPublishResult> createAppendAction(
+      Set<DataSegment> segments,
+      TaskLockType taskLockType
+  )
+  {
+    if (taskLockType.equals(TaskLockType.APPEND)) {
+      return SegmentTransactionalAppendAction.forSegments(segments);
+    } else if (taskLockType.equals(TaskLockType.SHARED)) {
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null);
+    } else {
+      throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
+    }
+  }
+
+  private TaskAction<SegmentPublishResult> createOverwriteAction(
+      TaskLockType taskLockType,
+      Set<DataSegment> segmentsWithTombstones
+  )
+  {
+    if (taskLockType.equals(TaskLockType.REPLACE)) {
+      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones);
+    } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
+      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones);
+    } else {
+      throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
+    }
   }
 
   /**
@@ -2221,11 +2262,13 @@ public class ControllerImpl implements Controller
   {
     int pendingTasks = -1;
     int runningTasks = 1;
+    Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStatsMap = new HashMap<>();
 
     if (taskLauncher != null) {
       WorkerCount workerTaskCount = taskLauncher.getWorkerTaskCount();
       pendingTasks = workerTaskCount.getPendingWorkerCount();
       runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
+      workerStatsMap = taskLauncher.getWorkerStats();
     }
 
     SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
@@ -2236,6 +2279,7 @@ public class ControllerImpl implements Controller
         errorReports,
         queryStartTime,
         queryDuration,
+        workerStatsMap,
         pendingTasks,
         runningTasks,
         status
@@ -2282,7 +2326,7 @@ public class ControllerImpl implements Controller
    */
   static void performSegmentPublish(
       final TaskActionClient client,
-      final SegmentTransactionalInsertAction action
+      final TaskAction<SegmentPublishResult> action
   ) throws IOException
   {
     try {

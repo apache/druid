@@ -17,27 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.query.operator;
 
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodStatus;
-import org.junit.jupiter.api.Test;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-public class PeonPhaseTest
+public class NaivePartitioningOperatorFactoryTest
 {
-
   @Test
-  void testGetPhaseForToMakeCoverageHappy()
+  public void testEquals()
   {
-    Pod pod = mock(Pod.class);
-    PodStatus status = mock(PodStatus.class);
-    when(status.getPhase()).thenReturn("Succeeded");
-    when(pod.getStatus()).thenReturn(status);
-    assertEquals(PeonPhase.UNKNOWN, PeonPhase.getPhaseFor(null));
-    assertEquals(PeonPhase.SUCCEEDED, PeonPhase.getPhaseFor(pod));
+    EqualsVerifier.forClass(NaivePartitioningOperatorFactory.class)
+        .usingGetClass()
+        .verify();
   }
 }

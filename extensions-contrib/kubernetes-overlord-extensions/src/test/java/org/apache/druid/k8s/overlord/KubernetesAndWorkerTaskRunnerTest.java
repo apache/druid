@@ -31,6 +31,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
+import org.apache.druid.k8s.overlord.runnerstrategy.KubernetesRunnerStrategy;
+import org.apache.druid.k8s.overlord.runnerstrategy.TaskTypeRunnerStrategy;
+import org.apache.druid.k8s.overlord.runnerstrategy.WorkerRunnerStrategy;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -67,7 +70,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, null)
+        new KubernetesRunnerStrategy()
     );
   }
 
@@ -77,7 +80,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, false)
+        new KubernetesRunnerStrategy()
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(kubernetesTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -93,7 +96,7 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunner,
         workerTaskRunner,
-        new KubernetesAndWorkerTaskRunnerConfig(null, true)
+        new WorkerRunnerStrategy()
     );
     TaskStatus taskStatus = TaskStatus.success(ID);
     EasyMock.expect(workerTaskRunner.run(task)).andReturn(Futures.immediateFuture(taskStatus));
@@ -101,6 +104,33 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     replayAll();
     Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(task).get());
     verifyAll();
+  }
+
+  @Test
+  public void test_runOnKubernetesOrWorkerBasedOnStrategy() throws ExecutionException, InterruptedException
+  {
+    TaskTypeRunnerStrategy runnerStrategy = new TaskTypeRunnerStrategy("k8s", ImmutableMap.of("index_kafka", "worker"));
+    KubernetesAndWorkerTaskRunner kubernetesAndWorkerTaskRunner = new KubernetesAndWorkerTaskRunner(
+        kubernetesTaskRunner,
+        workerTaskRunner,
+        runnerStrategy
+    );
+    Task taskMock = EasyMock.createMock(Task.class);
+    TaskStatus taskStatus = TaskStatus.success(ID);
+    EasyMock.expect(taskMock.getId()).andReturn(ID).anyTimes();
+
+    EasyMock.expect(taskMock.getType()).andReturn("index_kafka").once();
+    EasyMock.expect(workerTaskRunner.run(taskMock)).andReturn(Futures.immediateFuture(taskStatus)).once();
+    EasyMock.replay(taskMock, workerTaskRunner);
+    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
+    EasyMock.verify(taskMock, workerTaskRunner);
+    EasyMock.reset(taskMock, workerTaskRunner);
+
+    EasyMock.expect(taskMock.getType()).andReturn("compact").once();
+    EasyMock.expect(kubernetesTaskRunner.run(taskMock)).andReturn(Futures.immediateFuture(taskStatus)).once();
+    EasyMock.replay(taskMock, kubernetesTaskRunner);
+    Assert.assertEquals(taskStatus, kubernetesAndWorkerTaskRunner.run(taskMock).get());
+    EasyMock.verify(taskMock, kubernetesTaskRunner);
   }
 
   @Test
@@ -330,15 +360,6 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     kubernetesTaskRunner.updateStatus(task, TaskStatus.running(ID));
     replayAll();
     runner.updateStatus(task, TaskStatus.running(ID));
-    verifyAll();
-  }
-
-  @Test
-  public void test_updateLocation()
-  {
-    kubernetesTaskRunner.updateLocation(task, TaskLocation.unknown());
-    replayAll();
-    runner.updateLocation(task, TaskLocation.unknown());
     verifyAll();
   }
 }

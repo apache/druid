@@ -76,7 +76,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.5.0</apache.curator.version>
-        <apache.kafka.version>3.5.1</apache.kafka.version>
+        <apache.kafka.version>3.6.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <scala.library.version>2.13.11</scala.library.version>
@@ -86,7 +86,7 @@
              default_config.fmpp
           -->
         <calcite.version>1.35.0</calcite.version>
-        <datasketches.version>4.1.0</datasketches.version>
+        <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
@@ -1809,7 +1809,7 @@
               <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.11.3</version>
+                <version>1.14.2</version>
               </plugin>
             </plugins>
         </pluginManagement>

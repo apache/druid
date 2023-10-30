@@ -89,7 +89,6 @@ import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -98,7 +97,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
@@ -115,7 +113,7 @@ public class MSQSelectTest extends MSQTestBase
                   .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 
@@ -125,7 +123,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 
@@ -228,7 +226,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1, 2, 3} : new long[]{6})
+                .rows(isPageSizeLimited() ? new long[]{2, 2, 2} : new long[]{6})
                 .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
@@ -292,7 +290,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1L, 2L} : new long[]{3L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L} : new long[]{1L}),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -355,7 +355,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1, 2, 3} : new long[]{6})
+                .rows(isPageSizeLimited() ? new long[]{2, 2, 2} : new long[]{6})
                 .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
@@ -1444,8 +1444,8 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 2L} : new long[]{5L})
-                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L} : new long[]{1L}),
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
             0, 0, "shuffle"
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -1461,27 +1461,27 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 2L} : new long[]{5L})
-                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L} : new long[]{1L}),
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
             0, 1, "shuffle"
         );
     // adding result stage counter checks
     if (isPageSizeLimited()) {
       selectTester.setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2, 0, 2),
+              .with().rows(2, 0, 2, 0, 2),
           1, 0, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2, 0, 2),
+              .with().rows(2, 0, 2, 0, 2),
           1, 0, "output"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 2, 0, 4),
+              .with().rows(0, 2, 0, 2),
           1, 1, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 2, 0, 4),
+              .with().rows(0, 2, 0, 2),
           1, 1, "output"
       );
     }
@@ -1602,7 +1602,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1, 2} : new long[]{3})
+                .frames(isPageSizeLimited() ? new long[]{1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -2534,7 +2536,6 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2553,7 +2554,6 @@ public class MSQSelectTest extends MSQTestBase
     return expected;
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
     ArrayList<Object[]> expected = new ArrayList<>();

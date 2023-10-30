@@ -126,13 +126,21 @@ public class UnnestDimensionCursor implements Cursor
                 @Override
                 public boolean matches(boolean includeUnknown)
                 {
-                  return includeUnknown;
+                  // don't match anything, except for null values when includeUnknown is true
+                  if (includeUnknown) {
+                    if (indexedIntsForCurrentRow == null || indexedIntsForCurrentRow.size() <= 0) {
+                      return true;
+                    }
+                    final int rowId = indexedIntsForCurrentRow.get(index);
+                    return lookupName(rowId) == null;
+                  }
+                  return false;
                 }
 
                 @Override
                 public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                 {
-
+                  inspector.visit("selector", dimSelector);
                 }
               };
             }
@@ -155,7 +163,7 @@ public class UnnestDimensionCursor implements Cursor
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                dimSelector.inspectRuntimeShape(inspector);
+                inspector.visit("selector", dimSelector);
               }
             };
           }

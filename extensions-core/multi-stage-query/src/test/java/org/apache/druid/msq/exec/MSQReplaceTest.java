@@ -20,10 +20,14 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
@@ -54,6 +58,17 @@ import java.util.TreeSet;
 @RunWith(Parameterized.class)
 public class MSQReplaceTest extends MSQTestBase
 {
+
+  private static final String WITH_REPLACE_LOCK = "WITH_REPLACE_LOCK";
+  private static final Map<String, Object> QUERY_CONTEXT_WITH_REPLACE_LOCK =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      Tasks.TASK_LOCK_TYPE,
+                      StringUtils.toLowerCase(TaskLockType.REPLACE.name())
+                  )
+                  .build();
+
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
@@ -61,7 +76,8 @@ public class MSQReplaceTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
+        {WITH_REPLACE_LOCK, QUERY_CONTEXT_WITH_REPLACE_LOCK}
     };
     return Arrays.asList(data);
   }

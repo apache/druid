@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
@@ -459,6 +461,44 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           if (!succeeded) {
             throw new ISE("Failed to publish segments to DB");
           }
+          return true;
+        }
+    );
+  }
+
+  private Boolean insertPendingSegmentAndSequenceName(Pair<SegmentIdWithShardSpec, String> pendingSegmentSequenceName)
+  {
+    final SegmentIdWithShardSpec pendingSegment = pendingSegmentSequenceName.lhs;
+    final String sequenceName = pendingSegmentSequenceName.rhs;
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getPendingSegmentsTable();
+    return derbyConnector.retryWithHandle(
+        handle -> {
+          handle.createStatement(
+                    StringUtils.format(
+                        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
+                        + "sequence_name_prev_id_sha1, payload) "
+                        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
+                        + ":sequence_name_prev_id_sha1, :payload)",
+                        table,
+                        derbyConnector.getQuoteString()
+                    )
+                )
+                .bind("id", pendingSegment.toString())
+                .bind("dataSource", pendingSegment.getDataSource())
+                .bind("created_date", DateTimes.nowUtc().toString())
+                .bind("start", pendingSegment.getInterval().getStart().toString())
+                .bind("end", pendingSegment.getInterval().getEnd().toString())
+                .bind("sequence_name", sequenceName)
+                .bind("sequence_prev_id", pendingSegment.toString())
+                .bind("sequence_name_prev_id_sha1", BaseEncoding.base16().encode(
+                    Hashing.sha1()
+                           .newHasher()
+                           .putLong((long) pendingSegment.hashCode() * sequenceName.hashCode())
+                           .hash()
+                           .asBytes()
+                ))
+                .bind("payload", mapper.writeValueAsBytes(pendingSegment))
+                .execute();
           return true;
         }
     );
@@ -2552,6 +2592,110 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             )
         )
     );
+  }
+
+  @Test
+  public void testGetPendingSegmentsForIntervalWithSequencePrefixes()
+  {
+    Pair<SegmentIdWithShardSpec, String> validIntervalValidSequence = Pair.of(
+        SegmentIdWithShardSpec.fromDataSegment(defaultSegment),
+        "validLOL"
+    );
+    insertPendingSegmentAndSequenceName(validIntervalValidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> validIntervalInvalidSequence = Pair.of(
+        SegmentIdWithShardSpec.fromDataSegment(defaultSegment2),
+        "invalidRandom"
+    );
+    insertPendingSegmentAndSequenceName(validIntervalInvalidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> invalidIntervalvalidSequence = Pair.of(
+        SegmentIdWithShardSpec.fromDataSegment(existingSegment1),
+        "validStuff"
+    );
+    insertPendingSegmentAndSequenceName(invalidIntervalvalidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> twentyFifteenWithAnotherValidSequence = Pair.of(
+        new SegmentIdWithShardSpec(
+            existingSegment1.getDataSource(),
+            Intervals.of("2015/2016"),
+            "1970-01-01",
+            new NumberedShardSpec(1, 0)
+        ),
+        "alsoValidAgain"
+    );
+    insertPendingSegmentAndSequenceName(twentyFifteenWithAnotherValidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> twentyFifteenWithInvalidSequence = Pair.of(
+        new SegmentIdWithShardSpec(
+            existingSegment1.getDataSource(),
+            Intervals.of("2015/2016"),
+            "1970-01-01",
+            new NumberedShardSpec(2, 0)
+        ),
+        "definitelyInvalid"
+    );
+    insertPendingSegmentAndSequenceName(twentyFifteenWithInvalidSequence);
+
+
+    final Map<SegmentIdWithShardSpec, String> expected = new HashMap<>();
+    expected.put(validIntervalValidSequence.lhs, validIntervalValidSequence.rhs);
+    expected.put(twentyFifteenWithAnotherValidSequence.lhs, twentyFifteenWithAnotherValidSequence.rhs);
+
+    final Map<SegmentIdWithShardSpec, String> actual =
+        derbyConnector.retryWithHandle(handle -> coordinator.getPendingSegmentsForIntervalWithHandle(
+            handle,
+            defaultSegment.getDataSource(),
+            defaultSegment.getInterval(),
+            ImmutableSet.of("valid", "alsoValid")
+        ));
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testRetrieveUsedSegmentsAndCreatedDates()
+  {
+    insertUsedSegments(ImmutableSet.of(defaultSegment));
+
+    List<Pair<DataSegment, String>> resultForIntervalOnTheLeft =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2001"));
+    Assert.assertTrue(resultForIntervalOnTheLeft.isEmpty());
+
+    List<Pair<DataSegment, String>> resultForIntervalOnTheRight =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("3000/3001"));
+    Assert.assertTrue(resultForIntervalOnTheRight.isEmpty());
+
+    List<Pair<DataSegment, String>> resultForExactInterval =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+    Assert.assertEquals(1, resultForExactInterval.size());
+    Assert.assertEquals(defaultSegment, resultForExactInterval.get(0).lhs);
+
+    List<Pair<DataSegment, String>> resultForIntervalWithLeftOverlap =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2015-01-02"));
+    Assert.assertEquals(resultForExactInterval, resultForIntervalWithLeftOverlap);
+
+    List<Pair<DataSegment, String>> resultForIntervalWithRightOverlap =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2015-01-01/3000"));
+    Assert.assertEquals(resultForExactInterval, resultForIntervalWithRightOverlap);
+
+    List<Pair<DataSegment, String>> resultForEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.ETERNITY);
+    Assert.assertEquals(resultForExactInterval, resultForEternity);
+  }
+
+  @Test
+  public void testRetrieveUsedSegmentsAndCreatedDatesFetchesEternityForAnyInterval()
+  {
+
+    insertUsedSegments(ImmutableSet.of(eternitySegment, firstHalfEternityRangeSegment, secondHalfEternityRangeSegment));
+
+    List<Pair<DataSegment, String>> resultForRandomInterval =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+    Assert.assertEquals(3, resultForRandomInterval.size());
+
+    List<Pair<DataSegment, String>> resultForEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), eternitySegment.getInterval());
+    Assert.assertEquals(3, resultForEternity.size());
   }
 
   private static class DS

@@ -62,6 +62,7 @@ import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -483,13 +484,18 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       return TaskLockType.EXCLUSIVE;
     }
 
-    final String contextLockType = getContextValue(Tasks.TASK_LOCK_TYPE);
+    final TaskLockType contextTaskLockType = QueryContexts.getAsEnum(
+        Tasks.TASK_LOCK_TYPE,
+        getContextValue(Tasks.TASK_LOCK_TYPE),
+        TaskLockType.class
+    );
+
     final TaskLockType lockType;
-    if (contextLockType == null) {
+    if (contextTaskLockType == null) {
       lockType = getContextValue(Tasks.USE_SHARED_LOCK, false)
                  ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
     } else {
-      lockType = TaskLockType.valueOf(contextLockType);
+      lockType = contextTaskLockType;
     }
 
     final IngestionMode ingestionMode = getIngestionMode();

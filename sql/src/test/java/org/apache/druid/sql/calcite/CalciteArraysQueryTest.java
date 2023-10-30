@@ -6470,7 +6470,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           expressionFilter("(\"j0.unnest\" == \"m2\")"),
                           and(
                               isNull("j0.unnest"),
-                              not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
+                              NullHandling.sqlCompatible()
+                              ? not(istrue(expressionFilter("(\"j0.unnest\" == \"m2\")")))
+                              : not(expressionFilter("(\"j0.unnest\" == \"m2\")"))
                           )
                       ))
                   .legacy(false)

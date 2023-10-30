@@ -56,6 +56,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
 
@@ -63,6 +64,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         IllegalStateException.class,
         () -> workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
             task,
+            null,
             null,
             null,
             null,
@@ -80,6 +82,8 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_shutdown_withKubernetesPeonLifecycle()
   {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task);
+
     kubernetesPeonLifecycle.shutdown();
     EasyMock.expectLastCall();
     kubernetesPeonLifecycle.startWatchingLogs();
@@ -87,7 +91,6 @@ public class KubernetesWorkItemTest extends EasyMockSupport
 
     replayAll();
     workItem.setKubernetesPeonLifecycle(kubernetesPeonLifecycle);
-
     workItem.shutdown();
     verifyAll();
   }
@@ -158,6 +161,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
 
@@ -169,6 +173,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -194,6 +199,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ) {
       @Override
@@ -213,6 +219,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -244,6 +251,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ));
     Assert.assertFalse(workItem.streamTaskLogs().isPresent());
@@ -260,6 +268,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,

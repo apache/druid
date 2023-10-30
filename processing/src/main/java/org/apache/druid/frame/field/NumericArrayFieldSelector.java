@@ -25,8 +25,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Base implementation of the column value selector that the concrete numeric field reader implementations inherit from.
@@ -66,12 +64,8 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
   /**
    * Value of the row at the location beginning at {@link #currentFieldPosition}
    */
-  private final List<ElementType> currentRow = new ArrayList<>();
-
-  /**
-   * Nullity of the row at the location beginning at {@link #currentFieldPosition}
-   */
-  private boolean currentRowIsNull;
+  @Nullable
+  private Number[] currentRow = null;
 
   public NumericArrayFieldSelector(final Memory memory, final ReadableFieldPointer fieldPointer)
   {
@@ -89,13 +83,7 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
   @Override
   public Object getObject()
   {
-    final List<ElementType> currentArray = computeCurrentArray();
-
-    if (currentArray == null) {
-      return null;
-    }
-
-    return currentArray.toArray();
+    return computeCurrentArray();
   }
 
   @Override
@@ -143,34 +131,29 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
   public abstract int getIndividualFieldSize();
 
   @Nullable
-  private List<ElementType> computeCurrentArray()
+  private Number[] computeCurrentArray()
   {
     final long fieldPosition = fieldPointer.position();
+    final long fieldLength = fieldPointer.length();
 
     if (fieldPosition != currentFieldPosition) {
-      updateCurrentArray(fieldPosition);
+      updateCurrentArray(fieldPosition, fieldLength);
     }
 
     this.currentFieldPosition = fieldPosition;
-
-    if (currentRowIsNull) {
-      return null;
-    }
     return currentRow;
-
   }
 
-  private void updateCurrentArray(final long fieldPosition)
+  private void updateCurrentArray(final long fieldPosition, final long fieldLength)
   {
-    currentRow.clear();
-    currentRowIsNull = false;
+    currentRow = null;
 
     long position = fieldPosition;
     long limit = memory.getCapacity();
 
     // Check the first byte, and if it is null, update the current value to null and return
     if (isNull()) {
-      currentRowIsNull = true;
+      // Already set the currentRow to null
       return;
     }
 
@@ -179,9 +162,13 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
       position++;
     }
 
+    int numElements = numElements(fieldLength);
+    currentRow = new Number[numElements];
+
     // Sanity check, to make sure that we see the rowTerminator at the end
     boolean rowTerminatorSeen = false;
 
+    int curElement = 0;
     while (position < limit) {
       final byte kind = memory.getByte(position);
 
@@ -193,12 +180,26 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
 
       // If terminator not seen, then read the field at that location, and increment the position by the element's field
       // size to read the next element.
-      currentRow.add(getIndividualValueAtMemory(position));
+      currentRow[curElement] = getIndividualValueAtMemory(position);
       position += getIndividualFieldSize();
+      curElement++;
     }
 
-    if (!rowTerminatorSeen) {
+    if (!rowTerminatorSeen || curElement != numElements) {
       throw DruidException.defensive("Unexpected end of field");
     }
+  }
+
+  int numElements(long fieldSize)
+  {
+    if (fieldSize <= 1) {
+      throw DruidException.defensive("fieldSize should be greater than 1 for non null array elements");
+    }
+    // Remove one byte for the nullity byte, and one for the array terminator
+    long cumulativeFieldSize = fieldSize - Byte.BYTES - Byte.BYTES;
+    if (cumulativeFieldSize % getIndividualFieldSize() != 0) {
+      throw DruidException.defensive("cumulativeFieldSize should be a multiple of the individual fieldSize");
+    }
+    return Math.toIntExact(cumulativeFieldSize / getIndividualFieldSize());
   }
 }
