@@ -120,7 +120,7 @@ public class LocalInputSourceTest
   @Test
   public void testSystemFields()
   {
-    final LocalInputSource inputSource = (LocalInputSource) new LocalInputSource(
+    final LocalInputSource inputSource = new LocalInputSource(
         null,
         null,
         ImmutableList.of(

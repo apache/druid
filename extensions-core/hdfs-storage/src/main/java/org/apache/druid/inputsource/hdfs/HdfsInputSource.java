@@ -61,8 +61,10 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -327,6 +329,7 @@ public class HdfsInputSource
     private Object paths;
     private Configuration configuration;
     private HdfsInputSourceConfig inputSourceConfig;
+    private SystemFields systemFields = SystemFields.none();
 
     private Builder()
     {
@@ -350,11 +353,17 @@ public class HdfsInputSource
       return this;
     }
 
+    Builder systemFields(SystemField... systemFields)
+    {
+      this.systemFields = new SystemFields(EnumSet.copyOf(Arrays.asList(systemFields)));
+      return this;
+    }
+
     HdfsInputSource build()
     {
       return new HdfsInputSource(
           Preconditions.checkNotNull(paths, "paths"),
-          SystemFields.none(),
+          systemFields,
           Preconditions.checkNotNull(configuration, "configuration"),
           Preconditions.checkNotNull(inputSourceConfig, "inputSourceConfig")
       );

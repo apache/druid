@@ -465,7 +465,7 @@ Sample specs:
 |--------|-----------|-------|---------|
 |type|Set the value to `hdfs`.|None|yes|
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
-|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (HDFS URI starting with `hdfs://`) and `__file_path` (HDFS path).|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (URI) and `__file_path` (path component of URI).|None|no|
 
 You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
 However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
