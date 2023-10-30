@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -44,6 +45,9 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   private static final int MAX_ATTEMPTS_ABOUT_AN_HOUR = 125;
 
   private static final StandardRetryPolicy DEFAULT_UNLIMITED_POLICY = new Builder().maxAttempts(UNLIMITED).build();
+  private static final StandardRetryPolicy DEFAULT_UNLIMITED_POLICY_NO_RETRY_LOG = new Builder().maxAttempts(UNLIMITED)
+                                                                                                .retryLoggable(false)
+                                                                                                .build();
   private static final StandardRetryPolicy DEFAULT_ABOUT_AN_HOUR_POLICY =
       new Builder().maxAttempts(MAX_ATTEMPTS_ABOUT_AN_HOUR).build();
   private static final StandardRetryPolicy DEFAULT_NO_RETRIES_POLICY = new Builder().maxAttempts(1).build();
@@ -52,13 +56,21 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   private final long minWaitMillis;
   private final long maxWaitMillis;
   private final boolean retryNotAvailable;
+  private final boolean retryLoggable;
 
-  private StandardRetryPolicy(long maxAttempts, long minWaitMillis, long maxWaitMillis, boolean retryNotAvailable)
+  private StandardRetryPolicy(
+      long maxAttempts,
+      long minWaitMillis,
+      long maxWaitMillis,
+      boolean retryNotAvailable,
+      boolean retryLoggable
+  )
   {
     this.maxAttempts = maxAttempts;
     this.minWaitMillis = minWaitMillis;
     this.maxWaitMillis = maxWaitMillis;
     this.retryNotAvailable = retryNotAvailable;
+    this.retryLoggable = retryLoggable;
 
     if (maxAttempts == 0) {
       throw new IAE("maxAttempts must be positive (limited) or negative (unlimited); cannot be zero.");
@@ -77,6 +89,14 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   public static StandardRetryPolicy unlimited()
   {
     return DEFAULT_UNLIMITED_POLICY;
+  }
+
+  /**
+   * Standard unlimited retry policy along with muted the logging for the retries.
+   */
+  public static StandardRetryPolicy unlimitedWithoutRetryLogging()
+  {
+    return DEFAULT_UNLIMITED_POLICY_NO_RETRY_LOG;
   }
 
   /**
@@ -136,6 +156,12 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   }
 
   @Override
+  public boolean retryLoggable(@Nullable Throwable t)
+  {
+    return retryLoggable;
+  }
+
+  @Override
   public boolean retryNotAvailable()
   {
     return retryNotAvailable;
@@ -147,6 +173,7 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
     private long minWaitMillis = DEFAULT_MIN_WAIT_MS;
     private long maxWaitMillis = DEFAULT_MAX_WAIT_MS;
     private boolean retryNotAvailable = true;
+    private boolean retryLoggable = true;
 
     public Builder maxAttempts(final long maxAttempts)
     {
@@ -172,9 +199,15 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
       return this;
     }
 
+    public Builder retryLoggable(final boolean retryLoggable)
+    {
+      this.retryLoggable = retryLoggable;
+      return this;
+    }
+
     public StandardRetryPolicy build()
     {
-      return new StandardRetryPolicy(maxAttempts, minWaitMillis, maxWaitMillis, retryNotAvailable);
+      return new StandardRetryPolicy(maxAttempts, minWaitMillis, maxWaitMillis, retryNotAvailable, retryLoggable);
     }
   }
 }

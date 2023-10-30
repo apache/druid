@@ -21,6 +21,8 @@ package org.apache.druid.rpc;
 
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
+import javax.annotation.Nullable;
+
 /**
  * Used by {@link ServiceClient} to decide whether to retry requests.
  */
@@ -53,6 +55,11 @@ public interface ServiceRetryPolicy
    * Returns whether the given exception can be retried.
    */
   boolean retryThrowable(Throwable t);
+
+  /**
+   * Returns whether to log the cause of failure before retrying
+   */
+  boolean retryLoggable(@Nullable Throwable t);
 
   /**
    * Returns whether service-not-available, i.e. empty {@link ServiceLocations#getLocations()}, can be retried.

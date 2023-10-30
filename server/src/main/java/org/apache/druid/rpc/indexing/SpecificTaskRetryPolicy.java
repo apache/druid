@@ -27,6 +27,8 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
+
 /**
  * Retry policy for tasks. Meant to be used together with {@link SpecificTaskServiceLocator}.
  *
@@ -75,6 +77,12 @@ public class SpecificTaskRetryPolicy implements ServiceRetryPolicy
   public boolean retryThrowable(final Throwable t)
   {
     return StandardRetryPolicy.unlimited().retryThrowable(t);
+  }
+
+  @Override
+  public boolean retryLoggable(@Nullable Throwable t)
+  {
+    return true;
   }
 
   @Override
