@@ -37,6 +37,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -323,6 +324,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public long getScanRowsLimit()
   {
     return scanRowsLimit;
+  }
+
+  public OffsetLimit getOffsetLimit()
+  {
+    return new OffsetLimit(scanRowsOffset, scanRowsLimit);
   }
 
   /**
@@ -667,4 +673,5 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       return obj instanceof Integer && (int) obj == DEFAULT_BATCH_SIZE;
     }
   }
+
 }
