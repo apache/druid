@@ -50,7 +50,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.sleep;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
 {
@@ -209,8 +211,10 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         sleep(1);
       } else {
         assertTrue(exceptionHandler.getException() instanceof QueryInterruptedException);
+        return;
       }
     }
+    fail();
   }
 
   public void makeCursorAndAdvance()
