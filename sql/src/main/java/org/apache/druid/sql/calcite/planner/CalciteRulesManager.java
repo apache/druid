@@ -177,11 +177,7 @@ public class CalciteRulesManager
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
-          // Removing CoreRules.AGGREGATE_REMOVE rule here
-          // as after the Calcite upgrade, it would plan queries to a scan over a group by
-          // with ordering on a non-time column
-          // which is not allowed in Druid. We should add that rule back
-          // once Druid starts to support non-time ordering over scan queries
+          CoreRules.AGGREGATE_REMOVE,
           CoreRules.UNION_TO_DISTINCT,
           CoreRules.PROJECT_REMOVE,
           CoreRules.AGGREGATE_JOIN_TRANSPOSE,
@@ -237,7 +233,13 @@ public class CalciteRulesManager
 
     boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
+        Programs.sequence(
+            new LoggingProgram("Start", isDebug),
+            preProgram,
+            new LoggingProgram("After PreProgram", isDebug),
+            Programs.ofRules(druidConventionRuleSet(plannerContext)),
+            new LoggingProgram("After volcano planner program", isDebug)
+        ),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
         Programs.sequence(
             // currently, adding logging program after every stage for easier debugging

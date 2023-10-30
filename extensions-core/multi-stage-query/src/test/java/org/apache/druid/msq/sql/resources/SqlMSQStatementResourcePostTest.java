@@ -325,9 +325,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     ).getEntity();
 
     Assert.assertEquals(ImmutableList.of(
-        new PageInformation(0, 1L, 75L, 0, 0),
-        new PageInformation(1, 2L, 121L, 0, 1),
-        new PageInformation(2, 3L, 164L, 0, 2)
+        new PageInformation(0, 2L, 120L, 0, 0),
+        new PageInformation(1, 2L, 118L, 0, 1),
+        new PageInformation(2, 2L, 122L, 0, 2)
     ), sqlStatementResult.getResultSetInformation().getPages());
 
     assertExpectedResults(
@@ -348,7 +348,9 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
 
     assertExpectedResults(
-        "{\"cnt\":1,\"dim1\":\"\"}\n\n",
+        "{\"cnt\":1,\"dim1\":\"\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
+        + "\n",
         resource.doGetResults(
             sqlStatementResult.getQueryId(),
             0L,
@@ -359,8 +361,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
 
     assertExpectedResults(
-        "{\"cnt\":1,\"dim1\":\"1\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"def\"}\n"
+        "{\"cnt\":1,\"dim1\":\"def\"}\n"
         + "{\"cnt\":1,\"dim1\":\"abc\"}\n"
         + "\n",
         resource.doGetResults(
@@ -412,7 +413,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         new PageInformation(0, 2L, 128L, 0, 0),
         new PageInformation(1, 2L, 132L, 1, 1),
         new PageInformation(2, 2L, 128L, 0, 2),
-        new PageInformation(3, 4L, 228L, 1, 3)
+        new PageInformation(3, 2L, 132L, 1, 3),
+        new PageInformation(4, 2L, 130L, 0, 4)
     ), sqlStatementResult.getResultSetInformation().getPages());
 
 
@@ -457,9 +459,16 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
 
-    Assert.assertEquals(rows.subList(6, 10), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assert.assertEquals(rows.subList(6, 8), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         3L,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows.subList(8, 10), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        4L,
         ResultFormat.ARRAY.name(),
         SqlStatementResourceTest.makeOkRequest()
     )));
