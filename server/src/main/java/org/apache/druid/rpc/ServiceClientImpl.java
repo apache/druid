@@ -220,7 +220,7 @@ public class ServiceClientImpl implements ServiceClient
                     if (shouldTry(nextAttemptNumber) && retryPolicy.retryThrowable(t)) {
                       final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
 
-                      if (retryPolicy.retryLoggable(t)) {
+                      if (retryPolicy.retryLoggable()) {
                         // log as INFO level if the retry is loggable
                         log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
                       } else if (log.isDebugEnabled()) {
@@ -285,7 +285,7 @@ public class ServiceClientImpl implements ServiceClient
                   // Retryable server response (or null errorHolder, which means null result, which can happen
                   // if the HttpClient encounters an exception in the midst of response processing).
                   final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
-                  if (retryPolicy.retryLoggable(null)) {
+                  if (retryPolicy.retryLoggable()) {
                     log.noStackTrace().info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
                   } else if (log.isDebugEnabled()) {
                     log.noStackTrace().debug(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));

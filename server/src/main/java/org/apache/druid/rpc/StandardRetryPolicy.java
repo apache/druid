@@ -24,7 +24,6 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -156,7 +155,7 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   }
 
   @Override
-  public boolean retryLoggable(@Nullable Throwable t)
+  public boolean retryLoggable()
   {
     return retryLoggable;
   }
