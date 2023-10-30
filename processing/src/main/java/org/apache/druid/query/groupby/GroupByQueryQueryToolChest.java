@@ -32,6 +32,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Row;
@@ -58,6 +59,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SubqueryQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
@@ -78,10 +80,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
@@ -738,6 +744,65 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory).withBaggage(closeble);
 
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
+  }
+
+  @Override
+  public <S extends Comparable<?>, T> Map<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> decorateBySegmentsChunk(
+      QueryPlus<T> queryPlus,
+      Map<S, List<SegmentDescriptor>> serverAndSegments,
+      int numCorePartitions,
+      List<String> domainDimensions
+  )
+  {
+    GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
+    boolean havingCanBePushedDown;
+    if (query.getDimensions().size() == 0) {
+      havingCanBePushedDown = false;
+    } else {
+      String firstGroupingDimension = query.getDimensions().get(0).getDimension();
+      havingCanBePushedDown = domainDimensions.contains(firstGroupingDimension);
+    }
+
+    if (!havingCanBePushedDown) {
+      final SortedMap<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> serverSegments = new TreeMap<>();
+      for (Entry<S, List<SegmentDescriptor>> entry : serverAndSegments.entrySet()) {
+        QueryPlus<T> newQueryPlus = (QueryPlus<T>) queryPlus
+            .withQuery(query.withPostAggregatorSpecs(ImmutableList.of(), null));
+        serverSegments.put(entry.getKey(), Pair.of(entry.getValue(), newQueryPlus));
+      }
+      return serverSegments;
+    }
+
+    Object[] shardNumberToServers = new Object[numCorePartitions];
+    Set<S> serversToOptimize = new HashSet<>(serverAndSegments.keySet());
+
+    for (Map.Entry<S, List<SegmentDescriptor>> entry : serverAndSegments.entrySet()) {
+      S server = entry.getKey();
+
+      List<SegmentDescriptor> segments = entry.getValue();
+      for (SegmentDescriptor descriptor : segments) {
+        int shardNumber = descriptor.getPartitionNumber();
+        S tmpServer = (S) shardNumberToServers[shardNumber];
+        if (tmpServer == null) {
+          shardNumberToServers[shardNumber] = server;
+        } else if (!tmpServer.equals(server)) {
+          serversToOptimize.remove(server);
+          serversToOptimize.remove(tmpServer);
+        }
+      }
+    }
+
+    final SortedMap<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> serverSegments = new TreeMap<>();
+    for (Entry<S, List<SegmentDescriptor>> entry : serverAndSegments.entrySet()) {
+      QueryPlus<T> newQueryPlus = queryPlus;
+      if (!serversToOptimize.contains(entry.getKey())) {
+        newQueryPlus = (QueryPlus<T>) queryPlus
+            .withQuery(query.withPostAggregatorSpecs(ImmutableList.of(), null));
+      }
+      serverSegments.put(entry.getKey(), Pair.of(entry.getValue(), newQueryPlus));
+    }
+
+    return serverSegments;
   }
 
   /**

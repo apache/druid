@@ -285,7 +285,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
               return RowBasedGrouperHelper.makeGrouperIterator(
                   grouper,
                   query,
-                  resources
+                  resources,
+                  query.getContextSortByDimsFirst()
               );
             }
             catch (Throwable t) {

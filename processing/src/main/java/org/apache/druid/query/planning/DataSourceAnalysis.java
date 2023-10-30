@@ -24,6 +24,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.SampledTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -117,6 +118,8 @@ public class DataSourceAnalysis
   {
     if (baseDataSource instanceof TableDataSource) {
       return Optional.of((TableDataSource) baseDataSource);
+    } else if (baseDataSource instanceof SampledTableDataSource) {
+      return Optional.of((SampledTableDataSource) baseDataSource);
     } else {
       return Optional.empty();
     }
@@ -216,6 +219,7 @@ public class DataSourceAnalysis
   public boolean isTableBased()
   {
     return (baseDataSource instanceof TableDataSource
+            || baseDataSource instanceof SampledTableDataSource
             || (baseDataSource instanceof UnionDataSource &&
                 baseDataSource.getChildren()
                               .stream()

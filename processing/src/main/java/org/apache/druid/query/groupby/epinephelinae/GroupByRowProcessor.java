@@ -145,7 +145,8 @@ public class GroupByRowProcessor
       @Override
       public Sequence<ResultRow> results(@Nullable List<DimensionSpec> dimensionsToInclude)
       {
-        return getRowsFromGrouper(query, grouper, dimensionsToInclude);
+        return getRowsFromGrouper(query, grouper, dimensionsToInclude,
+            query.getContextSortByDimsFirst());
       }
 
       @Override
@@ -159,7 +160,8 @@ public class GroupByRowProcessor
   private static Sequence<ResultRow> getRowsFromGrouper(
       final GroupByQuery query,
       final Grouper<RowBasedKey> grouper,
-      @Nullable List<DimensionSpec> dimensionsToInclude
+      @Nullable List<DimensionSpec> dimensionsToInclude,
+      final boolean sorted
   )
   {
     return new BaseSequence<>(
@@ -172,7 +174,8 @@ public class GroupByRowProcessor
                 grouper,
                 query,
                 dimensionsToInclude,
-                () -> {}
+                () -> {},
+                sorted
             );
           }
 

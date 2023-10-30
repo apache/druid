@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -257,10 +256,8 @@ public class GroupingEngine
         granularity,
         dimensionSpecs,
         query.getAggregatorSpecs(),
-        // Don't apply postaggregators on compute nodes
-        ImmutableList.of(),
-        // Don't do "having" clause until the end of this method.
-        null,
+        query.getPostAggregatorSpecs(),
+        query.getHavingSpec(),
         // Potentially pass limit down the stack (i.e. limit pushdown). Notes:
         //   (1) Limit pushdown is only supported for DefaultLimitSpec.
         //   (2) When pushing down a limit, it must be extended to include the offset (the offset will be applied
@@ -320,10 +317,7 @@ public class GroupingEngine
     // Apply postaggregators if this is the outermost mergeResults (CTX_KEY_OUTERMOST) and we are not executing a
     // pushed-down subquery (CTX_KEY_EXECUTING_NESTED_QUERY).
 
-    if (!queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
-        || queryContext.getBoolean(GroupByQueryConfig.CTX_KEY_EXECUTING_NESTED_QUERY, false)) {
-      return mergedResults;
-    } else if (query.getPostAggregatorSpecs().isEmpty()) {
+    if (query.getPostAggregatorSpecs().isEmpty()) {
       if (!hasTimestampResultField) {
         return mergedResults;
       }
@@ -452,12 +446,7 @@ public class GroupingEngine
   {
     results = wrapSummaryRowIfNeeded(query, results);
 
-    // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
-    if (query.context().getBoolean(CTX_KEY_OUTERMOST, true)) {
-      return query.postProcess(results);
-    } else {
-      return results;
-    }
+    return query.postProcess(results);
   }
 
   /**

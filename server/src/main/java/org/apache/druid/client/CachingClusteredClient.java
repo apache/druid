@@ -69,6 +69,8 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.SampledTableDataSource;
+import org.apache.druid.query.SampledTableDataSource.SamplingType;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
@@ -85,6 +87,7 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline.PartitionChunkEntry;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -338,12 +341,17 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return new ClusterQueryResult<>(Sequences.empty(), 0);
       }
 
+
       final TimelineLookup<String, ServerSelector> timeline = timelineConverter.apply(maybeTimeline.get());
       if (uncoveredIntervalsLimit > 0) {
         computeUncoveredIntervals(timeline);
       }
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
+      Pair<Integer, Integer> ratio = pruneSegmentsForShardSampling(segmentServers);
+      if (ratio != null) {
+        responseContext.addSamplingComposition(ratio.lhs + "/" + ratio.rhs);
+      }
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
@@ -368,10 +376,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
       queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentServers.size()).emit(emitter);
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
+      ShardSpec shardSpec = timeline.lookup(intervals.get(0)).get(0).getObject().getChunk(0).getObject().getSegment().getShardSpec();
+
+      Map<DruidServer, Pair<List<SegmentDescriptor>, QueryPlus<T>>> serverSegmentsQueries = toolChest.decorateBySegmentsChunk(
+          queryPlus,
+          segmentsByServer,
+          shardSpec.getNumCorePartitions(),
+          shardSpec.getDomainDimensions()
+      );
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
-        addSequencesFromServer(sequencesByInterval, segmentsByServer);
+        addSequencesFromServer(sequencesByInterval, serverSegmentsQueries);
         return merge(sequencesByInterval);
       });
 
@@ -460,6 +476,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           segments.add(new SegmentServerSelector(server, segment));
         }
       }
+
       return segments;
     }
 
@@ -503,6 +520,36 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
+    private Pair<Integer, Integer> pruneSegmentsForShardSampling(final Set<SegmentServerSelector> segments)
+    {
+      if (query.getDataSource() instanceof SampledTableDataSource) {
+        if (((SampledTableDataSource) query.getDataSource()).getSamplingType()
+            == SamplingType.FIXED_SHARD) {
+          int allSegmentsSize = segments.size();
+          int allShards = segments.stream()
+              .mapToInt(s -> s.getSegmentDescriptor().getPartitionNumber()).max().getAsInt();
+          int targetShards = Math.round(
+              allShards * ((SampledTableDataSource) query.getDataSource()).getSamplingPercentage()) / 100;
+          Iterator<SegmentServerSelector> iterator = segments.iterator();
+          int removedSegments = 0;
+          while (iterator.hasNext()) {
+            SegmentServerSelector segmentServerSelector = iterator.next();
+            SegmentDescriptor segmentDescriptor = segmentServerSelector.getSegmentDescriptor();
+            int shard = segmentDescriptor.getPartitionNumber();
+            if (targetShards < shard) {
+              removedSegments++;
+              iterator.remove();
+            }
+          }
+          return Pair.of(allSegmentsSize - removedSegments, allSegmentsSize);
+        } else {
+          throw new UnsupportedOperationException("");
+        }
+      }
+      return null;
+    }
+
+
     private List<Pair<Interval, byte[]>> pruneSegmentsWithCachedResults(
         final byte[] queryCacheKey,
         final Set<SegmentServerSelector> segments
@@ -541,6 +588,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         byte[] queryCacheKey
     )
     {
+
       // cacheKeys map must preserve segment ordering, in order for shards to always be combined in the same order
       Map<SegmentServerSelector, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
       for (SegmentServerSelector segmentServer : segments) {
@@ -648,10 +696,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
      */
     private void addSequencesFromServer(
         final List<Sequence<T>> listOfSequences,
-        final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer
+        final Map<DruidServer, Pair<List<SegmentDescriptor>, QueryPlus<T>>> segmentsByServerQuery
     )
     {
-      segmentsByServer.forEach((server, segmentsOfServer) -> {
+
+      segmentsByServerQuery.forEach((server, segmentsAndQueriesOfServer) -> {
+        final List<SegmentDescriptor> segmentsOfServer = segmentsAndQueriesOfServer.lhs;
+        final QueryPlus<T> queryPlusForServer = segmentsAndQueriesOfServer.rhs;
         final QueryRunner serverRunner = serverView.getQueryRunner(server);
 
         if (serverRunner == null) {
@@ -661,15 +712,15 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
         // Divide user-provided maxQueuedBytes by the number of servers, and limit each server to that much.
         final long maxQueuedBytes = query.context().getMaxQueuedBytes(httpClientConfig.getMaxQueuedBytes());
-        final long maxQueuedBytesPerServer = maxQueuedBytes / segmentsByServer.size();
+        final long maxQueuedBytesPerServer = maxQueuedBytes / segmentsByServerQuery.size();
         final Sequence<T> serverResults;
 
         if (isBySegment) {
-          serverResults = getBySegmentServerResults(serverRunner, segmentsOfServer, maxQueuedBytesPerServer);
+          serverResults = getBySegmentServerResults(serverRunner, segmentsOfServer, queryPlusForServer, maxQueuedBytesPerServer);
         } else if (!server.isSegmentReplicationTarget() || !populateCache) {
-          serverResults = getSimpleServerResults(serverRunner, segmentsOfServer, maxQueuedBytesPerServer);
+          serverResults = getSimpleServerResults(serverRunner, segmentsOfServer, queryPlusForServer, maxQueuedBytesPerServer);
         } else {
-          serverResults = getAndCacheServerResults(serverRunner, segmentsOfServer, maxQueuedBytesPerServer);
+          serverResults = getAndCacheServerResults(serverRunner, segmentsOfServer, queryPlusForServer, maxQueuedBytesPerServer);
         }
         listOfSequences.add(serverResults);
       });
@@ -679,6 +730,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private Sequence<T> getBySegmentServerResults(
         final QueryRunner serverRunner,
         final List<SegmentDescriptor> segmentsOfServer,
+        final QueryPlus<T> queryPlus,
         long maxQueuedBytesPerServer
     )
     {
@@ -693,7 +745,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return (Sequence<T>) resultsBySegments
           .map(result -> result.map(
               resultsOfSegment -> resultsOfSegment.mapResults(
-                  toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing())::apply
+                  toolChest.makePreComputeManipulatorFn(queryPlus.getQuery(), MetricManipulatorFns.deserializing())::apply
               )
           ));
     }
@@ -702,6 +754,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private Sequence<T> getSimpleServerResults(
         final QueryRunner serverRunner,
         final List<SegmentDescriptor> segmentsOfServer,
+        final QueryPlus<T> queryPlus,
         long maxQueuedBytesPerServer
     )
     {
@@ -716,11 +769,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
     private Sequence<T> getAndCacheServerResults(
         final QueryRunner serverRunner,
         final List<SegmentDescriptor> segmentsOfServer,
+        final QueryPlus<T> queryPlus,
         long maxQueuedBytesPerServer
     )
     {
       @SuppressWarnings("unchecked")
-      final Query<T> downstreamQuery = query.withOverriddenContext(makeDownstreamQueryContext());
+      final Query<T> downstreamQuery = queryPlus.getQuery().withOverriddenContext(makeDownstreamQueryContext());
       final Sequence<Result<BySegmentResultValueClass<T>>> resultsBySegments = serverRunner.run(
           queryPlus
               .withQuery(
@@ -747,7 +801,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
                 toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
             );
           })
-          .flatMerge(seq -> seq, query.getResultOrdering());
+          .flatMerge(seq -> seq, queryPlus.getQuery().getResultOrdering());
     }
   }
 
