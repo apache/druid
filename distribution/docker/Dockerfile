@@ -17,7 +17,7 @@
 # under the License.
 #
 
-ARG JDK_VERSION=11
+ARG JDK_VERSION=17
 
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
@@ -66,9 +66,9 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     echo "Downloading bash-static from ${BASH_URL}" \
     && wget ${BASH_URL} -O /bin/bash
 
-FROM busybox:1.34.1-glibc as busybox
+FROM busybox:1.35.0-glibc as busybox
 
-FROM gcr.io/distroless/java$JDK_VERSION-debian11
+FROM gcr.io/distroless/java$JDK_VERSION-debian12
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
