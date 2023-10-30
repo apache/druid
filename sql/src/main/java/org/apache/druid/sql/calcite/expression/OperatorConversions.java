@@ -19,13 +19,11 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
@@ -37,13 +35,9 @@ import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
@@ -51,7 +45,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.util.Optionality;
-import org.apache.calcite.util.Static;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -69,7 +62,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 
 /**
  * Utilities for assisting in writing {@link SqlOperatorConversion} implementations.
@@ -508,10 +500,7 @@ public class OperatorConversions
     /**
      * Equivalent to calling {@link BasicOperandTypeChecker.Builder#requiredOperandCount(int)}; leads to using a
      * {@link BasicOperandTypeChecker} as our operand type checker.
-     *
-     * Not compatible with {@link #operandTypeChecker(SqlOperandTypeChecker)}.
      */
-    @Deprecated
     public OperatorBuilder<T> requiredOperandCount(final int requiredOperandCount)
     {
       this.requiredOperandCount = requiredOperandCount;
@@ -554,37 +543,26 @@ public class OperatorConversions
     @SuppressWarnings("unchecked")
     public T build()
     {
-      final IntSet nullableOperands = buildNullableOperands();
       return (T) new SqlFunction(
           name,
           kind,
           Preconditions.checkNotNull(returnTypeInference, "returnTypeInference"),
-          buildOperandTypeInference(nullableOperands),
-          buildOperandTypeChecker(nullableOperands),
+          buildOperandTypeInference(),
+          buildOperandTypeChecker(),
           functionCategory
       );
     }
 
-    protected IntSet buildNullableOperands()
-    {
-      // Create "nullableOperands" set including all optional arguments.
-      final IntSet nullableOperands = new IntArraySet();
-      if (requiredOperandCount != null) {
-        IntStream.range(requiredOperandCount, operandTypes.size()).forEach(nullableOperands::add);
-      }
-      return nullableOperands;
-    }
-
-    protected SqlOperandTypeChecker buildOperandTypeChecker(final IntSet nullableOperands)
+    protected SqlOperandTypeChecker buildOperandTypeChecker()
     {
       if (operandTypeChecker == null) {
-        return new DefaultOperandTypeChecker(
-            operandNames,
-            operandTypes,
-            requiredOperandCount == null ? operandTypes.size() : requiredOperandCount,
-            nullableOperands,
-            literalOperands
-        );
+        return DefaultOperandTypeChecker
+            .builder()
+            .operandNames(operandNames)
+            .operandTypes(operandTypes)
+            .requiredOperandCount(requiredOperandCount == null ? operandTypes.size() : requiredOperandCount)
+            .literalOperands(literalOperands)
+            .build();
       } else if (operandNames.isEmpty()
                  && operandTypes == null
                  && requiredOperandCount == null
@@ -598,8 +576,11 @@ public class OperatorConversions
       }
     }
 
-    protected SqlOperandTypeInference buildOperandTypeInference(final IntSet nullableOperands)
+    protected SqlOperandTypeInference buildOperandTypeInference()
     {
+      final IntSet nullableOperands = requiredOperandCount == null
+          ? new IntArraySet()
+          : DefaultOperandTypeChecker.buildNullableOperands(requiredOperandCount, operandTypes.size());
       if (operandTypeInference == null) {
         SqlOperandTypeInference defaultInference = new DefaultOperandTypeInference(operandTypes, nullableOperands);
         return (callBinding, returnType, types) -> {
@@ -634,9 +615,8 @@ public class OperatorConversions
     @Override
     public SqlAggFunction build()
     {
-      final IntSet nullableOperands = buildNullableOperands();
-      final SqlOperandTypeInference operandTypeInference = buildOperandTypeInference(nullableOperands);
-      final SqlOperandTypeChecker operandTypeChecker = buildOperandTypeChecker(nullableOperands);
+      final SqlOperandTypeInference operandTypeInference = buildOperandTypeInference();
+      final SqlOperandTypeChecker operandTypeChecker = buildOperandTypeChecker();
 
       class DruidSqlAggFunction extends SqlAggFunction
       {
@@ -732,147 +712,6 @@ public class OperatorConversions
 
         operandTypesOut[i] = inferredType;
       }
-    }
-  }
-
-  /**
-   * Operand type checker that is used in 'simple' situations: there are a particular number of operands, with
-   * particular types, some of which may be optional or nullable, and some of which may be required to be literals.
-   */
-  @VisibleForTesting
-  static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
-  {
-    /**
-     * Operand names for {@link #getAllowedSignatures(SqlOperator, String)}. May be empty, in which case the
-     * {@link #operandTypes} are used instead.
-     */
-    private final List<String> operandNames;
-    private final List<SqlTypeFamily> operandTypes;
-    private final int requiredOperands;
-    private final IntSet nullableOperands;
-    private final IntSet literalOperands;
-
-    public int getNumberOfLiteralOperands()
-    {
-      return literalOperands.size();
-    }
-
-    @VisibleForTesting
-    DefaultOperandTypeChecker(
-        final List<String> operandNames,
-        final List<SqlTypeFamily> operandTypes,
-        final int requiredOperands,
-        final IntSet nullableOperands,
-        @Nullable final int[] literalOperands
-    )
-    {
-      Preconditions.checkArgument(requiredOperands <= operandTypes.size() && requiredOperands >= 0);
-      this.operandNames = Preconditions.checkNotNull(operandNames, "operandNames");
-      this.operandTypes = Preconditions.checkNotNull(operandTypes, "operandTypes");
-      this.requiredOperands = requiredOperands;
-      this.nullableOperands = Preconditions.checkNotNull(nullableOperands, "nullableOperands");
-
-      if (!operandNames.isEmpty() && operandNames.size() != operandTypes.size()) {
-        throw new ISE("Operand name count[%s] and type count[%s] must match", operandNames.size(), operandTypes.size());
-      }
-
-      if (literalOperands == null) {
-        this.literalOperands = IntSets.EMPTY_SET;
-      } else {
-        this.literalOperands = new IntArraySet();
-        Arrays.stream(literalOperands).forEach(this.literalOperands::add);
-      }
-    }
-
-    @Override
-    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
-    {
-      for (int i = 0; i < callBinding.operands().size(); i++) {
-        final SqlNode operand = callBinding.operands().get(i);
-
-        if (literalOperands.contains(i)) {
-          // Verify that 'operand' is a literal. Allow CAST, since we can reduce these away later.
-          if (!SqlUtil.isLiteral(operand, true)) {
-            return throwOrReturn(
-                throwOnFailure,
-                callBinding,
-                cb -> cb.getValidator()
-                        .newValidationError(
-                            operand,
-                            Static.RESOURCE.argumentMustBeLiteral(callBinding.getOperator().getName())
-                        )
-            );
-          }
-        }
-
-        final RelDataType operandType = callBinding.getValidator().deriveType(callBinding.getScope(), operand);
-        final SqlTypeFamily expectedFamily = operandTypes.get(i);
-
-        if (expectedFamily == SqlTypeFamily.ANY) {
-          // ANY matches anything. This operand is all good; do nothing.
-        } else if (expectedFamily.getTypeNames().contains(operandType.getSqlTypeName())) {
-          // Operand came in with one of the expected types.
-        } else if (operandType.getSqlTypeName() == SqlTypeName.NULL || SqlUtil.isNullLiteral(operand, true)) {
-          // Null came in, check if operand is a nullable type.
-          if (!nullableOperands.contains(i)) {
-            return throwOrReturn(
-                throwOnFailure,
-                callBinding,
-                cb -> cb.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal())
-            );
-          }
-        } else {
-          return throwOrReturn(
-              throwOnFailure,
-              callBinding,
-              SqlCallBinding::newValidationSignatureError
-          );
-        }
-      }
-
-      return true;
-    }
-
-    @Override
-    public SqlOperandCountRange getOperandCountRange()
-    {
-      return SqlOperandCountRanges.between(requiredOperands, operandTypes.size());
-    }
-
-    @Override
-    public String getAllowedSignatures(SqlOperator op, String opName)
-    {
-      final List<?> operands = !operandNames.isEmpty() ? operandNames : operandTypes;
-      final StringBuilder ret = new StringBuilder();
-      ret.append("'");
-      ret.append(opName);
-      ret.append("(");
-      for (int i = 0; i < operands.size(); i++) {
-        if (i > 0) {
-          ret.append(", ");
-        }
-        if (i >= requiredOperands) {
-          ret.append("[");
-        }
-        ret.append("<").append(operands.get(i)).append(">");
-      }
-      for (int i = requiredOperands; i < operands.size(); i++) {
-        ret.append("]");
-      }
-      ret.append(")'");
-      return ret.toString();
-    }
-
-    @Override
-    public Consistency getConsistency()
-    {
-      return Consistency.NONE;
-    }
-
-    @Override
-    public boolean isOptional(int i)
-    {
-      return i + 1 > requiredOperands;
     }
   }
 
