@@ -27,7 +27,6 @@ import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
 import com.google.common.collect.ImmutableList;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -54,7 +53,7 @@ public class AzureStorageTest extends EasyMockSupport
   AzureClientFactory azureClientFactory;
 
   @Before
-  public void setup() throws URISyntaxException, StorageException
+  public void setup() throws StorageErrorException
   {
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
     azureStorage = new AzureStorage(() -> blobServiceClient, azureClientFactory);

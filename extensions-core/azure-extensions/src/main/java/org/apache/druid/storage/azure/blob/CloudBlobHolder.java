@@ -20,14 +20,10 @@
 package org.apache.druid.storage.azure.blob;
 
 import com.azure.storage.blob.models.BlobItem;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
-
-import java.net.URISyntaxException;
 import java.util.Date;
 
 /**
- * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
+ * Wrapper for {@link BlobItem}. Used to make testing easier, since {@link BlobItem}
  * is a final class and so is difficult to mock in unit tests.
  */
 public class CloudBlobHolder
@@ -41,7 +37,7 @@ public class CloudBlobHolder
     this.container = container;
   }
 
-  public String getContainerName() throws URISyntaxException, StorageException
+  public String getContainerName()
   {
     return container;
   }

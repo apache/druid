@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
@@ -129,7 +128,7 @@ public class AzureInputSource extends CloudObjectInputSource
                     blob.getBlobLength()
                 );
               }
-              catch (URISyntaxException | StorageException e) {
+              catch (StorageErrorException e) {
                 throw new RuntimeException(e);
               }
             }

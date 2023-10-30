@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -277,7 +277,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   }
 
   @Test
-  public void uploadDataSegmentTest() throws StorageException, IOException, URISyntaxException
+  public void uploadDataSegmentTest() throws StorageErrorException, IOException, URISyntaxException
   {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
     final int binaryVersion = 9;

@@ -121,8 +121,9 @@ public class AzureStorageDruidModule implements DruidModule
           + " Please refer to azure documentation.");
     }
 
-    /* Azure named keys and sas tokens are mutually exclusive with each other and with managed identity auth, but other forms of managed auth
-       that we support in the future are not mutually exclusive with managed identity auth, they just get added to the credential chain.
+    /* Azure named keys and sas tokens are mutually exclusive with each other and with azure keychain auth,
+    but any form of auth supported by the DefaultAzureCredentialChain is not mutually exclusive, e.g. you can have
+    environment credentials or workload credentials or managed credentials using the same chain.
     **/
     if (config.getKey() != null && config.getSharedAccessStorageToken() != null ||
         config.getKey() != null && config.getUseAzureCredentialsChain() ||
