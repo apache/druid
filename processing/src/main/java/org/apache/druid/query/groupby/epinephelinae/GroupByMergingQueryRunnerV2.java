@@ -92,7 +92,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   private final Iterable<QueryRunner<ResultRow>> queryables;
   private final QueryProcessingPool queryProcessingPool;
   private final QueryWatcher queryWatcher;
-  private final int concurrencyHint;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
@@ -104,7 +103,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
-      int concurrencyHint,
       BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
       ObjectMapper spillMapper,
@@ -116,7 +114,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     this.queryProcessingPool = queryProcessingPool;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
-    this.concurrencyHint = concurrencyHint;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
@@ -128,7 +125,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   {
     final GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
-
+    final int concurrencyHint = querySpecificConfig.getMergeBufferSlicesPerThread() * processingConfig.getNumThreads();
     // CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION is here because realtime servers use nested mergeRunners calls
     // (one for the entire query and one for each sink). We only want the outer call to actually do merging with a
     // merge buffer, otherwise the query will allocate too many merge buffers. This is potentially sub-optimal as it
