@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.plumber;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
@@ -314,42 +315,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       final boolean skipIncrementalSegment
   )
   {
-    final List<SinkSegmentReference> retVal = new ArrayList<>(hydrants.size());
-
-    try {
-      for (final FireHydrant hydrant : hydrants) {
-        // Hydrant might swap at any point, but if it's swapped at the start
-        // then we know it's *definitely* swapped.
-        final boolean hydrantDefinitelySwapped = hydrant.hasSwapped();
-
-        if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
-          continue;
-        }
-
-        final Optional<Pair<SegmentReference, Closeable>> maybeHolder = hydrant.getSegmentForQuery(segmentMapFn);
-        if (maybeHolder.isPresent()) {
-          final Pair<SegmentReference, Closeable> holder = maybeHolder.get();
-          retVal.add(new SinkSegmentReference(hydrant.getCount(), holder.lhs, hydrantDefinitelySwapped, holder.rhs));
-        } else {
-          // Cannot acquire this hydrant. Release all others previously acquired and return null.
-          for (final SinkSegmentReference reference : retVal) {
-            reference.close();
-          }
-
-          return null;
-        }
-      }
-
-      return retVal;
-    }
-    catch (Throwable e) {
-      // Release all references previously acquired and throw the error.
-      for (final SinkSegmentReference reference : retVal) {
-        CloseableUtils.closeAndSuppressExceptions(reference, e::addSuppressed);
-      }
-
-      throw e;
-    }
+    return acquireSegmentReferences(hydrants, segmentMapFn, skipIncrementalSegment);
   }
 
   private boolean checkInDedupSet(InputRow row)
@@ -516,5 +482,54 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   public short getAtomicUpdateGroupSize()
   {
     return shardSpec.getAtomicUpdateGroupSize();
+  }
+
+  /**
+   * Helper for {@link #acquireSegmentReferences(Function, boolean)}. Separate method to simplify testing (we test this
+   * method instead of testing {@link #acquireSegmentReferences(Function, boolean)} directly).
+   */
+  @VisibleForTesting
+  static List<SinkSegmentReference> acquireSegmentReferences(
+      final List<FireHydrant> hydrants,
+      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final boolean skipIncrementalSegment
+  )
+  {
+    final List<SinkSegmentReference> retVal = new ArrayList<>(hydrants.size());
+
+    try {
+      for (final FireHydrant hydrant : hydrants) {
+        // Hydrant might swap at any point, but if it's swapped at the start
+        // then we know it's *definitely* swapped.
+        final boolean hydrantDefinitelySwapped = hydrant.hasSwapped();
+
+        if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
+          continue;
+        }
+
+        final Optional<Pair<SegmentReference, Closeable>> maybeHolder = hydrant.getSegmentForQuery(segmentMapFn);
+        if (maybeHolder.isPresent()) {
+          final Pair<SegmentReference, Closeable> holder = maybeHolder.get();
+          retVal.add(new SinkSegmentReference(hydrant.getCount(), holder.lhs, hydrantDefinitelySwapped, holder.rhs));
+        } else {
+          // Cannot acquire this hydrant. Release all others previously acquired and return null.
+          for (final SinkSegmentReference reference : retVal) {
+            reference.close();
+          }
+
+          return null;
+        }
+      }
+
+      return retVal;
+    }
+    catch (Throwable e) {
+      // Release all references previously acquired and throw the error.
+      for (final SinkSegmentReference reference : retVal) {
+        CloseableUtils.closeAndSuppressExceptions(reference, e::addSuppressed);
+      }
+
+      throw e;
+    }
   }
 }
