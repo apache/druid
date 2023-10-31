@@ -67,6 +67,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
+        new HashMap<>(),
         1,
         2,
         null
@@ -105,6 +106,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
+        new HashMap<>(),
         1,
         2,
         null
@@ -144,6 +146,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
+        new HashMap<>(),
         1,
         2,
         null
@@ -181,6 +184,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
+        new HashMap<>(),
         1,
         2,
         null
@@ -220,6 +224,7 @@ public class SqlStatementResourceHelperTest
         new ArrayDeque<>(),
         null,
         0,
+        new HashMap<>(),
         1,
         2,
         null

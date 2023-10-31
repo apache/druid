@@ -5381,8 +5381,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPlanWithInFilterMoreThanInSubQueryThreshold()
   {
-    skipVectorize();
-    cannotVectorize();
     String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
 
     Map<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
@@ -5399,32 +5397,21 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       JoinDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
-                          new QueryDataSource(
-                              GroupByQuery.builder()
-                                          .setDataSource(InlineDataSource.fromIterable(
-                                                             ImmutableList.of(
-                                                                 new Object[]{4842L},
-                                                                 new Object[]{4844L},
-                                                                 new Object[]{4845L},
-                                                                 new Object[]{14905L},
-                                                                 new Object[]{4853L},
-                                                                 new Object[]{29064L}
-                                                             ),
-                                                             RowSignature.builder()
-                                                                         .add("ROW_VALUE", ColumnType.LONG)
-                                                                         .build()
-                                                         )
-                                          )
-                                          .setInterval(querySegmentSpec(Filtration.eternity()))
-                                          .setDimensions(
-                                              new DefaultDimensionSpec("ROW_VALUE", "d0", ColumnType.LONG)
-                                          )
-                                          .setGranularity(Granularities.ALL)
-                                          .setLimitSpec(NoopLimitSpec.instance())
+                          InlineDataSource.fromIterable(
+                              ImmutableList.of(
+                                  new Object[]{4842L},
+                                  new Object[]{4844L},
+                                  new Object[]{4845L},
+                                  new Object[]{14905L},
+                                  new Object[]{4853L},
+                                  new Object[]{29064L}
+                              ),
+                              RowSignature.builder()
+                                          .add("ROW_VALUE", ColumnType.LONG)
                                           .build()
                           ),
                           "j0.",
-                          "(\"l1\" == \"j0.d0\")",
+                          "(\"l1\" == \"j0.ROW_VALUE\")",
                           JoinType.INNER,
                           null,
                           ExprMacroTable.nil(),
