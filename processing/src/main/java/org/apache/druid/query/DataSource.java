@@ -36,6 +36,7 @@ import java.util.function.Function;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = TableDataSource.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = TableDataSource.class, name = "table"),
+    @JsonSubTypes.Type(value = SampledTableDataSource.class, name = "sampled_table"),
     @JsonSubTypes.Type(value = QueryDataSource.class, name = "query"),
     @JsonSubTypes.Type(value = UnionDataSource.class, name = "union"),
     @JsonSubTypes.Type(value = JoinDataSource.class, name = "join"),
