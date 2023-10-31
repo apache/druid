@@ -432,7 +432,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       int recordBufferFullWait,
       int maxRecordsPerPoll,
       boolean useEarliestSequenceNumber,
-      boolean useListShards
+      boolean useListShards,
+      long queueMaxByteSize
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
@@ -488,7 +489,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       );
     }
 
-    records = new LinkedBlockingQueue<>(recordBufferSize);
+    records = new MemoryBoundLinkedBlockingQueue<>(new LinkedBlockingQueue<>(), queueMaxByteSize);
   }
 
   public static AmazonKinesis getAmazonKinesisClient(
