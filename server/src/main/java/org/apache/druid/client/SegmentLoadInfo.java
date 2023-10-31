@@ -57,12 +57,16 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
 
   public boolean isEmpty()
   {
-    return servers.isEmpty();
+    synchronized (this) {
+      return servers.isEmpty();
+    }
   }
 
   public ImmutableSegmentLoadInfo toImmutableSegmentLoadInfo()
   {
-    return new ImmutableSegmentLoadInfo(segment, servers);
+    synchronized (this) {
+      return new ImmutableSegmentLoadInfo(segment, servers);
+    }
   }
 
   /**
