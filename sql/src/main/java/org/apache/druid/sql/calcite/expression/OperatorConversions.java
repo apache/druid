@@ -45,6 +45,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.util.Optionality;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -326,6 +327,13 @@ public class OperatorConversions
     return new AggregatorBuilder(name);
   }
 
+  /**
+   * Helps in creating the operator builder along with validations and type inference for simple operator conversions.
+   *
+   * The type checker for this operator conversion can be either supplied manually, or an instance of
+   * {@link DefaultOperandTypeChecker} will be used if the user passes in {@link #operandTypes} and other optional
+   * parameters. Exactly one of them must be supplied to the builder.
+   */
   public static class OperatorBuilder<T extends SqlFunction>
   {
     protected final String name;
@@ -483,8 +491,8 @@ public class OperatorConversions
     }
 
     /**
-     * Equivalent to calling {@link BasicOperandTypeChecker.Builder#operandTypes(SqlTypeFamily...)}; leads to using a
-     * {@link BasicOperandTypeChecker} as our operand type checker.
+     * Equivalent to calling {@link DefaultOperandTypeChecker.Builder#operandTypes(SqlTypeFamily...)}; leads to using a
+     * {@link DefaultOperandTypeChecker} as our operand type checker.
      *
      * May be used in conjunction with {@link #requiredOperandCount(int)} and {@link #literalOperands(int...)} in order
      * to further refine operand checking logic.
@@ -498,8 +506,8 @@ public class OperatorConversions
     }
 
     /**
-     * Equivalent to calling {@link BasicOperandTypeChecker.Builder#requiredOperandCount(int)}; leads to using a
-     * {@link BasicOperandTypeChecker} as our operand type checker.
+     * Equivalent to calling {@link DefaultOperandTypeChecker.Builder#requiredOperandCount(Integer)}; leads to using a
+     * {@link DefaultOperandTypeChecker} as our operand type checker.
      */
     public OperatorBuilder<T> requiredOperandCount(final int requiredOperandCount)
     {
@@ -520,8 +528,8 @@ public class OperatorConversions
     }
 
     /**
-     * Equivalent to calling {@link BasicOperandTypeChecker.Builder#literalOperands(int...)}; leads to using a
-     * {@link BasicOperandTypeChecker} as our operand type checker.
+     * Equivalent to calling {@link DefaultOperandTypeChecker.Builder#literalOperands(int...)}; leads to using a
+     * {@link DefaultOperandTypeChecker} as our operand type checker.
      *
      * Not compatible with {@link #operandTypeChecker(SqlOperandTypeChecker)}.
      */
@@ -556,6 +564,10 @@ public class OperatorConversions
     protected SqlOperandTypeChecker buildOperandTypeChecker()
     {
       if (operandTypeChecker == null) {
+        if (operandTypes == null) {
+          throw DruidException.defensive(
+              "'operandTypes' must be non null if 'operandTypeChecker' is not passed to the operator conversion.");
+        }
         return DefaultOperandTypeChecker
             .builder()
             .operandNames(operandNames)

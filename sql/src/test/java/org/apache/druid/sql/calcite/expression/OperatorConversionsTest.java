@@ -118,7 +118,7 @@ public class OperatorConversionsTest
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testRequiredOperandsOnly")
-          .operandTypeChecker(BasicOperandTypeChecker.builder().operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE).requiredOperandCount(1).build())
+          .operandTypeChecker(DefaultOperandTypeChecker.builder().operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE).requiredOperandCount(1).build())
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
