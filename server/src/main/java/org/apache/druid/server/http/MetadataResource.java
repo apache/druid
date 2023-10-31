@@ -156,6 +156,7 @@ public class MetadataResource
     }
 
     if (includeOvershadowedStatus != null) {
+      // note that realtime segments are returned only when druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator
       return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
     }
 
@@ -208,7 +209,7 @@ public class MetadataResource
                                                      : coordinator.getReplicationFactor(segment.getId());
 
           Long numRows = null;
-          if (null != coordinatorSegmentMetadataCache) {
+          if (coordinatorSegmentMetadataCache != null) {
             AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(
                 segment.getDataSource(),
                 segment.getId()
@@ -231,7 +232,7 @@ public class MetadataResource
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
     // conditionally add realtime segments information
-    if (null != includeRealtimeSegments && null != coordinatorSegmentMetadataCache) {
+    if (includeRealtimeSegments != null && coordinatorSegmentMetadataCache != null) {
       final Stream<SegmentStatusInCluster> realtimeSegmentStatus = coordinatorSegmentMetadataCache
           .getSegmentMetadataSnapshot()
           .values()
@@ -376,7 +377,7 @@ public class MetadataResource
   )
   {
     // if {@code coordinatorSegmentMetadataCache} is null, implies the feature is disabled. Return NOT_FOUND.
-    if (null == coordinatorSegmentMetadataCache) {
+    if (coordinatorSegmentMetadataCache == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
     Map<String, DataSourceInformation> dataSourceSchemaMap = coordinatorSegmentMetadataCache.getDataSourceInformationMap();
