@@ -47,7 +47,14 @@ import java.util.Set;
  */
 public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
 {
-  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__subquery__");
+  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__subquery__")
+  {
+    @Override
+    public boolean isConcrete()
+    {
+      return false;
+    }
+  };
 
   private static final QueryDataSource DUMMY_QUERY_DATA_SOURCE = new QueryDataSource(
       Druids.newScanQueryBuilder().dataSource("__subquery__").eternityInterval().build()
