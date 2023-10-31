@@ -98,7 +98,7 @@ By default, JSON-based batch ingestion replaces all data in the intervals in you
 #### Fully replacing existing segments using tombstones
 
 :::info
-This feature is still in beta.
+This feature is still experimental.
 :::
 
 You can set `dropExisting` flag in the `ioConfig` to true if you want the ingestion task to replace all existing segments that start and end within the intervals for your `granularitySpec`. This applies whether or not the new data covers all existing segments. `dropExisting` only applies when `appendToExisting` is false and the `granularitySpec` contains an `interval`.
@@ -242,7 +242,7 @@ The following table lists the properties of a `ioConfig` object:
 |`type`|The task type. Set to the value to `index_parallel`.|none|yes|
 |`inputFormat`|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
 |`appendToExisting`|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This means that you can append new segments to any datasource regardless of its original partitioning scheme. You must use the `dynamic` partitioning type for the appended segments. If you specify a different partitioning type, the task fails with an error.|false|no|
-|`dropExisting`|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task replaces all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid doesn't change any existing segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` isn't specified in `granularitySpec`, Druid doesn't replace any segments even if `dropExisting` is `true`. WARNING: this feature is still in beta.|false|no|
+|`dropExisting`|If `true` and `appendToExisting` is `false` and the `granularitySpec` contains an`interval`, then the ingestion task replaces all existing segments fully contained by the specified `interval` when the task publishes new segments. If ingestion fails, Druid doesn't change any existing segments. In the case of misconfiguration where either `appendToExisting` is `true` or `interval` isn't specified in `granularitySpec`, Druid doesn't replace any segments even if `dropExisting` is `true`. WARNING: this feature is still experimental.|false|no|
 
 ### `tuningConfig`
 
