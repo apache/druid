@@ -292,14 +292,6 @@
      <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
   </suppress>
   <suppress>
-    <notes><![CDATA[
-    Druid is not a native app, so the vulnerability flagged is a false positive.
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.google\.oauth-client/google\-oauth\-client@.*$</packageUrl>
-    <cve>CVE-2020-7692</cve>
-    <cve>CVE-2021-22573</cve>
-  </suppress>
-  <suppress>
     <!--
       ~ TODO: Fix when Apache Ranger 2.1 is released
       -->
@@ -766,6 +758,8 @@
     https://github.com/apache/hadoop/commit/ad49ddda0e1d9632c8c9fcdc78fca8244e1248c9 -->
     <cve>CVE-2023-1370</cve>
     <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
+    <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
+    <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
@@ -773,6 +767,7 @@
      file name: hadoop-client-api-3.3.6.jar: jquery.dataTables.min.js (pkg:javascript/jquery.datatables@1.10.18)
      ]]></notes>
     <vulnerabilityName>prototype pollution</vulnerabilityName>
+    <cve>CVE-2020-28458</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -799,5 +794,49 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@1..*$</packageUrl>
     <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: grpc-context-1.27.2.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
+    <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
+    <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
+  </suppress>
+
+  <!-- CVE-2022-4244 is affecting plexus-utils package, plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
+  <suppress base="true">
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-interpolation@.*$</packageUrl>
+    <cve>CVE-2022-4244</cve>
+  </suppress>
+
+  <!-- CVE-2023-5072 has a too broad CPE that seems to be flagging dependencies like json-*. Neither Druid nor any of its
+    ~ transitive dependency use json-java which contains the vulnerability-->
+  <suppress base="true">
+    <cve>CVE-2023-5072</cve>
+  </suppress>
+
+  <!--
+    ~ CVE-2023-44981 seems to affect Zookeeper servers. While we ship with a previous version of the Zookeeper, Druid only
+    ~ only uses the client classes of the Zookeeper. We do use the older version in the quickstart & example docker file,
+    ~ however in production it is recomended to use your own Zookeeper server with the CVE patched up, which the Druid's
+    ~ older ZK library is still compatible with.
+    -->
+  <suppress>
+    <notes><![CDATA[
+      file name: zookeeper-3.5.10.jar
+    ]]></notes>
+    <cve>CVE-2023-44981</cve>
+  </suppress>
+
+  <!--
+   ~ Hostname verification is disabled by default in Netty 4.x, therefore the version that Druid is using gets flagged,
+   ~ however Druid enables it in ChannelResourceFactory therefore this is a false positive-->
+  <suppress>
+    <notes><![CDATA[
+      file name: netty-transport-4.1.100.Final.jar
+    ]]></notes>
+    <cve>CVE-2023-4586</cve>
   </suppress>
 </suppressions>

@@ -63,7 +63,7 @@ public class KillAuditLogTest
         .withCoordinatorKillMaxSegments(10)
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
+    killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockAuditManager);
   }
@@ -78,7 +78,7 @@ public class KillAuditLogTest
         .withCoordinatorKillMaxSegments(10)
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
-    killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
+    killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockAuditManager).removeAuditLogsOlderThan(ArgumentMatchers.anyLong());
     Assert.assertTrue(runStats.hasStat(Stats.Kill.AUDIT_LOGS));
@@ -97,7 +97,7 @@ public class KillAuditLogTest
 
     final IllegalArgumentException exception = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig)
+        () -> killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager)
     );
     Assert.assertEquals(
         "[druid.coordinator.kill.audit.period] must be greater than"
@@ -118,7 +118,7 @@ public class KillAuditLogTest
         .build();
     final IllegalArgumentException exception = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig)
+        () -> killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager)
     );
     Assert.assertEquals(
         "[druid.coordinator.kill.audit.durationToRetain] must be 0 milliseconds or higher",

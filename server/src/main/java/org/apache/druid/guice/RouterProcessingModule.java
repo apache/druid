@@ -34,7 +34,6 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.server.metrics.MetricsModule;
 
 import java.nio.ByteBuffer;
@@ -54,7 +53,6 @@ public class RouterProcessingModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
-    binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
     MetricsModule.register(binder, ExecutorServiceMonitor.class);
   }
 

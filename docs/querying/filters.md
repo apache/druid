@@ -33,6 +33,8 @@ sidebar_label: "Filters"
 A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL.
 Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [Filtered aggregator](./aggregations.md#filtered-aggregator) and [Having filters](./having.md).
 
+By default, Druid uses SQL compatible three-value logic when filtering. See [Boolean logic](./sql-data-types.md#boolean-logic) for more details.
+
 Apache Druid supports the following types of filters.
 
 ## Selector filter
@@ -80,19 +82,19 @@ Druid's SQL planner uses the equality filter by default instead of selector filt
 ### Example: equivalent of `WHERE someColumn = 'hello'`
 
 ```json
-{ "type": "equality", "column": "someColumn", "matchValueType": "STRING", "matchValue": "hello" }
+{ "type": "equals", "column": "someColumn", "matchValueType": "STRING", "matchValue": "hello" }
 ```
 
 ### Example: equivalent of `WHERE someNumericColumn = 1.23`
 
 ```json
-{ "type": "equality", "column": "someNumericColumn", "matchValueType": "DOUBLE", "matchValue": 1.23 }
+{ "type": "equals", "column": "someNumericColumn", "matchValueType": "DOUBLE", "matchValue": 1.23 }
 ```
 
 ### Example: equivalent of `WHERE someArrayColumn = ARRAY[1, 2, 3]`
 
 ```json
-{ "type": "equality", "column": "someArrayColumn", "matchValueType": "ARRAY<LONG>", "matchValue": [1, 2, 3] }
+{ "type": "equals", "column": "someArrayColumn", "matchValueType": "ARRAY<LONG>", "matchValue": [1, 2, 3] }
 ```
 
 
@@ -160,8 +162,8 @@ Note that the column comparison filter converts all values to strings prior to c
 {
   "type": "and",
   "fields": [
-    { "type": "equality", "column": "someColumn", "matchValue": "a", "matchValueType": "STRING" },
-    { "type": "equality", "column": "otherColumn", "matchValue": 1234, "matchValueType": "LONG" },
+    { "type": "equals", "column": "someColumn", "matchValue": "a", "matchValueType": "STRING" },
+    { "type": "equals", "column": "otherColumn", "matchValue": 1234, "matchValueType": "LONG" },
     { "type": "null", "column": "anotherColumn" } 
   ]
 }
@@ -180,8 +182,8 @@ Note that the column comparison filter converts all values to strings prior to c
 {
   "type": "or",
   "fields": [
-    { "type": "equality", "column": "someColumn", "matchValue": "a", "matchValueType": "STRING" },
-    { "type": "equality", "column": "otherColumn", "matchValue": 1234, "matchValueType": "LONG" },
+    { "type": "equals", "column": "someColumn", "matchValue": "a", "matchValueType": "STRING" },
+    { "type": "equals", "column": "otherColumn", "matchValue": 1234, "matchValueType": "LONG" },
     { "type": "null", "column": "anotherColumn" } 
   ]
 }
@@ -709,7 +711,7 @@ All filters return true if any one of the dimension values is satisfies the filt
 Given a multi-value STRING row with values `['a', 'b', 'c']`, a filter such as
 
 ```json
-{ "type": "equality", "column": "someMultiValueColumn", "matchValueType": "STRING", "matchValue": "b" }
+{ "type": "equals", "column": "someMultiValueColumn", "matchValueType": "STRING", "matchValue": "b" }
 ```
 will successfully match the entire row. This can produce sometimes unintuitive behavior when coupled with the implicit UNNEST functionality of Druid [GroupBy](./groupbyquery.md) and [TopN](./topnquery.md) queries.
 
@@ -724,13 +726,13 @@ Given a multi-value STRING row with values `['a', 'b', 'c']`, and filter such as
   "type": "and",
   "fields": [
     {
-      "type": "equality",
+      "type": "equals",
       "column": "someMultiValueColumn",
       "matchValueType": "STRING",
       "matchValue": "a"
     },
     {
-      "type": "equality",
+      "type": "equals",
       "column": "someMultiValueColumn",
       "matchValueType": "STRING",
       "matchValue": "b"
@@ -754,7 +756,7 @@ the "regex" filter) the numeric column values will be converted to strings durin
 
 ```json
 {
-  "type": "equality",
+  "type": "equals",
   "dimension": "myFloatColumn",
   "matchValueType": "FLOAT",
   "value": 10.1
@@ -811,7 +813,7 @@ If you want to interpret the timestamp with a specific format, timezone, or loca
 
 ```json
 {
-  "type": "equality",
+  "type": "equals",
   "dimension": "__time",
   "matchValueType": "LONG",
   "value": 124457387532

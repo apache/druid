@@ -39,6 +39,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
@@ -70,6 +71,7 @@ public class RangeFilterTests
                          "-1000",
                          ImmutableList.of("a"),
                          null,
+                         "d",
                          6.6,
                          null,
                          10L,
@@ -82,6 +84,7 @@ public class RangeFilterTests
                          "-10.012",
                          ImmutableList.of("d"),
                          null,
+                         "e",
                          null,
                          3.0f,
                          null,
@@ -130,6 +133,30 @@ public class RangeFilterTests
             new RangeFilter("vdim0", ColumnType.STRING, null, "z", false, false, null),
             ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
         );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("dim1", ColumnType.STRING, null, "z", false, false, null)),
+            ImmutableList.of()
+        );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("vdim0", ColumnType.STRING, null, "z", false, false, null)),
+            ImmutableList.of()
+        );
+        assertFilterMatches(
+            new RangeFilter("s0", ColumnType.STRING, null, "b", false, false, null),
+            ImmutableList.of("0", "1", "2", "5")
+        );
+        assertFilterMatches(
+            new RangeFilter("vs0", ColumnType.STRING, null, "b", false, false, null),
+            ImmutableList.of("0", "1", "2", "5")
+        );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("s0", ColumnType.STRING, null, "b", false, false, null)),
+            ImmutableList.of("4", "6", "7")
+        );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("vs0", ColumnType.STRING, null, "b", false, false, null)),
+            ImmutableList.of("4", "6", "7")
+        );
       } else {
         assertFilterMatches(
             new RangeFilter("dim1", ColumnType.STRING, null, "z", false, false, null),
@@ -139,10 +166,38 @@ public class RangeFilterTests
             new RangeFilter("vdim0", ColumnType.STRING, null, "z", false, false, null),
             ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
         );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("dim1", ColumnType.STRING, null, "z", false, false, null)),
+            NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("0")
+        );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("vdim0", ColumnType.STRING, null, "z", false, false, null)),
+            NullHandling.sqlCompatible() ? ImmutableList.of("0") : ImmutableList.of()
+        );
+        assertFilterMatches(
+            new RangeFilter("s0", ColumnType.STRING, null, "b", false, false, null),
+            ImmutableList.of("1", "2", "5")
+        );
+        assertFilterMatches(
+            new RangeFilter("vs0", ColumnType.STRING, null, "b", false, false, null),
+            ImmutableList.of("1", "2", "5")
+        );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("s0", ColumnType.STRING, null, "b", false, false, null)),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("4", "6", "7")
+            : ImmutableList.of("0", "3", "4", "6", "7")
+        );
+        assertFilterMatches(
+            NotDimFilter.of(new RangeFilter("vs0", ColumnType.STRING, null, "b", false, false, null)),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("4", "6", "7")
+            : ImmutableList.of("0", "3", "4", "6", "7")
+        );
       }
 
       if (isAutoSchema()) {
-        // auto schema ingests arrays instead of mvds.. this filter doesn't currently support arrays
+        // auto schema ingests arrays instead of mvds.. this is covered in array tests
       } else {
         assertFilterMatches(
             new RangeFilter("dim2", ColumnType.STRING, null, "z", false, false, null),
@@ -269,6 +324,10 @@ public class RangeFilterTests
           new RangeFilter("dim3", ColumnType.STRING, null, "z", false, true, null),
           ImmutableList.of()
       );
+      assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("dim3", ColumnType.STRING, null, "z", false, true, null)),
+          NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+      );
     }
 
 
@@ -287,6 +346,10 @@ public class RangeFilterTests
           new RangeFilter("dim1", ColumnType.STRING, "abc", "abc", false, true, null),
           ImmutableList.of()
       );
+      assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("dim1", ColumnType.STRING, "abc", "abc", false, true, null)),
+          ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+      );
     }
 
     @Test
@@ -295,6 +358,10 @@ public class RangeFilterTests
       assertFilterMatches(
           new RangeFilter("dim1", ColumnType.STRING, "abc", "abc", false, false, null),
           ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("dim1", ColumnType.STRING, "abc", "abc", false, false, null)),
+          ImmutableList.of("0", "1", "2", "3", "4", "6", "7")
       );
     }
 
@@ -367,7 +434,12 @@ public class RangeFilterTests
           new RangeFilter("d0", ColumnType.DOUBLE, 2L, 3L, false, true, null),
           ImmutableList.of()
       );
-
+      assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("d0", ColumnType.DOUBLE, 2L, 3L, false, true, null)),
+          NullHandling.replaceWithDefault()
+          ? ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+          : ImmutableList.of("0", "1", "3", "4", "5", "6")
+      );
       assertFilterMatches(
           new RangeFilter("f0", ColumnType.LONG, 2L, 3L, false, true, null),
           ImmutableList.of()
@@ -377,12 +449,24 @@ public class RangeFilterTests
           ImmutableList.of()
       );
       assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("f0", ColumnType.DOUBLE, 2L, 3L, false, true, null)),
+          NullHandling.replaceWithDefault()
+          ? ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+          : ImmutableList.of("0", "1", "2", "3", "5", "7")
+      );
+      assertFilterMatches(
           new RangeFilter("l0", ColumnType.LONG, 2L, 3L, false, true, null),
           ImmutableList.of()
       );
       assertFilterMatches(
           new RangeFilter("l0", ColumnType.DOUBLE, 2L, 3L, false, true, null),
           ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("l0", ColumnType.DOUBLE, 2L, 3L, false, true, null)),
+          NullHandling.replaceWithDefault()
+          ? ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+          : ImmutableList.of("0", "1", "2", "4", "5", "6")
       );
     }
 
@@ -433,6 +517,12 @@ public class RangeFilterTests
           ImmutableList.of("3")
       );
       assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("d0", ColumnType.DOUBLE, 120.0245, 120.0245, false, false, null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "4", "5", "6")
+          : ImmutableList.of("0", "1", "2", "4", "5", "6", "7")
+      );
+      assertFilterMatches(
           new RangeFilter("d0", ColumnType.FLOAT, 120.0245f, 120.0245f, false, false, null),
           ImmutableList.of()
       );
@@ -449,8 +539,20 @@ public class RangeFilterTests
           ImmutableList.of("1")
       );
       assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("f0", ColumnType.FLOAT, 10.1f, 10.1f, false, false, null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "2", "3", "5", "7")
+          : ImmutableList.of("0", "2", "3", "4", "5", "6", "7")
+      );
+      assertFilterMatches(
           new RangeFilter("l0", ColumnType.LONG, 12345L, 12345L, false, false, null),
           ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(new RangeFilter("l0", ColumnType.LONG, 12345L, 12345L, false, false, null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "2", "4", "6")
+          : ImmutableList.of("0", "1", "2", "3", "4", "6", "7")
       );
       assertFilterMatches(
           new RangeFilter("l0", ColumnType.DOUBLE, 12345.0, 12345.0, false, false, null),
@@ -908,6 +1010,22 @@ public class RangeFilterTests
             ImmutableList.of("0", "3")
         );
         assertFilterMatches(
+            NotDimFilter.of(
+                new RangeFilter(
+                    "arrayString",
+                    ColumnType.STRING_ARRAY,
+                    new Object[]{"a", "b", "c"},
+                    new Object[]{"a", "b", "c"},
+                    false,
+                    false,
+                    null
+                )
+            ),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("1", "4", "5", "6", "7")
+            : ImmutableList.of("1", "2", "4", "5", "6", "7")
+        );
+        assertFilterMatches(
             new RangeFilter(
                 "arrayString",
                 ColumnType.STRING_ARRAY,
@@ -1010,6 +1128,22 @@ public class RangeFilterTests
             ),
             ImmutableList.of("1")
         );
+        assertFilterMatches(
+            NotDimFilter.of(
+                new RangeFilter(
+                    "arrayLong",
+                    ColumnType.LONG_ARRAY,
+                    null,
+                    new Object[]{},
+                    false,
+                    false,
+                    null
+                )
+            ),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("0", "2", "4", "5", "6", "7")
+            : ImmutableList.of("0", "2", "3", "4", "5", "6", "7")
+        );
 
         assertFilterMatches(
             new RangeFilter(
@@ -1102,6 +1236,22 @@ public class RangeFilterTests
                 null
             ),
             ImmutableList.of("3")
+        );
+        assertFilterMatches(
+            NotDimFilter.of(
+                new RangeFilter(
+                    "arrayDouble",
+                    ColumnType.DOUBLE_ARRAY,
+                    null,
+                    new Object[]{},
+                    false,
+                    false,
+                    null
+                )
+            ),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("0", "1", "2", "4", "6", "7")
+            : ImmutableList.of("0", "1", "2", "4", "5", "6", "7")
         );
 
         assertFilterMatches(
@@ -1389,6 +1539,22 @@ public class RangeFilterTests
                 null
             ),
             ImmutableList.of("1", "2", "5")
+        );
+        assertFilterMatches(
+            NotDimFilter.of(
+                new RangeFilter(
+                    "variant",
+                    ColumnType.LONG,
+                    100L,
+                    null,
+                    false,
+                    false,
+                    null
+                )
+            ),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("0", "3", "4")
+            : ImmutableList.of("0", "3", "4", "6", "7")
         );
         // lexicographical comparison
         assertFilterMatches(

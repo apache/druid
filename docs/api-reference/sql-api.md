@@ -367,8 +367,6 @@ The following table shows examples of how Druid returns the column names and dat
 
 ## Query from deep storage
 
-> Query from deep storage is an [experimental feature](../development/experimental.md).
-
 You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules.
 
 Note that at least one segment of a datasource must be available on a Historical process so that the Broker can plan your query. A quick way to check if this is true is whether or not a datasource is visible in the Druid console.

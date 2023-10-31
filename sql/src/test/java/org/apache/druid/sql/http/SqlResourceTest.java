@@ -1390,8 +1390,8 @@ public class SqlResourceTest extends CalciteTestBase
         "general",
         DruidException.Persona.ADMIN,
         DruidException.Category.INVALID_INPUT,
-        "Query planning failed for unknown reason, our best guess is this "
-        + "[SQL query requires order by non-time column [[dim1 ASC]], which is not supported.]"
+        "Query could not be planned. A possible reason is "
+        + "[SQL query requires ordering a table by non-time column [[dim1]], which is not supported.]"
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());

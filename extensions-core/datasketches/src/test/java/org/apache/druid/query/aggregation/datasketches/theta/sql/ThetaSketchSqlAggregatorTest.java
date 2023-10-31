@@ -278,7 +278,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            1L
+            1.0
         }
     );
 
@@ -334,11 +334,11 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             NullHandling.replaceWithDefault()
                             ? Arrays.asList(
-                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new CountAggregatorFactory("_a0:count")
                             )
                             : Arrays.asList(
-                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0:count"),
                                     notNull("a0")

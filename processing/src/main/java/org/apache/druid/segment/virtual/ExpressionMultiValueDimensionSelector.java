@@ -24,6 +24,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -127,14 +128,15 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         ExprEval evaluated = getEvaluated();
         if (evaluated.isArray()) {
           List<String> array = getArrayAsList(evaluated);
-          return array.stream().anyMatch(x -> Objects.equals(x, value));
+          return array.stream().anyMatch(x -> (includeUnknown && x == null) || Objects.equals(x, value));
         }
-        return Objects.equals(getValue(evaluated), value);
+        final String rowValue = getValue(evaluated);
+        return (includeUnknown && rowValue == null) || Objects.equals(rowValue, value);
       }
 
       @Override
@@ -146,26 +148,29 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         ExprEval evaluated = getEvaluated();
+        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
+        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
         if (evaluated.isArray()) {
           List<String> array = getArrayAsList(evaluated);
-          return array.stream().anyMatch(x -> predicate.apply(x));
+          return array.stream().anyMatch(x -> (matchNull && x == null) || predicate.apply(x));
         }
-        return predicate.apply(getValue(evaluated));
+        final String rowValue = getValue(evaluated);
+        return (matchNull && rowValue == null) || predicate.apply(rowValue);
       }
 
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("selector", baseSelector);
-        inspector.visit("predicate", predicate);
+        inspector.visit("predicate", predicateFactory);
       }
     };
   }

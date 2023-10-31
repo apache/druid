@@ -1582,7 +1582,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
                 final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
                 IndexTaskUtils.setTaskDimensions(metricBuilder, taskItem.getTask());
-                emitter.emit(metricBuilder.build(
+                emitter.emit(metricBuilder.setMetric(
                     "task/pending/time",
                     new Duration(taskItem.getCreatedTime(), DateTimes.nowUtc()).getMillis())
                 );
@@ -1777,6 +1777,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
 
     return totalBlacklistedPeons;
+  }
+
+  @Override
+  public int getTotalCapacity()
+  {
+    return getWorkers().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+  }
+
+  @Override
+  public int getUsedCapacity()
+  {
+    return getWorkers().stream().mapToInt(ImmutableWorkerInfo::getCurrCapacityUsed).sum();
   }
 
   private static class HttpRemoteTaskRunnerWorkItem extends RemoteTaskRunnerWorkItem

@@ -53,11 +53,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
@@ -235,7 +234,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
 
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
     if (indexSupplier == null) {
-      return new AllFalseBitmapColumnIndex(selector);
+      return new AllUnknownBitmapColumnIndex(selector);
     }
 
     final ValueIndexes valueIndexes = indexSupplier.as(ValueIndexes.class);
@@ -538,7 +537,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
       if (castForComparison == null) {
-        return BooleanValueMatcher.of(false);
+        return ValueMatchers.makeAlwaysFalseDimensionMatcher(selector, multiValue);
       }
       return ValueMatchers.makeStringValueMatcher(selector, castForComparison.asString(), multiValue);
     }
@@ -548,7 +547,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
       if (castForComparison == null) {
-        return BooleanValueMatcher.of(false);
+        return ValueMatchers.makeAlwaysFalseNumericMatcher(selector);
       }
       return ValueMatchers.makeFloatValueMatcher(selector, (float) castForComparison.asDouble());
     }
@@ -558,7 +557,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
       if (castForComparison == null) {
-        return BooleanValueMatcher.of(false);
+        return ValueMatchers.makeAlwaysFalseNumericMatcher(selector);
       }
       return ValueMatchers.makeDoubleValueMatcher(selector, castForComparison.asDouble());
     }
@@ -568,7 +567,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     {
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
       if (castForComparison == null) {
-        return BooleanValueMatcher.of(false);
+        return ValueMatchers.makeAlwaysFalseNumericMatcher(selector);
       }
       return ValueMatchers.makeLongValueMatcher(selector, castForComparison.asLong());
     }

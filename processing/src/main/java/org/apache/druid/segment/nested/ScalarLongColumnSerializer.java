@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -49,7 +50,7 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
       Closer closer
   )
   {
-    super(name, LONG_DICTIONARY_FILE_NAME, indexSpec, segmentWriteOutMedium, closer);
+    super(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -74,6 +75,16 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
         true
     );
     dictionaryWriter.open();
+    dictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            FileUtils.getTempDir(),
+            null,
+            dictionaryWriter,
+            null,
+            null
+        )
+    );
   }
 
   @Override
@@ -104,14 +115,11 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
 
     // null is always 0
     dictionaryWriter.write(null);
-    dictionaryIdLookup.addNumericNull();
-
     for (Long value : longs) {
       if (value == null) {
         continue;
       }
       dictionaryWriter.write(value);
-      dictionaryIdLookup.addLong(value);
     }
     dictionarySerialized = true;
   }
@@ -120,5 +128,15 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
   protected void writeValueColumn(FileSmoosher smoosher) throws IOException
   {
     writeInternal(smoosher, longsSerializer, LONG_VALUE_COLUMN_FILE_NAME);
+  }
+
+  @Override
+  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  {
+    if (dictionaryIdLookup.getLongBuffer() != null) {
+      writeInternal(smoosher, dictionaryIdLookup.getLongBuffer(), LONG_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, dictionaryWriter, LONG_DICTIONARY_FILE_NAME);
+    }
   }
 }

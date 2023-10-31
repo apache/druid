@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
@@ -110,21 +109,6 @@ public class SegmentToMoveCalculatorTest
     Assert.assertEquals(8_000, computeMaxSegmentsToMove(2_000_000, 8));
     Assert.assertEquals(3_000, computeMaxSegmentsToMove(5_000_000, 8));
     Assert.assertEquals(1_000, computeMaxSegmentsToMove(10_000_000, 8));
-  }
-
-  @Test
-  public void testMaxSegmentsToMoveWithComputedNumThreads()
-  {
-    Assert.assertEquals(1_900, computeNumThreadsAndMaxToMove(10_000));
-    Assert.assertEquals(9_700, computeNumThreadsAndMaxToMove(50_000));
-
-    Assert.assertEquals(19_500, computeNumThreadsAndMaxToMove(100_000));
-    Assert.assertEquals(39_000, computeNumThreadsAndMaxToMove(200_000));
-    Assert.assertEquals(29_000, computeNumThreadsAndMaxToMove(500_000));
-
-    Assert.assertEquals(16_000, computeNumThreadsAndMaxToMove(1_000_000));
-    Assert.assertEquals(8_000, computeNumThreadsAndMaxToMove(2_000_000));
-    Assert.assertEquals(1_000, computeNumThreadsAndMaxToMove(10_000_000));
   }
 
   @Test
@@ -235,15 +219,6 @@ public class SegmentToMoveCalculatorTest
   private static int computeMaxSegmentsToMoveInPeriod(int totalSegments, Duration coordinatorPeriod)
   {
     return SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(totalSegments, 1, coordinatorPeriod);
-  }
-
-  private static int computeNumThreadsAndMaxToMove(int totalSegments)
-  {
-    return SegmentToMoveCalculator.computeMaxSegmentsToMovePerTier(
-        totalSegments,
-        SegmentLoadingConfig.computeNumBalancerThreads(totalSegments),
-        DEFAULT_COORDINATOR_PERIOD
-    );
   }
 
   private static int computeMinSegmentsToMove(int totalSegmentsInTier)

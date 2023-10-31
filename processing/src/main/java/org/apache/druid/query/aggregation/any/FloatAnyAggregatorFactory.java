@@ -120,7 +120,7 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
     if (capabilities == null || capabilities.isNumeric()) {
       return new FloatAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
-      return NumericNilVectorAggregator.floatNilVectorAggregator();
+      return NilVectorAggregator.floatNilVectorAggregator();
     }
   }
 

@@ -39,7 +39,6 @@ import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -81,7 +80,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class CuratorDruidCoordinatorTest extends CuratorTestBase
 {
-  private SegmentsMetadataManager segmentsMetadataManager;
   private DataSourcesSnapshot dataSourcesSnapshot;
   private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
 
@@ -121,7 +119,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   @Before
   public void setUp() throws Exception
   {
-    segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
 
@@ -294,8 +291,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(sourceSegments.get(2));
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
-            .andReturn(druidDataSource);
     EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot())
             .andReturn(dataSourcesSnapshot).anyTimes();
     final CoordinatorDynamicConfig dynamicConfig =
@@ -322,7 +317,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(coordinatorRuntimeParams.getBalancerStrategy())
             .andReturn(balancerStrategy).anyTimes();
     EasyMock.expect(coordinatorRuntimeParams.getDruidCluster()).andReturn(cluster).anyTimes();
-    EasyMock.replay(segmentsMetadataManager, coordinatorRuntimeParams, balancerStrategy);
+    EasyMock.replay(coordinatorRuntimeParams, balancerStrategy);
 
     EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString()))
             .andReturn(druidDataSource).anyTimes();
@@ -334,7 +329,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     // Move the segment from source to dest
     SegmentLoadQueueManager loadQueueManager =
-        new SegmentLoadQueueManager(baseView, segmentsMetadataManager, taskMaster);
+        new SegmentLoadQueueManager(baseView, taskMaster);
     StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(loadQueueManager, coordinatorRuntimeParams);
     segmentAssigner.moveSegment(
         segmentToMove,

@@ -20,11 +20,14 @@
 package org.apache.druid.segment.index;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
@@ -86,9 +89,13 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       }
 
       @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
-
+        if (includeUnknown && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          return bitmapResultFactory.unionDimensionValueBitmaps(
+              ImmutableList.of(getBitmapForValue(), getBitmap(0))
+          );
+        }
         return bitmapResultFactory.wrapDimensionValue(getBitmapForValue());
       }
 
@@ -114,6 +121,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     return null;
   }
 
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   @Override
   public BitmapColumnIndex forSortedValues(SortedSet<String> values)
   {
@@ -122,10 +130,12 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
             values,
             StringUtils::toUtf8ByteBuffer
         ),
-        values.size()
+        values.size(),
+        values.contains(null)
     );
   }
 
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
   @Override
   public BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8)
   {
@@ -138,7 +148,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       tailSet = valuesUtf8;
     }
 
-    return getBitmapColumnIndexForSortedIterableUtf8(tailSet, tailSet.size());
+    return getBitmapColumnIndexForSortedIterableUtf8(tailSet, tailSet.size(), valuesUtf8.contains(null));
   }
 
   private ImmutableBitmap getBitmap(int idx)
@@ -154,7 +164,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   /**
    * Helper used by {@link #forSortedValues} and {@link #forSortedValuesUtf8}.
    */
-  private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(Iterable<ByteBuffer> valuesUtf8, int size)
+  private BitmapColumnIndex getBitmapColumnIndexForSortedIterableUtf8(Iterable<ByteBuffer> valuesUtf8, int size, boolean valuesContainsNull)
   {
     // for large number of in-filter values in comparison to the dictionary size, use the sorted merge algorithm.
     if (size > SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
@@ -213,19 +223,29 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+            return bitmaps.get(0);
+          }
+          return null;
+        }
       };
     }
 
     // if the size of in-filter values is less than the threshold percentage of dictionary size, then use binary search
     // based lookup per value. The algorithm works well for smaller number of values.
-    return getSimpleImmutableBitmapIterableIndexFromIterator(valuesUtf8);
+    return getSimpleImmutableBitmapIterableIndexFromIterator(valuesUtf8, valuesContainsNull);
   }
 
   /**
    * Iterates over the value set, using binary search to look up each element. The algorithm works well for smaller
    * number of values, and must be used if the values are not sorted in the same manner as {@link #dictionary}
    */
-  private SimpleImmutableBitmapIterableIndex getSimpleImmutableBitmapIterableIndexFromIterator(Iterable<ByteBuffer> valuesUtf8)
+  private SimpleImmutableBitmapIterableIndex getSimpleImmutableBitmapIterableIndexFromIterator(Iterable<ByteBuffer> valuesUtf8, boolean valuesContainsNull)
   {
     return new SimpleImmutableBitmapIterableIndex()
     {
@@ -276,6 +296,16 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
             }
           }
         };
+      }
+
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          return bitmaps.get(0);
+        }
+        return null;
       }
     };
   }

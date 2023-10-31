@@ -28,9 +28,9 @@ public class Stats
   {
     // Decisions taken in a run
     public static final CoordinatorStat ASSIGNED
-        = CoordinatorStat.toLogAndEmit("assigned", "segment/assigned/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("assigned", "segment/assigned/count");
     public static final CoordinatorStat DROPPED
-        = CoordinatorStat.toLogAndEmit("dropped", "segment/dropped/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("dropped", "segment/dropped/count");
     public static final CoordinatorStat DELETED
         = CoordinatorStat.toLogAndEmit("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat MOVED
@@ -147,6 +147,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
+    public static final CoordinatorStat PENDING_SEGMENTS
+        = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
   }
 
   public static class Balancer

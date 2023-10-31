@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -49,7 +50,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
       Closer closer
   )
   {
-    super(name, DOUBLE_DICTIONARY_FILE_NAME, indexSpec, segmentWriteOutMedium, closer);
+    super(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -73,6 +74,16 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
         true
     );
     dictionaryWriter.open();
+    dictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            FileUtils.getTempDir(),
+            null,
+            null,
+            dictionaryWriter,
+            null
+        )
+    );
   }
 
   @Override
@@ -102,21 +113,30 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
 
     // null is always 0
     dictionaryWriter.write(null);
-    dictionaryIdLookup.addNumericNull();
 
     for (Double value : doubles) {
       if (value == null) {
         continue;
       }
       dictionaryWriter.write(value);
-      dictionaryIdLookup.addDouble(value);
     }
     dictionarySerialized = true;
+
   }
 
   @Override
   protected void writeValueColumn(FileSmoosher smoosher) throws IOException
   {
     writeInternal(smoosher, doublesSerializer, DOUBLE_VALUE_COLUMN_FILE_NAME);
+  }
+
+  @Override
+  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  {
+    if (dictionaryIdLookup.getDoubleBuffer() != null) {
+      writeInternal(smoosher, dictionaryIdLookup.getDoubleBuffer(), DOUBLE_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, dictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
+    }
   }
 }

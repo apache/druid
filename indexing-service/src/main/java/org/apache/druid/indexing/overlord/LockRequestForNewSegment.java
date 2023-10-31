@@ -23,8 +23,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
@@ -41,7 +41,7 @@ public class LockRequestForNewSegment implements LockRequest
   private final int priority;
   private final String sequenceName;
   @Nullable
-  private final String previsousSegmentId;
+  private final String previousSegmentId;
   private final boolean skipSegmentLineageCheck;
 
   private String version;
@@ -55,7 +55,7 @@ public class LockRequestForNewSegment implements LockRequest
       PartialShardSpec partialShardSpec,
       int priority,
       String sequenceName,
-      @Nullable String previsousSegmentId,
+      @Nullable String previousSegmentId,
       boolean skipSegmentLineageCheck
   )
   {
@@ -67,7 +67,7 @@ public class LockRequestForNewSegment implements LockRequest
     this.partialShardSpec = partialShardSpec;
     this.priority = priority;
     this.sequenceName = sequenceName;
-    this.previsousSegmentId = previsousSegmentId;
+    this.previousSegmentId = previousSegmentId;
     this.skipSegmentLineageCheck = skipSegmentLineageCheck;
   }
 
@@ -79,7 +79,7 @@ public class LockRequestForNewSegment implements LockRequest
       Interval interval,
       PartialShardSpec partialShardSpec,
       String sequenceName,
-      @Nullable String previsousSegmentId,
+      @Nullable String previousSegmentId,
       boolean skipSegmentLineageCheck
   )
   {
@@ -92,7 +92,7 @@ public class LockRequestForNewSegment implements LockRequest
         partialShardSpec,
         task.getPriority(),
         sequenceName,
-        previsousSegmentId,
+        previousSegmentId,
         skipSegmentLineageCheck
     );
   }
@@ -142,7 +142,7 @@ public class LockRequestForNewSegment implements LockRequest
   public String getVersion()
   {
     if (version == null) {
-      version = DateTimes.nowUtc().toString();
+      version = TaskLocks.defaultLockVersion(lockType);
     }
     return version;
   }
@@ -168,9 +168,9 @@ public class LockRequestForNewSegment implements LockRequest
   }
 
   @Nullable
-  public String getPrevisousSegmentId()
+  public String getPreviousSegmentId()
   {
-    return previsousSegmentId;
+    return previousSegmentId;
   }
 
   public boolean isSkipSegmentLineageCheck()
@@ -190,7 +190,7 @@ public class LockRequestForNewSegment implements LockRequest
            ", partialShardSpec=" + partialShardSpec +
            ", priority=" + priority +
            ", sequenceName='" + sequenceName + '\'' +
-           ", previsousSegmentId='" + previsousSegmentId + '\'' +
+           ", previousSegmentId='" + previousSegmentId + '\'' +
            ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
            '}';
   }

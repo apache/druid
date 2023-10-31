@@ -25,9 +25,11 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -37,12 +39,15 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -494,8 +499,11 @@ public class TaskLockbox
         allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
-
       holderList.getPending().forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
+    }
+    catch (Exception e) {
+      holderList.clearStaleLocks(this);
+      throw e;
     }
     finally {
       giant.unlock();
@@ -711,7 +719,8 @@ public class TaskLockbox
    * for the given requests. Updates the holder with the allocated segment if
    * the allocation succeeds, otherwise marks it as failed.
    */
-  private void allocateSegmentIds(
+  @VisibleForTesting
+  void allocateSegmentIds(
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
@@ -750,7 +759,7 @@ public class TaskLockbox
     return metadataStorageCoordinator.allocatePendingSegment(
         request.getDataSource(),
         request.getSequenceName(),
-        request.getPrevisousSegmentId(),
+        request.getPreviousSegmentId(),
         request.getInterval(),
         request.getPartialShardSpec(),
         version,
@@ -769,7 +778,7 @@ public class TaskLockbox
    * @param intervals intervals
    * @param action    action to be performed inside of the critical section
    */
-  public <T> T doInCriticalSection(Task task, List<Interval> intervals, CriticalAction<T> action) throws Exception
+  public <T> T doInCriticalSection(Task task, Set<Interval> intervals, CriticalAction<T> action) throws Exception
   {
     giant.lock();
 
@@ -786,7 +795,7 @@ public class TaskLockbox
    * It doesn't check other semantics like acquired locks are enough to overwrite existing segments.
    * This kind of semantic should be checked in each caller of {@link #doInCriticalSection}.
    */
-  private boolean isTaskLocksValid(Task task, List<Interval> intervals)
+  private boolean isTaskLocksValid(Task task, Set<Interval> intervals)
   {
     giant.lock();
     try {
@@ -826,7 +835,7 @@ public class TaskLockbox
    * @param lock   lock to be revoked
    */
   @VisibleForTesting
-  protected void revokeLock(String taskId, TaskLock lock)
+  public void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();
 
@@ -883,6 +892,128 @@ public class TaskLockbox
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Finds the active non-revoked REPLACE locks held by the given task.
+   */
+  public Set<ReplaceTaskLock> findReplaceLocksForTask(Task task)
+  {
+    giant.lock();
+    try {
+      return getNonRevokedReplaceLocks(findLockPossesForTask(task), task.getDataSource());
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * Finds all the active non-revoked REPLACE locks for the given datasource.
+   */
+  public Set<ReplaceTaskLock> getAllReplaceLocksForDatasource(String datasource)
+  {
+    giant.lock();
+    try {
+      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> activeLocks = running.get(datasource);
+      if (activeLocks == null) {
+        return ImmutableSet.of();
+      }
+
+      List<TaskLockPosse> lockPosses
+          = activeLocks.values()
+                       .stream()
+                       .flatMap(map -> map.values().stream())
+                       .flatMap(Collection::stream)
+                       .collect(Collectors.toList());
+      return getNonRevokedReplaceLocks(lockPosses, datasource);
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  private Set<ReplaceTaskLock> getNonRevokedReplaceLocks(List<TaskLockPosse> posses, String datasource)
+  {
+    final Set<ReplaceTaskLock> replaceLocks = new HashSet<>();
+    for (TaskLockPosse posse : posses) {
+      final TaskLock lock = posse.getTaskLock();
+      if (lock.isRevoked() || !TaskLockType.REPLACE.equals(posse.getTaskLock().getType())) {
+        continue;
+      }
+
+      // Replace locks are always held by the supervisor task
+      if (posse.taskIds.size() > 1) {
+        throw DruidException.defensive(
+            "Replace lock[%s] for datasource[%s] is held by multiple tasks[%s]",
+            lock, datasource, posse.taskIds
+        );
+      }
+
+      String supervisorTaskId = posse.taskIds.iterator().next();
+      replaceLocks.add(
+          new ReplaceTaskLock(supervisorTaskId, lock.getInterval(), lock.getVersion())
+      );
+    }
+
+    return replaceLocks;
+  }
+
+  /**
+   * @param lockFilterPolicies Lock filters for the given datasources
+   * @return Map from datasource to intervals locked by tasks satisfying the lock filter condititions
+   */
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    final Map<String, Set<Interval>> datasourceToIntervals = new HashMap<>();
+
+    // Take a lock and populate the maps
+    giant.lock();
+
+    try {
+      lockFilterPolicies.forEach(
+          lockFilter -> {
+            final String datasource = lockFilter.getDatasource();
+            if (!running.containsKey(datasource)) {
+              return;
+            }
+
+            final int priority = lockFilter.getPriority();
+            final boolean ignoreAppendLocks =
+                TaskLockType.REPLACE.name().equals(lockFilter.getContext().get(Tasks.TASK_LOCK_TYPE));
+
+            running.get(datasource).forEach(
+                (startTime, startTimeLocks) -> startTimeLocks.forEach(
+                    (interval, taskLockPosses) -> taskLockPosses.forEach(
+                        taskLockPosse -> {
+                          if (taskLockPosse.getTaskLock().isRevoked()) {
+                            // do nothing
+                          } else if (ignoreAppendLocks
+                                     && TaskLockType.APPEND.equals(taskLockPosse.getTaskLock().getType())) {
+                            // do nothing
+                          } else if (taskLockPosse.getTaskLock().getPriority() == null
+                                     || taskLockPosse.getTaskLock().getPriority() < priority) {
+                            // do nothing
+                          } else {
+                            datasourceToIntervals.computeIfAbsent(datasource, k -> new HashSet<>())
+                                                 .add(interval);
+                          }
+                        }
+                    )
+                )
+            );
+          }
+      );
+    }
+    finally {
+      giant.unlock();
+    }
+
+    return datasourceToIntervals.entrySet().stream()
+                                .collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    entry -> new ArrayList<>(entry.getValue())
+                                ));
   }
 
   /**
@@ -1598,6 +1729,28 @@ public class TaskLockbox
       return pending;
     }
 
+    /**
+     *  When task locks are acquired in an attempt to allocate segments, *  a new lock posse might be created.
+     *  However, the posse is associated with the task only after all the segment allocations have succeeded.
+     *  If there is an exception, unlock all such unassociated locks.
+     */
+    void clearStaleLocks(TaskLockbox taskLockbox)
+    {
+      all
+          .stream()
+          .filter(holder -> holder.acquiredLock != null
+                            && holder.taskLockPosse != null
+                            && !holder.taskLockPosse.containsTask(holder.task))
+          .forEach(holder -> {
+            holder.taskLockPosse.addTask(holder.task);
+            taskLockbox.unlock(
+                holder.task,
+                holder.acquiredLock.getInterval(),
+                holder.acquiredLock instanceof SegmentLock ? ((SegmentLock) holder.acquiredLock).getPartitionId() : null
+            );
+            log.info("Cleared stale lock[%s] for task[%s]", holder.acquiredLock, holder.task.getId());
+          });
+    }
 
     List<SegmentAllocateResult> getResults()
     {
@@ -1608,7 +1761,8 @@ public class TaskLockbox
   /**
    * Contains the task, request, lock and final result for a segment allocation.
    */
-  private static class SegmentAllocationHolder
+  @VisibleForTesting
+  static class SegmentAllocationHolder
   {
     final AllocationHolderList list;
 

@@ -36,44 +36,36 @@
     cursor: pointer;
 
     &:before {
-      content: '⏵';
+      content: '';
       position: absolute;
       top: 3px;
       left: 2px;
       width: 12px;
       height: 12px;
       background: $blue3;
-      color: white;
-      line-height: 12px;
-      text-align: center;
       border-radius: 2px;
     }
 
-    &:hover:before {
-      background: $blue2;
-    }
-
-    &:hover:after {
-      content: 'Run';
+    &:after {
+      content: '';
       position: absolute;
-      top: 0;
-      left: 16px;
-      right: 0;
-      background: #383d57;
-      text-align: left;
-      animation: sharpFadeIn 1s;
+      top: 6px;
+      left: 5px;
+      width: 0;
+      height: 0;
+      border-top: 3px solid transparent;
+      border-bottom: 3px solid transparent;
+      border-left: 6px solid $white;
     }
-  }
-}
 
-@keyframes sharpFadeIn {
-  0% {
-    opacity: 0;
-  }
-  90% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
+    &:hover {
+      &:before {
+        background: $blue2;
+      }
+
+      &:after {
+        border-left-color: $gray5;
+      }
+    }
   }
 }

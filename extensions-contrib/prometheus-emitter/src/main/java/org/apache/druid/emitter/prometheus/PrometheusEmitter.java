@@ -69,7 +69,7 @@ public class PrometheusEmitter implements Emitter
   {
     this.config = config;
     this.strategy = config.getStrategy();
-    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel());
+    metrics = new Metrics(config.getNamespace(), config.getDimensionMapPath(), config.isAddHostAsLabel(), config.isAddServiceAsLabel(), config.getExtraLabels());
   }
 
 
@@ -136,6 +136,9 @@ public class PrometheusEmitter implements Emitter
     if (metric != null) {
       String[] labelValues = new String[metric.getDimensions().length];
       String[] labelNames = metric.getDimensions();
+
+      Map<String, String> extraLabels = config.getExtraLabels();
+
       for (int i = 0; i < labelValues.length; i++) {
         String labelName = labelNames[i];
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
@@ -148,6 +151,8 @@ public class PrometheusEmitter implements Emitter
             labelValues[i] = host;
           } else if (config.isAddServiceAsLabel() && TAG_SERVICE.equals(labelName)) {
             labelValues[i] = service;
+          } else if (extraLabels.containsKey(labelName)) {
+            labelValues[i] = config.getExtraLabels().get(labelName);
           } else {
             labelValues[i] = "unknown";
           }

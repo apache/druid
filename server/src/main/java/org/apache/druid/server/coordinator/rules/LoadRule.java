@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
@@ -40,11 +41,14 @@ public abstract class LoadRule implements Rule
    */
   private final boolean useDefaultTierForNull;
 
+  private final boolean shouldSegmentBeLoaded;
+
   protected LoadRule(Map<String, Integer> tieredReplicants, Boolean useDefaultTierForNull)
   {
     this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
     this.tieredReplicants = handleNullTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
     validateTieredReplicants(this.tieredReplicants);
+    this.shouldSegmentBeLoaded = this.tieredReplicants.values().stream().reduce(0, Integer::sum) > 0;
   }
 
   @JsonProperty
@@ -65,6 +69,18 @@ public abstract class LoadRule implements Rule
     handler.replicateSegment(segment, getTieredReplicants());
   }
 
+
+  /**
+   * @return Whether a segment that matches this rule needs to be loaded on a tier.
+   *
+   * Used in making handoff decisions.
+   */
+  @JsonIgnore
+  public boolean shouldMatchingSegmentBeLoaded()
+  {
+    return shouldSegmentBeLoaded;
+  }
+
   /**
    * Returns the given {@code tieredReplicants} map unchanged if it is non-null (including empty).
    * Returns the following default values if the given map is null.
@@ -73,10 +89,16 @@ public abstract class LoadRule implements Rule
    * <li>If {@code useDefaultTierForNull} is false, returns an empty map. This causes segments to have a replication factor of 0 and not get assigned to any historical.</li>
    * </ul>
    */
-  private static Map<String, Integer> handleNullTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
+  private static Map<String, Integer> handleNullTieredReplicants(
+      final Map<String, Integer> tieredReplicants,
+      boolean useDefaultTierForNull
+  )
   {
     if (useDefaultTierForNull) {
-      return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS));
+      return Configs.valueOrDefault(
+          tieredReplicants,
+          ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+      );
     } else {
       return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of());
     }
@@ -86,10 +108,17 @@ public abstract class LoadRule implements Rule
   {
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
-        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value must not be null.", entry.getKey());
+        throw InvalidInput.exception(
+            "Invalid number of replicas for tier [%s]. Value must not be null.",
+            entry.getKey()
+        );
       }
       if (entry.getValue() < 0) {
-        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value [%d] must be positive.", entry.getKey(), entry.getValue());
+        throw InvalidInput.exception(
+            "Invalid number of replicas for tier [%s]. Value [%d] must be positive.",
+            entry.getKey(),
+            entry.getValue()
+        );
       }
     }
   }

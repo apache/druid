@@ -152,14 +152,14 @@ values are treated as zeroes. This was the default prior to Druid 28.0.0.
 
 ## Boolean logic
 
-The [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations)
-runtime property controls Druid's boolean logic mode. For the most SQL compliant behavior, set this to `true` (the default).
+By default, Druid uses [SQL three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) for filter processing
+and boolean expression evaluation. This behavior relies on three settings:
 
-When `druid.expressions.useStrictBooleans = true`, Druid uses three-valued logic for
-[expressions](math-expr.md) evaluation, such as `expression` virtual columns or `expression` filters.
-However, even in this mode, Druid uses two-valued logic for filter types other than `expression`.
+*  [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compatible-null-handling) must be set to false (default), a runtime property which allows NULL values to exist in numeric columns and expressions, and string typed columns to distinguish between NULL and the empty string 
+*  [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations) must be set to true (default), a runtime property controls Druid's boolean logic mode for expressions, as well as coercing all expression boolean values to be represented with a 1 for true and 0 for false
+*  [`druid.generic.useThreeValueLogicForNativeFilters`](../configuration/index.md#sql-compatible-null-handling) must be set to true (default), a runtime property which decouples three-value logic handling from `druid.generic.useDefaultValueForNull` and `druid.expressions.useStrictBooleans` for backwards compatibility with older versions of Druid that did not fully support SQL compatible null value logic handling
 
-When `druid.expressions.useStrictBooleans = false` (legacy mode), Druid uses two-valued logic.
+If any of these settings is configured with a non-default value, Druid will use two-valued logic for non-expression based filters. Expression based filters are controlled independently with `druid.expressions.useStrictBooleans`, which if set to false Druid will use two-valued logic for expressions.
 
 ## Nested columns
 

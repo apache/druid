@@ -322,19 +322,17 @@ public class UnnestStorageAdapter implements StorageAdapter
         // outside filter contains unnested column
         // requires check for OR and And filters, disqualify rewrite for non-unnest filters
         if (queryFilter instanceof BooleanFilter) {
-          boolean isTopLevelAndFilter = queryFilter instanceof AndFilter;
           List<Filter> preFilterList = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) queryFilter,
               inputColumn,
               inputColumnCapabilites,
-              filterSplitter,
-              isTopLevelAndFilter
+              filterSplitter
           );
           // If rewite on entire query filter is successful then add entire filter to preFilter else skip and only add to post filter.
-          if (filterSplitter.getPreFilterCount() == filterSplitter.getOriginalFilterCount()) {
+          if (!preFilterList.isEmpty()) {
             if (queryFilter instanceof AndFilter) {
               filterSplitter.addPreFilter(new AndFilter(preFilterList));
-            } else if (queryFilter instanceof OrFilter) {
+            } else if (queryFilter instanceof OrFilter && filterSplitter.getPreFilterCount() == filterSplitter.getOriginalFilterCount()) {
               filterSplitter.addPreFilter(new OrFilter(preFilterList));
             }
           }
@@ -470,32 +468,37 @@ public class UnnestStorageAdapter implements StorageAdapter
       BooleanFilter queryFilter,
       final String inputColumn,
       final ColumnCapabilities inputColumnCapabilites,
-      final FilterSplitter filterSplitter,
-      final boolean isTopLevelAndFilter
+      final FilterSplitter filterSplitter
   )
   {
     final List<Filter> preFilterList = new ArrayList<>();
     for (Filter filter : queryFilter.getFilters()) {
       if (filter.getRequiredColumns().contains(outputColumnName)) {
         if (filter instanceof AndFilter) {
-          preFilterList.add(new AndFilter(recursiveRewriteOnUnnestFilters(
+          List<Filter> andChildFilters = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) filter,
               inputColumn,
               inputColumnCapabilites,
-              filterSplitter,
-              isTopLevelAndFilter
-          )));
+              filterSplitter
+          );
+          if (!andChildFilters.isEmpty()) {
+            preFilterList.add(new AndFilter(andChildFilters));
+          }
         } else if (filter instanceof OrFilter) {
-          // in case of Or Fiters, we set isTopLevelAndFilter to false that prevents pushing down any child filters to base
           List<Filter> orChildFilters = recursiveRewriteOnUnnestFilters(
               (BooleanFilter) filter,
               inputColumn,
               inputColumnCapabilites,
-              filterSplitter,
-              false
+              filterSplitter
           );
-          preFilterList.add(new OrFilter(orChildFilters));
+          if (orChildFilters.size() == ((OrFilter) filter).getFilters().size()) {
+            preFilterList.add(new OrFilter(orChildFilters));
+          }
+        } else if (filter instanceof NotFilter) {
+          // nothing to do here...
+          continue;
         } else {
+          // can we rewrite
           final Filter newFilter = rewriteFilterOnUnnestColumnIfPossible(
               filter,
               inputColumn,
@@ -505,13 +508,6 @@ public class UnnestStorageAdapter implements StorageAdapter
             // this is making sure that we are not pushing the unnest columns filters to base filter without rewriting.
             preFilterList.add(newFilter);
             filterSplitter.addToPreFilterCount(1);
-          }
-          /*
-           Push down the filters to base only if top level is And Filter
-           we can not push down if top level filter is OR or unnestColumn is derived expression like arrays
-           */
-          if (isTopLevelAndFilter && getUnnestInputIfDirectAccess(unnestColumn) != null) {
-            filterSplitter.addPreFilter(newFilter != null ? newFilter : filter);
           }
           filterSplitter.addToOriginalFilterCount(1);
         }
@@ -579,7 +575,7 @@ public class UnnestStorageAdapter implements StorageAdapter
       }
       return true;
     } else if (filter instanceof NotFilter) {
-      return filterMapsOverMultiValueStrings(((NotFilter) filter).getBaseFilter());
+      return false;
     } else {
       return filter instanceof SelectorFilter
              || filter instanceof InDimFilter

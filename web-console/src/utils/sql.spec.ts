@@ -237,13 +237,15 @@ describe('sql', () => {
     it('works with replace query', () => {
       const text = sane`
         REPLACE INTO "wikipedia" OVERWRITE ALL
-        WITH "ext" AS (SELECT *
-        FROM TABLE(
-          EXTERN(
-            '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
-            '{"type":"json"}'
-          )
-        ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR))
+        WITH "ext" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
+            )
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)
+        )
         SELECT
           TIME_PARSE("timestamp") AS "__time",
           "isRobot",
@@ -257,19 +259,21 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         Array [
           Object {
-            "endOffset": 363,
+            "endOffset": 379,
             "endRowColumn": Object {
               "column": 18,
-              "row": 13,
+              "row": 15,
             },
             "sql": "REPLACE INTO \\"wikipedia\\" OVERWRITE ALL
-        WITH \\"ext\\" AS (SELECT *
-        FROM TABLE(
-          EXTERN(
-            '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-            '{\\"type\\":\\"json\\"}'
-          )
-        ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR))
+        WITH \\"ext\\" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
+              '{\\"type\\":\\"json\\"}'
+            )
+          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+        )
         SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
@@ -283,18 +287,20 @@ describe('sql', () => {
             },
           },
           Object {
-            "endOffset": 344,
+            "endOffset": 360,
             "endRowColumn": Object {
               "column": 10,
-              "row": 12,
+              "row": 14,
             },
-            "sql": "WITH \\"ext\\" AS (SELECT *
-        FROM TABLE(
-          EXTERN(
-            '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-            '{\\"type\\":\\"json\\"}'
-          )
-        ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR))
+            "sql": "WITH \\"ext\\" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
+              '{\\"type\\":\\"json\\"}'
+            )
+          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+        )
         SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
@@ -307,39 +313,39 @@ describe('sql', () => {
             },
           },
           Object {
-            "endOffset": 261,
+            "endOffset": 276,
             "endRowColumn": Object {
-              "column": 68,
-              "row": 7,
+              "column": 70,
+              "row": 8,
             },
             "sql": "SELECT *
-        FROM TABLE(
-          EXTERN(
-            '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
-            '{\\"type\\":\\"json\\"}'
-          )
-        ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)",
-            "startOffset": 54,
+          FROM TABLE(
+            EXTERN(
+              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
+              '{\\"type\\":\\"json\\"}'
+            )
+          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)",
+            "startOffset": 57,
             "startRowColumn": Object {
-              "column": 15,
-              "row": 1,
+              "column": 2,
+              "row": 2,
             },
           },
           Object {
-            "endOffset": 344,
+            "endOffset": 360,
             "endRowColumn": Object {
               "column": 10,
-              "row": 12,
+              "row": 14,
             },
             "sql": "SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
           \\"channel\\"
         FROM \\"ext\\"",
-            "startOffset": 263,
+            "startOffset": 279,
             "startRowColumn": Object {
               "column": 0,
-              "row": 8,
+              "row": 10,
             },
           },
         ]

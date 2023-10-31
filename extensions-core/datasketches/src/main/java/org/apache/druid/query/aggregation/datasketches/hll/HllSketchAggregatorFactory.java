@@ -194,7 +194,11 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return round ? ColumnType.LONG : ColumnType.DOUBLE;
+    if (shouldFinalize) {
+      return round ? ColumnType.LONG : ColumnType.DOUBLE;
+    } else {
+      return getIntermediateType();
+    }
   }
 
   @Nullable

@@ -56,7 +56,6 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
-import org.apache.druid.sql.calcite.rule.logical.DruidAggregateCaseToFilterRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
@@ -133,6 +132,7 @@ public class CalciteRulesManager
           CoreRules.FILTER_VALUES_MERGE,
           CoreRules.PROJECT_FILTER_VALUES_MERGE,
           CoreRules.PROJECT_VALUES_MERGE,
+          CoreRules.SORT_PROJECT_TRANSPOSE,
           CoreRules.AGGREGATE_VALUES
       );
 
@@ -233,7 +233,13 @@ public class CalciteRulesManager
 
     boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
+        Programs.sequence(
+            new LoggingProgram("Start", isDebug),
+            preProgram,
+            new LoggingProgram("After PreProgram", isDebug),
+            Programs.ofRules(druidConventionRuleSet(plannerContext)),
+            new LoggingProgram("After volcano planner program", isDebug)
+        ),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
         Programs.sequence(
             // currently, adding logging program after every stage for easier debugging
@@ -318,7 +324,6 @@ public class CalciteRulesManager
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
         .addAll(baseRuleSet(plannerContext))
-        .add(DruidAggregateCaseToFilterRule.INSTANCE)
         .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }

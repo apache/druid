@@ -1417,9 +1417,21 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
                         false,
                         true,
                         1234,
-                        26,
-                        "a",
-                        "z",
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    "distinct",
+                    new ColumnAnalysis(
+                        null,
+                        "hyperUnique",
+                        false,
+                        true,
+                        1234,
+                        null,
+                        null,
+                        null,
                         null
                     )
                 )
@@ -1433,7 +1445,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         )
     );
     Assert.assertEquals(
-        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).build(),
+        RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).add("distinct", ColumnType.ofComplex("hyperUnique")).build(),
         signature
     );
   }

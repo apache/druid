@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.segment.column.ColumnType;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,22 +41,83 @@ public class RowBasedIndexBuilderTest
         new RowBasedIndexBuilder(ColumnType.STRING)
             .add("abc")
             .add("")
+            .add("1")
+            .add("def");
+
+    final IndexedTable.Index index = builder.build();
+
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    Assert.assertEquals(ColumnType.STRING, index.keyType());
+    Assert.assertTrue(index.areKeysUnique(false));
+    Assert.assertTrue(index.areKeysUnique(true));
+
+    Assert.assertEquals(intSet(0), index.find("abc"));
+    Assert.assertEquals(intSet(1), index.find(""));
+    Assert.assertEquals(intSet(2), index.find(1L));
+    Assert.assertEquals(intSet(2), index.find("1"));
+    Assert.assertEquals(intSet(3), index.find("def"));
+    Assert.assertEquals(intSet(), index.find(null));
+    Assert.assertEquals(intSet(), index.find("nonexistent"));
+
+    expectedException.expect(UnsupportedOperationException.class);
+    index.findUniqueLong(0L);
+  }
+
+  @Test
+  public void test_stringKey_uniqueKeysWithNull()
+  {
+    final RowBasedIndexBuilder builder =
+        new RowBasedIndexBuilder(ColumnType.STRING)
+            .add("abc")
+            .add("")
             .add(null)
             .add("1")
             .add("def");
 
     final IndexedTable.Index index = builder.build();
 
-    Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
     Assert.assertEquals(ColumnType.STRING, index.keyType());
-    Assert.assertTrue(index.areKeysUnique());
+    Assert.assertTrue(index.areKeysUnique(false));
+    Assert.assertTrue(index.areKeysUnique(true));
 
     Assert.assertEquals(intSet(0), index.find("abc"));
     Assert.assertEquals(intSet(1), index.find(""));
     Assert.assertEquals(intSet(3), index.find(1L));
     Assert.assertEquals(intSet(3), index.find("1"));
     Assert.assertEquals(intSet(4), index.find("def"));
-    Assert.assertEquals(intSet(), index.find(null));
+    Assert.assertEquals(intSet(2), index.find(null));
+    Assert.assertEquals(intSet(), index.find("nonexistent"));
+
+    expectedException.expect(UnsupportedOperationException.class);
+    index.findUniqueLong(0L);
+  }
+
+  @Test
+  public void test_stringKey_duplicateNullKey()
+  {
+    final RowBasedIndexBuilder builder =
+        new RowBasedIndexBuilder(ColumnType.STRING)
+            .add("abc")
+            .add("")
+            .add(null)
+            .add("1")
+            .add(null)
+            .add("def");
+
+    final IndexedTable.Index index = builder.build();
+
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    Assert.assertEquals(ColumnType.STRING, index.keyType());
+    Assert.assertTrue(index.areKeysUnique(false));
+    Assert.assertFalse(index.areKeysUnique(true));
+
+    Assert.assertEquals(intSet(0), index.find("abc"));
+    Assert.assertEquals(intSet(1), index.find(""));
+    Assert.assertEquals(intSet(3), index.find(1L));
+    Assert.assertEquals(intSet(3), index.find("1"));
+    Assert.assertEquals(intSet(5), index.find("def"));
+    Assert.assertEquals(intSet(2, 4), index.find(null));
     Assert.assertEquals(intSet(), index.find("nonexistent"));
 
     expectedException.expect(UnsupportedOperationException.class);
@@ -76,16 +138,17 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
     Assert.assertEquals(ColumnType.STRING, index.keyType());
-    Assert.assertFalse(index.areKeysUnique());
+    Assert.assertFalse(index.areKeysUnique(false));
+    Assert.assertFalse(index.areKeysUnique(true));
 
     Assert.assertEquals(intSet(0, 3), index.find("abc"));
     Assert.assertEquals(intSet(1), index.find(""));
     Assert.assertEquals(intSet(4), index.find(1L));
     Assert.assertEquals(intSet(4), index.find("1"));
     Assert.assertEquals(intSet(5), index.find("def"));
-    Assert.assertEquals(intSet(), index.find(null));
+    Assert.assertEquals(intSet(2), index.find(null));
     Assert.assertEquals(intSet(), index.find("nonexistent"));
 
     expectedException.expect(UnsupportedOperationException.class);
@@ -103,14 +166,44 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    Assert.assertThat(index, CoreMatchers.instanceOf(UniqueLongArrayIndex.class));
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(UniqueLongArrayIndex.class));
     Assert.assertEquals(ColumnType.LONG, index.keyType());
-    Assert.assertTrue(index.areKeysUnique());
+    Assert.assertTrue(index.areKeysUnique(false));
 
     Assert.assertEquals(intSet(0), index.find(1L));
     Assert.assertEquals(intSet(1), index.find(5L));
     Assert.assertEquals(intSet(2), index.find(2L));
     Assert.assertEquals(intSet(), index.find(3L));
+    Assert.assertEquals(intSet(), index.find(null));
+
+    Assert.assertEquals(0, index.findUniqueLong(1L));
+    Assert.assertEquals(1, index.findUniqueLong(5L));
+    Assert.assertEquals(2, index.findUniqueLong(2L));
+    Assert.assertEquals(IndexedTable.Index.NOT_FOUND, index.findUniqueLong(3L));
+  }
+
+  @Test
+  public void test_longKey_uniqueKeysWithNull()
+  {
+    final RowBasedIndexBuilder builder =
+        new RowBasedIndexBuilder(ColumnType.LONG)
+            .add(1)
+            .add(5)
+            .add(2)
+            .add(null);
+
+    final IndexedTable.Index index = builder.build();
+
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    Assert.assertEquals(ColumnType.LONG, index.keyType());
+    Assert.assertTrue(index.areKeysUnique(false));
+    Assert.assertTrue(index.areKeysUnique(true));
+
+    Assert.assertEquals(intSet(0), index.find(1L));
+    Assert.assertEquals(intSet(1), index.find(5L));
+    Assert.assertEquals(intSet(2), index.find(2L));
+    Assert.assertEquals(intSet(), index.find(3L));
+    Assert.assertEquals(intSet(3), index.find(null));
 
     Assert.assertEquals(0, index.findUniqueLong(1L));
     Assert.assertEquals(1, index.findUniqueLong(5L));
@@ -129,14 +222,15 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
     Assert.assertEquals(ColumnType.LONG, index.keyType());
-    Assert.assertTrue(index.areKeysUnique());
+    Assert.assertTrue(index.areKeysUnique(false));
 
     Assert.assertEquals(intSet(0), index.find(1L));
     Assert.assertEquals(intSet(1), index.find(10_000_000L));
     Assert.assertEquals(intSet(2), index.find(2L));
     Assert.assertEquals(intSet(), index.find(3L));
+    Assert.assertEquals(intSet(), index.find(null));
 
     Assert.assertEquals(0, index.findUniqueLong(1L));
     Assert.assertEquals(1, index.findUniqueLong(10_000_000L));
@@ -156,9 +250,9 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    Assert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
     Assert.assertEquals(ColumnType.LONG, index.keyType());
-    Assert.assertFalse(index.areKeysUnique());
+    Assert.assertFalse(index.areKeysUnique(false));
 
     Assert.assertEquals(intSet(0, 2), index.find("1"));
     Assert.assertEquals(intSet(0, 2), index.find(1));

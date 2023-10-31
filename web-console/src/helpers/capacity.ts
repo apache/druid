@@ -16,24 +16,17 @@
  * limitations under the License.
  */
 
-import { sum } from 'd3-array';
-
 import type { CapacityInfo } from '../druid-models';
 import { Api } from '../singletons';
 
 export async function getClusterCapacity(): Promise<CapacityInfo> {
-  const workersResponse = await Api.instance.get('/druid/indexer/v1/workers', {
+  const workersResponse = await Api.instance.get('/druid/indexer/v1/totalWorkerCapacity', {
     timeout: 5000,
   });
 
-  const usedTaskSlots = sum(
-    workersResponse.data,
-    (workerInfo: any) => Number(workerInfo.currCapacityUsed) || 0,
-  );
+  const usedTaskSlots = Number(workersResponse.data.usedClusterCapacity);
 
-  const totalTaskSlots = sum(workersResponse.data, (workerInfo: any) =>
-    Number(workerInfo.worker.capacity),
-  );
+  const totalTaskSlots = Number(workersResponse.data.currentClusterCapacity);
 
   return {
     availableTaskSlots: totalTaskSlots - usedTaskSlots,

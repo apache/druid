@@ -32,12 +32,24 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
+
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -66,6 +78,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     }
   };
 
+
   private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new StringFirstBufferAggregator(
       NilColumnValueSelector.instance(),
       NilColumnValueSelector.instance(),
@@ -75,6 +88,25 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   {
     @Override
     public void aggregate(ByteBuffer buf, int position)
+    {
+      // no-op
+    }
+  };
+
+  public static final VectorAggregator NIL_VECTOR_AGGREGATOR = new StringFirstVectorAggregator(
+      null,
+      null,
+      0
+  )
+  {
+    @Override
+    public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+    {
+      // no-op
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
     {
       // no-op
     }
@@ -121,6 +153,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
                           : maxStringBytes;
   }
 
+
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
@@ -151,6 +184,50 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
           StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
       );
     }
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    final VectorValueSelector timeSelector = selectorFactory.makeValueSelector(timeColumn);
+    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = selectorFactory.makeValueSelector(fieldName);
+      VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
+          selectorFactory.getReadableVectorInspector(),
+          fieldName,
+          valueSelector,
+          capabilities.toColumnType(),
+          ColumnType.STRING
+      );
+      return new StringFirstVectorAggregator(timeSelector, objectSelector, maxStringBytes);
+    }
+    if (capabilities != null) {
+      if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
+        // Case 1: Single value string with dimension selector
+        // For multivalue string we need to iterate a list of indexedInts which is also similar to iterating
+        // over elements for an ARRAY typed column. These two which requires an iteration will be done together.
+        if (!capabilities.hasMultipleValues().isTrue()) {
+          SingleValueDimensionVectorSelector sSelector = selectorFactory.makeSingleValueDimensionSelector(
+              DefaultDimensionSpec.of(
+                  fieldName));
+          return new SingleStringFirstDimensionVectorAggregator(timeSelector, sSelector, maxStringBytes);
+        }
+      }
+    }
+    // Case 2: return vector object selector
+    VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
+    if (capabilities != null) {
+      return new StringFirstVectorAggregator(timeSelector, vSelector, maxStringBytes);
+    } else {
+      return NIL_VECTOR_AGGREGATOR;
+    }
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   @Override

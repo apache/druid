@@ -22,7 +22,7 @@ import React from 'react';
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { compact, deepGet, deepSet, oneOf, typeIs, typeIsKnown } from '../../utils';
+import { compact, deepGet, deepSet, oneOf, typeIsKnown } from '../../utils';
 import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 
 export interface InputFormat {
@@ -523,10 +523,11 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
   return AutoForm.issueWithModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS);
 }
 
-export const inputFormatCanProduceNestedData: (inputFormat: InputFormat) => boolean = typeIs(
-  'json',
-  'parquet',
-  'orc',
-  'avro_ocf',
-  'avro_stream',
-);
+export function inputFormatCanProduceNestedData(inputFormat: InputFormat): boolean {
+  if (inputFormat.type === 'kafka') {
+    return Boolean(
+      inputFormat.valueFormat && inputFormatCanProduceNestedData(inputFormat.valueFormat),
+    );
+  }
+  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf', 'avro_stream');
+}

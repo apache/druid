@@ -153,7 +153,6 @@ public class KubernetesPeonClientTest
         TimeUnit.SECONDS
     );
 
-    Assertions.assertEquals(PeonPhase.SUCCEEDED, jobResponse.getPhase());
     Assertions.assertNotNull(jobResponse.getJob());
   }
 
@@ -178,7 +177,6 @@ public class KubernetesPeonClientTest
         TimeUnit.SECONDS
     );
 
-    Assertions.assertEquals(PeonPhase.FAILED, jobResponse.getPhase());
     Assertions.assertNotNull(jobResponse.getJob());
   }
 
@@ -191,7 +189,6 @@ public class KubernetesPeonClientTest
         TimeUnit.SECONDS
     );
 
-    Assertions.assertEquals(PeonPhase.FAILED, jobResponse.getPhase());
     Assertions.assertNull(jobResponse.getJob());
   }
 

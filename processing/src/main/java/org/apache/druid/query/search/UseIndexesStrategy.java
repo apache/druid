@@ -181,7 +181,7 @@ public class UseIndexesStrategy extends SearchStrategy
           "filter[%s] should support bitmap",
           filter
       );
-      baseFilter = columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(selector.getBitmapFactory()));
+      baseFilter = columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(selector.getBitmapFactory()), false);
     }
 
     final ImmutableBitmap timeFilteredBitmap;

@@ -328,6 +328,7 @@ public class JdbcExtractionNamespaceTest
         null,
         new Period(0),
         null,
+        0,
         null,
         new JdbcAccessSecurityConfig()
     );
@@ -362,6 +363,7 @@ public class JdbcExtractionNamespaceTest
         FILTER_COLUMN + "='1'",
         new Period(0),
         null,
+        0,
         null,
         new JdbcAccessSecurityConfig()
     );
@@ -401,6 +403,47 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
+  @Test
+  public void testRandomJitter()
+  {
+    JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        TABLE_NAME,
+        KEY_NAME,
+        VAL_NAME,
+        tsColumn,
+        FILTER_COLUMN + "='1'",
+        new Period(0),
+        null,
+        120,
+        null,
+        new JdbcAccessSecurityConfig()
+    );
+    long jitter = extractionNamespace.getJitterMills();
+    // jitter will be a random value between 0 and 120 seconds.
+    Assert.assertTrue(jitter >= 0 && jitter <= 120000);
+  }
+
+  @Test
+  public void testRandomJitterNotSpecified()
+  {
+    JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        TABLE_NAME,
+        KEY_NAME,
+        VAL_NAME,
+        tsColumn,
+        FILTER_COLUMN + "='1'",
+        new Period(0),
+        null,
+        0,
+        null,
+        new JdbcAccessSecurityConfig()
+    );
+    // jitter will be a random value between 0 and 120 seconds.
+    Assert.assertEquals(0, extractionNamespace.getJitterMills());
+  }
+
   @Test(timeout = 60_000L)
   public void testFindNew()
       throws InterruptedException
@@ -438,6 +481,7 @@ public class JdbcExtractionNamespaceTest
         "some filter",
         new Period(10),
         null,
+        0,
         null,
         securityConfig
     );
@@ -464,6 +508,7 @@ public class JdbcExtractionNamespaceTest
         null,
         new Period(10),
         null,
+        0,
         null,
         new JdbcAccessSecurityConfig()
     );

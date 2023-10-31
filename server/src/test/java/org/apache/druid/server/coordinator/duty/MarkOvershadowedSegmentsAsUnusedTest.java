@@ -99,7 +99,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
             CoordinatorDynamicConfig.builder().withMarkSegmentAsUnusedDelayMillis(0).build()
         )
         .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
         .build();
 
     SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()

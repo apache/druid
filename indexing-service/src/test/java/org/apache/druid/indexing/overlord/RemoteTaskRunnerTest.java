@@ -147,6 +147,9 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalCapacity());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedCapacity());
+
 
     ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
 
@@ -164,6 +167,8 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(3, remoteTaskRunner.getTotalTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(3, remoteTaskRunner.getTotalCapacity());
+    Assert.assertEquals(0, remoteTaskRunner.getUsedCapacity());
   }
 
   @Test

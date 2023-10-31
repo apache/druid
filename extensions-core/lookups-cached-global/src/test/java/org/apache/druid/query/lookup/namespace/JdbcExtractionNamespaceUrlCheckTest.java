@@ -63,7 +63,8 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
-          null,
+          0,
+          1000L,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -102,6 +103,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -139,6 +141,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -178,6 +181,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -221,6 +225,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -260,6 +265,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           10L,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -297,6 +303,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -336,6 +343,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -381,6 +389,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {
@@ -424,6 +433,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
+          0,
           null,
           new JdbcAccessSecurityConfig()
           {

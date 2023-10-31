@@ -1033,14 +1033,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
         temporaryFolder.newFolder()
     );
-
-    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, reader::read);
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
-    MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(SdkClientException.class));
-    MatcherAssert.assertThat(
-        e.getCause().getCause().getMessage(),
-        CoreMatchers.startsWith("Data read has a different length than the expected")
-    );
+    try (CloseableIterator<InputRow> readerIterator = reader.read()) {
+      final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, readerIterator::hasNext);
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
+      MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(SdkClientException.class));
+      MatcherAssert.assertThat(
+          e.getCause().getCause().getMessage(),
+          CoreMatchers.startsWith("Data read has a different length than the expected")
+      );
+    }
 
     EasyMock.verify(S3_CLIENT);
   }

@@ -59,14 +59,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, null, 1, 0, null, null, null)
-        {
-          @Override
-          public String getDataSource()
-          {
-            return "foo";
-          }
-        }
+        NoopTask.forDatasource("foo")
     );
     Assert.assertEquals("localhost", worker.getWorker().getHost());
   }
@@ -96,7 +89,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, null, 1, 0, null, null, null)
+        NoopTask.create()
     );
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
@@ -119,7 +112,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, null, null, 1, 0, null, null, null)
+        NoopTask.create()
     );
     Assert.assertNull(worker);
   }

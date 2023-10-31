@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.StupidPool;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -34,6 +35,9 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
@@ -41,25 +45,22 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private QueryRunner<ResultRow> runner;
 
   @Before
@@ -132,10 +133,13 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         null
     );
 
-    expectedException.expect(UnsupportedOperationException.class);
-    expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query)).toList();
+    Throwable t = Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runner.run(QueryPlus.wrap(query)).toList()
+    );
+    Assert.assertEquals("Map column doesn't support getRow()", t.getMessage());
   }
+
 
   @Test
   public void testWithSubColumn()
@@ -163,6 +167,126 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         ),
         new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
     ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
+
+    Assert.assertEquals(expected, result);
+  }
+
+  @Test
+  public void testWithSubColumnWithFilter()
+  {
+    final GroupByQuery query = new GroupByQuery(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
+        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        new EqualityFilter("params.key3", ColumnType.STRING, "value3", null),
+        Granularities.ALL,
+        ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
+        ImmutableList.of(new CountAggregatorFactory("count")),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
+    final List<ResultRow> expected = ImmutableList.of(
+        new MapBasedRow(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            MapVirtualColumnTestBase.mapOf("count", 1L, "params.key3", "value3")
+        )
+    ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
+
+    Assert.assertEquals(expected, result);
+  }
+
+  @Test
+  public void testWithSubColumnWithPredicateFilter()
+  {
+    final GroupByQuery query = new GroupByQuery(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
+        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        new InDimFilter("params.key3", ImmutableList.of("value1", "value3"), null),
+        Granularities.ALL,
+        ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
+        ImmutableList.of(new CountAggregatorFactory("count")),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
+    final List<ResultRow> expected = ImmutableList.of(
+        new MapBasedRow(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            MapVirtualColumnTestBase.mapOf("count", 1L, "params.key3", "value3")
+        )
+    ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
+
+    Assert.assertEquals(expected, result);
+  }
+
+  @Test
+  public void testWithSubColumnWithNotFilter()
+  {
+    final GroupByQuery query = new GroupByQuery(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
+        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        NotDimFilter.of(new EqualityFilter("params.key3", ColumnType.STRING, "value3", null)),
+        Granularities.ALL,
+        ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
+        ImmutableList.of(new CountAggregatorFactory("count")),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
+    final List<ResultRow> expected;
+    if (NullHandling.sqlCompatible()) {
+      expected = Collections.emptyList();
+    } else {
+      expected = ImmutableList.of(
+          new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
+      ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
+    }
+
+    Assert.assertEquals(expected, result);
+  }
+
+  @Test
+  public void testWithSubColumnWithNotPredicateFilter()
+  {
+    final GroupByQuery query = new GroupByQuery(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
+        VirtualColumns.create(ImmutableList.of(new MapVirtualColumn("keys", "values", "params"))),
+        NotDimFilter.of(new InDimFilter("params.key3", ImmutableList.of("value1", "value3"), null)),
+        Granularities.ALL,
+        ImmutableList.of(new DefaultDimensionSpec("params.key3", "params.key3")),
+        ImmutableList.of(new CountAggregatorFactory("count")),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
+    final List<ResultRow> expected;
+    if (NullHandling.sqlCompatible()) {
+      expected = Collections.emptyList();
+    } else {
+      expected = ImmutableList.of(
+          new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
+      ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
+    }
 
     Assert.assertEquals(expected, result);
   }

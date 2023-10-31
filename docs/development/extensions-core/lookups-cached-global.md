@@ -352,6 +352,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`filter`|The filter to use when selecting lookups, this is used to create a where clause on lookup population|No|No Filter|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
+|`jitterSeconds`| How much jitter to add (in seconds) up to maximum as a delay (actual value will be used as random from 0 to `jitterSeconds`), used to distribute db load more evenly|No|0|
 |`maxHeapPercentage`|The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs.|No|10% of JVM heap size|
 
 ```json
@@ -367,6 +368,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
   "valueColumn":"the_new_dim_value",
   "tsColumn":"timestamp_column",
   "pollPeriod":600000,
+  "jitterSeconds": 120,
   "maxHeapPercentage": 10
 }
 ```

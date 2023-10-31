@@ -171,7 +171,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = nullIndex.get();
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.0, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     Assert.assertEquals(0, bitmap.size());
   }
 
@@ -190,21 +190,21 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("b");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.4, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 7, 8);
 
     // non-existent in local column
     columnIndex = valueSetIndex.forValue("fo");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.0, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     // set index
     columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("b", "fooo", "z")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.8, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 2, 3, 4, 5, 6, 7, 8);
   }
 
@@ -224,144 +224,144 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex forRange = rangeIndex.forRange(null, false, "a", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange(null, true, "a", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange(null, false, "b", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange(null, false, "b", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 7, 8);
 
 
     forRange = rangeIndex.forRange("a", false, "b", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange("a", true, "b", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 7, 8);
 
     forRange = rangeIndex.forRange("b", false, "fon", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 7, 8);
 
     forRange = rangeIndex.forRange("bb", false, "fon", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange("b", true, "foo", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 9);
 
     forRange = rangeIndex.forRange("f", true, "g", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 5, 9);
 
     forRange = rangeIndex.forRange(null, false, "g", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.8, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 5, 7, 8, 9);
 
     forRange = rangeIndex.forRange("f", false, null, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 6, 9);
 
     forRange = rangeIndex.forRange("b", true, "fooo", true);
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 9);
 
     forRange = rangeIndex.forRange("b", true, "fooo", false);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 5, 9);
 
     forRange = rangeIndex.forRange(null, true, "fooo", true);
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 3, 7, 8, 9);
 
     forRange = rangeIndex.forRange("b", true, null, false);
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 6, 9);
 
     forRange = rangeIndex.forRange("b", false, null, true);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
     forRange = rangeIndex.forRange(null, true, "fooo", false);
     Assert.assertEquals(0.8, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 5, 7, 8, 9);
 
     forRange = rangeIndex.forRange(null, true, null, true);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
     forRange = rangeIndex.forRange(null, false, null, false);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
     forRange = rangeIndex.forRange(null, true, "foa", false);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 7, 8);
 
     forRange = rangeIndex.forRange(null, true, "foooa", false);
     Assert.assertEquals(0.8, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 5, 7, 8, 9);
 
     forRange = rangeIndex.forRange("foooa", true, "ggg", false);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange("g", true, "gg", false);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange("z", true, "zz", false);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange("z", false, "zz", false);
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 4, 6);
   }
 
@@ -385,7 +385,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         s -> !"fooo".equals(s)
     );
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 9);
 
     forRange = rangeIndex.forRange(
@@ -396,7 +396,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         s -> "fooo".equals(s)
     );
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 5);
 
     forRange = rangeIndex.forRange(
@@ -407,7 +407,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         s -> !"fooo".equals(s)
     );
     Assert.assertEquals(0.8, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 3, 4, 6, 7, 8, 9);
 
     forRange = rangeIndex.forRange(
@@ -418,7 +418,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         s -> !"fooo".equals(s)
     );
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 3, 7, 8, 9);
 
     forRange = rangeIndex.forRange(
@@ -429,7 +429,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         s -> true
     );
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 6, 9);
   }
 
@@ -442,7 +442,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("b", "z"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("b", "z"))
     );
 
     // 10 rows
@@ -452,7 +452,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = predicateIndex.forPredicate(predicateFactory);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.6, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 4, 6, 7, 8);
   }
 
@@ -471,7 +471,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = nullIndex.get();
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 7, 8);
   }
 
@@ -490,21 +490,21 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("b");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.1, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 3);
 
     // non-existent in local column
     columnIndex = valueSetIndex.forValue("fo");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.0, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     // set index
     columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("b", "fooo", "z")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.5, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 3, 4, 5, 6);
   }
 
@@ -524,77 +524,77 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 5, 9);
 
     forRange = rangeIndex.forRange(null, false, "g", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.5, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 3, 5, 9);
 
     forRange = rangeIndex.forRange(null, false, "a", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange(null, false, "b", true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndex.forRange(null, false, "b", false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.1, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 3);
 
     forRange = rangeIndex.forRange("f", false, null, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 6, 9);
 
     forRange = rangeIndex.forRange("b", true, "fooo", true);
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 9);
 
     forRange = rangeIndex.forRange("b", true, "fooo", false);
     Assert.assertEquals(0.4, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 5, 9);
 
     forRange = rangeIndex.forRange(null, true, "fooo", true);
     Assert.assertEquals(0.3, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 3, 9);
 
     forRange = rangeIndex.forRange("b", true, null, false);
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 6, 9);
 
     forRange = rangeIndex.forRange("b", false, null, true);
     Assert.assertEquals(0.7, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 3, 4, 5, 6, 9);
 
     forRange = rangeIndex.forRange(null, true, "fooo", false);
     Assert.assertEquals(0.5, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 3, 5, 9);
 
     forRange = rangeIndex.forRange(null, true, null, true);
     Assert.assertEquals(0.7, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 3, 4, 5, 6, 9);
 
     forRange = rangeIndex.forRange(null, false, null, false);
     Assert.assertEquals(0.7, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 3, 4, 5, 6, 9);
   }
 
@@ -607,7 +607,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("b", "z"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("b", "z"))
     );
 
     // 10 rows
@@ -617,7 +617,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = predicateIndex.forPredicate(predicateFactory);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 3, 4, 6);
   }
 
@@ -639,14 +639,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("1");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 9);
 
     // set index
     columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("1", "300", "700")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.6, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 2, 3, 7, 8, 9);
   }
 
@@ -666,56 +666,56 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.5, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 6, 7, 8);
 
     forRange = rangeIndexes.forRange(1, true, 3, true);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(1, false, 3, true);
     Assert.assertEquals(0.3, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 9);
 
     forRange = rangeIndexes.forRange(1, false, 3, false);
     Assert.assertEquals(0.5, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 4, 5, 9);
 
 
     forRange = rangeIndexes.forRange(100L, true, 300L, true);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
 
     forRange = rangeIndexes.forRange(100L, true, 300L, false);
     Assert.assertEquals(0.3, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 7, 8);
 
 
     forRange = rangeIndexes.forRange(100L, false, 300L, true);
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 6);
 
 
     forRange = rangeIndexes.forRange(100L, false, 300L, false);
     Assert.assertEquals(0.5, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 6, 7, 8);
 
     forRange = rangeIndexes.forRange(null, true, null, true);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(null, false, null, false);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
   }
 
@@ -728,7 +728,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("1", "3"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("1", "3"))
     );
 
     // 10 rows
@@ -738,7 +738,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = predicateIndex.forPredicate(predicateFactory);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.5, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 4, 5, 9);
   }
 
@@ -757,7 +757,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = nullIndex.get();
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 5, 8);
   }
 
@@ -776,14 +776,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("3");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.1, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 4);
 
     // set index
     columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("1", "3", "300")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.5, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 4, 7, 9);
 
     // set index with null
@@ -795,14 +795,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     columnIndex = valueSetIndex.forSortedValues(treeSet);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.8, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 2, 3, 4, 5, 7, 8, 9);
 
     // null value should really use NullValueIndex, but this works for classic reasons
     columnIndex = valueSetIndex.forValue(null);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 5, 8);
   }
 
@@ -822,52 +822,52 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.3, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 6, 7);
 
     forRange = rangeIndexes.forRange(100, true, 300, true);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(100, false, 300, true);
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 6);
 
     forRange = rangeIndexes.forRange(100, true, 300, false);
     Assert.assertEquals(0.1, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 7);
 
     forRange = rangeIndexes.forRange(100, false, 300, false);
     Assert.assertEquals(0.3, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 6, 7);
 
     forRange = rangeIndexes.forRange(null, true, null, true);
     Assert.assertEquals(0.7, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 3, 4, 6, 7, 9);
 
     forRange = rangeIndexes.forRange(null, false, null, false);
     Assert.assertEquals(0.7, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 3, 4, 6, 7, 9);
 
     forRange = rangeIndexes.forRange(null, false, 0, false);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(null, false, 1, false);
     Assert.assertEquals(0.3, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 9);
 
     forRange = rangeIndexes.forRange(null, false, 1, true);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
   }
 
@@ -880,7 +880,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("3", "100"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("3", "100"))
     );
 
     // 10 rows
@@ -890,7 +890,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = predicateIndex.forPredicate(predicateFactory);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 4, 6);
   }
 
@@ -912,14 +912,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("1.2");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 4, 7);
 
     // set index
     columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("1.2", "3.3", "6.6")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.7, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 3, 4, 5, 6, 7, 9);
   }
 
@@ -939,80 +939,80 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.9, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 6, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(1.1, false, 3.3, false);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.9, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 6, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(1.1, true, 3.3, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.3, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 4, 7);
 
     forRange = rangeIndexes.forRange(null, true, null, true);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(null, false, null, false);
     Assert.assertEquals(1.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(1.111, true, 1.19, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(1.01, true, 1.09, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(0.05, true, 0.98, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(0.05, true, 1.1, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(8.99, true, 10.10, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(8.99, true, 10.10, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(10.00, true, 10.10, true);
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
   }
 
@@ -1025,7 +1025,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("1.2", "3.3", "5.0"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("1.2", "3.3", "5.0"))
     );
 
     // 10 rows
@@ -1035,7 +1035,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = predicateIndex.forPredicate(predicateFactory);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.6, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 3, 4, 6, 7, 9);
   }
 
@@ -1054,7 +1054,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = nullIndex.get();
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 6);
   }
 
@@ -1073,14 +1073,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("6.6");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.1, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 5);
 
     // set index
     columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("1.2", "3.3", "7.7")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.4, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 4, 7, 9);
 
     // set index with null
@@ -1092,14 +1092,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     columnIndex = valueSetIndex.forSortedValues(treeSet);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.7, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 2, 3, 4, 6, 7, 9);
 
     // null value should really use NullValueIndex, but this works for classic reasons
     columnIndex = valueSetIndex.forValue(null);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 6);
   }
 
@@ -1119,37 +1119,37 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(forRange);
     Assert.assertEquals(0.6, forRange.estimateSelectivity(ROW_COUNT), 0.0);
 
-    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(null, true, null, true);
     Assert.assertEquals(0.7, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(null, false, null, false);
     Assert.assertEquals(0.7, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 7, 8, 9);
 
     forRange = rangeIndexes.forRange(null, true, 1.0, true);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
 
     forRange = rangeIndexes.forRange(null, true, 1.1, false);
     Assert.assertEquals(0.2, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 8);
 
     forRange = rangeIndexes.forRange(6.6, false, null, false);
     Assert.assertEquals(0.1, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 5);
 
     forRange = rangeIndexes.forRange(6.6, true, null, false);
     Assert.assertEquals(0.0, forRange.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = forRange.computeBitmapResult(bitmapResultFactory);
+    bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
   }
 
@@ -1162,7 +1162,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("1.2", "3.3"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("1.2", "3.3"))
     );
 
     // 10 rows
@@ -1172,7 +1172,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = predicateIndex.forPredicate(predicateFactory);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.4, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 4, 7, 9);
   }
 
@@ -1194,7 +1194,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = nullIndex.get();
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.2, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 7);
   }
 
@@ -1213,26 +1213,26 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("b");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.2, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 9);
 
     columnIndex = valueSetIndex.forValue("1");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.2, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 5);
 
     columnIndex = valueSetIndex.forValue("1.1");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.1, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 8);
 
     // set index
     columnIndex = valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of("b", "300", "9.9", "1.6")));
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.4, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 4, 9);
 
     // set index with null
@@ -1245,14 +1245,14 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     columnIndex = valueSetIndex.forSortedValues(treeSet);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.6, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 2, 3, 4, 7, 9);
 
     // null value should really use NullValueIndex, but this works for classic reasons
     columnIndex = valueSetIndex.forValue(null);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.2, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 7);
   }
 
@@ -1277,7 +1277,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(predicateIndex);
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("b", "z", "9.9", "300"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("b", "z", "9.9", "300"))
     );
 
     // 10 rows
@@ -1287,7 +1287,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = predicateIndex.forPredicate(predicateFactory);
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.5, columnIndex.estimateSelectivity(ROW_COUNT), 0.0);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 1, 3, 4, 6, 9);
   }
 
@@ -1443,19 +1443,19 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     BitmapColumnIndex columnIndex = valueSetIndex.forValue("1");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3333, columnIndex.estimateSelectivity(3), 0.001);
-    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    ImmutableBitmap bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0);
 
     columnIndex = valueSetIndex.forValue("-2");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.3333, columnIndex.estimateSelectivity(3), 0.001);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2);
 
     columnIndex = valueSetIndex.forValue("2");
     Assert.assertNotNull(columnIndex);
     Assert.assertEquals(0.0, columnIndex.estimateSelectivity(3), 0.0);
-    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory);
+    bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
   }
 
@@ -1485,7 +1485,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     // circuit early and return nothing
     DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
         null,
-        new InDimFilter.ValuesSet(ImmutableSet.of("0"))
+        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("0"))
     );
     Assert.assertNull(singleTypeStringSupplier.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));
     Assert.assertNull(singleTypeLongSupplier.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));

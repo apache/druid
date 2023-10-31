@@ -53,7 +53,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- *
+ * Logical AND filter operation
  */
 public class AndFilter implements BooleanFilter
 {
@@ -80,7 +80,7 @@ public class AndFilter implements BooleanFilter
   )
   {
     return bitmapResultFactory.toImmutableBitmap(
-        getBitmapIndex(selector, filters).computeBitmapResult(bitmapResultFactory)
+        getBitmapIndex(selector, filters).computeBitmapResult(bitmapResultFactory, false)
     );
   }
 
@@ -126,11 +126,11 @@ public class AndFilter implements BooleanFilter
       }
 
       @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
         for (final BitmapColumnIndex index : bitmapColumnIndices) {
-          final T bitmapResult = index.computeBitmapResult(bitmapResultFactory);
+          final T bitmapResult = index.computeBitmapResult(bitmapResultFactory, includeUnknown);
           if (bitmapResultFactory.isEmpty(bitmapResult)) {
             // Short-circuit.
             return bitmapResultFactory.wrapAllFalse(
@@ -196,7 +196,7 @@ public class AndFilter implements BooleanFilter
     for (Filter filter : filters) {
       final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
       if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
-        bitmaps.add(columnIndex.computeBitmapResult(resultFactory));
+        bitmaps.add(columnIndex.computeBitmapResult(resultFactory, false));
       } else {
         ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
         matchers.add(matcher);
@@ -256,10 +256,10 @@ public class AndFilter implements BooleanFilter
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         for (ValueMatcher matcher : baseMatchers) {
-          if (!matcher.matches()) {
+          if (!matcher.matches(includeUnknown)) {
             return false;
           }
         }
@@ -287,7 +287,7 @@ public class AndFilter implements BooleanFilter
     return new BaseVectorValueMatcher(baseMatchers[0])
     {
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         ReadableVectorMatch match = mask;
 
@@ -297,7 +297,7 @@ public class AndFilter implements BooleanFilter
             break;
           }
 
-          match = matcher.match(match);
+          match = matcher.match(match, includeUnknown);
         }
 
         assert match.isValid(mask);
