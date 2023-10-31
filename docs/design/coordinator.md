@@ -64,7 +64,7 @@ org.apache.druid.cli.Main server coordinator
 
 Segments can be automatically loaded and dropped from the cluster based on a set of rules. For more information on rules, see [Rule Configuration](../operations/rule-configuration.md).
 
-### Cleaning up segments
+### Cleaning up overshadowed segments
 
 On each run, the Druid Coordinator compares the set of used segments in the database with the segments served by some
 Historical nodes in the cluster. Coordinator sends requests to Historical nodes to unload unused segments or segments
@@ -72,6 +72,13 @@ that are removed from the database.
 
 Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are
 marked as unused. During the next Coordinator's run, they will be unloaded from Historical nodes in the cluster.
+
+### Cleaning up dangling tombstone segments
+
+On each run, the Druid coordinator will clean up any dangling tombstone segments.
+Dangling tombstones have eternity as their start or end -- for example,
+segments with an interval of `-146136543-09-08T08:23:32.096Z/2000-01-01` or `2020-01-01/146140482-04-24T15:36:27.903Z`.
+The coordinator will drop a dangling segment if its interval doesn't overlap with any overshadowed segment.
 
 ### Segment availability
 
