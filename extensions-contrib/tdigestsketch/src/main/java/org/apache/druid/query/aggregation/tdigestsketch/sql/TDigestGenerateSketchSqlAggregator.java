@@ -25,7 +25,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -143,17 +142,15 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.OTHER),
           null,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              // Validation for signatures like 'TDIGEST_GENERATE_SKETCH(column, compression)'
-              DefaultOperandTypeChecker
-                  .builder()
-                  .operandNames("column", "compression")
-                  .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-                  .requiredOperandCount(2)
-                  .literalOperands(1)
-                  .build()
-          ),
+          // Validation for signatures like 'TDIGEST_GENERATE_SKETCH(column)' and
+          // 'TDIGEST_GENERATE_SKETCH(column, compression)'
+          DefaultOperandTypeChecker
+              .builder()
+              .operandNames("column", "compression")
+              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              .requiredOperandCount(1)
+              .literalOperands(1)
+              .build(),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
           false,
