@@ -392,6 +392,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       return new ExternalColumnSelectorFactory(
           baseColumnSelectorFactory,
           ((ExternalSegment) segment).externalInputSource(),
+          ((ExternalSegment) segment).signature(),
           cursorOffset
       );
     }

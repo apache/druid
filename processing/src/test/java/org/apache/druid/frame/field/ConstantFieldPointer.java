@@ -22,15 +22,23 @@ package org.apache.druid.frame.field;
 public class ConstantFieldPointer implements ReadableFieldPointer
 {
   private final long position;
+  private final long length;
 
-  public ConstantFieldPointer(long position)
+  public ConstantFieldPointer(long position, long length)
   {
     this.position = position;
+    this.length = length;
   }
 
   @Override
   public long position()
   {
     return position;
+  }
+
+  @Override
+  public long length()
+  {
+    return length;
   }
 }

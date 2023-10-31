@@ -89,7 +89,7 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultLongValue());
 
     final ColumnValueSelector<?> readSelector =
-        LongFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        LongFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 
@@ -104,7 +104,7 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5L);
 
     final ColumnValueSelector<?> readSelector =
-        LongFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        LongFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(5L, readSelector.getObject());
   }
@@ -115,7 +115,8 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultLongValue());
 
     final DimensionSelector readSelector =
-        LongFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        LongFieldReader.forPrimitive()
+                       .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -149,7 +150,8 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5L);
 
     final DimensionSelector readSelector =
-        LongFieldReader.forPrimitive().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        LongFieldReader.forPrimitive()
+                       .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -178,7 +180,7 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
     final DimensionSelector readSelector =
         LongFieldReader.forPrimitive().makeDimensionSelector(
             memory,
-            new ConstantFieldPointer(MEMORY_POSITION),
+            new ConstantFieldPointer(MEMORY_POSITION, -1),
             new SubstringDimExtractionFn(1, null)
         );
 

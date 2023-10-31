@@ -186,7 +186,7 @@ public class ExpressionFilter implements Filter
               return Arrays.stream(dResult).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
           }
         }
-        return (includeUnknown && eval.value() == null) || eval.asBoolean();
+        return eval.asBoolean();
       }
 
       @Override

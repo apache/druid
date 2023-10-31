@@ -143,9 +143,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.singletonList("foo"));
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals("foo", readSelector.getObject());
     Assert.assertArrayEquals(new Object[]{"foo"}, (Object[]) readSelectorAsArray.getObject());
@@ -157,9 +157,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(ImmutableList.of("foo", "bar"));
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(ImmutableList.of("foo", "bar"), readSelector.getObject());
     Assert.assertArrayEquals(new Object[]{"foo", "bar"}, (Object[]) readSelectorAsArray.getObject());
@@ -171,9 +171,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.singletonList(null));
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertNull(readSelector.getObject());
     Assert.assertArrayEquals(new Object[]{null}, (Object[]) readSelectorAsArray.getObject());
@@ -185,9 +185,9 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(Collections.emptyList());
 
     final ColumnValueSelector<?> readSelector =
-        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
     final ColumnValueSelector<?> readSelectorAsArray =
-        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new StringArrayFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertNull(readSelector.getObject());
     Assert.assertArrayEquals(ObjectArrays.EMPTY_ARRAY, (Object[]) readSelectorAsArray.getObject());
@@ -200,7 +200,11 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
 
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        () -> new StringArrayFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null)
+        () -> new StringArrayFieldReader().makeDimensionSelector(
+            memory,
+            new ConstantFieldPointer(MEMORY_POSITION, -1),
+            null
+        )
     );
 
     MatcherAssert.assertThat(
@@ -215,7 +219,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(ImmutableList.of("foo", "bar"));
 
     final DimensionSelector readSelector =
-        new StringFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        new StringFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -247,7 +251,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
     final DimensionSelector readSelector =
         new StringFieldReader().makeDimensionSelector(
             memory,
-            new ConstantFieldPointer(MEMORY_POSITION),
+            new ConstantFieldPointer(MEMORY_POSITION, -1),
             new SubstringDimExtractionFn(1, null)
         );
 

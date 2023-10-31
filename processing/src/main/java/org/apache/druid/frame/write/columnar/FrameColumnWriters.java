@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.write.columnar;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.ISE;
@@ -167,9 +166,7 @@ public class FrameColumnWriters
 
   private static boolean hasNullsForNumericWriter(final ColumnCapabilities capabilities)
   {
-    if (NullHandling.replaceWithDefault()) {
-      return false;
-    } else if (capabilities == null) {
+    if (capabilities == null) {
       return true;
     } else if (capabilities.getType().isNumeric()) {
       return capabilities.hasNulls().isMaybeTrue();

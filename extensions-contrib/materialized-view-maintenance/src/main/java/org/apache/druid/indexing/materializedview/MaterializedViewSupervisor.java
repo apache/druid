@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -296,6 +297,12 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
+  public Set<String> getActiveRealtimeSequencePrefixes()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public int getActiveTaskGroupsCount()
   {
     throw new UnsupportedOperationException("Get Active Task Groups Count is not supported in MaterializedViewSupervisor");
@@ -364,7 +371,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
         getMaxCreateDateAndBaseSegments(
-            metadataStorageCoordinator.retrieveUsedSegmentsAndCreatedDates(spec.getBaseDataSource())
+            metadataStorageCoordinator.retrieveUsedSegmentsAndCreatedDates(spec.getBaseDataSource(), Intervals.ETERNITY)
         );
     // baseSegments are used to create HadoopIndexTask
     Map<Interval, List<DataSegment>> baseSegments = baseSegmentsSnapshot.rhs;

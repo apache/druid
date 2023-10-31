@@ -30,11 +30,13 @@ import java.util.List;
 public class IndexArrayFieldPointer implements ReadableFieldPointer
 {
   private final LongArrayList indices;
+  private final LongArrayList lengths;
   private int pointer = 0;
 
-  public IndexArrayFieldPointer(final List<Long> indices)
+  public IndexArrayFieldPointer(final List<Long> indices, final List<Long> lengths)
   {
     this.indices = new LongArrayList(indices);
+    this.lengths = new LongArrayList(lengths);
   }
 
   private int numIndices()
@@ -52,5 +54,11 @@ public class IndexArrayFieldPointer implements ReadableFieldPointer
   public long position()
   {
     return indices.getLong(pointer);
+  }
+
+  @Override
+  public long length()
+  {
+    return lengths.getLong(pointer);
   }
 }

@@ -389,7 +389,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertNotNull(actual);
     Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
     Assert.assertArrayEquals(new Object[]{1L, 2L, null, 3L}, (Object[]) actual.getRaw("dim"));
-    Assert.assertArrayEquals(new String[]{"1", "2", null, "3"}, actual.getDimension("dim").toArray());
+    Assert.assertEquals(ImmutableList.of("1", "2", "null", "3"), actual.getDimension("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 
@@ -416,9 +416,9 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(2.3, (Double) raw[1], 0.00001);
     Assert.assertNull(raw[2]);
     Assert.assertEquals(3.4, (Double) raw[3], 0.00001);
-    Assert.assertArrayEquals(
-        new String[]{"1.2000000476837158", "2.299999952316284", null, "3.4000000953674316"},
-        actual.getDimension("dim").toArray()
+    Assert.assertEquals(
+        ImmutableList.of("1.2000000476837158", "2.299999952316284", "null", "3.4000000953674316"),
+        actual.getDimension("dim")
     );
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
@@ -445,12 +445,12 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(2.3, (Double) raw[1], 0.0);
     Assert.assertNull(raw[2]);
     Assert.assertEquals(3.4, (Double) raw[3], 0.0);
-    Assert.assertArrayEquals(new String[]{"1.2", "2.3", null, "3.4"}, actual.getDimension("dim").toArray());
+    Assert.assertEquals(ImmutableList.of("1.2", "2.3", "null", "3.4"), actual.getDimension("dim"));
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 
   @Test
-  public void testTransformWithExpr()
+  public void testTransformWithArrayExpr()
   {
     final Transformer transformer = new Transformer(
         new TransformSpec(
@@ -517,6 +517,6 @@ public class TransformerTest extends InitializedNullHandlingTest
     });
     Assert.assertEquals(actualTranformedRow.getDimension("dim"), dimList.subList(0, 5));
     Assert.assertArrayEquals(dimList.subList(0, 5).toArray(), (Object[]) actualTranformedRow.getRaw("dim"));
-    Assert.assertArrayEquals(new Object[]{"a"}, actualTranformedRow.getDimension("dim1").toArray());
+    Assert.assertEquals(ImmutableList.of("a"), actualTranformedRow.getDimension("dim1"));
   }
 }

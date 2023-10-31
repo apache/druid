@@ -45,6 +45,8 @@ import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.IsFalseDimFilter;
+import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -379,22 +381,47 @@ public class Expressions
   {
     final SqlKind kind = expression.getKind();
 
-    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
-      return toFilter(
-          plannerContext,
-          rowSignature,
-          virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) expression).getOperands())
-      );
-    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
-      return new NotDimFilter(
-          toFilter(
+    if (kind == SqlKind.IS_TRUE
+        || kind == SqlKind.IS_NOT_TRUE
+        || kind == SqlKind.IS_FALSE
+        || kind == SqlKind.IS_NOT_FALSE) {
+      if (NullHandling.useThreeValueLogic()) {
+        final DimFilter baseFilter = toFilter(
+            plannerContext,
+            rowSignature,
+            virtualColumnRegistry,
+            Iterables.getOnlyElement(((RexCall) expression).getOperands())
+        );
+
+        if (kind == SqlKind.IS_TRUE) {
+          return IsTrueDimFilter.of(baseFilter);
+        } else if (kind == SqlKind.IS_NOT_TRUE) {
+          return NotDimFilter.of(IsTrueDimFilter.of(baseFilter));
+        } else if (kind == SqlKind.IS_FALSE) {
+          return IsFalseDimFilter.of(baseFilter);
+        } else { // SqlKind.IS_NOT_FALSE
+          return NotDimFilter.of(IsFalseDimFilter.of(baseFilter));
+        }
+      } else {
+        // legacy behavior
+        if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+          return toFilter(
               plannerContext,
               rowSignature,
               virtualColumnRegistry,
               Iterables.getOnlyElement(((RexCall) expression).getOperands())
-          )
-      );
+          );
+        } else { // SqlKind.IS_FALSE || SqlKind.IS_NOT_TRUE
+          return new NotDimFilter(
+              toFilter(
+                  plannerContext,
+                  rowSignature,
+                  virtualColumnRegistry,
+                  Iterables.getOnlyElement(((RexCall) expression).getOperands())
+              )
+          );
+        }
+      }
     } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
       return toFilter(
@@ -403,9 +430,7 @@ public class Expressions
           virtualColumnRegistry,
           Iterables.getOnlyElement(((RexCall) expression).getOperands())
       );
-    } else if (kind == SqlKind.AND
-               || kind == SqlKind.OR
-               || kind == SqlKind.NOT) {
+    } else if (kind == SqlKind.AND || kind == SqlKind.OR || kind == SqlKind.NOT) {
       final List<DimFilter> filters = new ArrayList<>();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(
@@ -424,8 +449,7 @@ public class Expressions
         return new AndDimFilter(filters);
       } else if (kind == SqlKind.OR) {
         return new OrDimFilter(filters);
-      } else {
-        assert kind == SqlKind.NOT;
+      } else { // SqlKind.NOT
         return new NotDimFilter(Iterables.getOnlyElement(filters));
       }
     } else {
@@ -488,6 +512,11 @@ public class Expressions
     final SqlKind kind = rexNode.getKind();
 
     if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+      if (NullHandling.useThreeValueLogic()) {
+        // use expression filter to get istrue or notfalse expressions for correct 3vl behavior
+        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+      }
+      // legacy behavior
       return toSimpleLeafFilter(
           plannerContext,
           rowSignature,
@@ -495,6 +524,11 @@ public class Expressions
           Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
       );
     } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+      if (NullHandling.useThreeValueLogic()) {
+        // use expression filter to get isfalse or nottrue expressions for correct 3vl behavior
+        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+      }
+      // legacy behavior
       return new NotDimFilter(
           toSimpleLeafFilter(
               plannerContext,
