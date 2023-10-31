@@ -27,6 +27,7 @@ import com.google.common.base.Function;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
@@ -36,7 +37,11 @@ import org.apache.druid.timeline.LogicalSegment;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
 /**
@@ -290,6 +295,20 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
   {
     return segments;
+  }
+
+  public <S extends Comparable<?>, T> Map<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> decorateBySegmentsChunk(
+      QueryPlus<T> queryPlus,
+      Map<S, List<SegmentDescriptor>> serverAndSegments,
+      int numCorePartitions,
+      List<String> domainDimensions
+  )
+  {
+    final SortedMap<S, Pair<List<SegmentDescriptor>, QueryPlus<T>>> serverSegments = new TreeMap<>();
+    for (Entry<S, List<SegmentDescriptor>> entry : serverAndSegments.entrySet()) {
+      serverSegments.put(entry.getKey(), Pair.of(entry.getValue(), queryPlus));
+    }
+    return serverSegments;
   }
 
   /**

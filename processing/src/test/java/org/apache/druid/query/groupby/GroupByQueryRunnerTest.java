@@ -5344,7 +5344,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery expressionQuery = query.withPostAggregatorSpecs(
         Collections.singletonList(
             new ExpressionPostAggregator("rows_times_10", "rows * 10.0", null, TestExprMacroTable.INSTANCE)
-        )
+        ),
+        null
     );
 
     List<ResultRow> expectedResults = Arrays.asList(
