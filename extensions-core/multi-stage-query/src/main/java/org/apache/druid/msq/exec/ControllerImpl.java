@@ -69,6 +69,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
+import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -1197,8 +1198,16 @@ public class ControllerImpl implements Controller
       }
 
       // Fetch all published, used segments (all non-realtime segments) from the metadata store.
-      final Collection<DataSegment> publishedUsedSegments =
-          FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
+      final Collection<DataSegment> publishedUsedSegments = new HashSet<>();
+      for (Interval interval : intervals) {
+        RetrieveSegmentsToReplaceAction action = new RetrieveSegmentsToReplaceAction(dataSource, interval);
+        try {
+          publishedUsedSegments.addAll(context.taskActionClient().submit(action));
+        }
+        catch (IOException e) {
+          return Optional.empty();
+        }
+      }
 
       int realtimeCount = 0;
 
