@@ -2323,3 +2323,5 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
