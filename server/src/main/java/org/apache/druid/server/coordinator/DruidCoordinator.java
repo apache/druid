@@ -516,7 +516,7 @@ public class DruidCoordinator
         new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(segments -> metadataManager.segments().markSegmentsAsUnused(segments)),
-        new MarkDanglingTombstonesAsUnused(metadataManager.segments()),
+        new MarkDanglingTombstonesAsUnused(segments -> metadataManager.segments().markSegmentsAsUnused(segments)),
         new BalanceSegments(config.getCoordinatorPeriod()),
         new CollectSegmentAndServerStats(taskMaster)
     );

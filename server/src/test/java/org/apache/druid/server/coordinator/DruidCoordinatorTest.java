@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -846,10 +845,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock
         .expect(segmentsMetadataManager.retrieveAllDataSourceNames())
         .andReturn(Collections.singleton(dataSource.getName()))
-        .anyTimes();
-    EasyMock
-        .expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(dataSource.getName(), Intervals.ETERNITY, false))
-        .andReturn(Optional.absent())
         .anyTimes();
     EasyMock.replay(segmentsMetadataManager);
 

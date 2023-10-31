@@ -52,7 +52,6 @@ import java.util.Set;
 @RunWith(JUnitParamsRunner.class)
 public class MarkDanglingSegmentsAsUnusedTest
 {
-
   private final String dataSource = "test";
   private final DataSegment eternitySegmentV0 = DataSegment.builder().dataSource(dataSource)
                                                            .interval(Intervals.ETERNITY)
@@ -138,7 +137,7 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(timeline.isOvershadowed(tombstoneSegment2V1));
 
 
-    params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager).run(params);
+    params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
 
     Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
     Assert.assertEquals(4, updatedUsedSegments.size());
@@ -152,7 +151,7 @@ public class MarkDanglingSegmentsAsUnusedTest
 
   @Test
   @Parameters({"historical", "broker"})
-  public void testDanglingTombstonesWithNoOvershadowedSegment(final String serverType)
+  public void testDanglingTombstonesWithNoOvershadowedSegments(final String serverType)
   {
     segmentsMetadataManager.addSegment(tombstoneSegment1V1);
     segmentsMetadataManager.addSegment(dataSegmentV1);
@@ -191,7 +190,7 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(timeline.isOvershadowed(dataSegmentV1));
     Assert.assertFalse(timeline.isOvershadowed(tombstoneSegment1V2));
 
-    params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager).run(params);
+    params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
 
     Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
     Assert.assertEquals(1, updatedUsedSegments.size());
@@ -245,14 +244,13 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get(dataSource);
 
-
     Assert.assertTrue(timeline.isOvershadowed(tombstoneSegment1V1));
     Assert.assertTrue(timeline.isOvershadowed(tombstoneSegment2V1));
     Assert.assertFalse(timeline.isOvershadowed(dataSegmentV1));
     Assert.assertFalse(timeline.isOvershadowed(tombstoneSegment1V2));
     Assert.assertFalse(timeline.isOvershadowed(tombstoneSegment2V2));
 
-    params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager).run(params);
+    params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
 
     Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
     Assert.assertEquals(5, updatedUsedSegments.size());

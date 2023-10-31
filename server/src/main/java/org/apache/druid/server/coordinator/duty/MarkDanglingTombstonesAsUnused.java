@@ -20,18 +20,18 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentTimeline;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,11 +47,11 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
 {
   private static final Logger log = new Logger(MarkDanglingTombstonesAsUnused.class);
 
-  private final SegmentsMetadataManager segmentsMetadataManager;
+  private final SegmentDeleteHandler deleteHandler;
 
-  public MarkDanglingTombstonesAsUnused(final SegmentsMetadataManager metadataManager)
+  public MarkDanglingTombstonesAsUnused(final SegmentDeleteHandler deleteHandler)
   {
-    this.segmentsMetadataManager = metadataManager;
+    this.deleteHandler = deleteHandler;
   }
 
   @Override
@@ -59,33 +59,22 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
   {
     DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
 
-    final Map<String, Set<DataSegment>> datasourceToDanglingTombstones = getDatasourceToNonOvershadowedDanglingTombstones(
-        dataSourcesSnapshot.getDataSourcesMap().keySet()
-    );
+    final Map<String, Set<SegmentId>> datasourceToDanglingTombstones = determineDanglingTombstones(dataSourcesSnapshot);
 
     if (datasourceToDanglingTombstones.size() == 0) {
-      log.info("No dangling tombstones found!");
+      log.debug("No dangling tombstones found.");
       return params;
     }
 
-    log.debug("DatasourceToDanglingSegments size[%d] - [%s]",
-             datasourceToDanglingTombstones.size(), datasourceToDanglingTombstones
-    );
-
-    final Map<String, Set<SegmentId>> datasourceToUnusedDanglingTombstones = getDatasourceToUnusedDanglingTombstones(
-        datasourceToDanglingTombstones,
-        dataSourcesSnapshot.getOvershadowedSegments()
-    );
-
-    log.debug("DatasourceToUnusedDanglingTombstones size[%d] - [%s]",
-             datasourceToUnusedDanglingTombstones.size(), datasourceToUnusedDanglingTombstones
+    log.debug("Found [%d] datasource dangling tombstones  [%s]",
+              datasourceToDanglingTombstones.size(), datasourceToDanglingTombstones
     );
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    datasourceToUnusedDanglingTombstones.forEach((datasource, unusedSegments) -> {
+    datasourceToDanglingTombstones.forEach((datasource, unusedSegments) -> {
       RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
       stats.add(Stats.Segments.DANGLING_TOMBSTONE, datasourceKey, unusedSegments.size());
-      int unusedCount = segmentsMetadataManager.markSegmentsAsUnused(unusedSegments);
+      int unusedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
       log.info(
           "Successfully marked [%d] dangling tombstones as unused for datasource[%s].",
           unusedCount,
@@ -96,52 +85,53 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
     return params;
   }
 
-  private Map<String, Set<DataSegment>> getDatasourceToNonOvershadowedDanglingTombstones(final Set<String> datasources)
+  /**
+   * Computes the set of dangling tombstones using the datasource snapshot.
+   *
+   * <li> Determine the set of used and non-overshadowed segments from the used segments' timeline. </li>
+   * <li> For each such segment that is dangling, look at the set of overshadowed segments to see if the intervals overlap.
+   *   There can at most be two such dangling tombstones per datasource. </li>
+   * <li> If there is no overlap, add it to the result set to be marked as unused. </li>
+   *</p>
+   * @param dataSourcesSnapshot the datasources snapshot for segments timeline and overshadowed segments
+   * @return the set of dangling tombstones grouped by datasource
+   */
+  private Map<String, Set<SegmentId>> determineDanglingTombstones(final DataSourcesSnapshot dataSourcesSnapshot)
   {
-    final Map<String, Set<DataSegment>> datasourceToDanglingSegments = new HashMap<>();
-    datasources.forEach((datasource) -> {
-      Optional<Iterable<DataSegment>> usedNonOvershadowedSegments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
-          datasource,
-          Intervals.ETERNITY,
-          false
-      );
+    final Map<String, Set<SegmentId>> datasourceToDanglingTombstones = new HashMap<>();
+
+    dataSourcesSnapshot.getDataSourcesMap().keySet().forEach((datasource) -> {
+      final SegmentTimeline usedSegmentsTimeline
+          = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
+
+      final Optional<Set<DataSegment>> usedNonOvershadowedSegments =
+          Optional.fromNullable(usedSegmentsTimeline)
+                  .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(
+                      Intervals.ETERNITY,
+                      Partitions.ONLY_COMPLETE
+                  ));
 
       if (usedNonOvershadowedSegments.isPresent()) {
         usedNonOvershadowedSegments.get().forEach(usedNonOvershadowedSegment -> {
           if (isDanglingTombstone(usedNonOvershadowedSegment)) {
-            datasourceToDanglingSegments.computeIfAbsent(
-                usedNonOvershadowedSegment.getDataSource(),
-                ds -> new HashSet<>()
-            ).add(usedNonOvershadowedSegment);
+            boolean overlaps = dataSourcesSnapshot.getOvershadowedSegments().stream()
+                                                   .anyMatch(
+                                                       overshadowedSegment ->
+                                                           datasource.equals(overshadowedSegment.getDataSource()) &&
+                                                                              isDanglingTombstone(usedNonOvershadowedSegment) &&
+                                                                              usedNonOvershadowedSegment.getInterval().overlaps(overshadowedSegment.getInterval())
+                                                   );
+            if (!overlaps) {
+              datasourceToDanglingTombstones
+                  .computeIfAbsent(datasource, ds -> new HashSet<>())
+                  .add(usedNonOvershadowedSegment.getId());
+            }
           }
         });
       }
     });
 
-    return datasourceToDanglingSegments;
-  }
-
-  private Map<String, Set<SegmentId>> getDatasourceToUnusedDanglingTombstones(
-      final Map<String, Set<DataSegment>> datasourceToDanglingSegments,
-      final ImmutableSet<DataSegment> overshadowedSegments
-  )
-  {
-    final Map<String, Set<SegmentId>> datasourceToUnusedDanglingSegmentIds = new HashMap<>();
-    datasourceToDanglingSegments.forEach((datasource, danglingSegments) -> danglingSegments.forEach(
-        (danglingSegment) -> {
-          boolean overlaps = overshadowedSegments.stream()
-                                                 .anyMatch(
-                                                     overshadowedSegment -> datasource.equals(overshadowedSegment.getDataSource()) &&
-                                                                            danglingSegment.getInterval().overlaps(overshadowedSegment.getInterval())
-                                                 );
-          if (!overlaps) {
-            datasourceToUnusedDanglingSegmentIds
-                .computeIfAbsent(datasource, ds -> new HashSet<>())
-                .add(danglingSegment.getId());
-          }
-        }
-    ));
-    return datasourceToUnusedDanglingSegmentIds;
+    return datasourceToDanglingTombstones;
   }
 
   private boolean isDanglingTombstone(final DataSegment segment)
