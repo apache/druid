@@ -90,9 +90,10 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
    *
    * <li> Determine the set of used and non-overshadowed segments from the used segments' timeline. </li>
    * <li> For each such segment that is dangling, look at the set of overshadowed segments to see if the intervals overlap.
-   *   There can at most be two such dangling tombstones per datasource. </li>
-   * <li> If there is no overlap, add it to the result set to be marked as unused. </li>
-   *</p>
+   * There can at most be two such dangling tombstones per datasource. </li>
+   * <li> If there is no overlap, add the dangling segment to the result set to be marked as unused. </li>
+   * </p>
+   *
    * @param dataSourcesSnapshot the datasources snapshot for segments timeline and overshadowed segments
    * @return the set of dangling tombstones grouped by datasource
    */
@@ -115,12 +116,13 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
         usedNonOvershadowedSegments.get().forEach(usedNonOvershadowedSegment -> {
           if (isDanglingTombstone(usedNonOvershadowedSegment)) {
             boolean overlaps = dataSourcesSnapshot.getOvershadowedSegments().stream()
-                                                   .anyMatch(
-                                                       overshadowedSegment ->
-                                                           datasource.equals(overshadowedSegment.getDataSource()) &&
-                                                                              isDanglingTombstone(usedNonOvershadowedSegment) &&
-                                                                              usedNonOvershadowedSegment.getInterval().overlaps(overshadowedSegment.getInterval())
-                                                   );
+                                                  .anyMatch(
+                                                      overshadowedSegment ->
+                                                          datasource.equals(overshadowedSegment.getDataSource()) &&
+                                                          isDanglingTombstone(usedNonOvershadowedSegment) &&
+                                                          usedNonOvershadowedSegment.getInterval()
+                                                                                    .overlaps(overshadowedSegment.getInterval())
+                                                  );
             if (!overlaps) {
               datasourceToDanglingTombstones
                   .computeIfAbsent(datasource, ds -> new HashSet<>())
