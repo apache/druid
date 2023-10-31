@@ -77,7 +77,7 @@ The MSQ task engine needs the following permissions for pushing,  fetching, and 
 
 The MSQ task engine needs the following permissions for pushing, fetching, and removing intermediate stage results to and from Azure:
 
-- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read` to read and list files in durable storage 
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read` to read and list files in durable storage.
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write` to write files in durable storage.
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action` to create files in durable storage.
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.
