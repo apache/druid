@@ -1172,6 +1172,48 @@ The following table shows the dynamic configuration properties for the Overlord.
 |`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"}` |
 |`autoScaler`| Only used if [autoscaling](#autoscaler) is enabled.| null |
 
+The following is an example of an Overlord dynamic config:
+
+<details><summary>Click to view the example</summary>
+
+```json
+{
+  "selectStrategy": {
+    "type": "fillCapacity",
+    "affinityConfig": {
+      "affinity": {
+        "datasource1": ["host1:port", "host2:port"],
+        "datasource2": ["host3:port"]
+      }
+    }
+  },
+  "autoScaler": {
+    "type": "ec2",
+    "minNumWorkers": 2,
+    "maxNumWorkers": 12,
+    "envConfig": {
+      "availabilityZone": "us-east-1a",
+      "nodeData": {
+        "amiId": "${AMI}",
+        "instanceType": "c3.8xlarge",
+        "minInstances": 1,
+        "maxInstances": 1,
+        "securityGroupIds": ["${IDs}"],
+        "keyName": "${KEY_NAME}"
+      },
+      "userData": {
+        "impl": "string",
+        "data": "${SCRIPT_COMMAND}",
+        "versionReplacementString": ":VERSION:",
+        "version": null
+      }
+    }
+  }
+}
+```
+
+</details>
+
 ##### Worker select strategy
 
 The select strategy controls how Druid assigns tasks to workers (MiddleManagers).
