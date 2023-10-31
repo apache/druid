@@ -77,14 +77,14 @@ When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid instead 
 
 ## Arrays
 
-Druid supports [ARRAY types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql-array-functions.md#unn) can be used to perform operations on individual array elements, translating each element into a separate row. 
+Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql-array-functions.md#unn) can be used to perform operations on individual array elements, translating each element into a separate row. 
 
-ARRAY typed columns can be stored in segments with class JSON based ingestion using the 'auto' typed dimension schema shared with [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns. For [SQL based ingestion](../multi-stage-query/index.md), the query context parameter `arrayIngestMode` must be specified as `"array"` to ingest ARRAY types. In Druid 28, the default mode for this parameter is `'mvd'` for backwards compatibility, which instead can only handle `ARRAY<STRING>` which it stores in [multi-value string columns](#multi-value-strings). 
+`ARRAY` typed columns can be stored in segments with class JSON based ingestion using the 'auto' typed dimension schema shared with [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns. For [SQL based ingestion](../multi-stage-query/index.md), the query context parameter `arrayIngestMode` must be specified as `"array"` to ingest ARRAY types. In Druid 28, the default mode for this parameter is `"mvd"` for backwards compatibility, which instead can only handle `ARRAY<STRING>` which it stores in [multi-value string columns](#multi-value-strings). 
 
 You can convert multi-value dimensions to standard SQL arrays explicitly with `MV_TO_ARRAY` or implicitly using [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
 
 Druid serializes `ARRAY` results as a JSON string of the array by default, which can be controlled by the context parameter
-`sqlStringifyArrays`. When set to `false`, the arrays will instead be returned as regular JSON arrays instead of in stringified form.
+[`sqlStringifyArrays`](sql-query-context.md). When set to `false` and using JSON [result formats](../api-reference/sql-api.md#responses), the arrays will instead be returned as regular JSON arrays instead of in stringified form.
 
 ## Multi-value strings
 
@@ -128,10 +128,11 @@ separately while processing.
 When converted to ARRAY or used with [array functions](./sql-array-functions.md), multi-value strings behave as standard SQL arrays and can no longer
 be manipulated with non-array functions.
 
-Druid serializes multi-value VARCHAR results as a JSON string of the array, if grouping was not applied on the value.
+By default Druid serializes multi-value VARCHAR results as a JSON string of the array, if grouping was not applied on the value.
 If the value was grouped, due to the implicit UNNEST behavior, all results will always be standard single value
-VARCHAR. ARRAY typed results will be serialized into stringified JSON arrays if the context parameter
-`sqlStringifyArrays` is set, otherwise they remain in their array format.
+VARCHAR. ARRAY typed results serialization is controlled with the context parameter [`sqlStringifyArrays`](sql-query-context.md). When set
+to `false` and using JSON [result formats](../api-reference/sql-api.md#responses), the arrays will instead be returned
+as regular JSON arrays instead of in stringified form.
 
 
 ## NULL values

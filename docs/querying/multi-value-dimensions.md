@@ -30,7 +30,7 @@ array of values instead of a single value, such as the `tags` values in the foll
 {"timestamp": "2011-01-12T00:00:00.000Z", "tags": ["t1","t2","t3"]} 
 ```
 
-It is important to be aware that multi-value dimensions are distinct from [array types](arrays.md), which behave like standard SQL arrays. This document describes the behavior of multi-value dimensions, and some additional details can be found in the [SQL data type documentation](sql-data-types.md#multi-value-strings-behavior).
+It is important to be aware that multi-value dimensions are distinct from [array types](arrays.md). While array types behave like standard SQL arrays, multi-value dimensions do not. This document describes the behavior of multi-value dimensions, and some additional details can be found in the [SQL data type documentation](sql-data-types.md#multi-value-strings-behavior).
 
 This document describes inserting, filtering, and grouping behavior for multi-value dimensions. For information about the internal representation of multi-value dimensions, see
 [segments documentation](../design/segments.md#multi-value-columns). Examples in this document
@@ -46,9 +46,10 @@ The following sections describe inserting, filtering, and grouping behavior base
 {"timestamp": "2011-01-14T00:00:00.000Z", "label": "row4", "tags": []}
 ```
 
-## Overview
+## Ingestion
 
-When using [native ingestion](../ingestion/native-batch.md), the Druid web console data loader can detect multi-value dimensions and configure the `dimensionsSpec` accordingly.
+### Native batch and streaming ingestion
+When using native [batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../development/extensions-core/kafka-ingestion.md), the Druid web console data loader can detect multi-value dimensions and configure the `dimensionsSpec` accordingly.
 
 For TSV or CSV data, you can specify the multi-value delimiters using the `listDelimiter` field in the `inputFormat`. JSON data must be formatted as a JSON array to be ingested as a multi-value dimension. JSON data does not require `inputFormat` configuration.
 
@@ -76,7 +77,8 @@ By default, Druid sorts values in multi-value dimensions. This behavior is contr
 
 See [Dimension Objects](../ingestion/ingestion-spec.md#dimension-objects) for information on configuring multi-value handling.
 
-Multi-value dimensions can also be inserted with [multi-stage ingestion](../multi-stage-query/index.md). The multi-stage query engine does not have direct handling of class Druid multi-value dimensions. A special pair of functions, `MV_TO_ARRAY` which converts multi-value dimensions into `VARCHAR ARRAY` and `ARRAY_TO_MV` to coerce them back into `VARCHAR` exist to enable handling these types. Multi-value handling is not available when using the multi-stage query engine to insert data.
+### SQL-based ingestion
+Multi-value dimensions can also be inserted with [SQL-based ingestion](../multi-stage-query/index.md). The multi-stage query engine does not have direct handling of class Druid multi-value dimensions. A special pair of functions, `MV_TO_ARRAY` which converts multi-value dimensions into `VARCHAR ARRAY` and `ARRAY_TO_MV` to coerce them back into `VARCHAR` exist to enable handling these types. Multi-value handling is not available when using the multi-stage query engine to insert data.
 
 For example, to insert the data used in this document:
 ```sql
@@ -99,6 +101,7 @@ FROM "ext"
 PARTITIONED BY DAY
 ```
 
+### SQL-based ingestion with rollup
 These input arrays can also be grouped prior to converting into a multi-value dimension:
 ```sql
 REPLACE INTO "mvd_example_rollup" OVERWRITE ALL
@@ -122,10 +125,10 @@ GROUP BY 1, 2, "tags"
 PARTITIONED BY DAY
 ```
 
-Notice that `ARRAY_TO_MV` is not present in the `GROUP BY` clause, since we only wish to coerce the type _after_ grouping.
+Notice that `ARRAY_TO_MV` is not present in the `GROUP BY` clause since we only wish to coerce the type _after_ grouping.
 
 
-The `EXTERN` is also able to refer to the `tags` input type as `VARCHAR`, which is also how a query on a Druid table containing a multi-value dimension would specify the type of the `tags` column. If this is the case, `MV_TO_ARRAY` must be used since the multi-stage engine only supports grouping on multi-value dimensions as arrays, and so they must be coerced first. These arrays then must be coerced back into `VARCHAR` in the `SELECT` part of the statement with `ARRAY_TO_MV`.
+The `EXTERN` is also able to refer to the `tags` input type as `VARCHAR`, which is also how a query on a Druid table containing a multi-value dimension would specify the type of the `tags` column. If this is the case you must use `MV_TO_ARRAY` since the multi-stage query engine only supports grouping on multi-value dimensions as arrays. So, they must be coerced first. These arrays must then be coerced back into `VARCHAR` in the `SELECT` part of the statement with `ARRAY_TO_MV`.
 
 ```sql
 REPLACE INTO "mvd_example_rollup" OVERWRITE ALL
@@ -498,3 +501,22 @@ You can disable the implicit unnesting behavior for groupBy by setting `groupByE
 [query context](query-context.md). In this mode, the groupBy engine will return an error instead of completing the query. This is a safety 
 feature for situations where you believe that all dimensions are singly-valued and want the engine to reject any 
 multi-valued dimensions that were inadvertently included.
+
+## Differences between arrays and multi-value dimensions
+Avoid confusing string arrays with [multi-value dimensions](multi-value-dimensions.md). Arrays and multi-value dimensions are stored in different column types, and query behavior is different. You can use the functions `MV_TO_ARRAY` and `ARRAY_TO_MV` to convert between the two if needed. In general, we recommend using arrays whenever possible, since they are a newer and more powerful feature and have SQL compliant behavior.
+
+Use care during ingestion to ensure you get the type you want.
+
+To get arrays when performing an ingestion using JSON ingestion specs, such as [native batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../development/extensions-core/kafka-ingestion.md), use dimension type `auto` or enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), write a query that generates arrays and set the context parameter `"arrayIngestMode": "array"`. Arrays may contain strings or numbers.
+
+To get multi-value dimensions when performing an ingestion using JSON ingestion specs, use dimension type `string` and do not enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), wrap arrays in [`ARRAY_TO_MV`](multi-value-dimensions.md#sql-based-ingestion), which ensures you get multi-value dimensions in any `arrayIngestMode`. Multi-value dimensions can only contain strings.
+
+You can tell which type you have by checking the `INFORMATION_SCHEMA.COLUMNS` table, using a query like:
+
+```sql
+SELECT COLUMN_NAME, DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'mytable'
+```
+
+Arrays are type `ARRAY`, multi-value strings are type `VARCHAR`.
