@@ -88,9 +88,6 @@ When deciding whether to use `REPLACE` or `INSERT`, keep in mind that segments g
 with dimension-based pruning but those generated with `INSERT` cannot. For more information about the requirements
 for dimension-based pruning, see [Clustering](#clustering).
 
-To insert [ARRAY types](../querying/arrays.md), be sure to set context flag `"arrayIngestMode":"array"` which allows
-ARRAY types to be stored in segments. This flag is not enabled by default.
-
 For more information about the syntax, see [INSERT](./reference.md#insert).
 
 <a name="replace"></a>
