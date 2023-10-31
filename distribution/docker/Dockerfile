@@ -49,7 +49,7 @@ RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plu
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
  && mv /opt/apache-druid-${VERSION} /opt/druid
 
-FROM alpine as bash-static
+FROM alpine:3 as bash-static
 ARG TARGETARCH
 #
 # Download bash-static binary to execute scripts that require bash.
