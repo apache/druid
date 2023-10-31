@@ -67,6 +67,9 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.ColumnWithDirection.Direction;
+import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
@@ -1014,9 +1017,14 @@ public class DruidQuery
       return groupByQuery;
     }
 
-    final ScanQuery scanQuery = toScanQuery();
+    final ScanQuery scanQuery = toScanQuery(true);
     if (scanQuery != null) {
       return scanQuery;
+    }
+
+    final WindowOperatorQuery scanAndSortQuery = toScanAndSortQuery();
+    if (scanAndSortQuery != null) {
+      return scanAndSortQuery;
     }
 
     throw new CannotBuildQueryException("Cannot convert query parts into an actual query");
@@ -1439,6 +1447,11 @@ public class DruidQuery
     if (windowing == null) {
       return null;
     }
+
+    // This is not yet supported
+    if (dataSource.isConcrete()) {
+      return null;
+    }
     if (dataSource instanceof TableDataSource) {
       // We need a scan query to pull the results up for us before applying the window
       // Returning null here to ensure that the planner generates that alternative
@@ -1474,12 +1487,82 @@ public class DruidQuery
   }
 
   /**
+   * Create an OperatorQuery which runs an order on top of a scan.
+   */
+  @Nullable
+  private WindowOperatorQuery toScanAndSortQuery()
+  {
+    if (sorting == null
+        || sorting.getOrderBys().isEmpty()
+        || sorting.getProjection() != null) {
+      return null;
+    }
+
+    ScanQuery scan = toScanQuery(false);
+    if (scan == null) {
+      return null;
+    }
+
+    if (dataSource.isConcrete()) {
+      // Currently only non-time orderings of subqueries are allowed.
+      List<String> orderByColumnNames = sorting.getOrderBys()
+          .stream().map(OrderByColumnSpec::getDimension)
+          .collect(Collectors.toList());
+      plannerContext.setPlanningError(
+          "SQL query requires ordering a table by non-time column [%s], which is not supported.",
+          orderByColumnNames
+      );
+      return null;
+    }
+
+    QueryDataSource newDataSource = new QueryDataSource(scan);
+    List<ColumnWithDirection> sortColumns = getColumnWithDirectionsFromOrderBys(sorting.getOrderBys());
+    RowSignature signature = getOutputRowSignature();
+    List<OperatorFactory> operators = new ArrayList<>();
+
+    operators.add(new NaiveSortOperatorFactory(sortColumns));
+    if (!sorting.getOffsetLimit().isNone()) {
+      operators.add(
+          new ScanOperatorFactory(
+              null,
+              null,
+              sorting.getOffsetLimit().toOperatorOffsetLimit(),
+              null,
+              null,
+              null
+          )
+      );
+    }
+
+    return new WindowOperatorQuery(
+        newDataSource,
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        plannerContext.queryContextMap(),
+        signature,
+        operators,
+        null
+    );
+  }
+
+  private ArrayList<ColumnWithDirection> getColumnWithDirectionsFromOrderBys(List<OrderByColumnSpec> orderBys)
+  {
+    ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+    for (OrderByColumnSpec orderBySpec : orderBys) {
+      Direction direction = orderBySpec.getDirection() == OrderByColumnSpec.Direction.ASCENDING
+          ? ColumnWithDirection.Direction.ASC
+          : ColumnWithDirection.Direction.DESC;
+      ordering.add(new ColumnWithDirection(orderBySpec.getDimension(), direction));
+    }
+    return ordering;
+  }
+
+  /**
    * Return this query as a Scan query, or null if this query is not compatible with Scan.
-   *
+   * @param considerSorting can be used to ignore the current sorting requirements {@link #toScanAndSortQuery()} uses it to produce the non-sorted part
    * @return query or null
    */
   @Nullable
-  private ScanQuery toScanQuery()
+  private ScanQuery toScanQuery(final boolean considerSorting)
   {
     if (grouping != null || windowing != null) {
       // Scan cannot GROUP BY or do windows.
@@ -1504,7 +1587,7 @@ public class DruidQuery
     long scanOffset = 0L;
     long scanLimit = 0L;
 
-    if (sorting != null) {
+    if (considerSorting && sorting != null) {
       scanOffset = sorting.getOffsetLimit().getOffset();
 
       if (sorting.getOffsetLimit().hasLimit()) {
