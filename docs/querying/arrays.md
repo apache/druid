@@ -71,7 +71,7 @@ The following shows an example `dimensionsSpec` for native ingestion of the data
 
 ### SQL-based ingestion
 
-Arrays can also be inserted with [SQL-based ingestion](../multi-stage-query/index.md) when you include a query context parameter [`"arrayIngestMode":"array"`](docs/multi-stage-query/reference.md#context).
+Arrays can also be inserted with [SQL-based ingestion](../multi-stage-query/index.md) when you include a query context parameter [`"arrayIngestMode":"array"`](../multi-stage-query/reference.md#context-parameters).
 
 For example, to insert the data used in this document:
 ```sql
