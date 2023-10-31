@@ -116,9 +116,4 @@ public class AzureAccountConfig
   {
     this.sharedAccessStorageToken = sharedAccessStorageToken;
   }
-
-  public void setManagedIdentityClientId(String managedIdentityClientId)
-  {
-    this.managedIdentityClientId = managedIdentityClientId;
-  }
 }
