@@ -39,13 +39,20 @@ To enable durable storage, you need to set the following common service properti
 
 ```
 druid.msq.intermediate.storage.enable=true
-druid.msq.intermediate.storage.type=s3
-druid.msq.intermediate.storage.bucket=YOUR_BUCKET
-druid.msq.intermediate.storage.prefix=YOUR_PREFIX
 druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
+
+# Include these configs if you're using S3
+# druid.msq.intermediate.storage.type=s3
+# druid.msq.intermediate.storage.bucket=YOUR_BUCKET
+
+# Include these configs if you're using Azure Blob Storage
+# druid.msq.intermediate.storage.type=azure
+# druid.sq.intermediate.storage.container=YOUR_CONTAINER
+
+druid.msq.intermediate.storage.prefix=YOUR_PREFIX
 ```
 
-For detailed information about the settings related to durable storage, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
+For detailed information about these and additional settings related to durable storage, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
 
 
 ## Use durable storage for SQL-based ingestion queries
@@ -80,7 +87,7 @@ cleaner can be scheduled to clean the directories corresponding to which there i
 the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
 for the cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 
-Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySEconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
+Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySeconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
 
 Note that if you choose to write query results to durable storage,the results are cleaned up when the task is removed from the metadata store.
 

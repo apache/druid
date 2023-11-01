@@ -125,7 +125,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT\n"
-        + "BLOOM_FILTER(dim1, 1000)\n"
+        + "BLOOM_FILTER(dim1, 1000),\n"
+        + "BLOOM_FILTER(dim1, CAST(1000 AS INTEGER))\n"
         + "FROM numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -145,7 +146,10 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
+            new Object[]{
+                queryFramework().queryJsonMapper().writeValueAsString(expected1),
+                queryFramework().queryJsonMapper().writeValueAsString(expected1)
+            }
         )
     );
   }
