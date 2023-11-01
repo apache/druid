@@ -148,9 +148,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     );
     final Map<Interval, String> intervalToVersion = Maps.newHashMapWithExpectedSize(locks.size());
     locks.forEach(lock -> {
-      if (lock.isRevoked()) {
-        throw new ISE("Lock[%s] is revoked", lock);
-      }
+      lock.assertNotRevoked(lock.getInterval());
       final String mustBeNull = intervalToVersion.put(lock.getInterval(), lock.getVersion());
       if (mustBeNull != null) {
         throw new ISE(

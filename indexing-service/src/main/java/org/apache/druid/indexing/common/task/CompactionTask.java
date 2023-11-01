@@ -438,41 +438,33 @@ public class CompactionTask extends AbstractBatchIndexTask
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
-  @VisibleForTesting
-  void emitCompactIngestionModeMetrics(
-      ServiceEmitter emitter,
-      boolean isDropExisting
-  )
-  {
-
-    if (emitter == null) {
-      return;
-    }
-    emitMetric(emitter, "ingest/count", 1);
-  }
-
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-
     // emit metric for compact ingestion mode:
-    emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
+    emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
-        UTC_CLOCK,
-        toolbox,
-        getTaskLockHelper().getLockGranularityToUse(),
-        ioConfig,
-        segmentProvider,
-        partitionConfigurationManager,
-        dimensionsSpec,
-        transformSpec,
-        metricsSpec,
-        granularitySpec,
-        toolbox.getCoordinatorClient(),
-        segmentCacheManagerFactory,
-        getMetricBuilder()
-    );
+    List<ParallelIndexIngestionSpec> ingestionSpecs;
+    try {
+      ingestionSpecs = createIngestionSchema(
+          UTC_CLOCK,
+          toolbox,
+          getTaskLockHelper().getLockGranularityToUse(),
+          ioConfig,
+          segmentProvider,
+          partitionConfigurationManager,
+          dimensionsSpec,
+          transformSpec,
+          metricsSpec,
+          granularitySpec,
+          toolbox.getCoordinatorClient(),
+          segmentCacheManagerFactory,
+          getMetricBuilder()
+      );
+    } catch (Exception e) {
+      emitMetric(toolbox.getEmitter(), "compact/failed/schemaError/count", 1);
+      throw e;
+    }
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
         .mapToObj(i -> {

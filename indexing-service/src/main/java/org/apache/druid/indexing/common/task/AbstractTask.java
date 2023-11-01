@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.UpdateStatusAction;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.LockAcquisitionFailedException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -170,6 +171,7 @@ public abstract class AbstractTask implements Task
       return taskStatus;
     }
     catch (Exception e) {
+      emitMetricIfLockAcquisitionFailed(taskToolbox, e);
       taskStatus = TaskStatus.failure(getId(), e.toString());
       throw e;
     }
@@ -235,6 +237,13 @@ public abstract class AbstractTask implements Task
       log.warn("Interrupted while waiting for task cleanUp to finish!");
       Thread.currentThread().interrupt();
       return false;
+    }
+  }
+
+  void emitMetricIfLockAcquisitionFailed(TaskToolbox taskToolbox, Exception e)
+  {
+    if (e instanceof LockAcquisitionFailedException) {
+      emitMetric(taskToolbox.getEmitter(), "task/failed/acquireLock/count", 1);
     }
   }
 
@@ -436,6 +445,4 @@ public abstract class AbstractTask implements Task
     }
     emitter.emit(getMetricBuilder().setMetric(metric, value));
   }
-
-
 }
