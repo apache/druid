@@ -23,7 +23,7 @@ sidebar_label: Jupyter Notebook tutorials
   ~ under the License.
   -->
 
-You can try out the Druid APIs using interactive Jupyter Notebook tutorials.
+You can try out the Druid APIs using interactive Jupyter notebook tutorials.
 These tutorials provide snippets of Python code that you can use to run calls against the Druid API to complete the tutorial.
 
 For ease of use, the tutorials are contained within their own open source [repo](https://github.com/implydata/learn-druid).
