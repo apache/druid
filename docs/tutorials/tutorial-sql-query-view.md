@@ -193,5 +193,5 @@ For more information on ingestion and querying data, see the following topics:
 - [Ingestion](../ingestion/index.md) for an overview of ingestion and the ingestion methods available in Druid.
 - [SQL-based ingestion](../multi-stage-query/index.md) for an overview of SQL-based ingestion.
 - [SQL-based ingestion query examples](../multi-stage-query/examples.md) for examples of SQL-based ingestion for various use cases.
-- Try out the interactive [Introduction to Druid SQL](https://github.com/implydata/learn-druid/tree/main/notebooks) notebook to learn more about Druid SQL.
+- [Introduction to Druid SQL](https://github.com/implydata/learn-druid/tree/main/notebooks) to learn more about Druid SQL.
 
