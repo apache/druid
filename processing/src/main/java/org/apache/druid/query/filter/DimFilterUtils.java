@@ -125,7 +125,7 @@ public class DimFilterUtils
         Map<String, RangeSet<String>> filterDomain = new HashMap<>();
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {
-          if (filterFields == null || filterFields.contains(dimension))  {
+          if (filterFields == null || filterFields.contains(dimension)) {
             Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
                 .computeIfAbsent(dimension, d -> Optional.ofNullable(dimFilter.getDimensionRangeSet(d)));
 
