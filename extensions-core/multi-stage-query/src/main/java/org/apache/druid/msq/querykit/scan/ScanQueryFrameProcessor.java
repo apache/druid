@@ -174,7 +174,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }).map(List::toArray);
   }
 
-  private static ScanQuery prepareScanQuery(@NotNull ScanQuery scanQuery) {
+  private static ScanQuery prepareScanQuery(@NotNull ScanQuery scanQuery)
+  {
     if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder())) {
       return Druids.ScanQueryBuilder.copy(scanQuery)
                                     .orderBy(ImmutableList.of())
