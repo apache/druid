@@ -26,7 +26,6 @@
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
       "tutorials/tutorial-jupyter-index",
-      "tutorials/tutorial-jupyter-docker",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
