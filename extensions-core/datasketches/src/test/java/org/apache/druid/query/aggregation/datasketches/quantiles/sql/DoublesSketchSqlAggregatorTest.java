@@ -493,6 +493,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + "  DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt + 123), 0.5) + 1000,\n"
         + "  ABS(DS_GET_QUANTILE(DS_QUANTILES_SKETCH(cnt), 0.5)),\n"
         + "  DS_GET_QUANTILES(DS_QUANTILES_SKETCH(cnt), 0.5, 0.8),\n"
+        + "  DS_GET_QUANTILES(DS_QUANTILES_SKETCH(cnt), CAST(0.5 AS DOUBLE), CAST(0.8 AS DOUBLE)),\n"
         + "  DS_HISTOGRAM(DS_QUANTILES_SKETCH(cnt), 0.2, 0.6),\n"
         + "  DS_RANK(DS_QUANTILES_SKETCH(cnt), 3),\n"
         + "  DS_CDF(DS_QUANTILES_SKETCH(cnt), 0.2, 0.6),\n"
@@ -583,41 +584,49 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           new double[]{0.5d, 0.8d}
                       ),
-                      new DoublesSketchToHistogramPostAggregator(
+                      new DoublesSketchToQuantilesPostAggregator(
                           "p13",
                           new FieldAccessPostAggregator(
                               "p12",
+                              "a2:agg"
+                          ),
+                          new double[]{0.5d, 0.8d}
+                      ),
+                      new DoublesSketchToHistogramPostAggregator(
+                          "p15",
+                          new FieldAccessPostAggregator(
+                              "p14",
                               "a2:agg"
                           ),
                           new double[]{0.2d, 0.6d},
                           null
                       ),
                       new DoublesSketchToRankPostAggregator(
-                          "p15",
-                          new FieldAccessPostAggregator(
-                              "p14",
-                              "a2:agg"
-                          ),
-                          3.0d
-                      ),
-                      new DoublesSketchToCDFPostAggregator(
                           "p17",
                           new FieldAccessPostAggregator(
                               "p16",
                               "a2:agg"
                           ),
-                          new double[]{0.2d, 0.6d}
+                          3.0d
                       ),
-                      new DoublesSketchToStringPostAggregator(
+                      new DoublesSketchToCDFPostAggregator(
                           "p19",
                           new FieldAccessPostAggregator(
                               "p18",
                               "a2:agg"
+                          ),
+                          new double[]{0.2d, 0.6d}
+                      ),
+                      new DoublesSketchToStringPostAggregator(
+                          "p21",
+                          new FieldAccessPostAggregator(
+                              "p20",
+                              "a2:agg"
                           )
                       ),
                       expressionPostAgg(
-                          "p20",
-                          "replace(replace(\"p19\",'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
+                          "p22",
+                          "replace(replace(\"p21\",'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
                           + "'Combined Buffer Capacity     : 6',"
                           + "'Combined Buffer Capacity     : 8')",
                           ColumnType.STRING
@@ -633,6 +642,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 1001.0d,
                 1124.0d,
                 1.0d,
+                "[1.0,1.0]",
                 "[1.0,1.0]",
                 "[0.0,0.0,6.0]",
                 1.0d,

@@ -356,40 +356,44 @@ SQL-based ingestion supports using durable storage to store intermediate files t
 
 ### Durable storage configurations
 
-Durable storage is supported on Amazon S3 storage and Microsoft's Azure storage. There are a few common configurations that controls the behavior for both the services as documented below. Apart from the common configurations,
-there are a few properties specific to each storage that must be set.
+Durable storage is supported on Amazon S3 storage and Microsoft's Azure Blob Storage. 
+There are common configurations that control the behavior regardless of which storage service you use. Apart from these common configurations, there are a few properties specific to S3 and to Azure.
 
 Common properties to configure the behavior of durable storage
 
-|Parameter          |Default                                 | Description          |
-|-------------------|----------------------------------------|----------------------|
-|`druid.msq.intermediate.storage.enable` | false |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md).|
-|`druid.msq.intermediate.storage.type` | n/a | Required. The type of storage to use. Set it to `s3` for S3 and `azure` for Azure |
-|`druid.msq.intermediate.storage.tempDir`| n/a | Required. Directory path on the local disk to store temporary files required while uploading and downloading the data  |
-|`druid.msq.intermediate.storage.maxRetry` | 10 | Optional. Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 
-|`druid.msq.intermediate.storage.chunkSize` | 100MiB | Optional. Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 
+|Parameter          | Required | Description          | Default | 
+|--|--|--|
+|`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
+|`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3 and `azure` for Azure | n/a |
+|`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data  | n/a |
+|`druid.msq.intermediate.storage.maxRetry` |  No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 10 |
+|`druid.msq.intermediate.storage.chunkSize` | No | Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 100MiB | 
 
-Following properties need to be set in addition to the common properties to enable durable storage on S3
+To use S3 for durable storage, you also need to configure the following properties:
 
-|Parameter          |Default                                 | Description          |
-|-------------------|----------------------------------------|----------------------|
-|`druid.msq.intermediate.storage.bucket` | n/a | Required. The S3 bucket where the files are uploaded to and download from |
-|`druid.msq.intermediate.storage.prefix` | n/a | Required. Path prepended to all the paths uploaded to the bucket to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well.  |
+|Parameter          | Required | Description  | Default |
+|-------------------|----------------------------------------|----------------------| --|
+|`druid.msq.intermediate.storage.bucket` | Yes | The S3 bucket where the files are uploaded to and download from | n/a |
+|`druid.msq.intermediate.storage.prefix` | Yes | Path prepended to all the paths uploaded to the bucket to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well.  | n/a | 
 
-Following properties must be set in addition to the common properties to enable durable storage on Azure.  
+To use Azure for durable storage, you also need to configure the following properties:
 
-|Parameter          |Default                                 | Description          |
-|-------------------|----------------------------------------|----------------------|
-|`druid.msq.intermediate.storage.container` | n/a | Required. The Azure container where the files are uploaded to and downloaded from.  |
-|`druid.msq.intermediate.storage.prefix` | n/a | Required. Path prepended to all the paths uploaded to the container to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well. |
+|Parameter          | Required  | Description          | Default |
+|-------------------|----------------------------------------|----------------------| - |
+|`druid.msq.intermediate.storage.container` | Yes | The Azure container where the files are uploaded to and downloaded from.  | n/a |
+|`druid.msq.intermediate.storage.prefix` | Yes | Path prepended to all the paths uploaded to the container to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well. | n/a |
 
-Durable storage creates files on the remote storage and is cleaned up once the job no longer requires those files. However, due to failures causing abrupt exit of the tasks, these files might not get cleaned up.
-Therefore, there are certain properties that you configure on the Overlord specifically to clean up intermediate files for the tasks that have completed and would no longer require these files:
+### Durable storage cleaner configurations
 
-|Parameter          |Default                                 | Description          |
-|-------------------|----------------------------------------|----------------------|
-|`druid.msq.intermediate.storage.cleaner.enabled`| false | Optional. Whether durable storage cleaner should be enabled for the cluster.  |
-|`druid.msq.intermediate.storage.cleaner.delaySeconds`| 86400 | Optional. The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs.  |
+Durable storage creates files on the remote storage, and these files get cleaned up once a job no longer requires those files. However, due to failures causing abrupt exits of tasks, these files might not get cleaned up.
+You can configure the Overlord to periodically clean up these intermediate files after a task completes and the files are no longer need. The files that get cleaned up are determined by the storage prefix you configure. Any files that match the path for the storage prefix may get cleaned up, not just intermediate files that are no longer needed.
+
+Use the following configurations to control the cleaner:
+
+|Parameter  | Required  | Description | Default | 
+|--|--|--|--|
+|`druid.msq.intermediate.storage.cleaner.enabled`|  No | Whether durable storage cleaner should be enabled for the cluster.  | false |
+|`druid.msq.intermediate.storage.cleaner.delaySeconds`| No | The delay (in seconds) after the latest run post which the durable storage cleaner cleans the up files.  | 86400 | 
 
 
 ## Limits
