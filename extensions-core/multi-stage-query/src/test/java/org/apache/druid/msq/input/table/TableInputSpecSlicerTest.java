@@ -195,57 +195,6 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_sliceStatic_dimFilterNotUsed()
-  {
-    final TableInputSpec spec = new TableInputSpec(
-        DATASOURCE,
-        null,
-        new SelectorDimFilter("dim", "bar", null),
-        Collections.emptyList()
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            new SegmentsInputSlice(
-                DATASOURCE,
-                ImmutableList.of(
-                    new RichSegmentDescriptor(
-                        SEGMENT1.getInterval(),
-                        Intervals.of("2000/P1M"),
-                        SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
-                    ),
-                    new RichSegmentDescriptor(
-                        SEGMENT2.getInterval(),
-                        Intervals.of("2000/P1M"),
-                        SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
-                    ),
-                    new RichSegmentDescriptor(
-                        SEGMENT1.getInterval(),
-                        Intervals.of("2000-06-01/P1M"),
-                        SEGMENT1.getVersion(),
-                        SEGMENT1.getShardSpec().getPartitionNum(),
-                        null
-                    ),
-                    new RichSegmentDescriptor(
-                        SEGMENT2.getInterval(),
-                        Intervals.of("2000-06-01/P1M"),
-                        SEGMENT2.getVersion(),
-                        SEGMENT2.getShardSpec().getPartitionNum(),
-                        null
-                    )
-                )
-            ),
-            NilInputSlice.INSTANCE
-        ),
-        slicer.sliceStatic(spec, 2)
-    );
-  }
-
-  @Test
   public void test_sliceStatic_dimFilter()
   {
     final TableInputSpec spec = new TableInputSpec(
@@ -272,6 +221,42 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
             NilInputSlice.INSTANCE
         ),
         slicer.sliceStatic(spec, 2)
+    );
+  }
+
+  @Test
+  public void test_sliceStatic_dimFilterNotUsed()
+  {
+    final TableInputSpec spec = new TableInputSpec(
+        DATASOURCE,
+        null,
+        new SelectorDimFilter("dim", "bar", null),
+        Collections.emptySet()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            new SegmentsInputSlice(
+                DATASOURCE,
+                ImmutableList.of(
+                    new RichSegmentDescriptor(
+                        SEGMENT1.getInterval(),
+                        SEGMENT1.getInterval(),
+                        SEGMENT1.getVersion(),
+                        SEGMENT1.getShardSpec().getPartitionNum(),
+                        null
+                    ),
+                    new RichSegmentDescriptor(
+                        SEGMENT2.getInterval(),
+                        SEGMENT2.getInterval(),
+                        SEGMENT2.getVersion(),
+                        SEGMENT2.getShardSpec().getPartitionNum(),
+                        null
+                    )
+                )
+            )
+        ),
+        slicer.sliceStatic(spec, 1)
     );
   }
 

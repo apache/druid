@@ -44,7 +44,7 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
         new SelectorDimFilter("dim", "val", null),
-        Collections.singletonList("dim")
+        Collections.singleton("dim")
     );
 
     Assert.assertEquals(
@@ -63,7 +63,7 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
         new SelectorDimFilter("dim", "val", null),
-        Collections.emptyList()
+        Collections.emptySet()
     );
 
     Assert.assertEquals(
