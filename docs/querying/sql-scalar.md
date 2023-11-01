@@ -200,7 +200,7 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 (e.g., "192.168.0.1") or an IP address represented as an integer (e.g., 3232235521). The `subnet`
 argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").
 
-For the IPv6 address function, the `address` argument accepts a semicolon separated string (e.g. 75e9:efa4:29c6:85f6::232c). The format of the `subnet` argument should be an IPv6 address subnet in CIDR notation (e.g. 75e9:efa4:29c6:85f6::/64).
+For the IPv6 address function, the `address` argument accepts a semicolon separated string (e.g. "75e9:efa4:29c6:85f6::232c"). The format of the `subnet` argument should be an IPv6 address subnet in CIDR notation (e.g. "75e9:efa4:29c6:85f6::/64").
 
 |Function|Notes|
 |---|---|
