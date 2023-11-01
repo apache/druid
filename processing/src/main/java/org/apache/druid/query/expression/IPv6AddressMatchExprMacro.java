@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import inet.ipaddr.AddressStringException;
-import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
