@@ -60,6 +60,23 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testSerdeOutputType() throws JsonProcessingException
+  {
+    ExpressionPostAggregator postAgg = new ExpressionPostAggregator(
+        "p0",
+        "2 + 3",
+        null,
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+
+    Assert.assertEquals(
+        postAgg,
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(postAgg), ExpressionPostAggregator.class)
+    );
+  }
+
+  @Test
   public void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(ExpressionPostAggregator.class)

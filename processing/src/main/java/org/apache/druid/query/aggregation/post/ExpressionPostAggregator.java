@@ -263,7 +263,9 @@ public class ExpressionPostAggregator implements PostAggregator
     return ordering;
   }
 
-  @JsonProperty
+  @Nullable
+  @JsonProperty("outputType")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public ColumnType getOutputType()
   {
     return outputType;
