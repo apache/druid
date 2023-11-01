@@ -154,6 +154,7 @@ public class DataSourcePlan
     if (!queryContext.isSecondaryPartitionPruningEnabled()) {
       // Clear filter, we don't want to prune today.
       filter = null;
+      filterFields = null;
     }
 
     if (filter != null && filterFields == null) {
