@@ -619,6 +619,34 @@ ALTER TABLE druid_segments
 ADD used_flag_last_updated varchar(255);
 ```
 
+### Recommended syntax for SQL UNNEST
+
+The recommended syntax for SQL UNNEST has changed. We recommend using CROSS JOIN instead of commas for most queries to prevent issues with precedence. For example, use:
+
+```sql
+SELECT column_alias_name1 FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
+
+Do not use:
+
+```sql
+SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
+
+### Dynamic parameters
+
+The Apache Calcite version has been upgraded from 1.21 to 1.35. As part of the Calcite upgrade, the behavior of type inference for dynamic parameters has changed. To avoid any type interference issues, explicitly `CAST` all dynamic parameters as a specific data type in SQL queries. For example, use:
+
+```sql
+SELECT (1 * CAST (? as DOUBLE))/2 as tmp
+```
+
+Do not use:
+
+```sql
+SELECT (1 * ?)/2 as tmp
+```
+
 ### Nested column format
 
 `json` type columns created with Druid 28.0.0 are not backwards compatible with Druid versions older than 26.0.0.
@@ -655,9 +683,11 @@ Starting with Druid 28.0.0, the default way Druid treats nulls and booleans has 
 
 For nulls, Druid now differentiates between an empty string and a record with no data as well as between an empty numerical record and `0`.  
 You can revert to the previous behavior by setting `druid.generic.useDefaultValueForNull` to `true`.
+
 This property affects both storage and querying, and must be set on all Druid service types to be available at both ingestion time and query time. Reverting this setting to the old value restores the previous behavior without reingestion.
 
-For booleans, Druid now strictly uses `1` (true) or `0` (false). Previously, true and false could be represented either as `true` and `false` as well as `1` and `0`, respectively. In addition, Druid now returns a null value for boolean comparisons like `True && NULL`.  
+For booleans, Druid now strictly uses `1` (true) or `0` (false). Previously, true and false could be represented either as `true` and `false` as well as `1` and `0`, respectively. In addition, Druid now returns a null value for boolean comparisons like `True && NULL`.
+
 You can revert to the previous behavior by setting `druid.expressions.useStrictBooleans` to `false`.
 This property affects both storage and querying, and must be set on all Druid service types to be available at both ingestion time and query time. Reverting this setting to the old value restores the previous behavior without reingestion.
 
@@ -680,6 +710,20 @@ The following table illustrates some example scenarios and the impact of the cha
 | ARRAY| Null| Null|
 | COMPLEX| none| Null|
 </details>
+
+Before upgrading to Druid 28.0.0, update your queries to account for the changed behavior as described in the following sections.
+
+#### NULL filters
+
+If your queries use NULL in the filter condition to match both nulls and empty strings, you should add an explicit filter clause for empty strings. For example, update `s IS NULL` to `s IS NULL OR s = ''`.
+
+#### COUNT functions
+
+`COUNT(column)` now counts empty strings. If you want to continue excluding empty strings from the count, replace `COUNT(column)` with `COUNT(column) FILTER(WHERE column <> '')`.
+
+#### GroupBy queries
+
+GroupBy queries on columns containing null values can now have additional entries as nulls can co-exist with empty strings.
 
 ### Stop Supervisors that ingest from multiple Kafka topics before downgrading
 
