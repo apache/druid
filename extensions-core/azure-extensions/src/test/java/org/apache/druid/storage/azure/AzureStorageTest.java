@@ -23,9 +23,9 @@ import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.http.rest.PagedResponse;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.easymock.EasyMock;
@@ -39,7 +39,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import java.net.URISyntaxException;
 
 @RunWith(EasyMockRunner.class)
 public class AzureStorageTest extends EasyMockSupport
@@ -53,14 +52,14 @@ public class AzureStorageTest extends EasyMockSupport
   AzureClientFactory azureClientFactory;
 
   @Before
-  public void setup() throws StorageErrorException
+  public void setup() throws BlobStorageException
   {
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
     azureStorage = new AzureStorage(() -> blobServiceClient, azureClientFactory);
   }
 
   @Test
-  public void testListDir() throws URISyntaxException, StorageErrorException
+  public void testListDir() throws BlobStorageException
   {
     BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
@@ -75,7 +74,7 @@ public class AzureStorageTest extends EasyMockSupport
   }
 
   @Test
-  public void testListDir_withMaxAttempts_factoryCreatesNewContainerClient() throws URISyntaxException, StorageErrorException
+  public void testListDir_withMaxAttempts_factoryCreatesNewContainerClient() throws BlobStorageException
   {
     Integer maxAttempts = 5;
     String containerName = "test";

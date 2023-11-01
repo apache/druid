@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -55,7 +55,7 @@ public class AzureUtils
         return false;
       }
 
-      if (t instanceof StorageErrorException) {
+      if (t instanceof BlobStorageException) {
         return true;
       }
 

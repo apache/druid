@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
@@ -37,7 +37,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +53,8 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   private static final String KEY_1 = "key1";
   private static final String KEY_2 = "key2";
   private static final URI PREFIX_URI = URI.create(StringUtils.format("azure://%s/%s", CONTAINER, PREFIX));
-  private static final Exception NON_RECOVERABLE_EXCEPTION = new URISyntaxException("", "");
+  // BlobStorageException is not recoverable since the client attempts retries on it internally
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new BlobStorageException("", null, null);
 
   private static final DataSegment DATA_SEGMENT = new DataSegment(
       "test",
@@ -85,7 +85,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void killTest() throws SegmentLoadingException, URISyntaxException, StorageErrorException
+  public void killTest() throws SegmentLoadingException, BlobStorageException
   {
 
     List<String> deletedFiles = new ArrayList<>();
@@ -104,7 +104,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
 
   @Test(expected = SegmentLoadingException.class)
   public void test_kill_StorageExceptionExtendedErrorInformationNull_throwsException()
-      throws SegmentLoadingException, URISyntaxException, StorageErrorException
+      throws SegmentLoadingException, BlobStorageException
   {
 
     common_test_kill_StorageExceptionExtendedError_throwsException();
@@ -112,22 +112,21 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
 
   @Test(expected = SegmentLoadingException.class)
   public void test_kill_StorageExceptionExtendedErrorInformationNotNull_throwsException()
-      throws SegmentLoadingException, URISyntaxException, StorageErrorException
+      throws SegmentLoadingException, BlobStorageException
   {
 
     common_test_kill_StorageExceptionExtendedError_throwsException();
   }
 
-  @Test(expected = SegmentLoadingException.class)
-  public void test_kill_URISyntaxException_throwsException()
-      throws SegmentLoadingException, URISyntaxException, StorageErrorException
+  @Test(expected = RuntimeException.class)
+  public void test_kill_runtimeException_throwsException()
+      throws SegmentLoadingException, BlobStorageException
   {
 
     String dirPath = Paths.get(BLOB_PATH).getParent().toString();
 
     EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
-        new URISyntaxException(
-            "",
+        new RuntimeException(
             ""
         )
     );
@@ -256,13 +255,14 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   }
 
   private void common_test_kill_StorageExceptionExtendedError_throwsException()
-      throws SegmentLoadingException, URISyntaxException, StorageErrorException
+      throws SegmentLoadingException, BlobStorageException
   {
     String dirPath = Paths.get(BLOB_PATH).getParent().toString();
 
     EasyMock.expect(azureStorage.emptyCloudBlobDirectory(CONTAINER_NAME, dirPath)).andThrow(
-        new StorageErrorException(
+        new BlobStorageException(
             "",
+            null,
             null
         )
     );

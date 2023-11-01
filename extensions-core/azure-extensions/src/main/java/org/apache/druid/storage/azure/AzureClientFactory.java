@@ -27,6 +27,7 @@ import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.CustomerProvidedKey;
+import com.azure.storage.common.StorageSharedKeyCredential;
 
 import java.time.Duration;
 
@@ -54,7 +55,7 @@ public class AzureClientFactory
         ));
 
     if (config.getKey() != null) {
-      clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
     } else if (config.getUseAzureCredentialsChain()) {

@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,7 +39,7 @@ public class AzureUtilsTest
   private static final URI URI_WITH_PATH_WITH_LEADING_SLASH;
 
   private static final URISyntaxException URI_SYNTAX_EXCEPTION = new URISyntaxException("", "");
-  private static final StorageErrorException STORAGE_EXCEPTION = new StorageErrorException("", null);
+  private static final BlobStorageException STORAGE_EXCEPTION = new BlobStorageException("", null, null);
   private static final IOException IO_EXCEPTION = new IOException();
   private static final RuntimeException RUNTIME_EXCEPTION = new RuntimeException();
   private static final RuntimeException NULL_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION = new RuntimeException("", null);

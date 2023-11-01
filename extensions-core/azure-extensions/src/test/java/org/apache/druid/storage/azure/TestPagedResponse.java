@@ -24,7 +24,6 @@ import com.azure.core.http.HttpRequest;
 import com.azure.core.http.rest.PagedResponse;
 import com.azure.core.util.IterableStream;
 
-import java.io.IOException;
 import java.util.Collection;
 
 public class TestPagedResponse<T> implements PagedResponse<T>
@@ -67,7 +66,7 @@ public class TestPagedResponse<T> implements PagedResponse<T>
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
 
   }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.data.input.azure;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -39,7 +39,6 @@ import org.apache.druid.storage.azure.AzureStorage;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -128,7 +127,7 @@ public class AzureInputSource extends CloudObjectInputSource
                     blob.getBlobLength()
                 );
               }
-              catch (StorageErrorException e) {
+              catch (BlobStorageException e) {
                 throw new RuntimeException(e);
               }
             }
@@ -146,7 +145,7 @@ public class AzureInputSource extends CloudObjectInputSource
 
           return blobWithAttributes.getProperties().getBlobSize();
         }
-        catch (URISyntaxException | StorageErrorException e) {
+        catch (BlobStorageException e) {
           throw new RuntimeException(e);
         }
       }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
@@ -37,7 +37,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -246,7 +245,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
     azureStorage.uploadBlockBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.anyString());
-    EasyMock.expectLastCall().andThrow(new URISyntaxException("", ""));
+    EasyMock.expectLastCall().andThrow(new BlobStorageException("", null, null));
 
     replayAll();
 
@@ -277,7 +276,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   }
 
   @Test
-  public void uploadDataSegmentTest() throws StorageErrorException, IOException, URISyntaxException
+  public void uploadDataSegmentTest() throws BlobStorageException, IOException
   {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
     final int binaryVersion = 9;

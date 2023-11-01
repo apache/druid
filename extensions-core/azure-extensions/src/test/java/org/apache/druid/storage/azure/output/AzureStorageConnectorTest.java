@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure.output;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
@@ -35,7 +35,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -64,7 +63,7 @@ public class AzureStorageConnectorTest
 
 
   @Test
-  public void testPathExistsSuccess() throws URISyntaxException, StorageErrorException, IOException
+  public void testPathExistsSuccess() throws BlobStorageException, IOException
   {
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
@@ -79,7 +78,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testPathExistsNotFound() throws URISyntaxException, StorageErrorException, IOException
+  public void testPathExistsNotFound() throws BlobStorageException, IOException
   {
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
@@ -94,7 +93,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testRead() throws URISyntaxException, StorageErrorException, IOException
+  public void testRead() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
 
@@ -122,7 +121,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testReadRange() throws URISyntaxException, StorageErrorException, IOException
+  public void testReadRange() throws BlobStorageException, IOException
   {
     String data = "test";
 
@@ -151,7 +150,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testDeleteSinglePath() throws URISyntaxException, StorageErrorException, IOException
+  public void testDeleteSinglePath() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
@@ -169,7 +168,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testDeleteMultiplePaths() throws URISyntaxException, StorageErrorException, IOException
+  public void testDeleteMultiplePaths() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
@@ -189,7 +188,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testListDir() throws URISyntaxException, StorageErrorException, IOException
+  public void testListDir() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
     EasyMock.expect(azureStorage.listDir(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyInt()))

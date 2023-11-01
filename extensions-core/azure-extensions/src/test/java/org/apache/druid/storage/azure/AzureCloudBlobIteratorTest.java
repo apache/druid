@@ -21,9 +21,9 @@ package org.apache.druid.storage.azure;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.http.rest.PagedResponse;
-import com.azure.storage.blob.implementation.models.StorageErrorException;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.RE;
@@ -179,7 +179,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
         EasyMock.anyString(),
         EasyMock.anyString(),
         EasyMock.anyInt()
-    )).andThrow(new StorageErrorException("", null)).times(3);
+    )).andThrow(new BlobStorageException("", null, null)).times(3);
 
     replayAll();
     azureCloudBlobIterator = new AzureCloudBlobIterator(

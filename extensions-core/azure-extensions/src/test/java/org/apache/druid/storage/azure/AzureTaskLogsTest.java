@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 public class AzureTaskLogsTest extends EasyMockSupport
@@ -61,8 +60,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
   private static final String KEY_1 = "key1";
   private static final String KEY_2 = "key2";
   private static final URI PREFIX_URI = URI.create(StringUtils.format("azure://%s/%s", CONTAINER, PREFIX));
-  private static final Exception RECOVERABLE_EXCEPTION = new StorageErrorException("", null);
-  private static final Exception NON_RECOVERABLE_EXCEPTION = new URISyntaxException("", "");
+  // BlobStorageException is not recoverable since the client attempts retries on failed status codes internally
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new BlobStorageException("", null, null);
 
   private AzureInputDataConfig inputDataConfig;
   private AzureAccountConfig accountConfig;
@@ -318,7 +317,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(true);
     EasyMock.expect(azureStorage.getBlockBlobLength(CONTAINER, blobPath)).andReturn((long) testLog.length());
     EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andThrow(
-        new URISyntaxException("", ""));
+        new BlobStorageException("", null, null));
 
 
     replayAll();
@@ -333,10 +332,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
   @Test(expected = IOException.class)
   public void test_streamTaskReports_exceptionWhenCheckingBlobExistence_throwsException() throws Exception
   {
-    final String testLog = "hello this is a log";
 
     final String blobPath = PREFIX + "/" + TASK_ID + "/report.json";
-    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andThrow(new URISyntaxException("", ""));
+    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andThrow(new BlobStorageException("", null, null));
 
     replayAll();
 
@@ -393,7 +391,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(true);
     EasyMock.expect(azureStorage.getBlockBlobLength(CONTAINER, blobPath)).andReturn((long) taskStatus.length());
     EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andThrow(
-        new URISyntaxException("", ""));
+        new BlobStorageException("", null, null));
 
 
     replayAll();
@@ -409,7 +407,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   public void test_streamTaskStatus_exceptionWhenCheckingBlobExistence_throwsException() throws Exception
   {
     final String blobPath = PREFIX + "/" + TASK_ID + "/status.json";
-    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andThrow(new URISyntaxException("", ""));
+    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andThrow(new BlobStorageException("", null, null));
 
     replayAll();
 

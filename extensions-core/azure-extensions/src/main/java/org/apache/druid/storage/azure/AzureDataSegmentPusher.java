@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.implementation.models.StorageErrorException;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,7 +35,6 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 
@@ -178,7 +177,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final File compressedSegmentData,
       final String azurePath
   )
-      throws StorageErrorException, IOException, URISyntaxException
+      throws BlobStorageException, IOException
   {
     azureStorage.uploadBlockBlob(compressedSegmentData, segmentConfig.getContainer(), azurePath);
 

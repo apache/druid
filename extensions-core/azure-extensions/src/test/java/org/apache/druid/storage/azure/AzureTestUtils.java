@@ -99,7 +99,7 @@ public class AzureTestUtils extends EasyMockSupport
   public static CloudBlobHolder newCloudBlobHolder(
       String container,
       String prefix,
-      long lastModifiedTimestamp) throws Exception
+      long lastModifiedTimestamp)
   {
     CloudBlobHolder object = EasyMock.createMock(CloudBlobHolder.class);
     EasyMock.expect(object.getContainerName()).andReturn(container).anyTimes();
