@@ -17,7 +17,7 @@ Druid continues to make SQL query execution more consistent with how standard SQ
 
 ### Three-valued logic
 
-Druid native filters now observe SQL [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) (`true`, `false`, or `unknown`) instead of Druid's classic two-state logic when you set the following configuration values:
+Druid native filters now observe SQL [three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) (`true`, `false`, or `unknown`) instead of Druid's classic two-state logic by default, when the following default settings apply:
 
 * `druid.generic.useThreeValueLogicForNativeFilters = true`
 * `druid.expressions.useStrictBooleans = true`
@@ -33,8 +33,7 @@ Previously, true and false could be represented either as `true` and `false` as 
 In addition, Druid now returns a null value for Boolean comparisons like `True && NULL`.
 
 If you don't explicitly configure this property in `runtime.properties`, clusters now use LONG types for any ingested boolean values and in the output of boolean functions for transformations and query time operations.
-
-This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
+For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
 
 [#14734](https://github.com/apache/druid/pull/14734)
 
@@ -43,18 +42,17 @@ This change may impact your query results. For more information, see [SQL compat
 `druid.generic.useDefaultValueForNull` is now disabled by default.
 Druid now differentiates between empty records and null records.
 Previously, Druid might treat empty records as empty or null.
-
-This change may impact your query results. For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
+For more information, see [SQL compatibility in the upgrade notes](#sql-compatibility-1).
 
 [#14792](https://github.com/apache/druid/pull/14792)
 
 ## SQL planner improvements
 
-Druid uses Apache Calcite for SQL planning and optimization. Starting in Druid 28.0.0, the Calcite version has been upgraded from 1.21 to 1.35. This upgrade brings in many bug fixes in SQL planning from Calcite. As part of the upgrade, the behavior of type inference for [dynamic parameters](#dynamic-parameters) and the [recommended syntax for UNNEST](#new-syntax-for-sql-unnest) have changed.
+Druid uses Apache Calcite for SQL planning and optimization. Starting in Druid 28.0.0, the Calcite version has been upgraded from 1.21 to 1.35. This upgrade brings in many bug fixes in SQL planning from Calcite.
 
 ### Dynamic parameters
 
-The behavior of type inference for dynamic parameters has changed. To avoid any type interference issues, explicitly `CAST` all dynamic parameters as a specific data type in SQL queries. For example, use:
+As part of the Calcite upgrade, the behavior of type inference for dynamic parameters has changed. To avoid any type interference issues, explicitly `CAST` all dynamic parameters as a specific data type in SQL queries. For example, use:
 
 ```sql
 SELECT (1 * CAST (? as DOUBLE))/2 as tmp
@@ -66,23 +64,23 @@ Do not use:
 SELECT (1 * ?)/2 as tmp
 ```
 
-### New syntax for SQL UNNEST
-
-The recommended syntax for SQL UNNEST has changed. We recommend using CROSS JOIN instead of commas for most queries to prevent issues with precedence. For example, use:
-
-```sql
-SELECT column_alias_name1 FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
-```
-
-Do not use:
-
-```sql
-SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
-```
-
 ## Async query and query from deep storage
 
 [Query from deep storage](https://druid.apache.org/docs/latest/querying/query-deep-storage/) is no longer an experimental feature. When you query from deep storage, more data is available for queries without having to scale your Historical services to accommodate more data. To benefit from the space saving that query from deep storage offers, configure your load rules to unload data from your Historical services.
+
+### Support for multiple result formats
+
+Query from deep storage now supports multiple result formats.
+Previously, the `/druid/v2/sql/statements/` endpoint only supported results in the `object` format. Now, results can be written in any format specified in the `resultFormat` parameter.
+For more information on result parameters supported by the Druid SQL API, see [Responses](https://druid.apache.org/docs/latest/api-reference/sql-api#responses).
+
+[#14571](https://github.com/apache/druid/pull/14571)
+
+### Broadened access for queries from deep storage
+
+Users with the `STATE` permission can interact with status APIs for queries from deep storage. Previously, only the user who submitted the query could use those APIs. This enables the web console to monitor the running status of the queries. Users with the `STATE` permission can access the query results.
+
+[#14944](https://github.com/apache/druid/pull/14944)
 
 ## MSQ queries for realtime tasks
 
@@ -109,11 +107,25 @@ For more information, see [Stop supervisors that ingest from multiple Kafka topi
 
 ## SQL UNNEST and ingestion flattening
 
-The UNNEST function is no longer experimental. UNNEST lets you flatten and explode data during batch ingestion. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
+The UNNEST function is no longer experimental. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
 
 You no longer need to include the context parameter `enableUnnest: true` to use UNNEST.
 
 [#14886](https://github.com/apache/druid/pull/14886)
+
+### Recommended syntax for SQL UNNEST
+
+The recommended syntax for SQL UNNEST has changed. We recommend using CROSS JOIN instead of commas for most queries to prevent issues with precedence. For example, use:
+
+```sql
+SELECT column_alias_name1 FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
+
+Do not use:
+
+```sql
+SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
 
 ## Window functions (experimental)
 
@@ -130,6 +142,18 @@ This feature allows you to safely replace the existing data in an interval of a 
 For more information, see [Concurrent append and replace](https://druid.apache.org/docs/latest/data-management/automatic-compaction#concurrent-append-and-replace).
 
 Segment locking will be deprecated and removed in favor of concurrent append and replace that is much simpler in design. With concurrent append and replace, Druid doesn't lock compaction jobs out because of active realtime ingestion.
+
+### Task locks for append and replace batch ingestion jobs
+
+Append batch ingestion jobs can now share locks. This allows you to run multiple append batch ingestion jobs against the same time internal. Replace batch ingestion jobs still require an exclusive lock. This means you can run multiple append batch ingestion jobs and one replace batch ingestion job for a given interval.
+
+[#14407](https://github.com/apache/druid/pull/14407)
+
+### Streaming ingestion with concurrent replace
+
+Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest concurrently with compaction running with `REPLACE` locks. The segment granularity of the streaming job must be equal to or finer than that of the concurrent replace job.
+
+[#15039](https://github.com/apache/druid/pull/15039)
 
 # Functional area and related changes
 
@@ -177,22 +201,6 @@ The web console supports ingesting streaming data from multiple Kafka topics to 
 * The web console now detects inline queries in the query text and lets you run them individually [#14810](https://github.com/apache/druid/pull/14801)
 * You can now reset specific partition offsets for a supervisor [#14863](https://github.com/apache/druid/pull/14863)
 
-## Multi-stage query
-
-### Support for multiple result formats
-
-Query from deep storage now supports multiple result formats.
-Previously, the `/druid/v2/sql/statements/` endpoint only supported results in the `object` format. Now, results can be written in any format specified in the `resultFormat` parameter.
-For more information on result parameters supported by the Druid SQL API, see [Responses](https://druid.apache.org/docs/latest/api-reference/sql-api#responses).
-
-[#14571](https://github.com/apache/druid/pull/14571)
-
-### Broadened access for queries from deep storage
-
-Users with the `STATE` permission can interact with status APIs for queries from deep storage. Previously, only the user who submitted the query could use those APIs. This enables the web console to monitor the running status of the queries. Users with the `STATE` permission can access the query results.
-
-[#14944](https://github.com/apache/druid/pull/14944)
-
 ## Cluster stability
 
 ### Unused segments
@@ -200,20 +208,6 @@ Users with the `STATE` permission can interact with status APIs for queries from
 Druid now stops loading and moving segments as soon as they are marked as unused. This prevents Historical processes from spending time on superfluous loads of segments that will be unloaded later. You can mark segments as unused by a drop rule, overshadowing, or by calling [the Data management API](https://druid.apache.org/docs/latest/api-reference/data-management-api).
 
 [#14644](https://github.com/apache/druid/pull/14644)
-
-## Compaction
-
-### Task locks for append and replace batch ingestion jobs
-
-Append batch ingestion jobs can now share locks. This allows you to run multiple append batch ingestion jobs against the same time internal. Replace batch ingestion jobs still require an exclusive lock. This means you can run multiple append batch ingestion jobs and one replace batch ingestion job for a given interval.
-
-[#14407](https://github.com/apache/druid/pull/14407)
-
-### Streaming ingestion with concurrent replace
-
-Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest concurrently with compaction running with `REPLACE` locks. The segment granularity of the streaming job must be equal to or finer than that of the concurrent replace job.
-
-[#15039](https://github.com/apache/druid/pull/15039)
 
 ## Ingestion
 
@@ -252,8 +246,7 @@ Set the `arrayIngestMode` query context parameter to `array` to ingest ARRAY typ
 
 In Druid 28.0.0, the default mode for `arrayIngestMode` is `mvd` for backwards compatibility, which only supports VARCHAR typed arrays and stores them as multi-value dimensions. This default is subject to change in future releases.
 
-Note that this improvement is incompatible with previous Druid versions. For information on how to migrate to the new behavior, see the [Ingestion options for ARRAY typed columns in the upgrade notes](#ingestion-options-for-array-typed-columns).
-
+For information on how to migrate to the new behavior, see the [Ingestion options for ARRAY typed columns in the upgrade notes](#ingestion-options-for-array-typed-columns).
 For information on inserting, filtering, and grouping behavior for `ARRAY` typed columns, see [Array columns](https://druid.apache.org/docs/latest/querying/arrays).
 
 [#15093](https://github.com/apache/druid/pull/15093)
@@ -731,9 +724,10 @@ If migrating to Druid's built-in ingestion is not possible, you must upgrade you
 
 ### Removed GroupBy v1 
 
-The GroupBy v1 engine has been removed. Use the GroupBy v2 engine instead.  
-If you are using GroupBy v1 in JSON-based batch queries, you must change your queries before upgrading. Otherwise, your queries will fail.
-For more information, see [GroupBy queries](https://druid.apache.org/docs/latest/querying/groupbyquery.html).
+The GroupBy v1 engine has been removed. Use the GroupBy v2 engine instead, which has been the default GroupBy engine for several releases.
+There should be no impact on your queries.
+
+Additionally, `AggregatorFactory.getRequiredColumns` has been deprecated and will be removed in a future release. If you have an extension that implements `AggregatorFactory`, then this method should be removed from your implementation.
 
 [#14866](https://github.com/apache/druid/pull/14866)
 
@@ -762,6 +756,7 @@ The deprecated MSQ fault `InsertCannotOrderByDescending` has been removed.
 ### Removed the backward compatibility code for the Handoff API
 
 The backward compatibility code for the Handoff API in `CoordinatorBasedSegmentHandoffNotifier` has been removed.
+If you are upgrading from a Druid version older than 0.14.0, upgrade to a newer version of Druid before upgrading to Druid 28.0.0.
 
 [#14652](https://github.com/apache/druid/pull/14652)
 
