@@ -27,9 +27,12 @@ title: Window functions
 Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 This document describes the SQL language.
 
-Window functions are an [experimental](../development/experimental.md) feature. Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
+Window functions are an [experimental](../development/experimental.md) feature.
+Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
+Window functions are an [experimental](../development/experimental.md) feature.
+Feel free to try window functions and provide your feedback.
+Windows functions are not currently supported by multi-stage-query engine so you cannot use them in SQL-based ingestion. 
 
-There are known issues where ORDER BY only works on ascending order and certain options may cause errors.
 
 Set the context parameter `enableWindowing: true` to use window functions.
 
@@ -89,7 +92,7 @@ Window functions support aliasing.
 
 The OVER clause defines the query windows for window functions as follows:
 - PARTITION BY indicates the dimension that defines the rows within the window
-- ORDER BY specifies the order of the rows within the windows. Currently only ascending order, ASC, works.
+- ORDER BY specifies the order of the rows within the windows.
 
 :::note
 
@@ -215,4 +218,9 @@ GROUP BY channel, __time, delta
 
 The following are known issues with window functions:
 
-- Descending order, DESC, in the ORDER BY clause in the window definition causes a Null Pointer Exception.
+-  Aggregates with ORDER BY specified are processed in the window: ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+     This is different than other databases that use the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+     In cases where the order column is unique there is no difference between RANGE / ROWS
+windows with RANGE specifications are handled as ROWS
+- LEAD/LAG ignores the default value
+- LAST_VALUE returns the last value of the window even when you include an ORDER BY clause
