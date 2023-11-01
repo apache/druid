@@ -31,7 +31,6 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.expression.BasicOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -43,16 +42,10 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("LOOKUP")
-      .operandTypeChecker(
-          BasicOperandTypeChecker.builder()
-                                 .operandTypes(
-                                     SqlTypeFamily.CHARACTER,
-                                     SqlTypeFamily.CHARACTER,
-                                     SqlTypeFamily.CHARACTER
-                                 )
-                                 .requiredOperandCount(2)
-                                 .literalOperands(2)
-                                 .build())
+      .operandNames("expr", "lookupName", "replaceMissingValueWith")
+      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
+      .requiredOperandCount(2)
+      .literalOperands(2)
       .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
