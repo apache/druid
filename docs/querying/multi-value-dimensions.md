@@ -78,7 +78,7 @@ By default, Druid sorts values in multi-value dimensions. This behavior is contr
 See [Dimension Objects](../ingestion/ingestion-spec.md#dimension-objects) for information on configuring multi-value handling.
 
 ### SQL-based ingestion
-Multi-value dimensions can also be inserted with [SQL-based ingestion](../multi-stage-query/index.md). The multi-stage query engine does not have direct handling of class Druid multi-value dimensions. A special pair of functions, `MV_TO_ARRAY` which converts multi-value dimensions into `VARCHAR ARRAY` and `ARRAY_TO_MV` to coerce them back into `VARCHAR` exist to enable handling these types. Multi-value handling is not available when using the multi-stage query engine to insert data.
+Multi-value dimensions can also be inserted with [SQL-based ingestion](../multi-stage-query/index.md). The functions `MV_TO_ARRAY` and `ARRAY_TO_MV` can assist in converting `VARCHAR` to `VARCHAR ARRAY` and `VARCHAR ARRAY` into `VARCHAR` respectively. Multi-value handling is not available when using the multi-stage query engine to insert data.
 
 For example, to insert the data used in this document:
 ```sql

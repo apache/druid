@@ -101,9 +101,12 @@ The expression post-aggregator is defined using a Druid [expression](math-expr.m
   "type": "expression",
   "name": <output_name>,
   "expression": <post-aggregation expression>,
-  "ordering" : <null (default), or "numericFirst">
+  "ordering": <null (default), or "numericFirst">,
+  "outputType": <output value type of expression> 
 }
 ```
+
+Output type is optional, and can be any native Druid type: `LONG`, `FLOAT`, `DOUBLE`, `STRING`, `ARRAY` types (e.g. `ARRAY<LONG>`), or `COMPLEX` types (e.g. `COMPLEX<json>`).
 
 
 ### Greatest / Least post-aggregators

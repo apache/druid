@@ -75,7 +75,6 @@ import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -2675,9 +2674,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             new CountAggregatorFactory("a1")
                         ))
-                        .setPostAggregatorSpecs(ImmutableList.of(
-                            expressionPostAgg("p0", "(\"a0\" / \"a1\")")
-                        ))
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg("p0", "(\"a0\" / \"a1\")", ColumnType.LONG)
+                        )
                         .setHavingSpec(having(expressionFilter("((\"a0\" / \"a1\") == 1)")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2712,7 +2711,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                         .setPostAggregatorSpecs(ImmutableList.of(
-                            expressionPostAgg("p0", "substring(\"d0\", 1, -1)")
+                            expressionPostAgg("p0", "substring(\"d0\", 1, -1)", ColumnType.STRING)
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2746,8 +2745,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                         .setPostAggregatorSpecs(ImmutableList.of(
-                            expressionPostAgg("p0", "substring(\"d0\", 1, -1)"),
-                            expressionPostAgg("p1", "strlen(\"d0\")")
+                            expressionPostAgg("p0", "substring(\"d0\", 1, -1)", ColumnType.STRING),
+                            expressionPostAgg("p1", "strlen(\"d0\")", ColumnType.LONG)
                         ))
                         .setLimitSpec(
                             DefaultLimitSpec
@@ -2796,7 +2795,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
-                .postAggregators(expressionPostAgg("s0", "substring(\"d0\", 1, -1)"))
+                .postAggregators(expressionPostAgg("s0", "substring(\"d0\", 1, -1)", ColumnType.STRING))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(10)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -2832,8 +2831,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .dimension(new DefaultDimensionSpec("dim1", "d0"))
                 .postAggregators(
-                    expressionPostAgg("p0", "substring(\"d0\", 1, -1)"),
-                    expressionPostAgg("p1", "strlen(\"d0\")")
+                    expressionPostAgg("p0", "substring(\"d0\", 1, -1)", ColumnType.STRING),
+                    expressionPostAgg("p1", "strlen(\"d0\")", ColumnType.LONG)
                 )
                 .metric(new NumericTopNMetricSpec("p1"))
                 .threshold(10)
@@ -2957,7 +2956,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
-                  .postAggregators(ImmutableList.of(expressionPostAgg("p0", "(\"a0\" / 10)")))
+                  .postAggregators(expressionPostAgg("p0", "(\"a0\" / 10)", ColumnType.DOUBLE))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -4679,7 +4678,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       ),
                       expressionPostAgg(
                           "p0",
-                          useDefault ? "((\"a3\" + \"a4\") + \"a5\")" : "((\"a4\" + \"a5\") + \"a6\")"
+                          useDefault ? "((\"a3\" + \"a4\") + \"a5\")" : "((\"a4\" + \"a5\") + \"a6\")",
+                          ColumnType.LONG
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -4714,7 +4714,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     new FloatMinAggregatorFactory("a0", "m1"),
                     new FloatMaxAggregatorFactory("a1", "m1")
                 )
-                .postAggregators(expressionPostAgg("p0", "(\"a0\" + \"a1\")"))
+                .postAggregators(expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.FLOAT))
                 .threshold(3)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -4746,7 +4746,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new FloatMinAggregatorFactory("a0", "m1"),
                             new FloatMaxAggregatorFactory("a1", "m1")
                         )
-                        .setPostAggregatorSpecs(ImmutableList.of(expressionPostAgg("p0", "(\"a0\" + \"a1\")")))
+                        .setPostAggregatorSpecs(expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.FLOAT))
                         .setLimitSpec(
                             DefaultLimitSpec
                                 .builder()
@@ -4793,9 +4793,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new FloatMaxAggregatorFactory("a1", "m1")
                         )
                         .setPostAggregatorSpecs(
-                            ImmutableList.of(
-                                expressionPostAgg("p0", "(\"a0\" + \"a1\")")
-                            )
+                            expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.FLOAT)
                         )
                         .setLimitSpec(
                             DefaultLimitSpec
@@ -4953,7 +4951,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             ),
                             new LongSumAggregatorFactory("a1", "cnt")
                         ))
-                        .setPostAggregatorSpecs(ImmutableList.of(expressionPostAgg("p0", "(\"a0\" + \"a1\")")))
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.LONG)
+                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -5040,8 +5040,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       new DoubleMinAggregatorFactory("a5", "v2", null, macroTable)
                   ))
                   .postAggregators(
-                      expressionPostAgg("p0", "log((\"a1\" + \"a2\"))"),
-                      expressionPostAgg("p1", "(\"a1\" % 4)")
+                      expressionPostAgg("p0", "log((\"a1\" + \"a2\"))", ColumnType.DOUBLE),
+                      expressionPostAgg("p1", "(\"a1\" % 4)", ColumnType.LONG)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -7247,9 +7247,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         ))
                         .setPostAggregatorSpecs(
-                            ImmutableList.of(
-                                expressionPostAgg("p0", "((1.0 - (\"a1\" / \"a0\")) * 100)")
-                            )
+                            expressionPostAgg("p0", "((1.0 - (\"a1\" / \"a0\")) * 100)", ColumnType.FLOAT)
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -7394,10 +7392,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      expressionPostAgg("p0", "CAST(\"a1\", 'DOUBLE')"),
-                      expressionPostAgg("p1", "(\"a0\" / \"a1\")"),
-                      expressionPostAgg("p2", "((\"a0\" / \"a1\") + 3)"),
-                      expressionPostAgg("p3", "((CAST(\"a0\", 'DOUBLE') / CAST(\"a1\", 'DOUBLE')) + 3)")
+                      expressionPostAgg("p0", "CAST(\"a1\", 'DOUBLE')", ColumnType.FLOAT),
+                      expressionPostAgg("p1", "(\"a0\" / \"a1\")", ColumnType.LONG),
+                      expressionPostAgg("p2", "((\"a0\" / \"a1\") + 3)", ColumnType.LONG),
+                      expressionPostAgg("p3", "((CAST(\"a0\", 'DOUBLE') / CAST(\"a1\", 'DOUBLE')) + 3)", ColumnType.FLOAT)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -8298,13 +8296,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setPostAggregatorSpecs(
-                            Collections.singletonList(
-                                new ExpressionPostAggregator(
-                                    "p0",
-                                    "(CAST(\"_a0\", 'DOUBLE') / \"_a1\")",
-                                    null,
-                                    ExprMacroTable.nil()
-                                )
+                            expressionPostAgg(
+                                "p0",
+                                "(CAST(\"_a0\", 'DOUBLE') / \"_a1\")",
+                                ColumnType.DOUBLE
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -10184,11 +10179,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )
                                             .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
                                             .setPostAggregatorSpecs(
-                                                ImmutableList.of(
-                                                    expressionPostAgg(
-                                                        "p0",
-                                                        "timestamp_floor(\"d0\",'P1M',null,'UTC')"
-                                                    )
+                                                expressionPostAgg(
+                                                    "p0",
+                                                    "timestamp_floor(\"d0\",'P1M',null,'UTC')",
+                                                    ColumnType.LONG
                                                 )
                                             )
                                             .setHavingSpec(
@@ -10431,12 +10425,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of()
                             )
                         )
-                        .setPostAggregatorSpecs(Collections.singletonList(new ExpressionPostAggregator(
-                            "p0",
-                            "case_searched((\"a1\" == 1),'ALL',\"d0\")",
-                            null,
-                            ExprMacroTable.nil()
-                        )))
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg(
+                                "p0",
+                                "case_searched((\"a1\" == 1),'ALL',\"d0\")",
+                                ColumnType.STRING
+                            )
+                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -11157,10 +11152,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             aggregators(new CountAggregatorFactory("a0"), new DoubleSumAggregatorFactory("a1", "m2"))
                         )
-                        .setPostAggregatorSpecs(Collections.singletonList(expressionPostAgg(
-                            "p0",
-                            "(\"a1\" / \"a0\")"
-                        )))
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg(
+                                "p0",
+                                "(\"a1\" / \"a0\")",
+                                ColumnType.DOUBLE
+                            )
+                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -11349,7 +11347,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      expressionPostAgg("s0", "(\"a0\" + \"a1\")")
+                      expressionPostAgg("s0", "(\"a0\" + \"a1\")", ColumnType.DOUBLE)
                   )
                   .descending(true)
                   .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
@@ -11410,7 +11408,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new FieldAccessPostAggregator(null, "a0:count")
                         )
                     ),
-                    expressionPostAgg("s0", "(\"a1\" + \"a2\")")
+                    expressionPostAgg("s0", "(\"a1\" + \"a2\")", ColumnType.DOUBLE)
                 )
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(5)
@@ -11914,15 +11912,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                // after upgrading to Calcite 1.21, expressions like sin(pi/6) that only reference
                                // literals are optimized into literals
                                .postAggregators(
-                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)"),
-                                   expressionPostAgg("p1", "0.49999999999999994"),
-                                   expressionPostAgg("p2", "0.8660254037844387"),
-                                   expressionPostAgg("p3", "0.5773502691896257"),
-                                   expressionPostAgg("p4", "1.7320508075688776"),
-                                   expressionPostAgg("p5", "asin((exp(\"a0\") / 2))"),
-                                   expressionPostAgg("p6", "acos((exp(\"a0\") / 2))"),
-                                   expressionPostAgg("p7", "atan((exp(\"a0\") / 2))"),
-                                   expressionPostAgg("p8", "atan2(exp(\"a0\"),1)")
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)", ColumnType.DOUBLE),
+                                   expressionPostAgg("p1", "0.49999999999999994", ColumnType.DOUBLE),
+                                   expressionPostAgg("p2", "0.8660254037844387", ColumnType.DOUBLE),
+                                   expressionPostAgg("p3", "0.5773502691896257", ColumnType.DOUBLE),
+                                   expressionPostAgg("p4", "1.7320508075688776", ColumnType.DOUBLE),
+                                   expressionPostAgg("p5", "asin((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p6", "acos((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p7", "atan((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p8", "atan2(exp(\"a0\"),1)", ColumnType.DOUBLE)
                                )
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
@@ -12174,8 +12172,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                         .setPostAggregatorSpecs(ImmutableList.of(
-                            expressionPostAgg("p0", "left(\"d0\",2)"),
-                            expressionPostAgg("p1", "right(\"d0\",2)")
+                            expressionPostAgg("p0", "left(\"d0\",2)", ColumnType.STRING),
+                            expressionPostAgg("p1", "right(\"d0\",2)", ColumnType.STRING)
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -13695,7 +13693,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .postAggregators(
-                      new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil())
+                      expressionPostAgg("p0", "'A'", ColumnType.STRING)
                   )
                   .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
                   .build()
@@ -13719,7 +13717,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(equality("dim1", "wat", ColumnType.STRING))
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
-                                new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil())
+                                expressionPostAgg("p0", "'A'", ColumnType.STRING)
                             )
                         )
 
@@ -13749,8 +13747,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .postAggregators(
-                      new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil()),
-                      new ExpressionPostAggregator("p1", "'wat'", null, ExprMacroTable.nil())
+                      expressionPostAgg("p0", "'A'", ColumnType.STRING),
+                      expressionPostAgg("p1", "'wat'", ColumnType.STRING)
                   )
                   .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
                   .build()
@@ -13774,8 +13772,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .granularity(Granularities.ALL)
                   .postAggregators(
-                      new ExpressionPostAggregator("p0", "'A'", null, ExprMacroTable.nil()),
-                      new ExpressionPostAggregator("p1", "'10.1'", null, ExprMacroTable.nil())
+                      expressionPostAgg("p0", "'A'", ColumnType.STRING),
+                      expressionPostAgg("p1", "'10.1'", ColumnType.STRING)
                   )
                   .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
                   .build()
@@ -13849,7 +13847,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       .setGranularity(Granularities.ALL)
                       .addDimension(new DefaultDimensionSpec("dim1", "_d0"))
                       .setPostAggregatorSpecs(ImmutableList.of(
-                          expressionPostAgg("p0", "0")
+                          expressionPostAgg("p0", "0", ColumnType.LONG)
                       ))
                       .build()
       );
@@ -13878,7 +13876,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       .addDimension(new DefaultDimensionSpec("dim1", "_d0"))
                       .addAggregator(new LongMaxAggregatorFactory("a0", "v0"))
                       .setPostAggregatorSpecs(ImmutableList.of(
-                          expressionPostAgg("p0", "isnull(\"a0\")")
+                          expressionPostAgg("p0", "isnull(\"a0\")", ColumnType.LONG)
                       ))
                       .build()
       );
@@ -13916,7 +13914,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .addDimension(new DefaultDimensionSpec("l1", "_d0", ColumnType.LONG))
                         .addAggregator(new StringLastAggregatorFactory("a0", "v0", null, 1024))
                         .setPostAggregatorSpecs(ImmutableList.of(
-                            expressionPostAgg("p0", "isnull(\"a0\")")
+                            expressionPostAgg("p0", "isnull(\"a0\")", ColumnType.LONG)
                         ))
                         .build()
         ),
@@ -13958,7 +13956,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .addDimension(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
                 .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
                 .setPostAggregatorSpecs(ImmutableList.of(
-                    expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)")))
+                    expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)", ColumnType.LONG)))
                 .build()
 
         ),

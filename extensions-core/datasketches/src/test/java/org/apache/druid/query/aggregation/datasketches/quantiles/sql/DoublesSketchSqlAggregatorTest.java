@@ -25,7 +25,6 @@ import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -44,7 +43,6 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchTo
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToRankPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToStringPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -537,11 +535,10 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           makeFieldAccessPostAgg("a1:agg"),
                           0.5f
                       ),
-                      new ExpressionPostAggregator(
+                      expressionPostAgg(
                           "p0",
                           "(\"a1\" + 1)",
-                          null,
-                          TestExprMacroTable.INSTANCE
+                          ColumnType.DOUBLE
                       ),
                       new DoublesSketchToQuantilePostAggregator(
                           "p2",
@@ -551,11 +548,10 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           0.5f
                       ),
-                      new ExpressionPostAggregator(
+                      expressionPostAgg(
                           "p3",
                           "(\"p2\" + 1000)",
-                          null,
-                          TestExprMacroTable.INSTANCE
+                          ColumnType.DOUBLE
                       ),
                       new DoublesSketchToQuantilePostAggregator(
                           "p5",
@@ -565,11 +561,10 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           0.5f
                       ),
-                      new ExpressionPostAggregator(
+                      expressionPostAgg(
                           "p6",
                           "(\"p5\" + 1000)",
-                          null,
-                          TestExprMacroTable.INSTANCE
+                          ColumnType.DOUBLE
                       ),
                       new DoublesSketchToQuantilePostAggregator(
                           "p8",
@@ -579,7 +574,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           0.5f
                       ),
-                      new ExpressionPostAggregator("p9", "abs(\"p8\")", null, TestExprMacroTable.INSTANCE),
+                      expressionPostAgg("p9", "abs(\"p8\")", ColumnType.DOUBLE),
                       new DoublesSketchToQuantilesPostAggregator(
                           "p11",
                           new FieldAccessPostAggregator(
@@ -620,13 +615,12 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               "a2:agg"
                           )
                       ),
-                      new ExpressionPostAggregator(
+                      expressionPostAgg(
                           "p20",
                           "replace(replace(\"p19\",'HeapCompactDoublesSketch','HeapUpdateDoublesSketch'),"
                           + "'Combined Buffer Capacity     : 6',"
                           + "'Combined Buffer Capacity     : 8')",
-                          null,
-                          ExprMacroTable.nil()
+                          ColumnType.STRING
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
