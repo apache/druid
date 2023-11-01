@@ -131,9 +131,47 @@ The docs go through a review process similar to the code where community members
 
 ## Style guide
 
-Before publishing new content or updating an existing topic, audit your documentation using this checklist to make sure your contributions align with existing documentation.
+Consistent style, formatting, and tone make documentation easier to consume.
+For the majority of style considerations, the Apache Druid documentation follows the [Google Developer Documentation Style Guide](https://developers.google.com/style).
+The style guide should serve as a point of reference to enable contributors and reviewers to maintain documentation quality.
 
-Here are some general guidelines:
+### Notable style exceptions
+
+In some cases, Google Style might make the Druid docs more difficult to read and understand. This section highlights those exceptions.
+
+#### SQL keyword syntax
+For SQL keywords and functions, use all caps, but do not use code font.
+
+:::tip
+
+**Correct**
+
+The UNNEST clause unnests array values.
+
+**Incorrect**
+
+The \`UNNEST\` clause unnests array values.
+:::
+
+
+#### Optional parameters and arguments
+
+For optional parameters and arguments, enclose the optional parameter and leading command in brackets.
+
+:::tip
+
+**Correct**
+
+HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])
+
+**Incorrect**
+
+HUMAN_READABLE_BINARY_BYTE_FORMAT(value, \[precision])
+:::
+
+### Style checklist
+
+Before publishing new content or updating an existing topic, you can audit your documentation using the following checklist to make sure your contributions align with existing documentation:
 
 * Use descriptive link text. If a link downloads a file, make sure to indicate this action.
 * Use present tense where possible.
