@@ -48,10 +48,12 @@ import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Class allowing lookup and usage of virtual columns.
@@ -110,6 +112,11 @@ public class VirtualColumns implements Cacheable
       }
     }
     return new VirtualColumns(ImmutableList.copyOf(virtualColumns), withDotSupport, withoutDotSupport);
+  }
+
+  public static VirtualColumns create(VirtualColumn... virtualColumns)
+  {
+    return create(Arrays.asList(virtualColumns));
   }
 
   public static VirtualColumns nullToEmpty(@Nullable VirtualColumns virtualColumns)
@@ -518,5 +525,15 @@ public class VirtualColumns implements Cacheable
       return obj instanceof VirtualColumns &&
              ((VirtualColumns) obj).virtualColumns.isEmpty();
     }
+  }
+
+  public boolean isEmpty()
+  {
+    return virtualColumns.isEmpty();
+  }
+
+  public List<String> getColumnNames()
+  {
+    return virtualColumns.stream().map(v -> v.getOutputName()).collect(Collectors.toList());
   }
 }

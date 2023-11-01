@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
@@ -186,7 +187,15 @@ class FunctionExpr implements Expr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return function.apply(args, bindings);
+    try {
+      return function.apply(args, bindings);
+    }
+    catch (DruidException | ExpressionValidationException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw DruidException.defensive().build(e, "Invocation of function '%s' encountered exception.", name);
+    }
   }
 
   @Override
