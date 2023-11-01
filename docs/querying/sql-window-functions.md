@@ -218,9 +218,8 @@ GROUP BY channel, __time, delta
 
 The following are known issues with window functions:
 
--  Aggregates with ORDER BY specified are processed in the window: ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-     This is different than other databases that use the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-     In cases where the order column is unique there is no difference between RANGE / ROWS
-windows with RANGE specifications are handled as ROWS
+-  Aggregates with ORDER BY specified are processed in the window: ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW  
+     This behavior differs from other databases that use the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW.  
+     In cases where the order column is unique there is no difference between RANGE / ROWS; windows with RANGE specifications are handled as ROWS.
 - LEAD/LAG ignores the default value
 - LAST_VALUE returns the last value of the window even when you include an ORDER BY clause
