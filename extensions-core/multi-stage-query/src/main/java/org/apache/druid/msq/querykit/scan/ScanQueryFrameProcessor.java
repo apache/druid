@@ -79,6 +79,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -173,12 +174,15 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }).map(List::toArray);
   }
 
-  private static ScanQuery prepareScanQuery(ScanQuery scanQuery) {
-    return Druids.ScanQueryBuilder.copy(scanQuery)
-                                  .orderBy(ImmutableList.of())
-                                  .order(ScanQuery.Order.NONE)
-                                  .limit(0)
-                                  .build();
+  private static ScanQuery prepareScanQuery(@NotNull ScanQuery scanQuery) {
+    if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder())) {
+      return Druids.ScanQueryBuilder.copy(scanQuery)
+                                    .orderBy(ImmutableList.of())
+                                    .limit(0)
+                                    .build();
+    } else {
+      return scanQuery;
+    }
   }
 
   @Override
