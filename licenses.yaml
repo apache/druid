@@ -4562,7 +4562,7 @@ license_name: MIT License
 copyright: Microsoft
 version: 1.10.1
 libraries:
-  - com.azure: azure-storage-blob
+  - com.azure: azure-identity
 
 ---
 
