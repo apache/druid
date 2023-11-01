@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.post;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.SettableObjectBinding;
@@ -81,7 +82,7 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
   {
     EqualsVerifier.forClass(ExpressionPostAggregator.class)
                   .usingGetClass()
-                  .withIgnoredFields("finalizers", "parsed", "dependentFields", "cacheKey", "partialTypeInformation")
+                  .withIgnoredFields("finalizers", "parsed", "dependentFields", "cacheKey", "partialTypeInformation", "expressionType")
                   .verify();
   }
 
@@ -130,7 +131,7 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(ColumnType.FLOAT, postAgg.getType(signature));
 
-    Assert.assertEquals(5.0, postAgg.compute(binding.asMap()));
+    Assert.assertEquals(5.0f, postAgg.compute(binding.asMap()));
   }
 
   @Test
@@ -164,6 +165,85 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
         -1,
         postAgg.getComparator().compare(postAgg.compute(binding.asMap()), postAgg.compute(binding2.asMap()))
     );
+  }
+
+  @Test
+  public void testExplicitOutputTypeAndComputeArrayNoType()
+  {
+    ExpressionPostAggregator postAgg = new ExpressionPostAggregator(
+        "p0",
+        "array(x, y)",
+        null,
+        null,
+        TestExprMacroTable.INSTANCE
+    );
+
+    RowSignature signature = RowSignature.builder()
+                                         .add("x", ColumnType.STRING)
+                                         .add("y", ColumnType.STRING)
+                                         .build();
+
+    SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", "abc")
+                                                               .withBinding("y", "def");
+
+    Assert.assertEquals(ColumnType.STRING_ARRAY, postAgg.getType(signature));
+
+    Assert.assertArrayEquals(new Object[]{"abc", "def"}, (Object[]) postAgg.compute(binding.asMap()));
+
+    SettableObjectBinding binding2 = new SettableObjectBinding().withBinding("x", "abc")
+                                                                .withBinding("y", "abc");
+
+    // ordering by arrays doesn't work if no outputType is specified...
+    Assert.assertThrows(
+        ClassCastException.class,
+        () -> postAgg.getComparator().compare(postAgg.compute(binding.asMap()), postAgg.compute(binding2.asMap()))
+    );
+  }
+
+  @Test
+  public void testExplicitOutputTypeAndComputeMultiValueDimension()
+  {
+    ExpressionPostAggregator postAgg = new ExpressionPostAggregator(
+        "p0",
+        "array(x, y)",
+        null,
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
+
+    RowSignature signature = RowSignature.builder()
+                                         .add("x", ColumnType.STRING)
+                                         .add("y", ColumnType.STRING)
+                                         .build();
+
+    SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", "abc")
+                                                               .withBinding("y", "def");
+
+    Assert.assertEquals(ColumnType.STRING, postAgg.getType(signature));
+
+    Assert.assertEquals(ImmutableList.of("abc", "def"), postAgg.compute(binding.asMap()));
+  }
+
+  @Test
+  public void testExplicitOutputTypeAndComputeMultiValueDimensionWithSingleElement()
+  {
+    ExpressionPostAggregator postAgg = new ExpressionPostAggregator(
+        "p0",
+        "array(x)",
+        null,
+        ColumnType.STRING,
+        TestExprMacroTable.INSTANCE
+    );
+
+    RowSignature signature = RowSignature.builder()
+                                         .add("x", ColumnType.STRING)
+                                         .build();
+
+    SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", "abc");
+
+    Assert.assertEquals(ColumnType.STRING, postAgg.getType(signature));
+
+    Assert.assertEquals("abc", postAgg.compute(binding.asMap()));
   }
 
   @Test

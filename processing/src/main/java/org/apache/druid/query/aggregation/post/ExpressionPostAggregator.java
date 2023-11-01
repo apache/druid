@@ -31,7 +31,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
@@ -40,6 +42,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -76,6 +80,9 @@ public class ExpressionPostAggregator implements PostAggregator
 
   @Nullable
   private final ColumnType outputType;
+
+  @Nullable
+  private final ExpressionType expressionType;
 
   /**
    * Constructor for deserialization.
@@ -158,6 +165,7 @@ public class ExpressionPostAggregator implements PostAggregator
     this.expression = expression;
     this.ordering = ordering;
     this.outputType = outputType;
+    this.expressionType = outputType != null ? ExpressionType.fromColumnTypeStrict(outputType) : null;
     if (outputType != null && ordering == null) {
       this.comparator = outputType.getNullableStrategy();
     } else {
@@ -168,13 +176,12 @@ public class ExpressionPostAggregator implements PostAggregator
 
     this.parsed = parsed;
     this.dependentFields = dependentFields;
-    this.cacheKey = Suppliers.memoize(() -> {
-      return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
-          .appendCacheable(parsed.get())
-          .appendString(ordering)
-          .appendString(outputType != null ? outputType.asTypeString() : null)
-          .build();
-    });
+    this.cacheKey = Suppliers.memoize(() -> new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
+        .appendCacheable(parsed.get())
+        .appendString(ordering)
+        .appendString(outputType != null ? outputType.asTypeString() : null)
+        .build()
+    );
   }
 
   @Override
@@ -203,7 +210,22 @@ public class ExpressionPostAggregator implements PostAggregator
 
     // we use partialTypeInformation to avoid unnecessarily coercing aggregator values for which we do have type info
     // from decoration
-    return parsed.get().eval(InputBindings.forMap(finalizedValues, partialTypeInformation)).valueOrDefault();
+    final ExprEval<?> eval = parsed.get().eval(InputBindings.forMap(finalizedValues, partialTypeInformation));
+    if (expressionType == null) {
+      return eval.valueOrDefault();
+    }
+    // outputType cannot be null if expressionType is not null
+    if (outputType.is(ValueType.FLOAT) && !eval.isNumericNull()) {
+      return (float) eval.asDouble();
+    }
+    if (eval.type().equals(expressionType)) {
+      return eval.valueOrDefault();
+    }
+    if (expressionType.is(ExprType.STRING) && eval.isArray()) {
+      return ExpressionSelectors.coerceEvalToObjectOrList(eval);
+    }
+    // coerce to expected type
+    return eval.castTo(expressionType).valueOrDefault();
   }
 
   @Override
