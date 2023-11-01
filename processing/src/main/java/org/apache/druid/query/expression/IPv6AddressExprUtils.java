@@ -78,12 +78,4 @@ public class IPv6AddressExprUtils
   {
     return bytes == null ? null : new IPv6Address(bytes);
   }
- 
-  /**
-  * @return IPv6 address canonical string.
-  */
-  public static String toString(IPv6Address address)
-  {
-    return address.toString();
-  }
 }
