@@ -440,9 +440,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
-        if (query.context().isSecondaryPartitionPruningEnabled()) {
+        if (query.getFilter() != null && query.context().isSecondaryPartitionPruningEnabled()) {
           filteredChunks = DimFilterUtils.filterShards(
               query.getFilter(),
+              DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), dataSourceAnalysis),
               holder.getObject(),
               partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
               dimensionRangeCache

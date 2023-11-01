@@ -54,6 +54,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -74,8 +75,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Plan for getting data from a {@link DataSource}. Used by {@link QueryKit} implementations.
+ */
 public class DataSourcePlan
 {
   /**
@@ -116,6 +121,22 @@ public class DataSourcePlan
     }
   }
 
+  /**
+   * Build a plan.
+   *
+   * @param queryKit         query kit reference for recursive planning
+   * @param queryId          query ID
+   * @param queryContext     query context
+   * @param dataSource       datasource to plan
+   * @param querySegmentSpec intervals for mandatory pruning. Must be {@link MultipleIntervalSegmentSpec}. The returned
+   *                         plan is guaranteed to be filtered to this interval.
+   * @param filter           filter for best-effort pruning. The returned plan may or may not be filtered to this
+   *                         filter. Query processing must still apply the filter to generated correct results.
+   * @param filterFields     which fields from the filter to consider for pruning, or null to consider all fields.
+   * @param maxWorkerCount   maximum number of workers for subqueries
+   * @param minStageNumber   starting stage number for subqueries
+   * @param broadcast        whether the plan should broadcast data for this datasource
+   */
   @SuppressWarnings("rawtypes")
   public static DataSourcePlan forDataSource(
       final QueryKit queryKit,
@@ -124,13 +145,31 @@ public class DataSourcePlan
       final DataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       @Nullable DimFilter filter,
+      @Nullable Set<String> filterFields,
       final int maxWorkerCount,
       final int minStageNumber,
       final boolean broadcast
   )
   {
+    if (!queryContext.isSecondaryPartitionPruningEnabled()) {
+      // Clear filter, we don't want to prune today.
+      filter = null;
+    }
+
+    if (filter != null && filterFields == null) {
+      // Ensure filterFields is nonnull if filter is nonnull. Helps for other forXYZ methods, so they don't need to
+      // deal with the case where filter is nonnull but filterFields is null.
+      filterFields = filter.getRequiredColumns();
+    }
+
     if (dataSource instanceof TableDataSource) {
-      return forTable((TableDataSource) dataSource, querySegmentSpecIntervals(querySegmentSpec), filter, broadcast);
+      return forTable(
+          (TableDataSource) dataSource,
+          querySegmentSpecIntervals(querySegmentSpec),
+          filter,
+          filterFields,
+          broadcast
+      );
     } else if (dataSource instanceof ExternalDataSource) {
       checkQuerySegmentSpecIsEternity(dataSource, querySegmentSpec);
       return forExternal((ExternalDataSource) dataSource, broadcast);
@@ -179,6 +218,7 @@ public class DataSourcePlan
           (UnionDataSource) dataSource,
           querySegmentSpec,
           filter,
+          filterFields,
           maxWorkerCount,
           minStageNumber,
           broadcast
@@ -198,6 +238,8 @@ public class DataSourcePlan
               queryContext,
               (JoinDataSource) dataSource,
               querySegmentSpec,
+              filter,
+              filterFields,
               maxWorkerCount,
               minStageNumber,
               broadcast
@@ -222,21 +264,36 @@ public class DataSourcePlan
     }
   }
 
+  /**
+   * Possibly remapped datasource that should be used when processing. Will be either the original datasource, or the
+   * original datasource with itself or some children replaced by {@link InputNumberDataSource}. Any added
+   * {@link InputNumberDataSource} refer to {@link StageInputSpec} in {@link #getInputSpecs()}.
+   */
   public DataSource getNewDataSource()
   {
     return newDataSource;
   }
 
+  /**
+   * Input specs that should be used when processing.
+   */
   public List<InputSpec> getInputSpecs()
   {
     return inputSpecs;
   }
 
+  /**
+   * Which input specs from {@link #getInputSpecs()} are broadcast.
+   */
   public IntSet getBroadcastInputs()
   {
     return broadcastInputs;
   }
 
+  /**
+   * Returns a {@link QueryDefinitionBuilder} that includes any {@link StageInputSpec} from {@link #getInputSpecs()}.
+   * Absent if this plan does not involve reading from prior stages.
+   */
   public Optional<QueryDefinitionBuilder> getSubQueryDefBuilder()
   {
     return Optional.ofNullable(subQueryDefBuilder);
@@ -302,12 +359,13 @@ public class DataSourcePlan
       final TableDataSource dataSource,
       final List<Interval> intervals,
       @Nullable final DimFilter filter,
+      @Nullable final Set<String> filterFields,
       final boolean broadcast
   )
   {
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
-        Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter)),
+        Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter, filterFields)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
     );
@@ -407,6 +465,7 @@ public class DataSourcePlan
         dataSource.getBase(),
         querySegmentSpec,
         null,
+        null,
         maxWorkerCount,
         minStageNumber,
         broadcast
@@ -447,6 +506,7 @@ public class DataSourcePlan
         dataSource.getBase(),
         querySegmentSpec,
         null,
+        null,
         maxWorkerCount,
         minStageNumber,
         broadcast
@@ -478,6 +538,7 @@ public class DataSourcePlan
       final UnionDataSource unionDataSource,
       final QuerySegmentSpec querySegmentSpec,
       @Nullable DimFilter filter,
+      @Nullable Set<String> filterFields,
       final int maxWorkerCount,
       final int minStageNumber,
       final boolean broadcast
@@ -499,6 +560,7 @@ public class DataSourcePlan
           child,
           querySegmentSpec,
           filter,
+          filterFields,
           maxWorkerCount,
           Math.max(minStageNumber, subqueryDefBuilder.getNextStageNumber()),
           broadcast
@@ -528,6 +590,8 @@ public class DataSourcePlan
       final QueryContext queryContext,
       final JoinDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
+      @Nullable final DimFilter filter,
+      @Nullable final Set<String> filterFields,
       final int maxWorkerCount,
       final int minStageNumber,
       final boolean broadcast
@@ -542,7 +606,8 @@ public class DataSourcePlan
         queryContext,
         analysis.getBaseDataSource(),
         querySegmentSpec,
-        null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
+        filter,
+        filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis),
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
@@ -561,7 +626,8 @@ public class DataSourcePlan
           queryContext,
           clause.getDataSource(),
           new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY),
-          null, // Don't push query filters down through a join: this needs some work to ensure pruning works properly.
+          null, // Don't push down query filters for right-hand side: needs some work to ensure it works properly.
+          null,
           maxWorkerCount,
           Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
           true // Always broadcast right-hand side of the join.
