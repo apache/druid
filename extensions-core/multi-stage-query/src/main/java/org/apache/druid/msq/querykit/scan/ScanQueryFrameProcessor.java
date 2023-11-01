@@ -174,9 +174,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }).map(List::toArray);
   }
 
-  private static ScanQuery prepareScanQuery(@NotNull ScanQuery scanQuery)
+  /**
+   * Prepares the scan query to be sent to a data server.
+   * If the query contains a non-time ordering, removes the ordering and limit, as the native query stack does not
+   * support it.
+   */
+  private static ScanQuery prepareScanQueryForDataServer(@NotNull ScanQuery scanQuery)
   {
-    if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder())) {
+    if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
       return Druids.ScanQueryBuilder.copy(scanQuery)
                                     .orderBy(ImmutableList.of())
                                     .limit(0)
@@ -190,7 +195,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      ScanQuery preparedQuery = prepareScanQuery(query);
+      ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
       final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> statusSequencePair =
           segment.fetchRowsFromDataServer(
               preparedQuery,
