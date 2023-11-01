@@ -57,6 +57,7 @@ import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.scan.ScanQuery;
@@ -172,13 +173,22 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }).map(List::toArray);
   }
 
+  private static ScanQuery prepareScanQuery(ScanQuery scanQuery) {
+    return Druids.ScanQueryBuilder.copy(scanQuery)
+                                  .orderBy(ImmutableList.of())
+                                  .order(ScanQuery.Order.NONE)
+                                  .limit(0)
+                                  .build();
+  }
+
   @Override
   protected ReturnOrAwait<Unit> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
+      ScanQuery preparedQuery = prepareScanQuery(query);
       final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> statusSequencePair =
           segment.fetchRowsFromDataServer(
-              query,
+              preparedQuery,
               ScanQueryFrameProcessor::mappingFunction,
               closer
           );
@@ -188,7 +198,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         return runWithSegment(segment);
       }
 
-      RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(query, jsonMapper);
+      RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(preparedQuery, jsonMapper);
       Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
           statusSequencePair.rhs,
           rowSignature
