@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -58,7 +57,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -1825,14 +1823,14 @@ public class MSQSelectTest extends MSQTestBase
                                                               )
                                                           )
                                                       )
-                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
-                                                          "a0")))
+                                                      .setAggregatorSpecs(
+                                                          aggregators(new CountAggregatorFactory("a0"))
+                                                      )
                                                       .setPostAggregatorSpecs(
-                                                          ImmutableList.of(new ExpressionPostAggregator(
-                                                                               "p0",
-                                                                               "mv_to_array(\"d0\")",
-                                                                               null, ExprMacroTable.nil()
-                                                                           )
+                                                          expressionPostAgg(
+                                                              "p0",
+                                                              "mv_to_array(\"d0\")",
+                                                              ColumnType.STRING_ARRAY
                                                           )
                                                       )
                                                       .setContext(localContext)
@@ -2216,11 +2214,10 @@ public class MSQSelectTest extends MSQTestBase
                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                 .setGranularity(Granularities.ALL)
                                 .setPostAggregatorSpecs(
-                                    ImmutableList.of(new ExpressionPostAggregator(
-                                                         "a0",
-                                                         "1",
-                                                         null, ExprMacroTable.nil()
-                                                     )
+                                    expressionPostAgg(
+                                        "a0",
+                                        "1",
+                                        ColumnType.LONG
                                     )
                                 )
                                 .build()
