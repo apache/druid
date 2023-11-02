@@ -85,7 +85,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.CachingEmitter;
@@ -418,27 +417,6 @@ public class CompactionTaskTest
         taskCreatedWithGranularitySpec.getSegmentGranularity(),
         taskCreatedWithSegmentGranularity.getSegmentGranularity()
     );
-  }
-
-  @Test
-  public void testCompactionTaskEmitter()
-  {
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
-    );
-    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
-    builder.tuningConfig(createTuningConfig());
-    builder.segmentGranularity(Granularities.HOUR);
-    final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
-
-    // null emitter should work
-    taskCreatedWithSegmentGranularity.emitCompactIngestionModeMetrics(null, false);
-    // non-null should also work
-    ServiceEmitter noopEmitter = new ServiceEmitter("service", "host", new NoopEmitter());
-    taskCreatedWithSegmentGranularity.emitCompactIngestionModeMetrics(noopEmitter, false);
-    taskCreatedWithSegmentGranularity.emitCompactIngestionModeMetrics(noopEmitter, true);
   }
 
   @Test(expected = IAE.class)

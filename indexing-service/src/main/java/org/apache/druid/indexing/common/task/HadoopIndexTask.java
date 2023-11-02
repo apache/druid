@@ -223,9 +223,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (lock == null) {
         return false;
       }
-      if (lock.isRevoked()) {
-        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-      }
+      lock.assertNotRevoked(interval);
       return true;
     } else {
       return true;
@@ -422,9 +420,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             ),
             "Cannot acquire a lock for interval[%s]", interval
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-        }
+        lock.assertNotRevoked(interval);
         version = lock.getVersion();
       } else {
         Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());

@@ -747,9 +747,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     final List<TaskLock> locks = toolbox
         .getTaskActionClient()
         .submit(new LockListAction());
-    final TaskLock revokedLock = locks.stream().filter(TaskLock::isRevoked).findAny().orElse(null);
-    if (revokedLock != null) {
-      throw new ISE("Lock revoked: [%s]", revokedLock);
+    for (TaskLock lock : locks) {
+      lock.assertNotRevoked(lock.getInterval());
     }
     final Map<Interval, String> versions = locks
         .stream()
