@@ -21,6 +21,7 @@ package org.apache.druid.query.expression;
 
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionProcessingException;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
@@ -57,7 +58,7 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testSubnetArgInvalid()
   {
-    expectException(IllegalArgumentException.class, "subnet arg has an invalid format");
+    expectException(ExpressionProcessingException.class, "Function[IPV6_MATCH] failed to parse address");
     Expr invalidSubnet = ExprEval.of("201:ef:168::/invalid").toExpr();
     apply(Arrays.asList(IPV6, invalidSubnet));
   }
