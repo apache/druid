@@ -40,7 +40,9 @@ Set the context parameter `enableWindowing: true` to use window functions.
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
 
-The following example groups results with the same `channel` value into windows. For each window, the query returns the rank of each row in ascending order based upon its `delta` value.
+The following example organizes results with the same `channel` value into windows. For each window, the query returns the rank of each row in ascending order based upon its `delta` value.
+
+Window functions in Druid require a GROUP BY statement. Druid performs the row-level aggregations for the GROUP BY before pefroming the window function calculations.
 
 ```sql
 SELECT FLOOR(__time TO DAY) AS event_time,
