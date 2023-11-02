@@ -69,6 +69,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -1060,6 +1061,42 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             Segments.ONLY_VISIBLE
         )
     ).containsOnlyOnce(defaultSegment3);
+  }
+
+  @Test
+  public void testRetrieveUsedSegmentsWithTooManyIntervals() throws IOException
+  {
+    final Set<DataSegment> segments = new HashSet<>();
+    final List<Interval> intervals = new ArrayList<>();
+
+    for (int year = 1900; year < 2050; year++) {
+      Interval segmentInterval = Intervals.of("%d-01-01/%d-01-01", year, year + 1);
+      segments.add(
+          new DataSegment(
+              "foo",
+              segmentInterval,
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(0),
+              9,
+              100
+          )
+      );
+      intervals.add(segmentInterval);
+    }
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segments);
+    Assert.assertTrue(committedSegments.containsAll(segments));
+
+    Assert.assertEquals(
+        segments.size(),
+        coordinator.retrieveUsedSegmentsForIntervals(
+            "foo",
+            intervals,
+            Segments.ONLY_VISIBLE
+        ).size()
+    );
   }
 
   @Test
