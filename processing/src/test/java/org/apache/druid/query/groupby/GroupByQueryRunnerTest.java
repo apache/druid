@@ -742,7 +742,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -5343,7 +5343,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     // Same query, but with expressions instead of arithmetic.
     final GroupByQuery expressionQuery = query.withPostAggregatorSpecs(
         Collections.singletonList(
-            new ExpressionPostAggregator("rows_times_10", "rows * 10.0", null, TestExprMacroTable.INSTANCE)
+            new ExpressionPostAggregator("rows_times_10", "rows * 10.0", null, null, TestExprMacroTable.INSTANCE)
         )
     );
 
@@ -12962,6 +12962,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new FloatSumAggregatorFactory("idxFloat", "indexFloat"),
             new DoubleSumAggregatorFactory("idxDouble", "index")
         )
+        .setPostAggregatorSpecs(
+            ImmutableList.of(
+                new ExpressionPostAggregator("post", "idx * 2", null, null, TestExprMacroTable.INSTANCE)))
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
@@ -12976,7 +12979,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "idxFloat",
             NullHandling.replaceWithDefault() ? 0.0 : null,
             "idxDouble",
-            NullHandling.replaceWithDefault() ? 0.0 : null
+            NullHandling.replaceWithDefault() ? 0.0 : null,
+            "post",
+            NullHandling.replaceWithDefault() ? 0L : null
         )
     );
 

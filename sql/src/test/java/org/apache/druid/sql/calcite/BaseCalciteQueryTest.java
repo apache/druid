@@ -602,9 +602,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return StringUtils.format("(%s == %s)", left.getExpression(), right.getExpression());
   }
 
-  public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression)
+  public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression, ColumnType outputType)
   {
-    return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
+    return new ExpressionPostAggregator(name, expression, null, outputType, CalciteTests.createExprMacroTable());
   }
 
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
@@ -1335,8 +1335,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
     }
     catch (Exception e) {
-      Assert.fail(e.getMessage());
-      return null;
+      throw new RuntimeException(e);
     }
   }
 
@@ -1514,6 +1513,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
       catch (AssertionError e) {
         log.info("sql: %s", sql);
+        log.info(resultsToString("Expected", expectedResults));
         log.info(resultsToString("Actual", queryResults.results));
         throw e;
       }

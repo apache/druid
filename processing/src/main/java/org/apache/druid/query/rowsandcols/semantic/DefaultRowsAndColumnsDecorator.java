@@ -21,6 +21,7 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.VirtualColumn;
@@ -39,14 +40,14 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   private Interval interval;
   private Filter filter;
   private VirtualColumns virtualColumns;
-  private int limit;
+  private OffsetLimit offsetLimit;
   private List<ColumnWithDirection> ordering;
 
   public DefaultRowsAndColumnsDecorator(
       RowsAndColumns base
   )
   {
-    this(base, null, null, null, -1, null);
+    this(base, null, null, null, OffsetLimit.NONE, null);
   }
 
   public DefaultRowsAndColumnsDecorator(
@@ -54,7 +55,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
       Interval interval,
       Filter filter,
       VirtualColumns virtualColumns,
-      int limit,
+      OffsetLimit limit,
       List<ColumnWithDirection> ordering
   )
   {
@@ -62,7 +63,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
     this.interval = interval;
     this.filter = filter;
     this.virtualColumns = virtualColumns;
-    this.limit = limit;
+    this.offsetLimit = limit;
     this.ordering = ordering;
   }
 
@@ -111,13 +112,9 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
   }
 
   @Override
-  public void setLimit(int numRows)
+  public void setOffsetLimit(OffsetLimit offsetLimit)
   {
-    if (this.limit == -1) {
-      this.limit = numRows;
-    } else {
-      this.limit = Math.min(limit, numRows);
-    }
+    this.offsetLimit = offsetLimit;
   }
 
   @Override
@@ -134,7 +131,7 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
         interval,
         filter,
         virtualColumns,
-        limit,
+        offsetLimit,
         ordering,
         columns == null ? null : new LinkedHashSet<>(columns)
     );

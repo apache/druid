@@ -83,6 +83,7 @@ import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
@@ -117,8 +118,7 @@ public class QueryStackTests
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactory joinableFactory,
-      final ServerConfig serverConfig,
-      final LookupExtractorFactoryContainerProvider lookupManager
+      final ServerConfig serverConfig
   )
   {
     return new ClientQuerySegmentWalker(
@@ -164,7 +164,7 @@ public class QueryStackTests
             return false;
           }
         },
-        lookupManager,
+        new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
         new SubqueryCountStatsProvider()
     );
   }

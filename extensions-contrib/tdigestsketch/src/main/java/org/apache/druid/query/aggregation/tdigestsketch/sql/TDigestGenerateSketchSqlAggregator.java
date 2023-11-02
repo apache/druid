@@ -25,10 +25,10 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
@@ -37,6 +37,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
@@ -133,8 +134,6 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
 
   private static class TDigestGenerateSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE_WITH_COMPRESSION = "'" + NAME + "(column, compression)'";
-
     TDigestGenerateSketchSqlAggFunction()
     {
       super(
@@ -143,16 +142,19 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.OTHER),
           null,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE_WITH_COMPRESSION, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-              )
-          ),
+          // Validation for signatures like 'TDIGEST_GENERATE_SKETCH(column)' and
+          // 'TDIGEST_GENERATE_SKETCH(column, compression)'
+          DefaultOperandTypeChecker
+              .builder()
+              .operandNames("column", "compression")
+              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              .requiredOperandCount(1)
+              .literalOperands(1)
+              .build(),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
-          false
+          false,
+          Optionality.FORBIDDEN
       );
     }
   }

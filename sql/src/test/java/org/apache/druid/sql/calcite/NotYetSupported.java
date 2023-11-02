@@ -79,7 +79,7 @@ public @interface NotYetSupported
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
     NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type"),
+    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
     CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
     MISSING_DESC(DruidException.class, "function signature DESC"),
     RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
@@ -88,7 +88,9 @@ public @interface NotYetSupported
     INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword"),
     // at least c7 is represented oddly in the parquet file
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
-    RESULT_MISMATCH(AssertionError.class, "assertResultsEquals");
+    RESULT_MISMATCH(AssertionError.class, "assertResultsEquals"),
+    UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
+    CANNOT_TRANSLATE(DruidException.class, "Cannot translate reference");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
