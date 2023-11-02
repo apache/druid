@@ -353,63 +353,90 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit
   )
   {
-    final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
-    final List<Iterator<DataSegment>> resultingIterators = new ArrayList<>();
+    if (intervals.isEmpty()) {
+      return CloseableIterators.withEmptyBaggage(
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit).getIterator()
+      );
+    } else {
+      final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
+      final List<Iterator<DataSegment>> resultingIterators = new ArrayList<>();
+      int totalFetched = 0;
+
+      for (final List<Interval> intervalList : intervalsLists) {
+        IteratorWithCount<DataSegment> resultIterator = retrieveSegmentsInIntervalsBatch(dataSource, intervalList, matchMode, used, limit);
+        resultingIterators.add(resultIterator.getIterator());
+        totalFetched += resultIterator.getCount();
+
+        if (null != limit && totalFetched >= limit) {
+          break;
+        }
+      }
+      return CloseableIterators.withEmptyBaggage(Iterators.concat(resultingIterators.iterator()));
+    }
+  }
+
+  private IteratorWithCount<DataSegment> retrieveSegmentsInIntervalsBatch(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      final IntervalMode matchMode,
+      final boolean used,
+      @Nullable final Integer limit
+  )
+  {
 
     // Currently the limit parameter is used only by the MarkSegmentsAsUnusedAction in the context of kill tasks,
     // and they only support a single interval. So the combination of multiple intervals and limit isn't applicable.
-    // Therefore, the logic here for totalSegmentsFetched is future proofing.
-    final AtomicInteger totalSegmentsFetched = new AtomicInteger(0);
+    // Therefore, the logic here for fetchedCounter is future proofing.
+    final AtomicInteger fetchedCounter = new AtomicInteger(0);
 
-    for (final List<Interval> intervalList : intervalsLists) {
-      // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
-      final boolean compareAsString = intervalList.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
-      final StringBuilder sb = new StringBuilder();
-      sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
+    // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
+    final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
 
-      if (compareAsString) {
-        appendConditionForIntervalsAndMatchMode(sb, intervalList, matchMode, connector);
-      }
+    final StringBuilder sb = new StringBuilder();
+    sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
 
-      final Query<Map<String, Object>> sql = handle
-          .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
-          .setFetchSize(connector.getStreamingFetchSize())
-          .bind("used", used)
-          .bind("dataSource", dataSource);
-      if (null != limit) {
-        sql.setMaxRows(Math.max(0, limit - totalSegmentsFetched.get()));
-      }
-
-      if (compareAsString) {
-        bindQueryIntervals(sql, intervalList);
-      }
-
-      final ResultIterator<DataSegment> resultIterator =
-          sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-             .iterator();
-
-      resultingIterators.add(
-          Iterators.filter(
-              resultIterator,
-              dataSegment -> {
-                // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
-                // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
-                // segment interval like "20010/20011".)
-                boolean matches = intervalList.stream().anyMatch(interval -> matchMode.apply(interval, dataSegment.getInterval()));
-                if (matches) {
-                  totalSegmentsFetched.incrementAndGet();
-                }
-                return matches;
-              }
-          )
-      );
-
-      if (null != limit && totalSegmentsFetched.get() >= limit) {
-        break;
-      }
+    if (compareAsString) {
+      appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    return CloseableIterators.withEmptyBaggage(Iterators.concat(resultingIterators.iterator()));
+    final Query<Map<String, Object>> sql = handle
+        .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
+        .setFetchSize(connector.getStreamingFetchSize())
+        .bind("used", used)
+        .bind("dataSource", dataSource);
+    if (null != limit) {
+      sql.setMaxRows(limit);
+    }
+
+    if (compareAsString) {
+      bindQueryIntervals(sql, intervals);
+    }
+
+    final ResultIterator<DataSegment> resultIterator =
+        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+           .iterator();
+
+    Iterator<DataSegment> filteredIterator = Iterators.filter(
+        resultIterator,
+        dataSegment -> {
+          fetchedCounter.incrementAndGet();
+          if (intervals.isEmpty()) {
+            return true;
+          } else {
+            // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
+            // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
+            // segment interval like "20010/20011".)
+            for (Interval interval : intervals) {
+              if (matchMode.apply(interval, dataSegment.getInterval())) {
+                return true;
+              }
+            }
+
+            return false;
+          }
+        }
+    );
+    return new IteratorWithCount<>(filteredIterator, fetchedCounter.get());
   }
 
   private static int computeNumChangedSegments(List<String> segmentIds, int[] segmentChanges)
@@ -483,5 +510,31 @@ public class SqlSegmentsMetadataQuery
     public abstract String makeSqlCondition(String quoteString, String startPlaceholder, String endPlaceholder);
 
     public abstract boolean apply(Interval a, Interval b);
+  }
+
+  /**
+   * A thin wrapper that holds the iterator and its size, so
+   * callers won't have to make a copy of the iterator or exhaust it.
+   */
+  private static class IteratorWithCount<DataSegment>
+  {
+    private final Iterator<DataSegment> iterator;
+    private final int count;
+
+    public IteratorWithCount(Iterator<DataSegment> iterator, int count)
+    {
+      this.iterator = iterator;
+      this.count = count;
+    }
+
+    public Iterator<DataSegment> getIterator()
+    {
+      return iterator;
+    }
+
+    public int getCount()
+    {
+      return count;
+    }
   }
 }
