@@ -299,7 +299,7 @@ public class NamespaceLookupExtractorFactoryTest
       }
 
       @Override
-      public long getLoadTimeout()
+      public long getLoadTimeoutMills()
       {
         return 1;
       }

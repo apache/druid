@@ -114,7 +114,7 @@ public class LoadingLookupFactory implements LookupExtractorFactory
   @Override
   public void awaitInitialization()
   {
-
+    // LoadingLookupFactory does not have any initialization period as it fetches the key from loadingCache and DataFetcher as necessary.
   }
 
   @Override

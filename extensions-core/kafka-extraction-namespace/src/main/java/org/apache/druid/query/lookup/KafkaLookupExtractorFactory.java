@@ -300,7 +300,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public void awaitInitialization()
   {
-
+    // Kafka lookup do not need await on initialization as it is realtime kafka lookups.
   }
 
   @Override

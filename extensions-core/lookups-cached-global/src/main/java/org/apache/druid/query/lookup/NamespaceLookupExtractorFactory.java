@@ -173,7 +173,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public void awaitInitialization() throws InterruptedException, TimeoutException
   {
-    long timeout = extractionNamespace.getLoadTimeout();
+    long timeout = extractionNamespace.getLoadTimeoutMills();
     if (entry.getCacheState() == CacheScheduler.NoCache.CACHE_NOT_INITIALIZED) {
       LOG.info("Cache not initialized yet for namespace %s waiting for %s secs", extractionNamespace, timeout);
       entry.awaitTotalUpdatesWithTimeout(1, timeout);
