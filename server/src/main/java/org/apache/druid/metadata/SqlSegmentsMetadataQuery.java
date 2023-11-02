@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -40,6 +41,7 @@ import org.skife.jdbi.v2.ResultIterator;
 
 import javax.annotation.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -55,6 +57,11 @@ import java.util.stream.Collectors;
 public class SqlSegmentsMetadataQuery
 {
   private static final Logger log = new Logger(SqlSegmentsMetadataQuery.class);
+
+  /**
+   * This is similar to {@link IndexerSQLMetadataStorageCoordinator#MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}.
+   */
+  private static final int MAX_INTERVALS_PER_BATCH = 100;
 
   private final Handle handle;
   private final SQLMetadataConnector connector;
@@ -345,36 +352,48 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit
   )
   {
-    // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
-    final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
+    // TODO: accommodate limit across multiple batches -- limit is non-null when fetching unused segments.
+    final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
+    final List<ResultIterator<DataSegment>> resultIterators = new ArrayList<>();
+    for (final List<Interval> intervalList : intervalsLists) {
+      // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
+      final boolean compareAsString = intervalList.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
+      final StringBuilder sb = new StringBuilder();
+      sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
 
-    final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
+      if (compareAsString) {
+        appendConditionForIntervalsAndMatchMode(sb, intervalList, matchMode, connector);
+      }
 
-    if (compareAsString) {
-      appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
+      final Query<Map<String, Object>> sql = handle
+          .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
+          .setFetchSize(connector.getStreamingFetchSize())
+          .bind("used", used)
+          .bind("dataSource", dataSource);
+      if (null != limit) {
+        sql.setMaxRows(limit);
+      }
+
+      if (compareAsString) {
+        bindQueryIntervals(sql, intervalList);
+      }
+
+      final ResultIterator<DataSegment> resultIterator =
+          sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
+             .iterator();
+
+      resultIterators.add(resultIterator);
     }
 
-    final Query<Map<String, Object>> sql = handle
-        .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
-        .setFetchSize(connector.getStreamingFetchSize())
-        .bind("used", used)
-        .bind("dataSource", dataSource);
-    if (null != limit) {
-      sql.setMaxRows(limit);
-    }
+    // Combine the ResultIterators into a single CloseableIterator
+    Iterator<DataSegment> combinedIterator = Iterators.concat(
+        resultIterators.iterator()
+    );
 
-    if (compareAsString) {
-      bindQueryIntervals(sql, intervals);
-    }
-
-    final ResultIterator<DataSegment> resultIterator =
-        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
-           .iterator();
-
-    return CloseableIterators.wrap(
+    // Apply the interval filtering logic
+    return CloseableIterators.withEmptyBaggage(
         Iterators.filter(
-            resultIterator,
+            combinedIterator,
             dataSegment -> {
               if (intervals.isEmpty()) {
                 return true;
@@ -387,12 +406,10 @@ public class SqlSegmentsMetadataQuery
                     return true;
                   }
                 }
-
                 return false;
               }
             }
-        ),
-        resultIterator
+        )
     );
   }
 
