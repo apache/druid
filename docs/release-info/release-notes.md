@@ -1,6 +1,27 @@
-<!--Intentionally, there's no Apache license so that the GHA fails it. This file is not meant to be merged.
--->
+---
+id: release-notes
+title: "Release notes"
+---
 
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+  
 Apache Druid 28.0.0 contains over $NUMBER_FEATURES new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from $NUMBER_OF_CONTRIBUTORS contributors.
 
 See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A28.0+sort%3Aupdated-desc+) for additional details, including bug fixes.
@@ -163,7 +184,7 @@ Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest
 
 The web console supports the `waitUntilSegmentsLoad` query context parameter.
 
-![UI for waitUntilSegmentsLoad context parameter](image.png)
+![UI for waitUntilSegmentsLoad context parameter](./assets/image.png)
 
 [#15110](https://github.com/apache/druid/pull/15110)
 
@@ -172,10 +193,10 @@ The web console supports the `waitUntilSegmentsLoad` query context parameter.
 The web console includes concurrent append and replace switches.
 
 The following screenshot shows the concurrent append and replace switches in the classic batch ingestion wizard:
-![Classic batch ingestion wizard](image-1.png)
+![Classic batch ingestion wizard](./assets/image-1.png)
 
 The following screenshot shows the concurrent append and replace switches in the compaction configuration UI:
-![Compaction configuration UI](image-2.png)
+![Compaction configuration UI](./assets/image-2.png)
 
 [#15114](https://github.com/apache/druid/pull/15114)
 
@@ -183,7 +204,7 @@ The following screenshot shows the concurrent append and replace switches in the
 
 The web console supports ingesting streaming data from multiple Kafka topics to a datasource using a single supervisor.
 
-![UI for Kafka multi-topic ingestion](image-3.png)
+![UI for Kafka multi-topic ingestion](./assets/image-3.png)
 
 [#14833](https://github.com/apache/druid/pull/14833)
 
