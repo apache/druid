@@ -61,7 +61,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -2598,7 +2597,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                           .intervals(querySegmentSpec(Filtration.eternity()))
                                           .granularity(Granularities.ALL)
                                           .aggregators(new LongMaxAggregatorFactory("a0", "__time"))
-                                          .postAggregators(expressionPostAgg("p0", "1"))
+                                          .postAggregators(expressionPostAgg("p0", "1", ColumnType.LONG))
                                           .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
@@ -3975,7 +3974,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                           .intervals(querySegmentSpec(Filtration.eternity()))
                                           .granularity(Granularities.ALL)
                                           .aggregators(new LongMinAggregatorFactory("a0", "__time"))
-                                          .postAggregators(expressionPostAgg("p0", "1"))
+                                          .postAggregators(expressionPostAgg("p0", "1", ColumnType.LONG))
                                           .context(QUERY_CONTEXT_DEFAULT)
                                           .build()
                                 ),
@@ -4739,7 +4738,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                         new DefaultDimensionSpec("dim1", "d0")
                                                     )
                                                 )
-                                                .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator("a0", "1", null, ExprMacroTable.nil())))
+                                                .setPostAggregatorSpecs(expressionPostAgg("a0", "1", ColumnType.LONG))
                                                 .setContext(queryContext)
                                                 .build()
                                 ),
@@ -5543,12 +5542,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                   new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING)
                                               )
                                               .setGranularity(Granularities.ALL)
-                                              .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator(
-                                                  "a0",
-                                                  "1",
-                                                  null,
-                                                  ExprMacroTable.nil()
-                                              )))
+                                              .setPostAggregatorSpecs(
+                                                  expressionPostAgg("a0", "1", ColumnType.LONG)
+                                              )
                                               .setLimitSpec(NoopLimitSpec.instance())
                                               .build()
                               ),
@@ -5623,12 +5619,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                               .setDimensions(
                                                   new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING)
                                               )
-                                              .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator(
-                                                  "a0",
-                                                  "1",
-                                                  null,
-                                                  ExprMacroTable.nil()
-                                              )))
+                                              .setPostAggregatorSpecs(
+                                                  expressionPostAgg("a0", "1", ColumnType.LONG)
+                                              )
                                               .setGranularity(Granularities.ALL)
                                               .setLimitSpec(NoopLimitSpec.instance())
                                               .build()
@@ -5914,7 +5907,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     .setDimensions(
                                                         new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                                                     )
-                                                    .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator("a0", "1", null, ExprMacroTable.nil())))
+                                                    .setPostAggregatorSpecs(
+                                                        expressionPostAgg("a0", "1", ColumnType.LONG)
+                                                    )
                                                     .build()
                                     ),
                                     "j0.",
@@ -5967,7 +5962,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     .setDimensions(
                                                         new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                                                     )
-                                                    .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator("a0", "1", null, ExprMacroTable.nil())))
+                                                    .setPostAggregatorSpecs(
+                                                        expressionPostAgg("a0", "1", ColumnType.LONG)
+                                                    )
                                                     .build()
                                     ),
                                     "_j0.",

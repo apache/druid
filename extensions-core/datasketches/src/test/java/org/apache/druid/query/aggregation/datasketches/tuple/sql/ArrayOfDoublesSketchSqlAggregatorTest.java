@@ -35,7 +35,6 @@ import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketc
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchOperations;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchSetOpPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -295,29 +294,26 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      ImmutableList.of(
-                          new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
-                              "p1",
-                              new FieldAccessPostAggregator("p0", "a1")
-                          ),
-                          new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
-                              "p5",
-                              new ArrayOfDoublesSketchSetOpPostAggregator(
-                                  "p4",
-                                  "INTERSECT",
-                                  128,
-                                  null,
-                                  ImmutableList.of(
-                                      new ExpressionPostAggregator(
-                                          "p2",
-                                          "complex_decode_base64('arrayOfDoublesSketch',"
-                                          + expectedBase64Constant
-                                          + ")",
-                                          null,
-                                          queryFramework().macroTable()
-                                      ),
-                                      new FieldAccessPostAggregator("p3", "a1")
-                                  )
+                      new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
+                          "p1",
+                          new FieldAccessPostAggregator("p0", "a1")
+                      ),
+                      new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
+                          "p5",
+                          new ArrayOfDoublesSketchSetOpPostAggregator(
+                              "p4",
+                              "INTERSECT",
+                              128,
+                              null,
+                              ImmutableList.of(
+                                  expressionPostAgg(
+                                      "p2",
+                                      "complex_decode_base64('arrayOfDoublesSketch',"
+                                      + expectedBase64Constant
+                                      + ")",
+                                      ColumnType.ofComplex("arrayOfDoublesSketch")
+                                  ),
+                                  new FieldAccessPostAggregator("p3", "a1")
                               )
                           )
                       )
@@ -391,7 +387,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ImmutableList.of(
                           new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
                               "p1",
-                              new ExpressionPostAggregator("p0", "null", null, queryFramework().macroTable())
+                              expressionPostAgg("p0", "null", null)
                           ),
                           new ArrayOfDoublesSketchSetOpPostAggregator(
                               "p4",
@@ -399,8 +395,8 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               ImmutableList.of(
-                                  new ExpressionPostAggregator("p2", "null", null, queryFramework().macroTable()),
-                                  new ExpressionPostAggregator("p3", "null", null, queryFramework().macroTable())
+                                  expressionPostAgg("p2", "null", null),
+                                  expressionPostAgg("p3", "null", null)
                               )
                           ),
                           new ArrayOfDoublesSketchSetOpPostAggregator(
@@ -409,7 +405,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               ImmutableList.of(
-                                  new ExpressionPostAggregator("p5", "null", null, queryFramework().macroTable()),
+                                  expressionPostAgg("p5", "null", null),
                                   new FieldAccessPostAggregator("p6", "a1")
                               )
                           ),
@@ -420,7 +416,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               ImmutableList.of(
                                   new FieldAccessPostAggregator("p8", "a1"),
-                                  new ExpressionPostAggregator("p9", "null", null, queryFramework().macroTable())
+                                  expressionPostAgg("p9", "null", null)
                               )
                           )
                       )

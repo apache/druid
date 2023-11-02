@@ -366,17 +366,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .postAggregators(
-                    expressionPostAgg("p0", "'foo'"),
-                    expressionPostAgg("p1", "'xfoo'"),
-                    expressionPostAgg("p2", "'foo'"),
-                    expressionPostAgg("p3", "' foo'"),
-                    expressionPostAgg("p4", "'foo'"),
-                    expressionPostAgg("p5", "'foo'"),
-                    expressionPostAgg("p6", "'foo'"),
-                    expressionPostAgg("p7", "'foo '"),
-                    expressionPostAgg("p8", "'foox'"),
-                    expressionPostAgg("p9", "' foo'"),
-                    expressionPostAgg("p10", "'xfoo'")
+                    expressionPostAgg("p0", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p1", "'xfoo'", ColumnType.STRING),
+                    expressionPostAgg("p2", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p3", "' foo'", ColumnType.STRING),
+                    expressionPostAgg("p4", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p5", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p6", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p7", "'foo '", ColumnType.STRING),
+                    expressionPostAgg("p8", "'foox'", ColumnType.STRING),
+                    expressionPostAgg("p9", "' foo'", ColumnType.STRING),
+                    expressionPostAgg("p10", "'xfoo'", ColumnType.STRING)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -407,12 +407,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .postAggregators(
-                    expressionPostAgg("p0", "'xxfoo'"),
-                    expressionPostAgg("p1", "'fo'"),
-                    expressionPostAgg("p2", "'  foo'"),
-                    expressionPostAgg("p3", "'fooxx'"),
-                    expressionPostAgg("p4", "'fo'"),
-                    expressionPostAgg("p5", "'foo  '")
+                    expressionPostAgg("p0", "'xxfoo'", ColumnType.STRING),
+                    expressionPostAgg("p1", "'fo'", ColumnType.STRING),
+                    expressionPostAgg("p2", "'  foo'", ColumnType.STRING),
+                    expressionPostAgg("p3", "'fooxx'", ColumnType.STRING),
+                    expressionPostAgg("p4", "'fo'", ColumnType.STRING),
+                    expressionPostAgg("p5", "'foo  '", ColumnType.STRING)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1005,7 +1005,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                    new DoubleSumAggregatorFactory("a1", "m2")
                                ))
                                .postAggregators(
-                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)", ColumnType.DOUBLE)
                                )
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
@@ -1030,7 +1030,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 new DoubleSumAggregatorFactory("a1", "m2")
             ))
             .postAggregators(
-                expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                expressionPostAgg("p0", "(exp(\"a0\") + 10)", ColumnType.DOUBLE)
             )
             .context(QUERY_CONTEXT_DEFAULT)
             .build()),
