@@ -277,6 +277,10 @@
     ],
     "Misc": [
       "misc/papers-and-talks"
+    ],
+    "Release info": [
+      "release-info/release-notes",
+      "release-info/upgrade-notes"
     ]
-      }
+  }
 }
