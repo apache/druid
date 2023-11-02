@@ -134,6 +134,7 @@
           "querying/joins",
           "querying/lookups",
           "querying/multi-value-dimensions",
+          "querying/arrays",
           "querying/nested-columns",
           "querying/multitenancy",
           "querying/caching",
