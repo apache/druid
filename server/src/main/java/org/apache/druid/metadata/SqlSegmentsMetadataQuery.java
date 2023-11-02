@@ -47,6 +47,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -352,9 +353,13 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit
   )
   {
-    // TODO: accommodate limit across multiple batches -- limit is non-null when fetching unused segments.
     final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
     final List<Iterator<DataSegment>> resultingIterators = new ArrayList<>();
+
+    // Currently the limit parameter is used only by the MarkSegmentsAsUnusedAction in the context of kill tasks,
+    // and they only support a single interval. So the combination of multiple intervals and limit isn't applicable.
+    // Therefore, the logic here for totalSegmentsFetched is future proofing.
+    final AtomicInteger totalSegmentsFetched = new AtomicInteger(0);
 
     for (final List<Interval> intervalList : intervalsLists) {
       // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -372,7 +377,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used", used)
           .bind("dataSource", dataSource);
       if (null != limit) {
-        sql.setMaxRows(limit);
+        sql.setMaxRows(Math.max(0, limit - totalSegmentsFetched.get()));
       }
 
       if (compareAsString) {
@@ -383,14 +388,25 @@ public class SqlSegmentsMetadataQuery
           sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
              .iterator();
 
-      // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
-      // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
-      // segment interval like "20010/20011".)
       resultingIterators.add(
           Iterators.filter(
               resultIterator,
-              dataSegment -> intervalList.stream().anyMatch(interval -> matchMode.apply(interval, dataSegment.getInterval()))
-      ));
+              dataSegment -> {
+                // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
+                // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
+                // segment interval like "20010/20011".)
+                boolean matches = intervalList.stream().anyMatch(interval -> matchMode.apply(interval, dataSegment.getInterval()));
+                if (matches) {
+                  totalSegmentsFetched.incrementAndGet();
+                }
+                return matches;
+              }
+          )
+      );
+
+      if (null != limit && totalSegmentsFetched.get() >= limit) {
+        break;
+      }
     }
 
     return CloseableIterators.withEmptyBaggage(Iterators.concat(resultingIterators.iterator()));

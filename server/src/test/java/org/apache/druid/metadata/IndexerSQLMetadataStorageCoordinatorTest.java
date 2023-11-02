@@ -1089,14 +1089,87 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final Set<DataSegment> committedSegments = coordinator.commitSegments(segments);
     Assert.assertTrue(committedSegments.containsAll(segments));
 
-    Assert.assertEquals(
-        segments.size(),
-        coordinator.retrieveUsedSegmentsForIntervals(
-            "foo",
-            intervals,
-            Segments.ONLY_VISIBLE
-        ).size()
+    Collection<DataSegment> actualSegments = coordinator.retrieveUsedSegmentsForIntervals(
+        "foo",
+        intervals,
+        Segments.ONLY_VISIBLE
     );
+
+    Assert.assertEquals(segments.size(), actualSegments.size());
+    Assert.assertTrue(actualSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithSmallLimit() throws IOException
+  {
+    final List<DataSegment> segments = new ArrayList<>();
+
+    for (int year = 1900; year < 1950; year++) {
+      Interval segmentInterval = Intervals.of("%d-01-01/%d-01-01", year, year + 1);
+      segments.add(
+          new DataSegment(
+              "foo",
+              segmentInterval,
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(0),
+              9,
+              100
+          )
+      );
+    }
+    final HashSet<DataSegment> segmentsSet = new HashSet<>(segments);
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
+    Assert.assertTrue(committedSegments.containsAll(segments));
+    markAllSegmentsUnused(segmentsSet);
+
+    final int limit = 10;
+    List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        "foo",
+        Intervals.of("1900-01-01/3000-01-01"),
+        limit
+    );
+
+    Assert.assertEquals(limit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(limit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithLargeLimit() throws IOException
+  {
+    final Set<DataSegment> segments = new HashSet<>();
+    for (int year = 1900; year < 2130; year++) {
+      Interval segmentInterval = Intervals.of("%d-01-01/%d-01-01", year, year + 1);
+      segments.add(
+          new DataSegment(
+              "foo",
+              segmentInterval,
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(0),
+              9,
+              100
+          )
+      );
+    }
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segments);
+    Assert.assertTrue(committedSegments.containsAll(segments));
+    markAllSegmentsUnused(segments);
+
+    final int limit = segments.size() + 1;
+
+    List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        "foo",
+        Intervals.of("1900-01-01/3000-01-01"),
+        limit
+    );
+
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments));
   }
 
   @Test
