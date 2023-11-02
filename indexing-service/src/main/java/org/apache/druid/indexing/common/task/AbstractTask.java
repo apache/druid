@@ -201,7 +201,7 @@ public abstract class AbstractTask implements Task
         ? TaskStatus.failure(id, "Task failed to run")
         : taskStatus;
     // report back to the overlord
-    UpdateStatusAction status = new UpdateStatusAction("", taskStatus);
+    UpdateStatusAction status = new UpdateStatusAction("", taskStatusToReport);
     toolbox.getTaskActionClient().submit(status);
 
     if (reportsFile != null && reportsFile.exists()) {
