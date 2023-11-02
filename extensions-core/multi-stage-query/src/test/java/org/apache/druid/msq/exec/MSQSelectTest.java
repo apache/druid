@@ -25,6 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
@@ -1270,7 +1271,12 @@ public class MSQSelectTest extends MSQTestBase
         GroupByQuery.builder()
                     .setDataSource(
                         new ExternalDataSource(
-                            new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile())),
+                            new LocalInputSource(
+                                null,
+                                null,
+                                ImmutableList.of(toRead.getAbsoluteFile()),
+                                SystemFields.none()
+                            ),
                             new JsonInputFormat(null, null, null, null, null),
                             RowSignature.builder()
                                         .add("timestamp", ColumnType.STRING)
@@ -1360,7 +1366,15 @@ public class MSQSelectTest extends MSQTestBase
     final ScanQuery expectedQuery =
         newScanQueryBuilder().dataSource(
                                  new ExternalDataSource(
-                                     new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile(), toRead.getAbsoluteFile())),
+                                     new LocalInputSource(
+                                         null,
+                                         null,
+                                         ImmutableList.of(
+                                             toRead.getAbsoluteFile(),
+                                             toRead.getAbsoluteFile()
+                                         ),
+                                         SystemFields.none()
+                                     ),
                                      new JsonInputFormat(null, null, null, null, null),
                                      RowSignature.builder()
                                                  .add("timestamp", ColumnType.STRING)
@@ -2141,7 +2155,12 @@ public class MSQSelectTest extends MSQTestBase
                 .builder()
                 .query(newScanQueryBuilder()
                            .dataSource(new ExternalDataSource(
-                               new LocalInputSource(null, null, Collections.nCopies(numFiles, toRead)),
+                               new LocalInputSource(
+                                   null,
+                                   null,
+                                   Collections.nCopies(numFiles, toRead),
+                                   SystemFields.none()
+                               ),
                                new CsvInputFormat(null, null, null, true, 0),
                                RowSignature.builder().add("timestamp", ColumnType.STRING).build()
                            ))
