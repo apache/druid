@@ -26,6 +26,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.CastedLiteralOperandTypeCheckers;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
@@ -156,7 +157,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
               OperandTypes.sequence(
                   StringUtils.format("'%s(expr, maxSizeBytes)'", NAME),
                   OperandTypes.ARRAY,
-                  OperandTypes.POSITIVE_INTEGER_LITERAL
+                  CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
               )
           ),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
