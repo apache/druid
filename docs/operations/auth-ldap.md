@@ -254,7 +254,9 @@ Before you start to set up LDAPS in Druid, you must [configure Druid for LDAP au
 
 Complete the following steps to set up LDAPS for Druid. See [Configuration reference](../configuration/index.md) for the location of the configuration files. 
 
-1. Either create a new java trust store and import the CA certificate (or self-signed certificate) for your LDAP server into the newly created ldap truststore or import the CA certificate (or self-signed certificate) into the truststore specified by the `druid.client.https.trustStorePath`  property located in your `common.runtime.properties` file. The example below ilustrates the option with one key store for both https clients and ldap clients but you could use a separate dedicated trust store just for ldap if you wish. 
+1. Import the CA or self-signed certificate for your LDAP server into either a newly created LDAP trust store or the trust store specified by the `druid.client.https.trustStorePath`  property located in your `common.runtime.properties` file.
+
+   The example below illustrates the option with one key store for both HTTPS clients and LDAP clients, but you can use a separate dedicated trust store just for ldap if you wish. 
 
    ```
    keytool -import -trustcacerts -keystore path/to/cacerts -storepass truststorepassword -alias aliasName -file path/to/certificate.cer
