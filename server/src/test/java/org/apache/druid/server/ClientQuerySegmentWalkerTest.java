@@ -1507,8 +1507,7 @@ public class ClientQuerySegmentWalkerTest
         ),
         conglomerate,
         joinableFactory,
-        serverConfig,
-        null
+        serverConfig
     );
   }
 
