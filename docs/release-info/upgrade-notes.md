@@ -22,7 +22,7 @@ title: "Upgrade notes"
   ~ under the License.
   -->
 
-The upgrade notes assume that you are upgrading from the preceding version of Druid. If you are upgrading across multiple versions, make sure you read the upgrade notes for all the versions.
+The upgrade notes assume that you are upgrading from the Druid version that immediately precedes your target version. If you are upgrading across multiple versions, make sure you read the upgrade notes for all the intermediate versions.
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
