@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.curator.CuratorTestBase;
@@ -37,9 +38,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -61,6 +64,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -525,6 +529,63 @@ public class BrokerServerViewTest extends CuratorTestBase
   {
     setupViews(null, Collections.emptySet(), true);
   }
+
+  @Test
+  public void testGetAndAddServer() throws Exception
+  {
+    setupViews(null, null, false);
+    String hostAndPort = "127.0.0.1";
+    QueryableDruidServer queryableDruidServer = brokerServerView.getAndAddServer(hostAndPort);
+    Assert.assertEquals(queryableDruidServer.getServer().getHostAndPort(), hostAndPort);
+    Assert.assertEquals(queryableDruidServer, brokerServerView.getAndAddServer(hostAndPort));
+  }
+
+  @Test(expected = ISE.class)
+  public void testGetAndAddServerException() throws Exception
+  {
+    setupViews(null, null, false);
+    new TimelineServerView()
+    {
+      @Override
+      public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
+      {
+        return Optional.empty();
+      }
+
+      @Override
+      public List<ImmutableDruidServer> getDruidServers()
+      {
+        return null;
+      }
+
+      @Override
+      public <T> QueryRunner<T> getQueryRunner(DruidServer server)
+      {
+        return null;
+      }
+
+      @Override
+      public void registerTimelineCallback(Executor exec, TimelineCallback callback)
+      {
+
+      }
+
+      @Override
+      public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
+      {
+
+      }
+
+      @Override
+      public void registerSegmentCallback(Executor exec, SegmentCallback callback)
+      {
+
+      }
+
+    }.getAndAddServer("localhost:8888");
+
+  }
+
 
   /**
    * Creates a DruidServer of type HISTORICAL and sets up a ZNode for it.

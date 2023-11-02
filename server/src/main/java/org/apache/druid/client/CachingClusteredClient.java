@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -372,6 +373,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
+        addSequencesFromFederatedCluster(sequencesByInterval);
         return merge(sequencesByInterval);
       });
 
@@ -673,6 +675,33 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         listOfSequences.add(serverResults);
       });
+    }
+
+    private void addSequencesFromFederatedCluster(
+        final List<Sequence<T>> listOfSequences
+    )
+    {
+      String federatedClusterBrokersStr = query.context().getString(QueryContexts.FEDERATED_CLUSTER_BROKERS);
+      if (!Strings.isNullOrEmpty(federatedClusterBrokersStr)) {
+        String[] brokers = federatedClusterBrokersStr.split(",");
+        for (String hostName : brokers) {
+          if (hostName.length() > 0) {
+            final QueryRunner serverRunner = serverView.getAndAddServer(hostName).getQueryRunner();
+            // Divide user-provided maxQueuedBytes by the number of servers, and limit each server to that much.
+            final long maxQueuedBytes = query.context().getMaxQueuedBytes(httpClientConfig.getMaxQueuedBytes()) / brokers.length;
+            final Sequence<T> serverResults = serverRunner.run(
+                queryPlus.withQuery(queryPlus.getQuery()
+                                             .withOverriddenContext(ImmutableMap.of(
+                                                 QueryContexts.FEDERATED_CLUSTER_BROKERS,
+                                                 ""
+                                             )))
+                         .withMaxQueuedBytes(maxQueuedBytes),
+                responseContext
+            );
+            listOfSequences.add(serverResults);
+          }
+        }
+      }
     }
 
     @SuppressWarnings("unchecked")
