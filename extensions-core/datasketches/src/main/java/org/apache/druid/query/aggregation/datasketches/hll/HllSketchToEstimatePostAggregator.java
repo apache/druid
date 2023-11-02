@@ -99,7 +99,7 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   {
     Object hllSketchHolderObject = field.compute(combinedAggregators);
     if (hllSketchHolderObject == null) {
-      return 0.0d;
+      return 0.0D;
     }
     final HllSketchHolder holder = HllSketchHolder.fromObj(hllSketchHolderObject);
     // The union object always uses an HLL_8 sketch, so we always get that.  The target type doesn't actually impact
