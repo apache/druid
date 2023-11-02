@@ -34,23 +34,23 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 public class IPv6AddressMatchOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlSingleOperandTypeChecker ADDRESS_OPERAND = OperandTypes.or(
-    OperandTypes.family(SqlTypeFamily.STRING)
+      OperandTypes.family(SqlTypeFamily.STRING)
   );
 
   private static final SqlSingleOperandTypeChecker SUBNET_OPERAND = OperandTypes.family(SqlTypeFamily.STRING);
  
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-    .operatorBuilder(StringUtils.toUpperCase(IPv6AddressMatchExprMacro.FN_NAME))
-    .operandTypeChecker(
+      .operatorBuilder(StringUtils.toUpperCase(IPv6AddressMatchExprMacro.FN_NAME))
+      .operandTypeChecker(
       OperandTypes.sequence(
         "'" + StringUtils.toUpperCase(IPv6AddressMatchExprMacro.FN_NAME) + "(expr, string)'",
         ADDRESS_OPERAND,
         SUBNET_OPERAND
       )
     )
-    .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
-    .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-    .build();
+      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
+      .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+      .build();
  
   public IPv6AddressMatchOperatorConversion()
   {
