@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -58,7 +57,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -226,7 +224,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1, 2, 3} : new long[]{6})
+                .rows(isPageSizeLimited() ? new long[]{2, 2, 2} : new long[]{6})
                 .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
@@ -290,7 +288,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1L, 2L} : new long[]{3L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L} : new long[]{1L}),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -353,7 +353,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1, 2, 3} : new long[]{6})
+                .rows(isPageSizeLimited() ? new long[]{2, 2, 2} : new long[]{6})
                 .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
@@ -1442,8 +1442,8 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 2L} : new long[]{5L})
-                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L} : new long[]{1L}),
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
             0, 0, "shuffle"
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -1459,27 +1459,27 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with()
-                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 2L} : new long[]{5L})
-                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L} : new long[]{1L}),
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
             0, 1, "shuffle"
         );
     // adding result stage counter checks
     if (isPageSizeLimited()) {
       selectTester.setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2, 0, 2),
+              .with().rows(2, 0, 2, 0, 2),
           1, 0, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(2, 0, 2),
+              .with().rows(2, 0, 2, 0, 2),
           1, 0, "output"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 2, 0, 4),
+              .with().rows(0, 2, 0, 2),
           1, 1, "input0"
       ).setExpectedCountersForStageWorkerChannel(
           CounterSnapshotMatcher
-              .with().rows(0, 2, 0, 4),
+              .with().rows(0, 2, 0, 2),
           1, 1, "output"
       );
     }
@@ -1600,7 +1600,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1, 2} : new long[]{3})
+                .frames(isPageSizeLimited() ? new long[]{1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -1821,14 +1823,14 @@ public class MSQSelectTest extends MSQTestBase
                                                               )
                                                           )
                                                       )
-                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
-                                                          "a0")))
+                                                      .setAggregatorSpecs(
+                                                          aggregators(new CountAggregatorFactory("a0"))
+                                                      )
                                                       .setPostAggregatorSpecs(
-                                                          ImmutableList.of(new ExpressionPostAggregator(
-                                                                               "p0",
-                                                                               "mv_to_array(\"d0\")",
-                                                                               null, ExprMacroTable.nil()
-                                                                           )
+                                                          expressionPostAgg(
+                                                              "p0",
+                                                              "mv_to_array(\"d0\")",
+                                                              ColumnType.STRING_ARRAY
                                                           )
                                                       )
                                                       .setContext(localContext)
@@ -2212,11 +2214,10 @@ public class MSQSelectTest extends MSQTestBase
                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                 .setGranularity(Granularities.ALL)
                                 .setPostAggregatorSpecs(
-                                    ImmutableList.of(new ExpressionPostAggregator(
-                                                         "a0",
-                                                         "1",
-                                                         null, ExprMacroTable.nil()
-                                                     )
+                                    expressionPostAgg(
+                                        "a0",
+                                        "1",
+                                        ColumnType.LONG
                                     )
                                 )
                                 .build()

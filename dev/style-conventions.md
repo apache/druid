@@ -36,7 +36,7 @@ While this page might discuss conventions that are also enforced via said mechan
 discuss style-related convention that cannot be (or are extremely difficult to be) enforced through such automated
 mechanisms.
 
-## Message Formatting (Logs and Exceptions)
+## Message formatting for logs and exceptions
 
 The way that log and exception messages get formatted is an important part of a project.  Specifically, it is
 important that there is consistency in formatting such that someone can easily identify and interpret messages.
@@ -60,3 +60,8 @@ This consistency applies to both log *and* exception messages.
    * Good: `log.info("Filter [%s] on column [%s] cannot be applied to type [%s]", "is not null", "null", "INTEGER")`
      * After interpolation, clear separation: `"Filter [is not null] on column [null] cannot be applied to type [INTEGER]"`
      * With interpolations removed, it is clear what happened, though still hard to figure out which specific thing to adjust: `"Filter on column cannot be applied to type"`
+
+
+## Documentation style
+
+For the majority of style considerations, the Apache Druid documentation follows the [Google Developer Documentation Style Guide](https://developers.google.com/style). For more details, see [Contribute to Druid docs](../docs/development/docs-contribute.md#style-guide).

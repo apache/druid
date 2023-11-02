@@ -25,12 +25,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.msq.exec.SegmentLoadStatusFetcher;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class MSQStatusReport
@@ -47,6 +50,8 @@ public class MSQStatusReport
 
   private final long durationMs;
 
+  private final Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStats;
+
   private final int pendingTasks;
 
   private final int runningTasks;
@@ -61,6 +66,7 @@ public class MSQStatusReport
       @JsonProperty("warnings") Collection<MSQErrorReport> warningReports,
       @JsonProperty("startTime") @Nullable DateTime startTime,
       @JsonProperty("durationMs") long durationMs,
+      @JsonProperty("workers") Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStats,
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
       @JsonProperty("segmentLoadWaiterStatus") @Nullable SegmentLoadStatusFetcher.SegmentLoadWaiterStatus segmentLoadWaiterStatus
@@ -71,6 +77,7 @@ public class MSQStatusReport
     this.warningReports = warningReports != null ? warningReports : Collections.emptyList();
     this.startTime = startTime;
     this.durationMs = durationMs;
+    this.workerStats = workerStats;
     this.pendingTasks = pendingTasks;
     this.runningTasks = runningTasks;
     this.segmentLoadWaiterStatus = segmentLoadWaiterStatus;
@@ -121,6 +128,12 @@ public class MSQStatusReport
   public long getDurationMs()
   {
     return durationMs;
+  }
+
+  @JsonProperty("workers")
+  public Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> getWorkerStats()
+  {
+    return workerStats;
   }
 
   @Nullable
