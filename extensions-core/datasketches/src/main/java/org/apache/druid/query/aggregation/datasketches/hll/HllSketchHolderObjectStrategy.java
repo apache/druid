@@ -78,7 +78,13 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
     );
   }
 
-  private boolean isSafeToConvertToNullSketch(ByteBuffer buf, int size)
+  /**
+   * Checks if a sketch is empty and can be converted to null. Returns true if it is and false if it is not, or if is
+   * not possible to say for sure.
+   * Checks the initial 8 byte header to find the type of internal sketch implementation, then uses the logic the
+   * corresponding implementation uses to tell if a sketch is empty while deserializing it.
+   */
+  private static boolean isSafeToConvertToNullSketch(ByteBuffer buf, int size)
   {
     if (size < 8) {
       // Sanity check.
@@ -86,36 +92,40 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
       // false since we can't be sure.
       return false;
     }
-
-    // Get org.apache.datasketches.hll.CurMode. This indicates the type of data structure.
     final int position = buf.position();
-    final int preInts = buf.get(position) & 0X3F;   // get(PREAMBLE_INTS_BYTE) & 0X3F
-    final int curMode = buf.get(position + 7) & 3;  // get(MODE_BYTE) & CUR_MODE_MASK
 
+    // Get preamble int. These should correspond to the type of internal implementaion as a sanity check.
+    final int preInts = buf.get(position) & 0x3F;   // get(PREAMBLE_INTS_BYTE) & PREAMBLE_MASK
+
+    // Get org.apache.datasketches.hll.CurMode. This indicates the type of internal data structure.
+    final int curMode = buf.get(position + 7) & 3;  // get(MODE_BYTE) & CUR_MODE_MASK
     switch (curMode) {
-      case 0:          // LIST
+      case 0: // LIST
         if (preInts != 2) {
           // preInts should be LIST_PREINTS, Sanity check.
           return false;
         }
-        int listCount = buf.get(position + 6) & 0XFF; // get(LIST_COUNT_BYTE) & 0XFF
+        // Based on org.apache.datasketches.hll.PreambleUtil.extractListCount
+        int listCount = buf.get(position + 6) & 0xFF; // get(LIST_COUNT_BYTE) & 0xFF
         return listCount == 0;
-      case 1:          // SET
+      case 1: // SET
         if (preInts != 3 || size < 9) {
           // preInts should be HASH_SET_PREINTS, Sanity check.
           // We also need to read an additional byte for Set implementations.
           return false;
         }
+        // Based on org.apache.datasketches.hll.PreambleUtil.extractHashSetCount
         int setCount = buf.get(position + 8);  // get(HASH_SET_COUNT_INT)
         return setCount == 0;
-      case 2:          // HLL
+      case 2: // HLL
         if (preInts != 10) {
           // preInts should be HLL_PREINTS, Sanity check.
           return false;
         }
+        // Based on org.apache.datasketches.hll.DirectHllArray.isEmpty
         final int flags = buf.get(position + 5);      // get(FLAGS_BYTE)
         return (flags & 4) > 0;                       // (flags & EMPTY_FLAG_MASK) > 0
-      default:         // UNKNOWN
+      default: // Unknown implementation
         // Can't say for sure, so return false.
         return false;
     }
