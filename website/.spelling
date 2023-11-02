@@ -1486,8 +1486,13 @@ ipv4_match
 ipv4_parse
 ipv4_stringify
 ipv6_match
-75e9:efa4:29c6:85f6::232c
-75e9:efa4:29c6:85f6::/64
+
+# IPv6 Address Example Sections
+75e9
+efa4
+29c6
+85f6
+232c
 
 isnull
 java.lang.Math
