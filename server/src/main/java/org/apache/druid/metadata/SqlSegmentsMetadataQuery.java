@@ -354,7 +354,8 @@ public class SqlSegmentsMetadataQuery
   {
     // TODO: accommodate limit across multiple batches -- limit is non-null when fetching unused segments.
     final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
-    final List<ResultIterator<DataSegment>> resultIterators = new ArrayList<>();
+    final List<Iterator<DataSegment>> resultingIterators = new ArrayList<>();
+
     for (final List<Interval> intervalList : intervalsLists) {
       // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
       final boolean compareAsString = intervalList.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
@@ -382,35 +383,17 @@ public class SqlSegmentsMetadataQuery
           sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
              .iterator();
 
-      resultIterators.add(resultIterator);
+      // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
+      // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
+      // segment interval like "20010/20011".)
+      resultingIterators.add(
+          Iterators.filter(
+              resultIterator,
+              dataSegment -> intervalList.stream().anyMatch(interval -> matchMode.apply(interval, dataSegment.getInterval()))
+      ));
     }
 
-    // Combine the ResultIterators into a single CloseableIterator
-    Iterator<DataSegment> combinedIterator = Iterators.concat(
-        resultIterators.iterator()
-    );
-
-    // Apply the interval filtering logic
-    return CloseableIterators.withEmptyBaggage(
-        Iterators.filter(
-            combinedIterator,
-            dataSegment -> {
-              if (intervals.isEmpty()) {
-                return true;
-              } else {
-                // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
-                // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
-                // segment interval like "20010/20011".)
-                for (Interval interval : intervals) {
-                  if (matchMode.apply(interval, dataSegment.getInterval())) {
-                    return true;
-                  }
-                }
-                return false;
-              }
-            }
-        )
-    );
+    return CloseableIterators.withEmptyBaggage(Iterators.concat(resultingIterators.iterator()));
   }
 
   private static int computeNumChangedSegments(List<String> segmentIds, int[] segmentChanges)
