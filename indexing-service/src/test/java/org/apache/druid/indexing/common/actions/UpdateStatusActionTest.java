@@ -63,6 +63,19 @@ public class UpdateStatusActionTest
   }
 
   @Test
+  public void testTaskStatusFull()
+  {
+    Task task = NoopTask.create();
+    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    TaskRunner runner = mock(TaskRunner.class);
+    when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
+    TaskStatus taskStatus = TaskStatus.failure(task.getId(), "custom error message");
+    UpdateStatusAction action = new UpdateStatusAction("failure", taskStatus);
+    action.perform(task, toolbox);
+    verify(runner, times(1)).updateStatus(eq(task), eq(taskStatus));
+  }
+
+  @Test
   public void testNoTaskRunner()
   {
     UpdateStatusAction action = new UpdateStatusAction("successful");
