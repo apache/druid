@@ -144,7 +144,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     LocalInputSource inputSource = new LocalInputSource(
         null,
         null,
-        Collections.singletonList(new File("/tmp/myFile.csv"))
+        Collections.singletonList(new File("/tmp/myFile.csv")),
+        null
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
@@ -314,6 +315,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     LocalInputSource inputSource = new LocalInputSource(
         new File("/tmp"),
         "*.csv",
+        null,
         null
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -365,7 +367,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     LocalInputSource inputSource = new LocalInputSource(
         null,
         null,
-        files
+        files,
+        null
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))

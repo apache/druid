@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -78,6 +79,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
           Collections.singletonList(toURI("http://foo.com/bar.csv")),
           "bob",
           new DefaultPasswordProvider("secret"),
+          SystemFields.none(),
           new HttpInputSourceConfig(null)
       ),
       new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
@@ -250,6 +252,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             Arrays.asList(toURI("http://example.com/foo.csv"), toURI("http://example.com/bar.csv")),
             "bob",
             new DefaultPasswordProvider("secret"),
+            SystemFields.none(),
             new HttpInputSourceConfig(null)
         ),
         new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0),
@@ -392,6 +395,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             Collections.singletonList(toURI("http://foo.com/bar.json")),
             "bob",
             new DefaultPasswordProvider("secret"),
+            SystemFields.none(),
             new HttpInputSourceConfig(null)
         ),
         new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
@@ -546,7 +550,8 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
       new LocalInputSource(
           null,
           null,
-          Arrays.asList(new File("/tmp/foo.csv"), new File("/tmp/bar.csv"))
+          Arrays.asList(new File("/tmp/foo.csv"), new File("/tmp/bar.csv")),
+          SystemFields.none()
       ),
       new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
       RowSignature.builder()
