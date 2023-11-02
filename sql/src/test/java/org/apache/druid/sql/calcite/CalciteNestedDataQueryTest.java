@@ -4455,6 +4455,48 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByCastedRootKeysJsonPath()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT "
+        + "JSON_KEYS(nester, CAST('$.' AS VARCHAR)), "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "json_keys(\"nester\",'$.')",
+                                ColumnType.STRING_ARRAY,
+                                queryFramework().macroTable()
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 5L},
+            new Object[]{"[\"array\",\"n\"]", 2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
   public void testGroupByAllPaths()
   {
     cannotVectorize();

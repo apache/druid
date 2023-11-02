@@ -24,7 +24,6 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
@@ -35,35 +34,47 @@ import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Static;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 
 /**
- * Operand type checker that is used in simple situations: there are a particular number of operands, with
+ * Operand type checker that is used in 'simple' situations: there are a particular number of operands, with
  * particular types, some of which may be optional or nullable, and some of which may be required to be literals.
  */
-public class BasicOperandTypeChecker implements SqlOperandTypeChecker
+public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
 {
+  /**
+   * Operand names for {@link #getAllowedSignatures(SqlOperator, String)}. May be empty, in which case the
+   * {@link #operandTypes} are used instead.
+   */
+  private final List<String> operandNames;
   private final List<SqlTypeFamily> operandTypes;
   private final int requiredOperands;
-  private final IntSet nullOperands;
+  private final IntSet nullableOperands;
   private final IntSet literalOperands;
 
-  BasicOperandTypeChecker(
+  private DefaultOperandTypeChecker(
+      final List<String> operandNames,
       final List<SqlTypeFamily> operandTypes,
       final int requiredOperands,
-      final IntSet nullOperands,
+      final IntSet nullableOperands,
       @Nullable final int[] literalOperands
   )
   {
     Preconditions.checkArgument(requiredOperands <= operandTypes.size() && requiredOperands >= 0);
+    this.operandNames = Preconditions.checkNotNull(operandNames, "operandNames");
     this.operandTypes = Preconditions.checkNotNull(operandTypes, "operandTypes");
     this.requiredOperands = requiredOperands;
-    this.nullOperands = Preconditions.checkNotNull(nullOperands, "nullOperands");
+    this.nullableOperands = Preconditions.checkNotNull(nullableOperands, "nullableOperands");
+
+    if (!operandNames.isEmpty() && operandNames.size() != operandTypes.size()) {
+      throw new ISE("Operand name count[%s] and type count[%s] must match", operandNames.size(), operandTypes.size());
+    }
 
     if (literalOperands == null) {
       this.literalOperands = IntSets.EMPTY_SET;
@@ -78,19 +89,6 @@ public class BasicOperandTypeChecker implements SqlOperandTypeChecker
     return new Builder();
   }
 
-  public static boolean throwOrReturn(
-      final boolean throwOnFailure,
-      final SqlCallBinding callBinding,
-      final Function<SqlCallBinding, CalciteException> exceptionMapper
-  )
-  {
-    if (throwOnFailure) {
-      throw exceptionMapper.apply(callBinding);
-    } else {
-      return false;
-    }
-  }
-
   @Override
   public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
   {
@@ -98,9 +96,9 @@ public class BasicOperandTypeChecker implements SqlOperandTypeChecker
       final SqlNode operand = callBinding.operands().get(i);
 
       if (literalOperands.contains(i)) {
-        // Verify that 'operand' is a literal.
-        if (!SqlUtil.isLiteral(operand)) {
-          return throwOrReturn(
+        // Verify that 'operand' is a literal. Allow CAST, since we can reduce these away later.
+        if (!SqlUtil.isLiteral(operand, true)) {
+          return OperatorConversions.throwOrReturn(
               throwOnFailure,
               callBinding,
               cb -> cb.getValidator()
@@ -121,15 +119,15 @@ public class BasicOperandTypeChecker implements SqlOperandTypeChecker
         // Operand came in with one of the expected types.
       } else if (operandType.getSqlTypeName() == SqlTypeName.NULL || SqlUtil.isNullLiteral(operand, true)) {
         // Null came in, check if operand is a nullable type.
-        if (!nullOperands.contains(i)) {
-          return throwOrReturn(
+        if (!nullableOperands.contains(i)) {
+          return OperatorConversions.throwOrReturn(
               throwOnFailure,
               callBinding,
               cb -> cb.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal())
           );
         }
       } else {
-        return throwOrReturn(
+        return OperatorConversions.throwOrReturn(
             throwOnFailure,
             callBinding,
             SqlCallBinding::newValidationSignatureError
@@ -149,7 +147,25 @@ public class BasicOperandTypeChecker implements SqlOperandTypeChecker
   @Override
   public String getAllowedSignatures(SqlOperator op, String opName)
   {
-    return SqlUtil.getAliasedSignature(op, opName, operandTypes);
+    final List<?> operands = !operandNames.isEmpty() ? operandNames : operandTypes;
+    final StringBuilder ret = new StringBuilder();
+    ret.append("'");
+    ret.append(opName);
+    ret.append("(");
+    for (int i = 0; i < operands.size(); i++) {
+      if (i > 0) {
+        ret.append(", ");
+      }
+      if (i >= requiredOperands) {
+        ret.append("[");
+      }
+      ret.append("<").append(operands.get(i)).append(">");
+    }
+    for (int i = requiredOperands; i < operands.size(); i++) {
+      ret.append("]");
+    }
+    ret.append(")'");
+    return ret.toString();
   }
 
   @Override
@@ -166,64 +182,70 @@ public class BasicOperandTypeChecker implements SqlOperandTypeChecker
 
   public static class Builder
   {
+    private List<String> operandNames = Collections.emptyList();
     private List<SqlTypeFamily> operandTypes;
-    private Integer requiredOperandCount = null;
-    private int[] literalOperands = null;
 
-    /**
-     * Signifies that a function accepts operands of type family given by {@param operandTypes}.
-     */
+    @Nullable
+    private Integer requiredOperandCount;
+    private int[] literalOperands;
+
+    private Builder()
+    {
+    }
+
+    public Builder operandNames(final String... operandNames)
+    {
+      this.operandNames = Arrays.asList(operandNames);
+      return this;
+    }
+
+    public Builder operandNames(final List<String> operandNames)
+    {
+      this.operandNames = operandNames;
+      return this;
+    }
+
     public Builder operandTypes(final SqlTypeFamily... operandTypes)
     {
       this.operandTypes = Arrays.asList(operandTypes);
       return this;
     }
 
-    /**
-     * Signifies that a function accepts operands of type family given by {@param operandTypes}.
-     */
     public Builder operandTypes(final List<SqlTypeFamily> operandTypes)
     {
       this.operandTypes = operandTypes;
       return this;
     }
 
-    /**
-     * Signifies that the first {@code requiredOperands} operands are required, and all later operands are optional.
-     *
-     * Required operands are not allowed to be null. Optional operands can either be skipped or explicitly provided as
-     * literal NULLs. For example, if {@code requiredOperands == 1}, then {@code F(x, NULL)} and  {@code F(x)} are both
-     * accepted, and {@code x} must not be null.
-     */
-    public Builder requiredOperandCount(final int requiredOperandCount)
+    public Builder requiredOperandCount(Integer requiredOperandCount)
     {
       this.requiredOperandCount = requiredOperandCount;
       return this;
     }
 
-    /**
-     * Signifies that the operands at positions given by {@code literalOperands} must be literals.
-     */
     public Builder literalOperands(final int... literalOperands)
     {
       this.literalOperands = literalOperands;
       return this;
     }
 
-    public BasicOperandTypeChecker build()
+    public DefaultOperandTypeChecker build()
     {
-      // Create "nullableOperands" set including all optional arguments.
-      final IntSet nullableOperands = new IntArraySet();
-      if (requiredOperandCount != null) {
-        IntStream.range(requiredOperandCount, operandTypes.size()).forEach(nullableOperands::add);
-      }
-
-      return new BasicOperandTypeChecker(
+      int computedRequiredOperandCount = requiredOperandCount == null ? operandTypes.size() : requiredOperandCount;
+      return new DefaultOperandTypeChecker(
+          operandNames,
           operandTypes,
-          requiredOperandCount == null ? operandTypes.size() : requiredOperandCount,
-          nullableOperands,
+          computedRequiredOperandCount,
+          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes.size()),
           literalOperands
       );
     }
+  }
+
+  public static IntSet buildNullableOperands(int requiredOperandCount, int totalOperandCount)
+  {
+    final IntSet nullableOperands = new IntArraySet();
+    IntStream.range(requiredOperandCount, totalOperandCount).forEach(nullableOperands::add);
+    return nullableOperands;
   }
 }
