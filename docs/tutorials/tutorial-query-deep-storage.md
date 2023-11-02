@@ -31,6 +31,8 @@ To run the queries in this tutorial, replace `ROUTER:PORT` with the location of 
 
 For more general information, see [Query from deep storage](../querying/query-from-deep-storage.md).
 
+If you are trying this feature on an existing cluster, make sure query from deep storage [pre-requisites](../querying/query-from-deep-storage.md#pre-requisites) are met.
+
 ## Load example data
 
 Use the **Load data** wizard or the following SQL query to ingest the `wikipedia` sample datasource bundled with Druid. If you use the wizard, make sure you change the partitioning to be by hour.
