@@ -40,7 +40,7 @@ fields from left to right. The fields can be aggregators or other post aggregato
 
 | Property | Description | Required |
 | --- | --- | --- |
-| `type` | Must be "arithmetic". | Yes |
+| `type` | Must be `"arithmetic"`. | Yes |
 | `name` | Output name of the post-aggregation | Yes |
 | `fn`| Supported functions are `+`, `-`, `*`, `/`, `pow` and `quotient` | Yes |
 | `fields` | List of post-aggregator specs which define inputs to the `fn` | Yes |
@@ -72,7 +72,7 @@ These post-aggregators return the value produced by the specified [dimension](..
 
 | Property | Description | Required |
 | --- | --- | --- |
-| `type` | Must be "fieldAccess" or "finalizingFieldAccess". Use type "fieldAccess" to return the raw aggregation object, or use type "finalizingFieldAccess" to return a finalized value, such as an estimated cardinality. | Yes |
+| `type` | Must be `"fieldAccess"` or `"finalizingFieldAccess"`. Use type `"fieldAccess"` to return the raw aggregation object, or use type `"finalizingFieldAccess"` to return a finalized value, such as an estimated cardinality. | Yes |
 | `name` | Output name of the post-aggregation | Yes if defined as a standalone post-aggregation, but may be omitted if used inline to some other post-aggregator in a `fields` list |
 | `fieldName` | The output name of the dimension or aggregator to reference | Yes |
 
@@ -95,7 +95,7 @@ The constant post-aggregator always returns the specified value.
 
 | Property | Description | Required |
 | --- | --- | --- |
-| `type` | Must be "constant". | Yes |
+| `type` | Must be `"constant"` | Yes |
 | `name` | Output name of the post-aggregation | Yes |
 | `value` | The constant value | Yes |
 
@@ -111,7 +111,7 @@ The expression post-aggregator is defined using a Druid [expression](math-expr.m
 
 | Property | Description | Required |
 | --- | --- | --- |
-| `type` | Must be "expression". | Yes |
+| `type` | Must be `"expression"` | Yes |
 | `name` | Output name of the post-aggregation | Yes |
 | `expression` | Native Druid [expression](math-expr.md) to compute, may refer to any dimension or aggregator output names | Yes |
 | `ordering` | If no ordering (or `null`) is specified, the "natural" ordering is used. `numericFirst` ordering always returns finite values first, followed by `NaN`, and infinite values last. If the expression produces array or complex types, specify `ordering` as null and use `outputType` instead to use the correct type native ordering. | No |
@@ -135,7 +135,7 @@ Example:
 
 | Property | Description | Required |
 | --- | --- | --- |
-| `type` | Must be "doubleGreatest", "doubleLeast", "longGreatest", or "longLeast". | Yes |
+| `type` | Must be `"doubleGreatest"`, `"doubleLeast"`, `"longGreatest"`, or `"longLeast"`. | Yes |
 | `name` | Output name of the post-aggregation | Yes |
 | `fields` | List of post-aggregator specs which define inputs to the greatest or least function | Yes |
 
@@ -162,7 +162,7 @@ Applies the provided JavaScript function to the given fields. Fields are passed 
 
 | Property | Description | Required |
 | --- | --- | --- |
-| `type` | Must be "javascript" | Yes |
+| `type` | Must be `"javascript"` | Yes |
 | `name` | Output name of the post-aggregation | Yes |
 | `fieldNames` | List of input dimension or aggregator output names | Yes |
 | `function` | String javascript function which accepts `fieldNames` as arguments | Yes |
@@ -187,7 +187,7 @@ The hyperUniqueCardinality post aggregator is used to wrap a hyperUnique object 
 
 | Property | Description | Required |
 | --- | --- | --- |
-| `type` | Must be "javascript" | Yes |
+| `type` | Must be `"hyperUniqueCardinality"` | Yes |
 | `name` | Output name of the post-aggregation | Yes |
 | `fieldName` | The output name of a [`hyperUnique` aggregator](aggregations.md#cardinality-hyperunique) | Yes |
 
