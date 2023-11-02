@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -76,6 +77,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
+            FileUtils.getTempDir(),
             null,
             null,
             dictionaryWriter,

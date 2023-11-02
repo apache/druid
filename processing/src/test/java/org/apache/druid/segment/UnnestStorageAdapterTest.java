@@ -35,6 +35,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
@@ -300,12 +301,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     });
   }
 
-  private static void assertColumnReadsIdentifier(final VirtualColumn column, final String identifier)
-  {
-    MatcherAssert.assertThat(column, CoreMatchers.instanceOf(ExpressionVirtualColumn.class));
-    Assert.assertEquals("\"" + identifier + "\"", ((ExpressionVirtualColumn) column).getExpression());
-  }
-
   @Test
   public void test_pushdown_or_filters_unnested_and_original_dimension_with_unnest_adapters()
   {
@@ -350,6 +345,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       return null;
     });
   }
+
   @Test
   public void test_nested_filters_unnested_and_original_dimension_with_unnest_adapters()
   {
@@ -483,7 +479,6 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         "(unnested-multi-string1 = 3 || (newcol = 2 && multi-string1 = 2 && unnested-multi-string1 = 1))"
     );
   }
-
   @Test
   public void test_nested_filters_unnested_and_topLevelAND3filtersInORWithNestedOrs()
   {
@@ -734,6 +729,62 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     });
   }
 
+  @Test
+  public void testUnnestValueMatcherValueDoesntExist()
+  {
+    final String inputColumn = "multi-string5";
+    final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
+
+    final DataSegment dataSegment = DataSegment.builder()
+                                               .dataSource("foo")
+                                               .interval(schemaInfo.getDataInterval())
+                                               .version("1")
+                                               .shardSpec(new LinearShardSpec(0))
+                                               .size(0)
+                                               .build();
+    final SegmentGenerator segmentGenerator = CLOSER.register(new SegmentGenerator());
+
+    IncrementalIndex index = CLOSER.register(
+        segmentGenerator.generateIncrementalIndex(dataSegment, schemaInfo, Granularities.HOUR, 100)
+    );
+    IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    UnnestStorageAdapter withNullsStorageAdapter = new UnnestStorageAdapter(
+        adapter,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + inputColumn + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+    Sequence<Cursor> cursorSequence = withNullsStorageAdapter.makeCursors(
+        null,
+        withNullsStorageAdapter.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
+      // wont match anything
+      ValueMatcher matcher = dimSelector.makeValueMatcher("x");
+      int count = 0;
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        if (dimSelectorVal == null) {
+          Assert.assertNull(dimSelectorVal);
+          Assert.assertTrue(matcher.matches(true));
+        }
+        Assert.assertFalse(matcher.matches(false));
+        cursor.advance();
+        count++;
+      }
+      Assert.assertEquals(count, 618);
+      return null;
+    });
+
+  }
+
   public void testComputeBaseAndPostUnnestFilters(
       Filter testQueryFilter,
       String expectedBasePushDown,
@@ -776,6 +827,12 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         expectedPostUnnest,
         actualPostUnnestFilter == null ? "" : actualPostUnnestFilter.toString()
     );
+  }
+
+  private static void assertColumnReadsIdentifier(final VirtualColumn column, final String identifier)
+  {
+    MatcherAssert.assertThat(column, CoreMatchers.instanceOf(ExpressionVirtualColumn.class));
+    Assert.assertEquals("\"" + identifier + "\"", ((ExpressionVirtualColumn) column).getExpression());
   }
 }
 

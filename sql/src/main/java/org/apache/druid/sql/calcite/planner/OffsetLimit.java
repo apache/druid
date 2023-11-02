@@ -76,6 +76,11 @@ public class OffsetLimit
     return limit != null;
   }
 
+  public boolean isNone()
+  {
+    return !hasLimit() && !hasOffset();
+  }
+
   public long getLimit()
   {
     Preconditions.checkState(limit != null, "limit is not present");
@@ -161,5 +166,14 @@ public class OffsetLimit
            "offset=" + offset +
            ", limit=" + limit +
            '}';
+  }
+
+  public org.apache.druid.query.operator.OffsetLimit toOperatorOffsetLimit()
+  {
+    if (hasLimit()) {
+      return new org.apache.druid.query.operator.OffsetLimit(offset, limit);
+    } else {
+      return new org.apache.druid.query.operator.OffsetLimit(offset, -1);
+    }
   }
 }
