@@ -24,6 +24,8 @@ title: "Upgrade notes"
 
 The upgrade notes assume that you are upgrading from the preceding version of Druid. If you are upgrading across multiple versions, make sure you read the upgrade notes for all the versions.
 
+For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
+
 ## 28.0.0
 
 ### Upgrade notes
@@ -428,3 +430,207 @@ Apache Curator upgraded to the latest version, 5.3.0. This version drops support
 The behavior of the parquet reader for lists of structured objects has been changed to be consistent with other parquet logical list conversions. The data is now fetched directly, more closely matching its expected structure.
 
 [#13294](https://github.com/apache/druid/pull/13294)
+
+## 24.0.0
+
+### Upgrade notes
+
+#### Permissions for multi-stage query engine
+
+To read external data using the multi-stage query task engine, you must have READ permissions for the EXTERNAL resource type. Users without the correct permission encounter a 403 error when trying to run SQL queries that include EXTERN.
+
+The way you assign the permission depends on your authorizer. For example, with [basic security](https://github.com/apache/druid/blob/druid-24.0.0/docs/operations/security-user-auth.md) in Druid, add the EXTERNAL READ permission by sending a POST request to the [roles API](https://github.com/apache/druid/blob/druid-24.0.0/docs/development/extensions-core/druid-basic-security.md#permissions).
+
+The example adds permissions for users with the admin role using a basic authorizer named MyBasicMetadataAuthorizer. The following permissions are granted:
+
+* DATASOURCE READ
+* DATASOURCE WRITE
+* CONFIG READ
+* CONFIG WRITE
+* STATE READ
+* STATE WRITE
+* EXTERNAL READ
+
+```
+curl --location --request POST 'http://localhost:8081/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/admin/permissions' \
+--header 'Content-Type: application/json' \
+--data-raw '[
+{
+  "resource": {
+    "name": ".*",
+    "type": "DATASOURCE"
+  },
+  "action": "READ"
+},
+{
+  "resource": {
+    "name": ".*",
+    "type": "DATASOURCE"
+  },
+  "action": "WRITE"
+},
+{
+  "resource": {
+    "name": ".*",
+    "type": "CONFIG"
+  },
+  "action": "READ"
+},
+{
+  "resource": {
+    "name": ".*",
+    "type": "CONFIG"
+  },
+  "action": "WRITE"
+},
+{
+  "resource": {
+    "name": ".*",
+    "type": "STATE"
+  },
+  "action": "READ"
+},
+{
+  "resource": {
+    "name": ".*",
+    "type": "STATE"
+  },
+  "action": "WRITE"
+},
+{
+  "resource": {
+    "name": "EXTERNAL",
+    "type": "EXTERNAL"
+  },
+  "action": "READ"
+}
+]'
+```
+
+#### Behavior for unused segments
+
+Druid automatically retains any segments marked as unused. Previously, Druid permanently deleted unused segments from metadata store and deep storage after their duration to retain passed. This behavior was reverted from 0.23.0.
+
+[#12693](https://github.com/apache/druid/pull/12693)
+
+#### Default for druid.processing.fifo
+
+The default for `druid.processing.fifo` is now true. This means that tasks of equal priority are treated in a FIFO manner. For most use cases, this change can improve performance on heavily loaded clusters.
+
+[#12571](https://github.com/apache/druid/pull/12571)
+
+#### Update to JDBC statement closure
+
+In previous releases, Druid automatically closed the JDBC Statement when the ResultSet was closed. Druid closed the ResultSet on EOF. Druid closed the statement on any exception. This behavior is, however, non-standard.
+In this release, Druid's JDBC driver follows the JDBC standards more closely:
+The ResultSet closes automatically on EOF, but does not close the Statement or PreparedStatement. Your code must close these statements, perhaps by using a try-with-resources block.
+The PreparedStatement can now be used multiple times with different parameters. (Previously this was not true since closing the ResultSet closed the PreparedStatement.)
+If any call to a Statement or PreparedStatement raises an error, the client code must still explicitly close the statement. According to the JDBC standards, statements are not closed automatically on errors. This allows you to obtain information about a failed statement before closing it.
+If you have code that depended on the old behavior, you may have to change your code to add the required close statement.
+
+[#12709](https://github.com/apache/druid/pull/12709)
+
+## 0.23.0
+
+### Upgrade notes
+
+#### Auto-killing of segments
+
+In 0.23.0, Auto killing of segments is now enabled by default [(#12187)](https://github.com/apache/druid/pull/12187). The new defaults should kill all unused segments older than 90 days. If users do not want this behavior on an upgrade, they should explicitly disable the behavior. This is a risky change since depending on the interval, segments will be killed immediately after being marked unused. this behavior will be reverted or changed in the next druid release. Please see [(#12693)](https://github.com/apache/druid/pull/12693) for more details.
+
+#### Other changes
+
+# Other changes
+
+- Kinesis ingestion requires listShards API access on the stream.
+- Kafka clients libraries have been upgraded to 3.0.0 [(#11735)](https://github.com/apache/druid/pull/11735)
+- The dynamic coordinator config, percentOfSegmentsToConsiderPerMove has been deprecated and will be removed in a future release of Druid. It is being replaced by a new segment picking strategy introduced in [(#11257)](https://github.com/apache/druid/pull/11257). This new strategy is currently toggled off by default, but can be toggled on if you set the dynamic coordinator config useBatchedSegmentSampler to true. Setting this as such, will disable the use of the deprecated percentOfSegmentsToConsiderPerMove. In a future release, useBatchedSegmentSampler will become permanently true. [(#11960)](https://github.com/apache/druid/pull/11960)
+
+
+## 0.22.0
+
+### Upgrade notes
+
+#### Dropped support for Apache ZooKeeper 3.4
+
+Following up to 0.21, which officially deprecated support for Zookeeper 3.4, [which has been end-of-life for a while](https://lists.apache.org/thread/xckr6nnsg9rxchkbvltkvt7hr2d0mhbo), support for ZooKeeper 3.4 is now removed in 0.22.0. Be sure to upgrade your Zookeeper cluster prior to upgrading your Druid cluster to 0.22.0.
+
+[#10780](https://github.com/apache/druid/issues/10780)
+[#11073](https://github.com/apache/druid/pull/11073)
+
+#### Native batch ingestion segment allocation fix
+
+Druid 0.22.0 includes an important bug-fix in native batch indexing where transient failures of indexing sub-tasks can result in non-contiguous partitions in the result segments, which will never become queryable due to logic which checks for the 'complete' set. This issue has been resolved in the latest version of Druid, but required a change in the protocol which batch tasks use to allocate segments, and this change can cause issues during rolling downgrades if you decide to roll back from Druid 0.22.0 to an earlier version.
+
+To avoid task failure during a rolling-downgrade, set
+
+```
+druid.indexer.task.default.context={ "useLineageBasedSegmentAllocation" : false }
+```
+
+in the overlord runtime properties, and wait for all tasks which have `useLineageBasedSegmentAllocation` set to true to complete before initiating the downgrade. After these tasks have all completed the downgrade shouldn't have any further issue and the setting can be removed from the overlord configuration (recommended, as you will want this setting enabled if you are running Druid 0.22.0 or newer).
+
+[#11189](https://github.com/apache/druid/pull/11189)
+
+#### SQL timeseries no longer skip empty buckets with all granularity
+
+Prior to Druid 0.22, an SQL group by query which is using a single universal grouping key (e.g. only aggregators) such as `SELECT COUNT(*), SUM(x) FROM y WHERE z = 'someval'` would produce an empty result set instead of `[0, null]` that might be expected from this query matching no results. This was because underneath this would plan into a timeseries query with 'ALL' granularity, and skipEmptyBuckets set to true in the query context. This latter option caused the results of such a query to return no results, as there are no buckets with values to aggregate and so they are skipped, making an empty result set instead of a 'nil' result set. This behavior has been changed to behave in line with other SQL implementations, but the previous behavior can be obtained by explicitly setting `skipEmptyBuckets` on the query context.
+
+[#11188](https://github.com/apache/druid/pull/11188)
+
+#### Druid reingestion incompatible changes
+
+Batch tasks using a 'Druid' input source to reingest segment data will no longer accept the 'dimensions' and 'metrics' sections of their task spec, and now will internally use a new columns filter to specify which columns from the original segment should be retained. Additionally, timestampSpec is no longer ignored, allowing the __time column to be modified or replaced with a different column. These changes additionally fix a bug where transformed columns would be ignored and unavailable on the new segments.
+
+[#10267](https://github.com/apache/druid/pull/10267)
+
+#### Druid web-console no longer supports IE11 and other older browsers
+
+Some things might still work, but it is no longer officially supported so that newer Javascript features can be used to develop the web-console.
+
+[#11357](https://github.com/apache/druid/pull/11357)
+
+#### Changed default maximum segment loading queue size
+
+Druid coordinator `maxSegmentsInNodeLoadingQueue` dynamic configuration has been changed from unlimited (`0`) to `100`. This should make the coordinator behave in a much more relaxed manner during periods of cluster volatility, such as a rolling upgrade, but caps the total number of segments that will be loaded in any given coordinator cycle to 100 per server, which can slow down the speed at which a completely stopped cluster is started and loaded from deep storage.
+
+[#11540](https://github.com/apache/druid/pull/11540)
+
+## 0.21.0
+
+#### Improved HTTP status codes for query errors
+
+Before this release, Druid returned the "internal error (500)" for most of the query errors. Now Druid returns different error codes based on their cause. The following table lists the errors and their corresponding codes that has changed:
+
+| Exception | Description| Old code | New code                |
+|-----|-|--|-----|
+| SqlParseException and ValidationException from Calcite | Query planning failed             | 500      | 400                     |
+| QueryTimeoutException            | Query execution didn't finish in timeout                 | 500      | 504                     |
+| ResourceLimitExceededException   | Query asked more resources than configured threshold     | 500      | 400                    |
+| InsufficientResourceException   | Query failed to schedule because of lack of merge buffers available at the time when it was submitted | 500      | 429, merged to QueryCapacityExceededException |
+| QueryUnsupportedException       | Unsupported functionality        | 400      | 501                    |
+
+[#10464](https://github.com/apache/druid/pull/10464)
+[#10746](https://github.com/apache/druid/pull/10746)
+
+####  Query interrupted metric
+`query/interrupted/count` no longer counts the queries that timed out. These queries are counted by `query/timeout/count`.
+
+#### context dimension in query metrics
+
+`context` is now a default dimension emitted for all query metrics. `context` is a JSON-formatted string containing the query context for the query that the emitted metric refers to. The addition of a dimension that was not previously alters some metrics emitted by Druid. You should plan to handle this new `context` dimension in your metrics pipeline. Since the dimension is a JSON-formatted string, a common solution is to parse the dimension and either flatten it or extract the bits you want and discard the full JSON-formatted string blob.
+
+[#10578](https://github.com/apache/druid/pull/10578)
+
+#### Deprecated support for Apache ZooKeeper 3.4
+
+As [ZooKeeper 3.4 has been end-of-life for a while](https://mail-archives.apache.org/mod_mbox/zookeeper-user/202004.mbox/%3C41A7EC67-D8F4-4C3A-B2DB-C2741C2EECA3%40apache.org%3E), support for ZooKeeper 3.4 is deprecated in 0.21.0 and will be removed in the near future.
+
+[#10780](https://github.com/apache/druid/issues/10780)
+
+#### Consistent serialization format and column naming convention for the sys.segments table
+
+All columns in the `sys.segments` table are now serialized in the JSON format to make them consistent with other system tables. Column names now use the same "snake case" convention.
+
+[#10481](https://github.com/apache/druid/pull/10481)
+
