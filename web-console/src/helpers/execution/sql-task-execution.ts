@@ -59,9 +59,9 @@ export async function submitTaskQuery(
 ): Promise<Execution | IntermediateQueryState<Execution>> {
   const { query, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
 
-  // setting waitTillSegmentsLoad to true by default
+  // setting waitUntilSegmentsLoad to true by default
   const context = {
-    waitTillSegmentsLoad: true,
+    waitUntilSegmentsLoad: true,
     ...(options.context || {}),
   };
 
@@ -268,7 +268,7 @@ export async function updateExecutionWithDatasourceLoadedIfNeeded(
   }
 
   // This means we don't have to perform the SQL query to check if the segments are loaded
-  if (execution.queryContext?.waitTillSegmentsLoad === true) {
+  if (execution.queryContext?.waitUntilSegmentsLoad === true) {
     return execution.markDestinationDatasourceLoaded();
   }
 

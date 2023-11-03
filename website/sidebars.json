@@ -26,7 +26,6 @@
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
       "tutorials/tutorial-jupyter-index",
-      "tutorials/tutorial-jupyter-docker",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
@@ -90,8 +89,18 @@
       "data-management/update",
       "data-management/delete",
       "data-management/schema-changes",
-      "data-management/compaction",
-      "data-management/automatic-compaction"
+      {
+        "type": "category",
+        "label": "Compaction",
+        "link": {
+           "type": "doc",
+           "id": "data-management/compaction"
+        },
+        "items": [
+           "data-management/automatic-compaction",
+           "data-management/manual-compaction"
+         ]
+       }
     ],
     "Querying": [
       {

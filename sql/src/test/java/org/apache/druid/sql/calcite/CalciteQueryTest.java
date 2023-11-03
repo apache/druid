@@ -39,11 +39,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.OperatorFactoryBuilders;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.WindowOperatorQueryBuilder;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -96,6 +98,7 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
+import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
@@ -639,10 +642,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT "
-        + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), "
+        + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), EARLIEST(dim1, CAST(10 AS INTEGER)), "
         + "EARLIEST(cnt + 1), EARLIEST(m1 + 1), EARLIEST(dim1 || CAST(cnt AS VARCHAR), 10), "
         + "EARLIEST_BY(cnt, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(m1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(dim1, MILLIS_TO_TIMESTAMP(l1), 10), "
-        + "EARLIEST_BY(cnt + 1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(m1 + 1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), 10) "
+        + "EARLIEST_BY(cnt + 1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(m1 + 1, MILLIS_TO_TIMESTAMP(l1)), EARLIEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), 10), EARLIEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), 10) "
         + "FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -674,7 +677,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 1.0f, "", 2L, 2.0f, "1", 1L, 3.0f, "2", 2L, 4.0f, "21"}
+            new Object[]{1L, 1.0f, "", "", 2L, 2.0f, "1", 1L, 3.0f, "2", 2L, 4.0f, "21", "21"}
         )
     );
   }
@@ -749,10 +752,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT "
-        + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), "
+        + "LATEST(cnt), LATEST(m1), LATEST(dim1, 10), LATEST(dim1, CAST(10 AS INTEGER)), "
         + "LATEST(cnt + 1), LATEST(m1 + 1), LATEST(dim1 || CAST(cnt AS VARCHAR), 10), "
         + "LATEST_BY(cnt, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(m1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(dim1, MILLIS_TO_TIMESTAMP(l1), 10), "
-        + "LATEST_BY(cnt + 1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(m1 + 1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), 10) "
+        + "LATEST_BY(cnt + 1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(m1 + 1, MILLIS_TO_TIMESTAMP(l1)), LATEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), 10), LATEST_BY(dim1 || CAST(cnt AS VARCHAR), MILLIS_TO_TIMESTAMP(l1), CAST(10 AS INTEGER)) "
         + "FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -784,7 +787,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{1L, 6.0f, "abc", 2L, 7.0f, "abc1", 1L, 2.0f, "10.1", 2L, 3.0f, "10.11"}
+            new Object[]{1L, 6.0f, "abc", "abc", 2L, 7.0f, "abc1", 1L, 2.0f, "10.1", 2L, 3.0f, "10.11", "10.11"}
         )
     );
   }
@@ -2725,7 +2728,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2810,7 +2813,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -4692,7 +4695,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -4724,7 +4727,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -4768,7 +4771,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_CONVERT)
+  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
@@ -5370,7 +5373,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final Map<String, String> queries = ImmutableMap.of(
         // SELECT query with order by non-__time.
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "SQL query requires order by non-time column [[dim1 ASC]], which is not supported.",
+        "SQL query requires ordering a table by non-time column [[dim1]], which is not supported.",
 
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
@@ -5610,6 +5613,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountStarWithTimeInCastedIntervalFilter()
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo "
+        + "WHERE TIME_IN_INTERVAL(__time, CAST('2000-01-01/P1Y' AS VARCHAR)) "
+        + "AND TIME_IN_INTERVAL(CURRENT_TIMESTAMP, '2000/3000') -- Optimized away: always true",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithTimeInIntervalFilterLosAngeles()
   {
     testQuery(
@@ -5658,7 +5683,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         expected -> {
           expected.expect(CoreMatchers.instanceOf(DruidException.class));
           expected.expect(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-              "Argument to function 'TIME_IN_INTERVAL' must be a literal (line [1], column [38])")));
+              "Argument to function 'TIME_IN_INTERVAL' must be a literal (line [1], column [63])")));
         }
     );
   }
@@ -13949,15 +13974,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "group by 1",
         ImmutableList.of(
             GroupByQuery.builder()
-                        .setDataSource(CalciteTests.DATASOURCE3)
-                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                        .setGranularity(Granularities.ALL)
-                        .addDimension(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
-                        .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
-                        .setPostAggregatorSpecs(ImmutableList.of(
-                            expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)")
-                        ))
-                        .build()
+                .setDataSource(CalciteTests.DATASOURCE3)
+                .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                .setGranularity(Granularities.ALL)
+                .addDimension(new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING))
+                .addAggregator(new LongSumAggregatorFactory("a0", "l1"))
+                .setPostAggregatorSpecs(ImmutableList.of(
+                    expressionPostAgg("p0", "case_searched((\"a0\" == 0),1,0)")))
+                .build()
+
         ),
         useDefault ? ImmutableList.of(
             new Object[]{"", 0L},
@@ -14073,6 +14098,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       );
     }
   }
+
   @Test
   public void testComplexDecodeAgg()
   {
@@ -14106,6 +14132,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testComplexDecodeAggWithCastedTypeName()
+  {
+    msqIncompatible();
+    cannotVectorize();
+    testQuery(
+        "SELECT "
+        + "APPROX_COUNT_DISTINCT_BUILTIN(COMPLEX_DECODE_BASE64(CAST('hyperUnique' AS VARCHAR),PARSE_JSON(TO_JSON_STRING(unique_dim1)))) "
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "complex_decode_base64('hyperUnique',parse_json(to_json_string(\"unique_dim1\")))",
+                          ColumnType.ofComplex("hyperUnique")
+                      )
+                  )
+                  .aggregators(
+                      new HyperUniquesAggregatorFactory(
+                          "a0",
+                          "v0",
+                          false,
+                          true
+                      )
+                  )
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+  }
+
   @NotYetSupported
   @Test
   public void testOrderByAlongWithInternalScanQuery()
@@ -14274,5 +14337,271 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 NULLS LAST) from druid.foo")
         .run());
     assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
+  }
+
+  @Test
+  public void testWindowingErrorWithoutFeatureFlag()
+  {
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, false))
+        .sql("SELECT dim1,ROW_NUMBER() OVER () from druid.foo")
+        .run());
+
+    assertThat(e, invalidSqlIs("The query contains window functions; To run these window functions, enable [WINDOW_FUNCTIONS] in query context. (line [1], column [13])"));
+  }
+
+  @Test
+  public void testInGroupByLimitOutGroupByOrderBy()
+  {
+    skipVectorize();
+    cannotVectorize();
+
+    testBuilder()
+        .sql(
+            "with t AS (SELECT m2, COUNT(m1) as trend_score\n"
+                + "FROM \"foo\"\n"
+                + "GROUP BY 1 \n"
+                + "LIMIT 10\n"
+                + ")\n"
+                + "select m2, (MAX(trend_score)) from t\n"
+                + "where m2 > 2\n"
+                + "GROUP BY 1 \n"
+                + "ORDER BY 2 DESC"
+        )
+        .expectedQuery(
+            WindowOperatorQueryBuilder.builder()
+                .setDataSource(
+                    new TopNQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
+                        .threshold(10)
+                        .aggregators(
+                            aggregators(
+                                useDefault
+                                    ? new CountAggregatorFactory("a0")
+                                    : new FilteredAggregatorFactory(
+                                        new CountAggregatorFactory("a0"),
+                                        notNull("m1")
+                                    )
+                            )
+                        )
+                        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+                        .context(OUTER_LIMIT_CONTEXT)
+                        .build()
+                )
+                .setSignature(
+                    RowSignature.builder()
+                        .add("d0", ColumnType.DOUBLE)
+                        .add("a0", ColumnType.LONG)
+                        .build()
+                )
+                .setOperators(
+                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.DESC)
+                )
+                .setLeafOperators(
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                        .setOffsetLimit(0, Long.MAX_VALUE)
+                        .setFilter(
+                            range(
+                                "d0",
+                                ColumnType.LONG,
+                                2L,
+                                null,
+                                true,
+                                false
+                            )
+                        )
+                        .setProjectedColumns("a0", "d0")
+                        .build()
+                )
+                .build()
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {3.0D, 1L},
+                new Object[] {4.0D, 1L},
+                new Object[] {5.0D, 1L},
+                new Object[] {6.0D, 1L}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testInGroupByOrderByLimitOutGroupByOrderByLimit()
+  {
+    skipVectorize();
+    cannotVectorize();
+    String sql = "with t AS (SELECT m2 as mo, COUNT(m1) as trend_score\n"
+        + "FROM \"foo\"\n"
+        + "GROUP BY 1\n"
+        + "ORDER BY trend_score DESC\n"
+        + "LIMIT 10)\n"
+        + "select mo, (MAX(trend_score)) from t\n"
+        + "where mo > 2\n"
+        + "GROUP BY 1 \n"
+        + "ORDER BY 2 DESC  LIMIT 2 OFFSET 1\n";
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {4.0D, 1L},
+        new Object[] {5.0D, 1L}
+    );
+
+    testBuilder()
+        .sql(sql)
+        .expectedQuery(
+            WindowOperatorQueryBuilder.builder()
+                .setDataSource(
+                    new TopNQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
+                        .threshold(10)
+                        .aggregators(
+                            aggregators(
+                                useDefault
+                                    ? new CountAggregatorFactory("a0")
+                                    : new FilteredAggregatorFactory(
+                                        new CountAggregatorFactory("a0"),
+                                        notNull("m1")
+                                    )
+                            )
+                        )
+                        .metric(new NumericTopNMetricSpec("a0"))
+                        .context(OUTER_LIMIT_CONTEXT)
+                        .build()
+                )
+                .setSignature(
+                    RowSignature.builder()
+                        .add("d0", ColumnType.DOUBLE)
+                        .add("a0", ColumnType.LONG)
+                        .build()
+                )
+                .setOperators(
+                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.DESC),
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                        .setOffsetLimit(1, 2)
+                        .build()
+                )
+                .setLeafOperators(
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                        .setOffsetLimit(0, Long.MAX_VALUE)
+                        .setFilter(
+                            range(
+                                "d0",
+                                ColumnType.LONG,
+                                2L,
+                                null,
+                                true,
+                                false
+                            )
+                        )
+                        .setProjectedColumns("a0", "d0")
+                        .build()
+                )
+                .build()
+        )
+        .expectedResults(expectedResults)
+        .run();
+  }
+
+  @NotYetSupported(Modes.CANNOT_TRANSLATE)
+  @Test
+  public void testWindowingWithScanAndSort()
+  {
+    skipVectorize();
+    cannotVectorize();
+    msqIncompatible();
+    String sql = "with t AS (\n"
+        + "SELECT  \n"
+        + "    RANK() OVER (PARTITION BY m2 ORDER BY m2 ASC) \n"
+        + "      AS ranking,\n"
+        + "    COUNT(m1) as trend_score\n"
+        + "FROM foo\n"
+        + "GROUP BY m2,m1 LIMIT 10\n"
+        + ")\n"
+        + "select ranking, trend_score from t ORDER BY trend_score";
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L}
+    );
+
+    testBuilder()
+        .sql(sql)
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .expectedQuery(
+            WindowOperatorQueryBuilder.builder()
+                .setDataSource(
+                    Druids.newScanQueryBuilder()
+                        .dataSource(
+                            new WindowOperatorQueryBuilder()
+                                .setDataSource(
+                                    GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE1)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            dimensions(
+                                                new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE),
+                                                new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)
+                                            )
+                                        )
+                                        .setAggregatorSpecs(
+                                            aggregators(
+                                                useDefault
+                                                    ? new CountAggregatorFactory("a0")
+                                                    : new FilteredAggregatorFactory(
+                                                        new CountAggregatorFactory("a0"),
+                                                        notNull("m1")
+                                                    )
+                                            )
+                                        )
+                                        .build()
+                                )
+                                .setOperators(
+                                    OperatorFactoryBuilders.naivePartitionOperator("d0"),
+                                    OperatorFactoryBuilders.windowOperators(
+                                        OperatorFactoryBuilders.rankProcessor("w0", "d0")
+                                    )
+                                )
+                                .setSignature(
+                                    RowSignature.builder()
+                                        .add("w0", ColumnType.LONG)
+                                        .add("a0", ColumnType.LONG)
+                                        .build()
+                                )
+                                .build()
+                        )
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .columns("a0", "w0")
+                        .context(QUERY_CONTEXT_DEFAULT)
+                        .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                        .legacy(false)
+                        .limit(10)
+                        .build()
+                )
+                .setSignature(
+                    RowSignature.builder()
+                        .add("w0", ColumnType.LONG)
+                        .add("a0", ColumnType.LONG)
+                        .build()
+                )
+                .setOperators(
+                    OperatorFactoryBuilders.naiveSortOperator("a0", ColumnWithDirection.Direction.ASC)
+                )
+                .setLeafOperators(
+                    OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                        .setOffsetLimit(0, Long.MAX_VALUE)
+                        .setProjectedColumns("a0", "w0")
+                        .build()
+                )
+                .build()
+        )
+        .expectedResults(expectedResults)
+        .run();
   }
 }

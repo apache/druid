@@ -118,13 +118,10 @@ public class NestedDataOperatorConversions
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder("JSON_KEYS")
-        .operandTypeChecker(
-            OperandTypes.sequence(
-                "'JSON_KEYS(expr, path)'",
-                OperandTypes.ANY,
-                OperandTypes.and(OperandTypes.family(SqlTypeFamily.STRING), OperandTypes.LITERAL)
-            )
-        )
+        .operandNames("expr", "path")
+        .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.STRING)
+        .literalOperands(1)
+        .requiredOperandCount(2)
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
         .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
         .build();
