@@ -26,7 +26,6 @@
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
       "tutorials/tutorial-jupyter-index",
-      "tutorials/tutorial-jupyter-docker",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
@@ -135,6 +134,7 @@
           "querying/joins",
           "querying/lookups",
           "querying/multi-value-dimensions",
+          "querying/arrays",
           "querying/nested-columns",
           "querying/multitenancy",
           "querying/caching",

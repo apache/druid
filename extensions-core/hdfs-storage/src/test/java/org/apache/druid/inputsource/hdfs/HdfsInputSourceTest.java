@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -37,6 +38,9 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.storage.hdfs.HdfsStorageDruidModule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -64,6 +68,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -169,11 +174,12 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       final Configuration conf = new Configuration();
       conf.set("fs.default.name", "hdfs://localhost:7020");
-      HdfsInputSource inputSource = HdfsInputSource.builder()
-                     .paths("/foo/bar*")
-                     .configuration(conf)
-                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
-                     .build();
+      HdfsInputSource inputSource =
+          HdfsInputSource.builder()
+                         .paths("/foo/bar*")
+                         .configuration(conf)
+                         .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+                         .build();
 
       Assert.assertEquals(Collections.singleton(HdfsInputSource.TYPE_KEY), inputSource.getTypes());
     }
@@ -217,6 +223,13 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     public void serializesDeserializesStringPaths()
     {
       Wrapper target = new Wrapper(hdfsInputSourceBuilder.paths(PATH));
+      testSerializesDeserializes(target);
+    }
+
+    @Test
+    public void serializesDeserializesStringPathsWithSystemFields()
+    {
+      Wrapper target = new Wrapper(hdfsInputSourceBuilder.paths(PATH).systemFields(SystemField.URI));
       testSerializesDeserializes(target);
     }
 
@@ -438,6 +451,57 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       int numSplits = target.estimateNumSplits(null, null);
       Assert.assertEquals(0, numSplits);
+    }
+  }
+
+  public static class SystemFieldsTest
+  {
+    @Test
+    public void testSystemFields()
+    {
+      final Configuration configuration = new Configuration();
+      final HdfsInputSource inputSource = new HdfsInputSource(
+          "hdfs://127.0.0.1/bar",
+          new SystemFields(EnumSet.of(SystemField.URI, SystemField.PATH)),
+          configuration,
+          new HdfsInputSourceConfig(null)
+      );
+
+      Assert.assertEquals(
+          EnumSet.of(SystemField.URI, SystemField.PATH),
+          inputSource.getConfiguredSystemFields()
+      );
+
+      final HdfsInputEntity entity = new HdfsInputEntity(configuration, new Path("hdfs://127.0.0.1/bar"));
+      Assert.assertEquals("hdfs://127.0.0.1/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
+      Assert.assertEquals("/bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
+
+      final HdfsInputEntity entity2 = new HdfsInputEntity(configuration, new Path("/127.0.0.1/bar"));
+      Assert.assertEquals("file:///127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.URI));
+      Assert.assertEquals("/127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.PATH));
+
+      final HdfsInputEntity entity3 = new HdfsInputEntity(configuration, new Path("bar"));
+      Assert.assertEquals(
+          StringUtils.format("file:%s/bar", System.getProperty("user.dir")),
+          inputSource.getSystemFieldValue(entity3, SystemField.URI)
+      );
+      Assert.assertEquals(
+          StringUtils.format("%s/bar", System.getProperty("user.dir")),
+          inputSource.getSystemFieldValue(entity3, SystemField.PATH)
+      );
+    }
+  }
+
+  public static class EqualsTest
+  {
+    @Test
+    public void testEquals()
+    {
+      EqualsVerifier.forClass(HdfsInputSource.class)
+                    .usingGetClass()
+                    .withIgnoredFields("cachedPaths")
+                    .withPrefabValues(Configuration.class, new Configuration(), new Configuration())
+                    .verify();
     }
   }
 }

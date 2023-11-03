@@ -45,9 +45,16 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -55,10 +62,12 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -70,6 +79,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -86,6 +96,9 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   private final KeyOrder sortedness;
 
   private MemoryAllocator allocator;
+
+  @Nullable
+  private Consumer<ColumnCapabilitiesImpl> capabilitiesAdjustFn;
 
   public FrameWriterTest(
       @Nullable final FrameType inputFrameType,
@@ -130,14 +143,89 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_string()
+  public void test_string_multiValueTrue()
   {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.TRUE);
     testWithDataset(FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE);
   }
 
   @Test
-  public void test_multiValueString()
+  public void test_string_multiValueFalse()
   {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
+    testWithDataset(FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE);
+  }
+
+  @Test
+  public void test_string_multiValueUnknown()
+  {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.UNKNOWN);
+    testWithDataset(FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE);
+  }
+
+  @Test
+  public void test_singleValueWithEmpty_multiValueTrue()
+  {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.TRUE);
+    testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE);
+  }
+
+  @Test
+  public void test_singleValueWithEmpty_multiValueFalse()
+  {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
+
+    // When columnar frames are in multiValue = false mode, and when they see a dataset that is all single strings and
+    // empty arrays, they write a single-valued column, replacing the empty arrays with nulls.
+    final FrameWriterTestData.Dataset<?> expectedReadDataset =
+        outputFrameType == FrameType.COLUMNAR
+        ? FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE
+        : FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY;
+
+    testWithDataset(
+        FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY,
+        expectedReadDataset
+    );
+  }
+
+  @Test
+  public void test_singleValueWithEmpty_multiValueUnknown()
+  {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.UNKNOWN);
+    testWithDataset(FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY);
+  }
+
+  @Test
+  public void test_multiValueString_multiValueTrue()
+  {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.TRUE);
+    testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE);
+  }
+
+  @Test
+  public void test_multiValueString_multiValueFalse()
+  {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
+
+    if (outputFrameType == FrameType.COLUMNAR) {
+      final IllegalStateException e = Assert.assertThrows(
+          IllegalStateException.class,
+          () -> testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
+      );
+
+      MatcherAssert.assertThat(
+          e,
+          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered unexpected multi-value row"))
+      );
+    } else {
+      testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE);
+    }
+  }
+
+  @Test
+  public void test_multiValueString_multiValueUnknown()
+  {
+    capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.UNKNOWN);
     testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE);
   }
 
@@ -418,6 +506,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         inputFrameType,
         outputFrameType,
         allocator,
+        capabilitiesAdjustFn,
         rows,
         signature,
         computeSortColumns(sortColumns)
@@ -453,6 +542,20 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     verifyFrame(rows(dataset.getData(sortedness)), writeResult.lhs, signature);
   }
 
+  private <T1, T2> void testWithDataset(
+      final FrameWriterTestData.Dataset<T1> writeDataset,
+      final FrameWriterTestData.Dataset<T2> readDataset
+  )
+  {
+    final List<T1> data = writeDataset.getData(KeyOrder.NONE);
+    final RowSignature signature = RowSignature.builder().add("x", writeDataset.getType()).build();
+    final Sequence<List<Object>> rowSequence = rows(data);
+    final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
+
+    Assert.assertEquals(data.size(), (int) writeResult.rhs);
+    verifyFrame(rows(readDataset.getData(sortedness)), writeResult.lhs, signature);
+  }
+
   /**
    * Writes as many rows to a single frame as possible. Returns the number of rows written.
    */
@@ -460,6 +563,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       @Nullable final FrameType inputFrameType,
       final FrameType outputFrameType,
       final MemoryAllocator allocator,
+      @Nullable final Consumer<ColumnCapabilitiesImpl> capabilitiesAdjustFn,
       final Sequence<List<Object>> rows,
       final RowSignature signature,
       final List<KeyColumn> keyColumns
@@ -483,6 +587,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
           null,
           inputFrameType,
           HeapMemoryAllocator.unlimited(),
+          null,
           rows,
           signature,
           Collections.emptyList()
@@ -504,8 +609,17 @@ public class FrameWriterTest extends InitializedNullHandlingTest
                                  keyColumns
                              );
 
+                             ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+
+                             if (capabilitiesAdjustFn != null) {
+                               columnSelectorFactory = new OverrideCapabilitiesColumnSelectorFactory(
+                                   columnSelectorFactory,
+                                   capabilitiesAdjustFn
+                               );
+                             }
+
                              try (final FrameWriter frameWriter =
-                                      frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+                                      frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
                                while (!cursor.isDone() && frameWriter.addSelection()) {
                                  numRows++;
                                  cursor.advance();
@@ -592,5 +706,53 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     }
 
     return Sequences.simple(retVal);
+  }
+
+  private static class OverrideCapabilitiesColumnSelectorFactory implements ColumnSelectorFactory
+  {
+    private final ColumnSelectorFactory delegate;
+    private final Consumer<ColumnCapabilitiesImpl> fn;
+
+    public OverrideCapabilitiesColumnSelectorFactory(
+        final ColumnSelectorFactory delegate,
+        final Consumer<ColumnCapabilitiesImpl> fn
+    )
+    {
+      this.delegate = delegate;
+      this.fn = fn;
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return delegate.makeDimensionSelector(dimensionSpec);
+    }
+
+    @Override
+    public ColumnValueSelector makeColumnValueSelector(String columnName)
+    {
+      return delegate.makeColumnValueSelector(columnName);
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String column)
+    {
+      final ColumnCapabilities capabilities = delegate.getColumnCapabilities(column);
+      if (capabilities == null) {
+        return null;
+      } else {
+        final ColumnCapabilitiesImpl retVal = ColumnCapabilitiesImpl.copyOf(capabilities);
+        fn.accept(retVal);
+        return retVal;
+      }
+    }
+
+    @Nullable
+    @Override
+    public RowIdSupplier getRowIdSupplier()
+    {
+      return delegate.getRowIdSupplier();
+    }
   }
 }
