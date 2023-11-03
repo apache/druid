@@ -442,7 +442,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs() throws Exception
+  public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
     CloudBlobHolder object1 = null;
@@ -516,7 +516,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killOlderThan_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs() throws Exception
+  public void test_killOlderThan_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
     CloudBlobHolder object1 = null;

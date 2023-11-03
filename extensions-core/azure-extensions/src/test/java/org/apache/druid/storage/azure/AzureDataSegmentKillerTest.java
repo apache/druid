@@ -195,7 +195,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_killAll_nonrecoverableExceptionWhenListingObjects_deletesAllSegments() throws Exception
+  public void test_killAll_nonrecoverableExceptionWhenListingObjects_deletesAllSegments()
   {
     boolean ioExceptionThrown = false;
     CloudBlobHolder object1 = null;
