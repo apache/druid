@@ -77,7 +77,7 @@ public class LiteralSqlAggregator implements SqlAggregator
 
     return Aggregation.create(
         ImmutableList.of(),
-        new ExpressionPostAggregator(name, expr.getExpression(), null, plannerContext.getExprMacroTable())
+        new ExpressionPostAggregator(name, expr.getExpression(), null, expr.getDruidType(), plannerContext.getExprMacroTable())
     );
   }
 }

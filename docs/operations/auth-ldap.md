@@ -254,17 +254,20 @@ Before you start to set up LDAPS in Druid, you must [configure Druid for LDAP au
 
 Complete the following steps to set up LDAPS for Druid. See [Configuration reference](../configuration/index.md) for the location of the configuration files. 
 
-1. Import the CA certificate for your LDAP server or a self-signed certificate into the truststore location saved as `druid.client.https.trustStorePath` in your `common.runtime.properties` file.
+1. Import the CA or self-signed certificate for your LDAP server into either a newly created LDAP trust store or the trust store specified by the `druid.client.https.trustStorePath`  property located in your `common.runtime.properties` file.
+
+   The example below illustrates the option with one key store for both HTTPS clients and LDAP clients, but you can use a separate dedicated trust store just for ldap if you wish. 
+
+  ```
+  keytool -import -trustcacerts -keystore path/to/cacerts -storepass truststorepassword -alias aliasName -file path/to/certificate.cer
+  ```
+
+  Replace `path/to/cacerts` with the path to your truststore, `truststorepassword` with your truststore password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
 
    ```
-   keytool -import -trustcacerts -keystore path/to/cacerts -storepass truststorepassword -alias aliasName -file path/to/certificate.cer
-   ```
+  keytool -import -trustcacerts -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
+  ```
 
-   Replace `path/to/cacerts` with the path to your truststore, `truststorepassword` with your truststore password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
-
-   ```
-   keytool -import -trustcacerts -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
-   ```
 
 2. If the root certificate for the CA isn't already in the Java truststore, import it:
 
@@ -278,7 +281,7 @@ Complete the following steps to set up LDAPS for Druid. See [Configuration refer
    keytool -importcert -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
    ```
 
-3. In your `common.runtime.properties` file, add the following lines to the LDAP configuration section, substituting your own truststore path and password:
+3. In your `common.runtime.properties` file, add the following lines to the LDAP configuration section, substituting your own trust store path and password. Note that the property to point to the trust store is `druid.auth.basic.ssl.trustStorePath` and not `druid.client.https.trustStorePath` . Regardless of if you use the same trust store for HTTPS clients and LDAP or if you use a separate LDAP trust store, ensure the correct property points to the trust store where you imported the LDAP certificates. 
 
    ```
    druid.auth.basic.ssl.trustStorePath=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts
