@@ -436,19 +436,34 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
-      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
+      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache;
+      final Set<String> filterFieldsForPruning;
+
+      final boolean trySecondaryPartititionPruning =
+          query.getFilter() != null && query.context().isSecondaryPartitionPruningEnabled();
+
+      if (trySecondaryPartititionPruning) {
+        dimensionRangeCache = new HashMap<>();
+        filterFieldsForPruning =
+            DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), dataSourceAnalysis);
+      } else {
+        dimensionRangeCache = null;
+        filterFieldsForPruning = null;
+      }
+
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
-        if (query.context().isSecondaryPartitionPruningEnabled()) {
+        if (trySecondaryPartititionPruning) {
           filteredChunks = DimFilterUtils.filterShards(
               query.getFilter(),
+              filterFieldsForPruning,
               holder.getObject(),
               partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
               dimensionRangeCache
           );
         } else {
-          filteredChunks = Sets.newHashSet(holder.getObject());
+          filteredChunks = Sets.newLinkedHashSet(holder.getObject());
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
