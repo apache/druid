@@ -31,7 +31,7 @@ To run the queries in this tutorial, replace `ROUTER:PORT` with the location of 
 
 For more general information, see [Query from deep storage](../querying/query-from-deep-storage.md).
 
-If you are trying this feature on an existing cluster, make sure query from deep storage [pre-requisites](../querying/query-from-deep-storage.md#pre-requisites) are met.
+If you are trying this feature on an existing cluster, make sure query from deep storage [prerequisites](../querying/query-from-deep-storage.md#prerequisites) are met.
 
 ## Load example data
 
