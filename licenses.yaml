@@ -4687,7 +4687,7 @@ module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
 version: 9.30.2
 libraries:
-  - om.nimbusds: nimbus-jose-jwt
+  - com.nimbusds: nimbus-jose-jwt
 
 ---
 
@@ -4705,7 +4705,7 @@ name: Reactor Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 1.0.34,
+version: 1.0.34
 libraries:
   - io.projectreactor.netty: reactor-netty-core
   - io.projectreactor.netty: reactor-netty-http
@@ -4716,7 +4716,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.4.31,
+version: 3.4.31
 libraries:
   - io.projectreactor: reactor-core
 ---
