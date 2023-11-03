@@ -34,7 +34,7 @@ import java.math.BigDecimal;
 
 public class CastedLiteralOperandTypeCheckers
 {
-  public static SqlSingleOperandTypeChecker LITERAL = new CastedLiteralOperandTypeChecker(false);
+  public static final SqlSingleOperandTypeChecker LITERAL = new CastedLiteralOperandTypeChecker(false);
 
   /**
    * Blatantly copied from {@link OperandTypes#POSITIVE_INTEGER_LITERAL}, however the reference to the {@link #LITERAL}
