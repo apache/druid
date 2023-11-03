@@ -75,6 +75,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
@@ -1433,7 +1434,7 @@ public class ControllerImpl implements Controller
         catch (IllegalStateException e) {
           throw new MSQException(e, InsertLockPreemptedFault.instance());
         }
-        catch (IllegalArgumentException e) {
+        catch (TooManyBucketsException e) {
           throw new MSQException(e, new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS));
         }
       }

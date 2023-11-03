@@ -414,7 +414,7 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testReplaceTombstonesWithTooManyBucketsThrowsException()
+  public void testReplaceTombstonesWithTooManyBucketsThrowsFault()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)

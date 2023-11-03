@@ -25,7 +25,7 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -570,7 +570,7 @@ public class TombstoneHelperTest
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
     Assert.assertThrows(
-        IAE.class,
+        TooManyBucketsException.class,
         () -> tombstoneHelper.computeTombstoneIntervalsForReplace(
             dropIntervals,
             ImmutableList.of(replaceInterval),

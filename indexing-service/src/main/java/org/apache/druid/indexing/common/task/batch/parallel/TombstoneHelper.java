@@ -26,8 +26,8 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -217,7 +217,7 @@ public class TombstoneHelper
           continue;
         }
         if (buckets > maxBuckets) {
-          throw new IAE("Cannot add more tombstone buckets than [%d].", maxBuckets);
+          throw new TooManyBucketsException(maxBuckets);
         }
 
         if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
