@@ -26,6 +26,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.CastedLiteralOperandTypeCheckers;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -156,7 +157,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
                   OperandTypes.sequence(
                       "'" + name + "(column, size)'",
                       OperandTypes.ANY,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
               ),
@@ -164,8 +165,8 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
                   OperandTypes.sequence(
                       "'" + name + "(column, size, scale)'",
                       OperandTypes.ANY,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
               ),
@@ -173,8 +174,8 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
                   OperandTypes.sequence(
                       "'" + name + "(column, size, scale, strictNumberParsing)'",
                       OperandTypes.ANY,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL,
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
                       OperandTypes.BOOLEAN
                   ),
                   OperandTypes.family(
