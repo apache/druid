@@ -214,7 +214,7 @@ The web console supports ingesting streaming data from multiple Kafka topics to 
 * The web console now shows the execution dialog for `query_controller` tasks in the task view instead of the generic raw task details dialog. You can still access the raw task details from the ellipsis (...) menu [#14930)](https://github.com/apache/druid/pull/14930)
 * You can now select a horizontal range in the web console time chart to modify the current WHERE clause [#14929](https://github.com/apache/druid/pull/14929)
 * You can now set dynamic query parameters in the web console [#14921](https://github.com/apache/druid/pull/14921)
-* You can now edit the Coordinator dynamic coonfiguration in the web console [#14791](https://github.com/apache/druid/pull/14791)
+* You can now edit the Coordinator dynamic configuration in the web console [#14791](https://github.com/apache/druid/pull/14791)
 * You can now prettify SQL queries and use flatten with a Kafka input format [#14906](https://github.com/apache/druid/pull/14906)
 * A warning now appears when a CSV or TSV sample contains newlines that Druid does not accept [#14783](https://github.com/apache/druid/pull/14783)
 * You can now select a format when downloading data [#14794](https://github.com/apache/druid/pull/14794)
@@ -412,7 +412,7 @@ You can now set the `maxSubqueryBytes` guardrail to one of the following:
 
 ### Encrypt data in transit
 
-The `net.spy.memcached` client has been replaced with the AWS Elasticache Client. This change allows Druid to encrypt data in transit using TLS.
+The `net.spy.memcached` client has been replaced with the AWS ElastiCache client. This change allows Druid to encrypt data in transit using TLS.
 
 Configure it with the following properties:
 

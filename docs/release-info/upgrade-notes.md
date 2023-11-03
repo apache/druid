@@ -513,7 +513,7 @@ Druid automatically retains any segments marked as unused. Previously, Druid per
 
 [#12693](https://github.com/apache/druid/pull/12693)
 
-#### Default for druid.processing.fifo
+#### Default for `druid.processing.fifo`
 
 The default for `druid.processing.fifo` is now true. This means that tasks of equal priority are treated in a FIFO manner. For most use cases, this change can improve performance on heavily loaded clusters.
 
@@ -542,10 +542,9 @@ In 0.23.0, Auto killing of segments is now enabled by default [(#12187)](https:/
 
 # Other changes
 
-- Kinesis ingestion requires listShards API access on the stream.
+- Kinesis ingestion requires `listShards` API access on the stream.
 - Kafka clients libraries have been upgraded to 3.0.0 [(#11735)](https://github.com/apache/druid/pull/11735)
-- The dynamic coordinator config, percentOfSegmentsToConsiderPerMove has been deprecated and will be removed in a future release of Druid. It is being replaced by a new segment picking strategy introduced in [(#11257)](https://github.com/apache/druid/pull/11257). This new strategy is currently toggled off by default, but can be toggled on if you set the dynamic coordinator config useBatchedSegmentSampler to true. Setting this as such, will disable the use of the deprecated percentOfSegmentsToConsiderPerMove. In a future release, useBatchedSegmentSampler will become permanently true. [(#11960)](https://github.com/apache/druid/pull/11960)
-
+- The dynamic coordinator config, `percentOfSegmentsToConsiderPerMove` has been deprecated and will be removed in a future release of Druid. It is being replaced by a new segment picking strategy introduced in [(#11257)](https://github.com/apache/druid/pull/11257). This new strategy is currently toggled off by default, but can be toggled on if you set the dynamic coordinator config `useBatchedSegmentSampler` to true. Setting this as such, will disable the use of the deprecated `percentOfSegmentsToConsiderPerMove`. In a future release, `useBatchedSegmentSampler` will become permanently true. [(#11960)](https://github.com/apache/druid/pull/11960)
 
 ## 0.22.0
 
@@ -553,7 +552,7 @@ In 0.23.0, Auto killing of segments is now enabled by default [(#12187)](https:/
 
 #### Dropped support for Apache ZooKeeper 3.4
 
-Following up to 0.21, which officially deprecated support for Zookeeper 3.4, [which has been end-of-life for a while](https://lists.apache.org/thread/xckr6nnsg9rxchkbvltkvt7hr2d0mhbo), support for ZooKeeper 3.4 is now removed in 0.22.0. Be sure to upgrade your Zookeeper cluster prior to upgrading your Druid cluster to 0.22.0.
+Following up to 0.21, which officially deprecated support for ZooKeeper 3.4, [which has been end-of-life for a while](https://lists.apache.org/thread/xckr6nnsg9rxchkbvltkvt7hr2d0mhbo), support for ZooKeeper 3.4 is now removed in 0.22.0. Be sure to upgrade your ZooKeeper cluster prior to upgrading your Druid cluster to 0.22.0.
 
 [#10780](https://github.com/apache/druid/issues/10780)
 [#11073](https://github.com/apache/druid/pull/11073)
@@ -602,13 +601,13 @@ Druid coordinator `maxSegmentsInNodeLoadingQueue` dynamic configuration has been
 
 Before this release, Druid returned the "internal error (500)" for most of the query errors. Now Druid returns different error codes based on their cause. The following table lists the errors and their corresponding codes that has changed:
 
-| Exception | Description| Old code | New code                |
+| Exception | Description| Old code | New code |
 |-----|-|--|-----|
-| SqlParseException and ValidationException from Calcite | Query planning failed             | 500      | 400                     |
-| QueryTimeoutException            | Query execution didn't finish in timeout                 | 500      | 504                     |
-| ResourceLimitExceededException   | Query asked more resources than configured threshold     | 500      | 400                    |
-| InsufficientResourceException   | Query failed to schedule because of lack of merge buffers available at the time when it was submitted | 500      | 429, merged to QueryCapacityExceededException |
-| QueryUnsupportedException       | Unsupported functionality        | 400      | 501                    |
+| SqlParseException and ValidationException from Calcite | Query planning failed | 500 | 400 |
+| QueryTimeoutException | Query execution didn't finish in timeout | 500 | 504 |
+| ResourceLimitExceededException | Query asked more resources than configured threshold | 500 | 400 |
+| InsufficientResourceException | Query failed to schedule because of lack of merge buffers available at the time when it was submitted | 500 | 429, merged to QueryCapacityExceededException |
+| QueryUnsupportedException | Unsupported functionality | 400 | 501 |
 
 [#10464](https://github.com/apache/druid/pull/10464)
 [#10746](https://github.com/apache/druid/pull/10746)
@@ -633,4 +632,3 @@ As [ZooKeeper 3.4 has been end-of-life for a while](https://mail-archives.apache
 All columns in the `sys.segments` table are now serialized in the JSON format to make them consistent with other system tables. Column names now use the same "snake case" convention.
 
 [#10481](https://github.com/apache/druid/pull/10481)
-
