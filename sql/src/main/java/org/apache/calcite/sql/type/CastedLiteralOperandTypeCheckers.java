@@ -26,7 +26,6 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.Static;
 import org.apache.druid.error.DruidException;
