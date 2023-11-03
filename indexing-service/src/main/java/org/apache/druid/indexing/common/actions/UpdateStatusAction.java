@@ -37,6 +37,7 @@ public class UpdateStatusAction implements TaskAction<Void>
   @JsonIgnore
   private final TaskStatus statusFull;
 
+  @Deprecated
   public UpdateStatusAction(
       String status
   )
@@ -98,7 +99,7 @@ public class UpdateStatusAction implements TaskAction<Void>
   {
     return "UpdateStatusAction{" +
            "status=" + status +
-           "statusFull=" + statusFull +
+           ", statusFull=" + statusFull +
            '}';
   }
 
