@@ -57,6 +57,7 @@ import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.scan.ScanQuery;
@@ -78,6 +79,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -172,13 +174,31 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }).map(List::toArray);
   }
 
+  /**
+   * Prepares the scan query to be sent to a data server.
+   * If the query contains a non-time ordering, removes the ordering and limit, as the native query stack does not
+   * support it.
+   */
+  private static ScanQuery prepareScanQueryForDataServer(@NotNull ScanQuery scanQuery)
+  {
+    if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
+      return Druids.ScanQueryBuilder.copy(scanQuery)
+                                    .orderBy(ImmutableList.of())
+                                    .limit(0)
+                                    .build();
+    } else {
+      return scanQuery;
+    }
+  }
+
   @Override
   protected ReturnOrAwait<Unit> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
+      ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
       final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> statusSequencePair =
           segment.fetchRowsFromDataServer(
-              query,
+              preparedQuery,
               ScanQueryFrameProcessor::mappingFunction,
               closer
           );
@@ -188,7 +208,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         return runWithSegment(segment);
       }
 
-      RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(query, jsonMapper);
+      RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(preparedQuery, jsonMapper);
       Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
           statusSequencePair.rhs,
           rowSignature
