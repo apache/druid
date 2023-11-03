@@ -82,7 +82,7 @@ public class HllPostAggExprMacros
 
       final Object valObj = eval.value();
       if (valObj == null) {
-        return ExprEval.of(null);
+        return ExprEval.of(0.0D);
       }
       HllSketchHolder h = HllSketchHolder.fromObj(valObj);
       double estimate = h.getEstimate();

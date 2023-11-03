@@ -91,7 +91,7 @@ public class DimensionSchemaUtils
         if (elementType == ValueType.STRING) {
           if (arrayIngestMode == ArrayIngestMode.NONE) {
             throw InvalidInput.exception(
-                "String arrays can not be ingested when '%s' is set to '%s'. Either set '%s' in query context "
+                "String arrays can not be ingested when '%s' is set to '%s'. Set '%s' in query context "
                 + "to 'array' to ingest the string array as an array, or ingest it as an MVD by explicitly casting the "
                 + "array to an MVD with ARRAY_TO_MV function.",
                 MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,

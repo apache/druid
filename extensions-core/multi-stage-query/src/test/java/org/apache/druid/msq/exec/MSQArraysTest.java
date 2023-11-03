@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -121,7 +122,7 @@ public class MSQArraysTest extends MSQTestBase
     dataFileSignatureJsonString = queryFramework().queryJsonMapper().writeValueAsString(dataFileSignature);
 
     dataFileExternalDataSource = new ExternalDataSource(
-        new LocalInputSource(null, null, ImmutableList.of(dataFile)),
+        new LocalInputSource(null, null, ImmutableList.of(dataFile), SystemFields.none()),
         new JsonInputFormat(null, null, null, null, null),
         dataFileSignature
     );
