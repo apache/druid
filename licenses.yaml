@@ -4721,6 +4721,15 @@ libraries:
   - io.projectreactor: reactor-core
 ---
 
+name: Woodstox
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: Apache License version 2.0
+version: 6.2.4
+libraries:
+  - com.fasterxml.woodstox: woodstox-core
+
+---
 name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
@@ -5202,7 +5211,7 @@ name: Woodstox
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 6.2.4
+version: 5.4.0
 libraries:
   - com.fasterxml.woodstox: woodstox-core
 

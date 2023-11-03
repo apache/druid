@@ -309,11 +309,6 @@
                 <version>1.10.0</version>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.woodstox</groupId>
-                <artifactId>woodstox-core</artifactId>
-                <version>6.2.4</version>
-            </dependency>
-            <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-core</artifactId>
                 <version>${aws.sdk.version}</version>
