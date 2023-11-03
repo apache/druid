@@ -148,10 +148,6 @@ public class CastedLiteralOperandTypeCheckers
       return (SqlLiteral) node;
     }
 
-    if (SqlUtil.isLiteral(node, false)) {
-      return (SqlLiteral) node;
-    }
-
     switch (node.getKind()) {
       case CAST:
         return fetchPrimitiveLiteralFromCasts(((SqlCall) node).operand(0));
