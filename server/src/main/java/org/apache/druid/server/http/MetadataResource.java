@@ -157,6 +157,7 @@ public class MetadataResource
 
     if (includeOvershadowedStatus != null) {
       // note that realtime segments are returned only when druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator
+      // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
       return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
     }
 
@@ -363,7 +364,7 @@ public class MetadataResource
   }
 
   /**
-   * API to fetch {@link DataSourceInformation} for the specified dataSources.
+   * API to fetch {@link DataSourceInformation} for the specified datasources.
    *
    * @param dataSources list of dataSources to be queried
    * @return information including schema details for the specified datasources

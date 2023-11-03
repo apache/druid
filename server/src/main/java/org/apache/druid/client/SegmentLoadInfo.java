@@ -62,7 +62,7 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   }
 
   /**
-   * Randomly return one server from the sets of {@code servers}.
+   * Randomly return one server from the set of {@code servers}.
    */
   public DruidServerMetadata pickOne()
   {
