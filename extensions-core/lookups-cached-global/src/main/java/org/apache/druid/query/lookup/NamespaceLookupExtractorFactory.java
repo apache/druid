@@ -175,7 +175,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   {
     long timeout = extractionNamespace.getLoadTimeoutMills();
     if (entry.getCacheState() == CacheScheduler.NoCache.CACHE_NOT_INITIALIZED) {
-      LOG.info("Cache not initialized yet for namespace %s waiting for %s secs", extractionNamespace, timeout);
+      LOG.info("Cache not initialized yet for namespace %s waiting for %s mills", extractionNamespace, timeout);
       entry.awaitTotalUpdatesWithTimeout(1, timeout);
     }
   }
