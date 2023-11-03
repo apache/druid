@@ -50,7 +50,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -2599,7 +2598,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      expressionPostAgg("p0", "array_quantile(\"a0\",0.9)")
+                      expressionPostAgg("p0", "array_quantile(\"a0\",0.9)", ColumnType.DOUBLE)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -2973,7 +2972,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3017,7 +3016,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3209,7 +3208,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                .postAggregators(new ExpressionPostAggregator("s0", "1", null, ExprMacroTable.nil()))
+                .postAggregators(expressionPostAgg("s0", "1", ColumnType.LONG))
                 .build()
         ),
         useDefault ?
