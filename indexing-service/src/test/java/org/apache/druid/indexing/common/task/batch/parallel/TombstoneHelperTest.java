@@ -57,7 +57,7 @@ public class TombstoneHelperTest
 
   private final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
 
-  private final int MAX_BUCKETS = 5_000;
+  private final int MAX_BUCKETS = 100;
 
   @Test
   public void noTombstonesWhenNoDataInInputIntervalAndNoExistingSegments() throws Exception
@@ -552,8 +552,8 @@ public class TombstoneHelperTest
     Interval usedInterval = Intervals.of("1000-01-01/9000-12-31");
     Interval replaceInterval = Intervals.of("1000-01-01/9000-12-31");
     List<Interval> dropIntervals = ImmutableList.of(
-        Intervals.of("1000-01-01/5000-12-31"),
-        Intervals.of("6000-01-01/9000-12-31")
+        Intervals.of("1000-01-01/1001-01-01"),
+        Intervals.of("6000-01-01/6001-01-01")
     );
     Granularity replaceGranularity = Granularities.DAY;
 
@@ -587,8 +587,8 @@ public class TombstoneHelperTest
     Interval usedInterval = Intervals.of("1000-01-01/9000-12-31");
     Interval replaceInterval = Intervals.of("1000-01-01/9000-12-31");
     List<Interval> dropIntervals = ImmutableList.of(
-        Intervals.of("1000-01-01/5000-12-31"),
-        Intervals.of("6000-01-01/9000-12-31")
+        Intervals.of("1000-01-01/1001-01-01"),
+        Intervals.of("6000-01-01/6001-01-01")
     );
     Granularity replaceGranularity = Granularities.DAY;
 
@@ -609,10 +609,10 @@ public class TombstoneHelperTest
         ImmutableList.of(replaceInterval),
         "test",
         replaceGranularity,
-        3_000_000
+        800
     );
 
-    // ((5000 - 1000) * 365) + ((9000 - 6000) * 365 * 24) ~= 2_557_426 day intervals
+    // (365 * 2) ~= 730 day intervals
     Assert.assertEquals(
         dropIntervals.stream()
                      .mapToLong(interval -> interval.toDuration().getStandardDays())

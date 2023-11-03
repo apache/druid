@@ -52,12 +52,10 @@ import java.util.Set;
 
 public class TombstoneHelper
 {
-
   private final TaskActionClient taskActionClient;
 
   public TombstoneHelper(TaskActionClient taskActionClient)
   {
-
     this.taskActionClient = Preconditions.checkNotNull(taskActionClient, "taskActionClient");
   }
 
@@ -216,18 +214,15 @@ public class TombstoneHelper
         if (overlap == null) {
           continue;
         }
-        if (buckets > maxBuckets) {
-          throw new TooManyBucketsException(maxBuckets);
-        }
 
         if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
           // Generate a tombstone interval covering the negative eternity interval.
+          buckets = validateAndGetBuckets(buckets + 1, maxBuckets);
           retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketStart(overlap.getEnd())));
-          buckets += 1;
         } else if ((Intervals.ETERNITY.getEnd()).equals(overlap.getEnd())) {
           // Generate a tombstone interval covering the positive eternity interval.
+          buckets = validateAndGetBuckets(buckets + 1, maxBuckets);
           retVal.add(new Interval(replaceGranularity.bucketStart(overlap.getStart()), overlap.getEnd()));
-          buckets += 1;
         } else {
           // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
           // However when fetching from the iterator, the first interval is found using the bucketStart, which
@@ -250,8 +245,8 @@ public class TombstoneHelper
           // Helps in deduplication if required. Since all the intervals are uniformly granular, there should be no
           // no overlap post deduplication
           HashSet<Interval> intervals = Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator());
+          buckets = validateAndGetBuckets(buckets + intervals.size(), maxBuckets);
           retVal.addAll(intervals);
-          buckets += intervals.size();
         }
       }
     }
@@ -325,6 +320,14 @@ public class TombstoneHelper
     }
 
     return JodaUtils.condenseIntervals(retVal);
+  }
+
+  private int validateAndGetBuckets(final int buckets, final int maxBuckets)
+  {
+    if (buckets >= maxBuckets) {
+      throw new TooManyBucketsException(maxBuckets);
+    }
+    return buckets;
   }
 
 }
