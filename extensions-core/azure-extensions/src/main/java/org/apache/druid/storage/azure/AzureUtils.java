@@ -116,7 +116,6 @@ public class AzureUtils
       String prefix,
       Predicate<CloudBlobHolder> filter
   )
-      throws Exception
   {
     AzureCloudBlobIterable azureCloudBlobIterable =
         azureCloudBlobIterableFactory.create(ImmutableList.of(new CloudObjectLocation(

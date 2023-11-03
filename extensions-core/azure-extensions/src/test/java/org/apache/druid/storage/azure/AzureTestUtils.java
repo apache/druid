@@ -68,7 +68,7 @@ public class AzureTestUtils extends EasyMockSupport
   public static void expectDeleteObjects(
       AzureStorage storage,
       List<CloudBlobHolder> deleteRequestsExpected,
-      Map<CloudBlobHolder, Exception> deleteRequestToException) throws Exception
+      Map<CloudBlobHolder, Exception> deleteRequestToException)
   {
     Map<CloudBlobHolder, IExpectationSetters<CloudBlobHolder>> requestToResultExpectationSetter = new HashMap<>();
 
