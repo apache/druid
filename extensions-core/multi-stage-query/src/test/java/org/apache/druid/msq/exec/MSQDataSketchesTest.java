@@ -26,6 +26,7 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -91,6 +92,51 @@ public class MSQDataSketchesTest extends MSQTestBase
             : ImmutableList.of(
                 new Object[]{"", "\"AgEHDAMIAwCOlN8FjkSVCqfcYQQ=\""},
                 new Object[]{"a", "\"AgEHDAMIAgALpZ0PPgu1BA==\""}
+            )
+        )
+        .verifyResults();
+  }
+
+  @Test
+  public void testEmptyHllSketch()
+  {
+    RowSignature resultSignature =
+        RowSignature.builder()
+                    .add("c", ColumnType.LONG)
+                    .build();
+
+    GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource(CalciteTests.DATASOURCE1)
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(
+                        aggregators(
+                            new FilteredAggregatorFactory(
+                                new HllSketchBuildAggregatorFactory("a0", "dim2", 12, "HLL_4", null, true, true),
+                                equality("dim1", "nonexistent", ColumnType.STRING),
+                                "a0"
+                            )
+                        )
+                    )
+                    .setContext(DEFAULT_MSQ_CONTEXT)
+                    .build();
+
+    testSelectQuery()
+        .setSql("SELECT APPROX_COUNT_DISTINCT_DS_HLL(dim2) FILTER(WHERE dim1 = 'nonexistent') AS c FROM druid.foo")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("a0", "c"))
+                                   ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setQueryContext(DEFAULT_MSQ_CONTEXT)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{0L}
             )
         )
         .verifyResults();

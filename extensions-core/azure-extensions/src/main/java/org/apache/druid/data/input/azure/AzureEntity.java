@@ -75,4 +75,9 @@ public class AzureEntity extends RetryingInputEntity
   {
     return location.getPath();
   }
+
+  CloudObjectLocation getLocation()
+  {
+    return location;
+  }
 }

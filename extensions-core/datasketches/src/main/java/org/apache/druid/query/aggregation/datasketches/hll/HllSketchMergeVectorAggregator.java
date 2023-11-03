@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
-import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.datasketches.util.ToObjectVectorColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
@@ -29,7 +28,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.function.Supplier;
 
 public class HllSketchMergeVectorAggregator implements VectorAggregator
@@ -65,10 +63,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
   {
     final Object[] vector = objectSupplier.get();
 
-    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN)
-                                             .writableRegion(position, helper.getSize());
-
-    final Union union = Union.writableWrap(mem);
+    final Union union = helper.getOrCreateUnion(buf, position);
     for (int i = startRow; i < endRow; i++) {
       if (vector[i] != null) {
         union.update(((HllSketchHolder) vector[i]).getSketch());
@@ -85,7 +80,6 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
       final int positionOffset
   )
   {
-    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN);
     final Object[] vector = objectSupplier.get();
 
     for (int i = 0; i < numRows; i++) {
@@ -93,7 +87,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
 
       if (o != null) {
         final int position = positions[i] + positionOffset;
-        final Union union = Union.writableWrap(mem.writableRegion(position, helper.getSize()));
+        final Union union = helper.getOrCreateUnion(buf, position);
         union.update(o.getSketch());
       }
     }
@@ -108,6 +102,12 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
   @Override
   public void close()
   {
-    // Nothing to close.
+    helper.close();
+  }
+
+  @Override
+  public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
+  {
+    helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
   }
 }
