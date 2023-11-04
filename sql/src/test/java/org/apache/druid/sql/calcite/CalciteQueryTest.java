@@ -13478,7 +13478,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "SELECT STRING_AGG(l1, ',', 128), STRING_AGG(DISTINCT l1, ',', 128) FROM numfoo",
+        "SELECT STRING_AGG(l1, ',', 128), STRING_AGG(DISTINCT l1, ',', CAST(128 AS INTEGER)) FROM numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE3)
