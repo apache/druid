@@ -31,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -73,18 +74,31 @@ public class DimFilterUtilsTest
     EasyMock.replay(filter1, shard1, shard2, shard3, shard4, shard5, shard6, shard7);
 
     Set<ShardSpec> expected1 = ImmutableSet.of(shard1, shard4, shard5, shard6, shard7);
-    assertFilterResult(filter1, shards, expected1);
+    assertFilterResult(filter1, null, shards, expected1);
+    assertFilterResult(filter1, Collections.singleton("dim1"), shards, expected1);
+    assertFilterResult(filter1, Collections.singleton("dim2"), shards, ImmutableSet.copyOf(shards));
+    assertFilterResult(filter1, Collections.emptySet(), shards, ImmutableSet.copyOf(shards));
   }
 
-  private void assertFilterResult(DimFilter filter, Iterable<ShardSpec> input, Set<ShardSpec> expected)
+  private void assertFilterResult(
+      DimFilter filter,
+      Set<String> filterFields,
+      Iterable<ShardSpec> input,
+      Set<ShardSpec> expected
+  )
   {
-    Set<ShardSpec> result = DimFilterUtils.filterShards(filter, input, CONVERTER);
-    Assert.assertEquals(expected, result);
-
+    Set<ShardSpec> result = new HashSet<>();
     Map<String, Optional<RangeSet<String>>> dimensionRangeMap = new HashMap<>();
-    result = new HashSet<>();
     for (ShardSpec shard : input) {
-      result.addAll(DimFilterUtils.filterShards(filter, ImmutableList.of(shard), CONVERTER, dimensionRangeMap));
+      result.addAll(
+          DimFilterUtils.filterShards(
+              filter,
+              filterFields,
+              ImmutableList.of(shard),
+              CONVERTER,
+              dimensionRangeMap
+          )
+      );
     }
     Assert.assertEquals(expected, result);
   }

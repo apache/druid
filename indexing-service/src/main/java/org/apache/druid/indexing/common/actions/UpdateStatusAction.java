@@ -34,13 +34,25 @@ public class UpdateStatusAction implements TaskAction<Void>
 {
   @JsonIgnore
   private final String status;
+  @JsonIgnore
+  private final TaskStatus statusFull;
+
+  @Deprecated
+  public UpdateStatusAction(
+      String status
+  )
+  {
+    this(status, null);
+  }
 
   @JsonCreator
   public UpdateStatusAction(
-      @JsonProperty("status") String status
+      @JsonProperty("status") String status,
+      @JsonProperty("statusFull") TaskStatus statusFull
   )
   {
     this.status = status;
+    this.statusFull = statusFull;
   }
 
 
@@ -48,6 +60,12 @@ public class UpdateStatusAction implements TaskAction<Void>
   public String getStatus()
   {
     return status;
+  }
+
+  @JsonProperty
+  public TaskStatus getStatusFull()
+  {
+    return statusFull;
   }
 
   @Override
@@ -63,9 +81,8 @@ public class UpdateStatusAction implements TaskAction<Void>
   {
     Optional<TaskRunner> taskRunner = toolbox.getTaskRunner();
     if (taskRunner.isPresent()) {
-      TaskStatus result = "successful".equals(status)
-                          ? TaskStatus.success(task.getId())
-                          : TaskStatus.failure(task.getId(), "Error with task");
+      // Fall back to checking status instead of statusFull for backwards compatibility
+      TaskStatus result = statusFull != null ? statusFull : "successful".equals(status) ? TaskStatus.success(task.getId()) : TaskStatus.failure(task.getId(), "Error with task");
       taskRunner.get().updateStatus(task, result);
     }
     return null;
@@ -82,6 +99,7 @@ public class UpdateStatusAction implements TaskAction<Void>
   {
     return "UpdateStatusAction{" +
            "status=" + status +
+           ", statusFull=" + statusFull +
            '}';
   }
 
@@ -95,12 +113,12 @@ public class UpdateStatusAction implements TaskAction<Void>
       return false;
     }
     UpdateStatusAction that = (UpdateStatusAction) o;
-    return Objects.equals(status, that.status);
+    return Objects.equals(status, that.status) && Objects.equals(statusFull, that.statusFull);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(status);
+    return Objects.hash(status, statusFull);
   }
 }
