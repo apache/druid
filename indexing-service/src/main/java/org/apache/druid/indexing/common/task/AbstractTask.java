@@ -159,12 +159,13 @@ public abstract class AbstractTask implements Task
   @Override
   public final TaskStatus run(TaskToolbox taskToolbox) throws Exception
   {
-    TaskStatus taskStatus = TaskStatus.running(getId());
+    TaskStatus taskStatus = null;
     try {
       cleanupCompletionLatch = new CountDownLatch(1);
       String errorMessage = setup(taskToolbox);
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
-        return TaskStatus.failure(getId(), errorMessage);
+        taskStatus = TaskStatus.failure(getId(), errorMessage);
+        return taskStatus;
       }
       taskStatus = runTask(taskToolbox);
       return taskStatus;
@@ -186,7 +187,7 @@ public abstract class AbstractTask implements Task
   public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
 
   @Override
-  public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
     // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
     Thread.interrupted();
@@ -196,11 +197,11 @@ public abstract class AbstractTask implements Task
       return;
     }
 
+    TaskStatus taskStatusToReport = taskStatus == null
+        ? TaskStatus.failure(id, "Task failed to run")
+        : taskStatus;
     // report back to the overlord
-    UpdateStatusAction status = new UpdateStatusAction("successful");
-    if (taskStatus.isFailure()) {
-      status = new UpdateStatusAction("failure");
-    }
+    UpdateStatusAction status = new UpdateStatusAction("", taskStatusToReport);
     toolbox.getTaskActionClient().submit(status);
 
     if (reportsFile != null && reportsFile.exists()) {
@@ -211,7 +212,7 @@ public abstract class AbstractTask implements Task
     }
 
     if (statusFile != null) {
-      toolbox.getJsonMapper().writeValue(statusFile, taskStatus);
+      toolbox.getJsonMapper().writeValue(statusFile, taskStatusToReport);
       toolbox.getTaskLogPusher().pushTaskStatus(id, statusFile);
       Files.deleteIfExists(statusFile.toPath());
       log.debug("Pushed task status");
