@@ -637,11 +637,16 @@ public class BrokerServerViewTest extends CuratorTestBase
       }
     };
 
-    brokerServerView = new BrokerServerView(
+    DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
+        new NoopServiceEmitter(),
         EasyMock.createMock(QueryToolChestWarehouse.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
-        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(HttpClient.class)
+    );
+
+    brokerServerView = new BrokerServerView(
+        druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),

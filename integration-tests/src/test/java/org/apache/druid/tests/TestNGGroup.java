@@ -161,4 +161,6 @@ public class TestNGGroup
   public static final String CUSTOM_COORDINATOR_DUTIES = "custom-coordinator-duties";
 
   public static final String HTTP_ENDPOINT = "http-endpoint";
+
+  public static final String CENTRALIZED_TABLE_SCHEMA = "centralized-table-schema";
 }
