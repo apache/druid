@@ -1085,9 +1085,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
 
+    final Interval outOfRangeInterval = Intervals.of("1700/1800");
+    Assert.assertTrue(segments.stream()
+                              .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
+
     final Collection<DataSegment> actualUsedSegments = coordinator.retrieveUsedSegmentsForIntervals(
         DS.WIKI,
-        ImmutableList.of(Intervals.of("1700/1800")),
+        ImmutableList.of(outOfRangeInterval),
         Segments.ONLY_VISIBLE
     );
 
@@ -1180,10 +1184,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
     markAllSegmentsUnused(new HashSet<>(segments));
 
+    final Interval outOfRangeInterval = Intervals.of("1700/1800");
+    Assert.assertTrue(segments.stream()
+                              .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
     final int limit = segments.size() + 1;
+
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
-        Intervals.of("1700/1800"),
+        outOfRangeInterval,
         limit
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
@@ -1252,8 +1260,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
     markAllSegmentsUnused(new HashSet<>(segments));
 
+    final Interval outOfRangeInterval = Intervals.of("1700/1800");
+    Assert.assertTrue(segments.stream()
+                              .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
+
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
-        ImmutableList.of(Intervals.of("1700/1800")),
+        ImmutableList.of(outOfRangeInterval),
         null
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
