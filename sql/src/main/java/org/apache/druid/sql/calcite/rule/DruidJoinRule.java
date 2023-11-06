@@ -366,14 +366,6 @@ public class DruidJoinRule extends RelOptRule
       return true;
     }
 
-    public RexNode getCondition(final RexBuilder rexBuilder)
-    {
-      Preconditions.checkState(unsupportedSubConditions.isEmpty(),
-                               "Unsupported sub conditions [%s] must be empty", unsupportedSubConditions
-      );
-      return getConditionWithUnsupportedSubConditionsIgnored(rexBuilder);
-    }
-
     public RexNode getConditionWithUnsupportedSubConditionsIgnored(final RexBuilder rexBuilder)
     {
       return RexUtil.composeConjunction(
@@ -422,11 +414,10 @@ public class DruidJoinRule extends RelOptRule
    * that can be extracted into post join filter.
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  public static ConditionAnalysis analyzeCondition(
+  public ConditionAnalysis analyzeCondition(
       final RexNode condition,
       final RelDataType leftRowType,
-      final RexBuilder rexBuilder,
-      @Nullable final PlannerContext plannerContext
+      final RexBuilder rexBuilder
   )
   {
     final List<RexNode> subConditions = decomposeAnd(condition);
@@ -469,13 +460,11 @@ public class DruidJoinRule extends RelOptRule
         comparisonKind = SqlKind.EQUALS;
 
         if (!SqlTypeName.BOOLEAN_TYPES.contains(secondOperand.getType().getSqlTypeName())) {
-          if (null != plannerContext) {
-            plannerContext.setPlanningError(
-                "SQL requires a join with '%s' condition where the column is of the type %s, that is not supported",
-                subCondition.getKind(),
-                secondOperand.getType().getSqlTypeName()
-            );
-          }
+          plannerContext.setPlanningError(
+              "SQL requires a join with '%s' condition where the column is of the type %s, that is not supported",
+              subCondition.getKind(),
+              secondOperand.getType().getSqlTypeName()
+          );
           unSupportedSubConditions.add(subCondition);
           continue;
 
@@ -488,12 +477,10 @@ public class DruidJoinRule extends RelOptRule
         comparisonKind = subCondition.getKind();
       } else {
         // If it's not EQUALS or a BOOLEAN input ref, it's not supported.
-        if (plannerContext != null) {
-          plannerContext.setPlanningError(
-              "SQL requires a join with '%s' condition that is not supported.",
-              subCondition.getKind()
-          );
-        }
+        plannerContext.setPlanningError(
+            "SQL requires a join with '%s' condition that is not supported.",
+            subCondition.getKind()
+        );
         unSupportedSubConditions.add(subCondition);
         continue;
       }
@@ -507,9 +494,7 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) firstOperand);
       } else {
         // Cannot handle this condition.
-        if (plannerContext != null) {
-          plannerContext.setPlanningError("SQL is resulting in a join that has unsupported operand types.");
-        }
+        plannerContext.setPlanningError("SQL is resulting in a join that has unsupported operand types.");
         unSupportedSubConditions.add(subCondition);
       }
     }
