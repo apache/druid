@@ -840,4 +840,11 @@
     ]]></notes>
     <cve>CVE-2023-4586</cve>
   </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: jose4j-0.7.3.jar
+    ]]></notes>
+    <cve>CVE-2023-31582</cve>
+  </suppress>
 </suppressions>
