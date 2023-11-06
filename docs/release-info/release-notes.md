@@ -28,7 +28,7 @@ See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3A
 
 Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid 28.0.0.
 
-# Important changes and deprecations
+# Important features, changes, and deprecations
 
 In Druid 28.0.0, we have made substantial improvements to querying to make the system more ANSI SQL compatible. This includes changes in handling NULL and boolean values as well as boolean logic. At the same time, the Apache Calcite library has been upgraded to the latest version. While we have documented known query behavior changes, please read the [upgrade notes](#upgrade-notes) section carefully. Test your application before rolling out to broad production scenarios while closely monitoring the query status.
 
@@ -128,7 +128,8 @@ For more information, see [Stop supervisors that ingest from multiple Kafka topi
 
 ## SQL UNNEST and ingestion flattening
 
-The UNNEST function is no longer experimental. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
+The UNNEST function is no longer experimental.
+Druid now supports UNNEST in SQL-based batch ingestion and query from deep storage, so you can flatten arrays easily. For more information, see [UNNEST](https://druid.apache.org/docs/latest/querying/sql/#unnest) and [Unnest arrays within a column](https://druid.apache.org/docs/latest/tutorials/tutorial-unnest-arrays/).
 
 You no longer need to include the context parameter `enableUnnest: true` to use UNNEST.
 
@@ -178,6 +179,8 @@ Streaming jobs reading from Kafka and Kinesis with `APPEND` locks can now ingest
 
 # Functional area and related changes
 
+This section contains detailed release notes separated by areas.
+
 ## Web console
 
 ### Added UI support for segment loading query context parameter
@@ -221,14 +224,6 @@ The web console supports ingesting streaming data from multiple Kafka topics to 
 * Improved the clarity of cluster default rules in the retention dialog [#14793](https://github.com/apache/druid/pull/14793)
 * The web console now detects inline queries in the query text and lets you run them individually [#14810](https://github.com/apache/druid/pull/14801)
 * You can now reset specific partition offsets for a supervisor [#14863](https://github.com/apache/druid/pull/14863)
-
-## Cluster stability
-
-### Unused segments
-
-Druid now stops loading and moving segments as soon as they are marked as unused. This prevents Historical processes from spending time on superfluous loads of segments that will be unloaded later. You can mark segments as unused by a drop rule, overshadowing, or by calling [the Data management API](https://druid.apache.org/docs/latest/api-reference/data-management-api).
-
-[#14644](https://github.com/apache/druid/pull/14644)
 
 ## Ingestion
 
@@ -409,6 +404,12 @@ You can now set the `maxSubqueryBytes` guardrail to one of the following:
 * Improved performance of EARLIEST aggregator with vectorization [#14408](https://github.com/apache/druid/pull/14408)
 
 ## Cluster management
+
+### Unused segments
+
+Druid now stops loading and moving segments as soon as they are marked as unused. This prevents Historical processes from spending time on superfluous loads of segments that will be unloaded later. You can mark segments as unused by a drop rule, overshadowing, or by calling [the Data management API](https://druid.apache.org/docs/latest/api-reference/data-management-api).
+
+[#14644](https://github.com/apache/druid/pull/14644)
 
 ### Encrypt data in transit
 
