@@ -156,6 +156,11 @@ public class MetadataResource
     }
 
     if (includeOvershadowedStatus != null) {
+<<<<<<< HEAD
+=======
+      // note that realtime segments are returned only when druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator
+      // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
+>>>>>>> upstream/master
       return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
     }
 
@@ -208,7 +213,11 @@ public class MetadataResource
                                                      : coordinator.getReplicationFactor(segment.getId());
 
           Long numRows = null;
+<<<<<<< HEAD
           if (null != coordinatorSegmentMetadataCache) {
+=======
+          if (coordinatorSegmentMetadataCache != null) {
+>>>>>>> upstream/master
             AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(
                 segment.getDataSource(),
                 segment.getId()
@@ -231,7 +240,11 @@ public class MetadataResource
     Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
 
     // conditionally add realtime segments information
+<<<<<<< HEAD
     if (null != includeRealtimeSegments && null != coordinatorSegmentMetadataCache) {
+=======
+    if (includeRealtimeSegments != null && coordinatorSegmentMetadataCache != null) {
+>>>>>>> upstream/master
       final Stream<SegmentStatusInCluster> realtimeSegmentStatus = coordinatorSegmentMetadataCache
           .getSegmentMetadataSnapshot()
           .values()
@@ -362,7 +375,11 @@ public class MetadataResource
   }
 
   /**
+<<<<<<< HEAD
    * API to fetch {@link DataSourceInformation} for the specified dataSources.
+=======
+   * API to fetch {@link DataSourceInformation} for the specified datasources.
+>>>>>>> upstream/master
    *
    * @param dataSources list of dataSources to be queried
    * @return information including schema details for the specified datasources
@@ -376,7 +393,11 @@ public class MetadataResource
   )
   {
     // if {@code coordinatorSegmentMetadataCache} is null, implies the feature is disabled. Return NOT_FOUND.
+<<<<<<< HEAD
     if (null == coordinatorSegmentMetadataCache) {
+=======
+    if (coordinatorSegmentMetadataCache == null) {
+>>>>>>> upstream/master
       return Response.status(Response.Status.NOT_FOUND).build();
     }
     Map<String, DataSourceInformation> dataSourceSchemaMap = coordinatorSegmentMetadataCache.getDataSourceInformationMap();

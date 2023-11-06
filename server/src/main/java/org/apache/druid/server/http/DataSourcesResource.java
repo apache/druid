@@ -96,6 +96,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @Path("/druid/coordinator/v1/datasources")
 public class DataSourcesResource
@@ -186,7 +187,8 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(
+        dataSourceName);
     return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
   }
 
@@ -480,7 +482,8 @@ public class DataSourcesResource
       return Response.ok(
           ImmutableMap.of(
               dataSourceName,
-              100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments()) / (double) segmentsLoadStatistics.getNumPublishedSegments())
+              100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments())
+                     / (double) segmentsLoadStatistics.getNumPublishedSegments())
           )
       ).build();
     }
@@ -873,16 +876,14 @@ public class DataSourcesResource
       final DateTime now = DateTimes.nowUtc();
 
       // A segment that is not eligible for load will never be handed off
-      boolean notEligibleForLoad = true;
+      boolean eligibleForLoad = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(theInterval, now)) {
-          if (rule instanceof LoadRule) {
-            notEligibleForLoad = false;
-          }
+          eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
           break;
         }
       }
-      if (notEligibleForLoad) {
+      if (!eligibleForLoad) {
         return Response.ok(true).build();
       }
 

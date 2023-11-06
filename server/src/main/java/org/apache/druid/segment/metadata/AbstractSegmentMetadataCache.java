@@ -184,8 +184,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   private int totalSegments = 0;
 
+<<<<<<< HEAD:server/src/main/java/org/apache/druid/segment/metadata/AbstractSegmentMetadataCache.java
   private SegmentSchemaIdGenerator schemaIdGenerator;
 
+=======
+>>>>>>> upstream/master:sql/src/main/java/org/apache/druid/sql/calcite/schema/SegmentMetadataCache.java
   protected final ExecutorService callbackExec;
 
   @GuardedBy("lock")
@@ -217,12 +220,17 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @GuardedBy("lock")
   protected final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
+<<<<<<< HEAD:server/src/main/java/org/apache/druid/segment/metadata/AbstractSegmentMetadataCache.java
   protected SegmentSchemaCache schemaCache;
 
   public AbstractSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
       final SegmentSchemaCache schemaCache,
       final SegmentSchemaIdGenerator schemaIdGenerator,
+=======
+  public AbstractSegmentMetadataCache(
+      final QueryLifecycleFactory queryLifecycleFactory,
+>>>>>>> upstream/master:sql/src/main/java/org/apache/druid/sql/calcite/schema/SegmentMetadataCache.java
       final SegmentMetadataCacheConfig config,
       final Escalator escalator,
       final InternalQueryConfig internalQueryConfig,
@@ -230,8 +238,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
+<<<<<<< HEAD:server/src/main/java/org/apache/druid/segment/metadata/AbstractSegmentMetadataCache.java
     this.schemaCache = schemaCache;
     this.schemaIdGenerator = schemaIdGenerator;
+=======
+>>>>>>> upstream/master:sql/src/main/java/org/apache/druid/sql/calcite/schema/SegmentMetadataCache.java
     this.config = Preconditions.checkNotNull(config, "config");
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");

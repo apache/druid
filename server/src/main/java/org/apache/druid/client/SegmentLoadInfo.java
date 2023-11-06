@@ -25,7 +25,11 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
 
+<<<<<<< HEAD
 import java.util.HashSet;
+=======
+import java.util.Iterator;
+>>>>>>> upstream/master
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -66,6 +70,7 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   }
 
   /**
+<<<<<<< HEAD
    * Randomly return one server from the sets of {@code servers}.
    */
   public DruidServerMetadata pickOne()
@@ -73,6 +78,27 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
     synchronized (this) {
       return Iterators.get(servers.iterator(), ThreadLocalRandom.current().nextInt(servers.size()));
     }
+=======
+   * Randomly return one server from the set of {@code servers}.
+   */
+  public DruidServerMetadata pickOne()
+  {
+    int randomPosition = ThreadLocalRandom.current().nextInt(servers.size());
+
+    Iterator<DruidServerMetadata> serversIterator = servers.iterator();
+    int index = 0;
+    DruidServerMetadata randomServer = null;
+
+    while (serversIterator.hasNext()) {
+      randomServer = serversIterator.next();
+      if (index == randomPosition) {
+        break;
+      }
+      index++;
+    }
+
+    return randomServer;
+>>>>>>> upstream/master
   }
 
   @Override

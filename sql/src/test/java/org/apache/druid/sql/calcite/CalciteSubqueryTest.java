@@ -496,7 +496,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         ))
                                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                                         .setPostAggregatorSpecs(
-                                            ImmutableList.of(expressionPostAgg("p0", "'abc'"))
+                                            expressionPostAgg("p0", "'abc'", ColumnType.STRING)
                                         )
                                         .setHavingSpec(having(equality("a0", 1L, ColumnType.LONG)))
                                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -576,17 +576,15 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setPostAggregatorSpecs(
-                            ImmutableList.of(
-                                new ArithmeticPostAggregator(
-                                    "_a2",
-                                    "quotient",
-                                    ImmutableList.of(
-                                        new FieldAccessPostAggregator(null, "_a2:sum"),
-                                        new FieldAccessPostAggregator(null, "_a2:count")
-                                    )
-                                ),
-                                expressionPostAgg("p0", "timestamp_extract(\"_a3\",'EPOCH','UTC')")
-                            )
+                            new ArithmeticPostAggregator(
+                                "_a2",
+                                "quotient",
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator(null, "_a2:sum"),
+                                    new FieldAccessPostAggregator(null, "_a2:count")
+                                )
+                            ),
+                            expressionPostAgg("p0", "timestamp_extract(\"_a3\",'EPOCH','UTC')", ColumnType.LONG)
                         )
                         .setContext(queryContext)
                         .build()

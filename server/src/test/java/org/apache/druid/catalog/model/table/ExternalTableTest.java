@@ -169,6 +169,7 @@ public class ExternalTableTest extends BaseExternTableTest
         Collections.singletonList(new URI("https://example.com/my.csv")), // removed
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     Map<String, Object> sourceMap = toMap(inputSource);
@@ -193,6 +194,7 @@ public class ExternalTableTest extends BaseExternTableTest
         Collections.singletonList(new URI("https://example.com/")),
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("koala")

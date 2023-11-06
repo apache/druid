@@ -106,6 +106,9 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
             protected String getValue()
             {
               final Object retVal = columnAccessor.getObject(cellIdSupplier.get());
+              if (retVal == null) {
+                return null;
+              }
               if (retVal instanceof ByteBuffer) {
                 return StringUtils.fromUtf8(((ByteBuffer) retVal).asReadOnlyBuffer());
               }

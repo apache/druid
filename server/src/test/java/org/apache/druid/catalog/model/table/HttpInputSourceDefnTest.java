@@ -98,6 +98,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://example.com/file.csv")),
         null,
         null,
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -115,6 +116,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // No format: not valid if URI is provided
     HttpInputSource inputSource = new HttpInputSource(
         Collections.singletonList(new URI("http://example.com/file.csv")),
+        null,
         null,
         null,
         new HttpInputSourceConfig(null)
@@ -145,6 +147,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // No format: not valid if URI is provided
     HttpInputSource inputSource = new HttpInputSource(
         Collections.singletonList(new URI("http://example.com/file.csv")),
+        null,
         null,
         null,
         new HttpInputSourceConfig(null)
@@ -212,6 +215,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")),
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -339,6 +343,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")), // removed
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -376,6 +381,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Arrays.asList(new URI("http://foo.com/foo.csv"), new URI("http://foo.com/bar.csv")),
         "bob",
         new EnvironmentVariablePasswordProvider("SECRET"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -408,6 +414,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")), // removed
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -476,6 +483,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")),
         "bob",
         new EnvironmentVariablePasswordProvider("SECRET"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")

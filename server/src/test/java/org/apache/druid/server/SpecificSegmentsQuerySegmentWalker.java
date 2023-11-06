@@ -113,8 +113,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         ),
         conglomerate,
         joinableFactoryWrapper.getJoinableFactory(),
-        new ServerConfig(),
-        LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER
+        new ServerConfig()
     );
   }
 

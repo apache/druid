@@ -2598,7 +2598,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      expressionPostAgg("p0", "array_quantile(\"a0\",0.9)")
+                      expressionPostAgg("p0", "array_quantile(\"a0\",0.9)", ColumnType.DOUBLE)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -2709,6 +2709,106 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayAggArraysWithMaxSizeBytes()
+  {
+    // Produces nested array - ARRAY<ARRAY<LONG>>, which frame writers don't support. A way to get this query
+    // to run would be to use nested columns.
+    msqIncompatible();
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_AGG(ARRAY[l1, l2], 10000), ARRAY_AGG(DISTINCT ARRAY[l1, l2], CAST(10000 AS INTEGER)) FROM numfoo",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_append(\"__acc\", \"v0\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_set_add(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                  .build()
+        ),
+        (sql, queryResults) -> {
+          // ordering is not stable in array_agg and array_concat_agg
+          List<Object[]> expected = ImmutableList.of(
+              useDefault ?
+              new Object[]{
+                  Arrays.asList(
+                      Arrays.asList(7L, 0L),
+                      Arrays.asList(325323L, 325323L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L)
+                  ),
+                  Arrays.asList(
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(7L, 0L),
+                      Arrays.asList(325323L, 325323L)
+                  )
+              }
+                         :
+              new Object[]{
+                  Arrays.asList(
+                      Arrays.asList(7L, null),
+                      Arrays.asList(325323L, 325323L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(null, null),
+                      Arrays.asList(null, null),
+                      Arrays.asList(null, null)
+                  ),
+                  Arrays.asList(
+                      Arrays.asList(null, null),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(7L, null),
+                      Arrays.asList(325323L, 325323L)
+                  )
+              }
+          );
+          assertResultsDeepEquals(sql, expected, queryResults.results);
+        }
+    );
+  }
+
+
+  @Test
   public void testArrayConcatAggArrays()
   {
     cannotVectorize();
@@ -2768,6 +2868,69 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testArrayConcatAggArraysWithMaxSizeBytes()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_CONCAT_AGG(ARRAY[l1, l2], 10000), ARRAY_CONCAT_AGG(DISTINCT ARRAY[l1, l2], CAST(10000 AS INTEGER)) "
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              true,
+                              false,
+                              false,
+                              "array_concat(\"__acc\", \"v0\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              true,
+                              false,
+                              false,
+                              "array_set_add_all(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"[7,0,325323,325323,0,0,0,0,0,0,0,0]", "[0,7,325323]"}
+            : new Object[]{"[7,null,325323,325323,0,0,null,null,null,null,null,null]", "[null,0,7,325323]"}
+        )
+    );
+  }
+
 
 
   @Test
@@ -2972,7 +3135,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3016,7 +3179,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3031,7 +3194,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "SELECT ARRAY_AGG(l1, 128), ARRAY_AGG(DISTINCT l1, 128) FROM numfoo",
+        "SELECT ARRAY_AGG(l1, 128), ARRAY_AGG(DISTINCT l1, CAST(128 AS INTEGER)) FROM numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE3)
@@ -3171,55 +3334,45 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testArrayAggGroupByArrayAggFromSubquery()
   {
     cannotVectorize();
-    skipVectorize();
+
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(new TopNQueryBuilder()
-                                           .dataSource(CalciteTests.DATASOURCE1)
-                                           .dimension(new DefaultDimensionSpec(
-                                               "dim2",
-                                               "d0",
-                                               ColumnType.STRING
-                                           ))
-                                           .metric(new DimensionTopNMetricSpec(
-                                               null,
-                                               StringComparators.LEXICOGRAPHIC
-                                           ))
-                                           .filters(notNull("dim1"))
-                                           .threshold(5)
-                                           .aggregators(new ExpressionLambdaAggregatorFactory(
-                                               "a0",
-                                               ImmutableSet.of("dim1"),
-                                               "__acc",
-                                               "ARRAY<STRING>[]",
-                                               "ARRAY<STRING>[]",
-                                               true,
-                                               true,
-                                               false,
-                                               "array_set_add(\"__acc\", \"dim1\")",
-                                               "array_set_add_all(\"__acc\", \"a0\")",
-                                               null,
-                                               null,
-                                               new HumanReadableBytes(1024),
-                                               ExprMacroTable.nil()
-                                           ))
-                                           .intervals(querySegmentSpec(Filtration.eternity()))
-                                           .granularity(Granularities.ALL)
-                                           .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                                           .build()
-                        )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setGranularity(Granularities.ALL)
-                        .setDimensions(
-                            new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING),
-                            new DefaultDimensionSpec("a0", "_d1", ColumnType.STRING_ARRAY)
-                        )
-                        .setAggregatorSpecs(new CountAggregatorFactory("_a0"))
-                        .setContext(QUERY_CONTEXT_DEFAULT)
-                        .build()
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .dimension(new DefaultDimensionSpec(
+                    "dim2",
+                    "d0",
+                    ColumnType.STRING
+                ))
+                .metric(new DimensionTopNMetricSpec(
+                    null,
+                    StringComparators.LEXICOGRAPHIC
+                ))
+                .filters(notNull("dim1"))
+                .threshold(5)
+                .aggregators(new ExpressionLambdaAggregatorFactory(
+                    "a0",
+                    ImmutableSet.of("dim1"),
+                    "__acc",
+                    "ARRAY<STRING>[]",
+                    "ARRAY<STRING>[]",
+                    true,
+                    true,
+                    false,
+                    "array_set_add(\"__acc\", \"dim1\")",
+                    "array_set_add_all(\"__acc\", \"a0\")",
+                    null,
+                    null,
+                    new HumanReadableBytes(1024),
+                    ExprMacroTable.nil()
+                ))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                .postAggregators(expressionPostAgg("s0", "1", ColumnType.LONG))
+                .build()
         ),
         useDefault ?
         ImmutableList.of(

@@ -46,24 +46,36 @@ import java.util.Set;
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
+<<<<<<< HEAD
   private SegmentSchemaPersistQueue schemaPersistQueue;
+=======
+>>>>>>> upstream/master
 
   @Inject
   public CoordinatorSegmentMetadataCache(
       QueryLifecycleFactory queryLifecycleFactory,
       CoordinatorServerView serverView,
+<<<<<<< HEAD
       SegmentSchemaCache schemaCache,
       SegmentSchemaIdGenerator schemaIdGenerator,
       SegmentSchemaPersistQueue schemaPersistQueue,
+=======
+>>>>>>> upstream/master
       SegmentMetadataCacheConfig config,
       Escalator escalator,
       InternalQueryConfig internalQueryConfig,
       ServiceEmitter emitter
   )
   {
+<<<<<<< HEAD
     super(queryLifecycleFactory, schemaCache, schemaIdGenerator, config, escalator, internalQueryConfig, emitter);
     initServerViewTimelineCallback(serverView);
     this.schemaPersistQueue = schemaPersistQueue;
+=======
+    super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
+
+    initServerViewTimelineCallback(serverView);
+>>>>>>> upstream/master
   }
 
   private void initServerViewTimelineCallback(final CoordinatorServerView serverView)
@@ -111,7 +123,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   /**
+<<<<<<< HEAD
    * Fires SegmentMetadataQuery to fetch schema information for each segment in the refresh list.
+=======
+   * Executes SegmentMetadataQuery to fetch schema information for each segment in the refresh list.
+>>>>>>> upstream/master
    * The schema information for individual segments is combined to construct a table schema, which is then cached.
    *
    * @param segmentsToRefresh    segments for which the schema might have changed
@@ -121,6 +137,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
+<<<<<<< HEAD
     Set<SegmentId> filteredSegmentsToRefresh = filterSegmentsWithCachedSchema(segmentsToRefresh);
     // Refresh the segments.
     final Set<SegmentId> refreshed = refreshSegments(filteredSegmentsToRefresh);
@@ -128,6 +145,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     synchronized (lock) {
       // Add missing segments back to the refresh list.
       segmentsNeedingRefresh.addAll(Sets.difference(filteredSegmentsToRefresh, refreshed));
+=======
+    // Refresh the segments.
+    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
+
+    synchronized (lock) {
+      // Add missing segments back to the refresh list.
+      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
+>>>>>>> upstream/master
 
       // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
