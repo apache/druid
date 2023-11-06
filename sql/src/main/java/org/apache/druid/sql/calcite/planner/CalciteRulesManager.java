@@ -54,7 +54,6 @@ import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
-import org.apache.druid.sql.calcite.rule.JoinNonEquiFilterExtractRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
@@ -163,15 +162,6 @@ public class CalciteRulesManager
           CoreRules.FILTER_MERGE,
           CoreRules.INTERSECT_TO_DISTINCT
       );
-
-  /**
-   * Rules from Calcite that are not part of Calcite's standard set, but that we use anyway.
-   */
-  private static final List<RelOptRule> EXTRA_CALCITE_RULES =
-          ImmutableList.of(
-                  // Useful for planning funky join conditions as filters on top of cross joins.
-                  JoinNonEquiFilterExtractRule.INSTANCE
-          );
 
   /**
    * Rules from {@link org.apache.calcite.plan.RelOptRules#ABSTRACT_RELATIONAL_RULES}, minus:
@@ -357,7 +347,6 @@ public class CalciteRulesManager
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
-    rules.addAll(EXTRA_CALCITE_RULES);
 
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
       rules.addAll(FANCY_JOIN_RULES);
