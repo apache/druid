@@ -60,7 +60,9 @@ public class SqlSegmentsMetadataQuery
   private static final Logger log = new Logger(SqlSegmentsMetadataQuery.class);
 
   /**
-   * This is similar to {@link IndexerSQLMetadataStorageCoordinator#MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}.
+   * Maximum number of intervals to consider for a batch.
+   * This is similar to {@link IndexerSQLMetadataStorageCoordinator#MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}, but imposed
+   * on the intervals size.
    */
   private static final int MAX_INTERVALS_PER_BATCH = 100;
 

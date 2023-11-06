@@ -1087,7 +1087,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final Collection<DataSegment> actualUsedSegments = coordinator.retrieveUsedSegmentsForIntervals(
         DS.WIKI,
-        ImmutableList.of(Intervals.of("1700-01-01/1800-01-01")),
+        ImmutableList.of(Intervals.of("1700/1800")),
         Segments.ONLY_VISIBLE
     );
 
@@ -1116,7 +1116,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
-        Intervals.of("1900-01-01/3000-01-01"),
+        Intervals.of("1900/3000"),
         null
     );
 
@@ -1133,7 +1133,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final int requestedLimit = segments.size();
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
-        Intervals.of("1900-01-01/3000-01-01"),
+        Intervals.of("1900/3000"),
         requestedLimit
     );
 
@@ -1150,7 +1150,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final int requestedLimit = segments.size() - 1;
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
-        Intervals.of("1900-01-01/3000-01-01"),
+        Intervals.of("1900/3000"),
         requestedLimit
     );
 
@@ -1167,7 +1167,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final int limit = segments.size() + 1;
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
-        Intervals.of("1900-01-01/3000-01-01"),
+        Intervals.of("1900/3000"),
         limit
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
@@ -1183,7 +1183,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final int limit = segments.size() + 1;
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
-        Intervals.of("1700-01-01/1800-01-01"),
+        Intervals.of("1700/1800"),
         limit
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
@@ -2917,7 +2917,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     for (int year = startYear; year < endYear; year++) {
       segments.add(createSegment(
-          Intervals.of("%d-01-01/%d-01-01", year, year + 1),
+          Intervals.of("%d/%d", year, year + 1),
           "version",
           new LinearShardSpec(0))
       );
