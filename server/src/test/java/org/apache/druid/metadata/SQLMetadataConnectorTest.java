@@ -199,7 +199,7 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    connector.alterSegmentTableAddUsedFlagLastUpdated();
+    connector.alterSegmentTable();
     connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "USED_STATUS_LAST_UPDATED"

@@ -184,6 +184,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   private int totalSegments = 0;
 
+  private SegmentSchemaIdGenerator schemaIdGenerator;
+
   protected final ExecutorService callbackExec;
 
   @GuardedBy("lock")
@@ -215,8 +217,12 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @GuardedBy("lock")
   protected final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
+  protected SegmentSchemaCache schemaCache;
+
   public AbstractSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
+      final SegmentSchemaCache schemaCache,
+      final SegmentSchemaIdGenerator schemaIdGenerator,
       final SegmentMetadataCacheConfig config,
       final Escalator escalator,
       final InternalQueryConfig internalQueryConfig,
@@ -224,6 +230,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
+    this.schemaCache = schemaCache;
+    this.schemaIdGenerator = schemaIdGenerator;
     this.config = Preconditions.checkNotNull(config, "config");
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
@@ -643,6 +651,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+  public Set<SegmentId> filterSegmentsWithCachedSchema(Set<SegmentId> segments)
+  {
+    return segments.stream().filter(id -> !schemaCache.isSchemaCached(id)).collect(Collectors.toSet());
+  }
+
   /**
    * Attempt to refresh "segmentSignatures" for a set of segments. Returns the set of segments actually refreshed,
    * which may be a subset of the asked-for set.
@@ -726,6 +739,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
           log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
+
           segmentMetadataInfo.compute(
               dataSource,
               (datasourceKey, dataSourceSegments) -> {
@@ -747,7 +761,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                         } else {
                           final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
                               .from(segmentMetadata)
-                              .withRowSignature(rowSignature)
                               .withNumRows(analysis.getNumRows())
                               .build();
                           retVal.add(segmentId);
@@ -799,8 +812,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
-        final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
-        if (rowSignature != null) {
+        final SegmentSchema segmentSchema = schemaCache.getSchemaForSegment(availableSegmentMetadata.getSegment().getId());
+        if (segmentSchema != null && segmentSchema.getRowSignature() != null) {
+          RowSignature rowSignature = segmentSchema.getRowSignature();
           for (String column : rowSignature.getColumnNames()) {
             final ColumnType columnType =
                 rowSignature.getColumnType(column)

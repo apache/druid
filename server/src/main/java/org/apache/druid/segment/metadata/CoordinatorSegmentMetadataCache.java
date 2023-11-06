@@ -46,20 +46,24 @@ import java.util.Set;
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
+  private SegmentSchemaPersistQueue schemaPersistQueue;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
       QueryLifecycleFactory queryLifecycleFactory,
       CoordinatorServerView serverView,
+      SegmentSchemaCache schemaCache,
+      SegmentSchemaIdGenerator schemaIdGenerator,
+      SegmentSchemaPersistQueue schemaPersistQueue,
       SegmentMetadataCacheConfig config,
       Escalator escalator,
       InternalQueryConfig internalQueryConfig,
       ServiceEmitter emitter
   )
   {
-    super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
-
+    super(queryLifecycleFactory, schemaCache, schemaIdGenerator, config, escalator, internalQueryConfig, emitter);
     initServerViewTimelineCallback(serverView);
+    this.schemaPersistQueue = schemaPersistQueue;
   }
 
   private void initServerViewTimelineCallback(final CoordinatorServerView serverView)
@@ -117,12 +121,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
+    Set<SegmentId> filteredSegmentsToRefresh = filterSegmentsWithCachedSchema(segmentsToRefresh);
     // Refresh the segments.
-    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
+    final Set<SegmentId> refreshed = refreshSegments(filteredSegmentsToRefresh);
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.
-      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
+      segmentsNeedingRefresh.addAll(Sets.difference(filteredSegmentsToRefresh, refreshed));
 
       // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);

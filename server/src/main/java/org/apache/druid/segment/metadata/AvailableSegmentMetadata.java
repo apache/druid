@@ -19,11 +19,9 @@
 
 package org.apache.druid.segment.metadata;
 
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -36,11 +34,10 @@ public class AvailableSegmentMetadata
       DataSegment segment,
       long isRealtime,
       Set<DruidServerMetadata> segmentServers,
-      RowSignature rowSignature,
       long numRows
   )
   {
-    return new Builder(segment, isRealtime, segmentServers, rowSignature, numRows);
+    return new Builder(segment, isRealtime, segmentServers, numRows);
   }
 
   public static Builder from(AvailableSegmentMetadata h)
@@ -49,7 +46,6 @@ public class AvailableSegmentMetadata
         h.getSegment(),
         h.isRealtime(),
         h.getReplicas(),
-        h.getRowSignature(),
         h.getNumRows()
     );
   }
@@ -61,12 +57,9 @@ public class AvailableSegmentMetadata
   // set of servers that contain the segment
   private final Set<DruidServerMetadata> segmentServers;
   private final long numRows;
-  @Nullable
-  private final RowSignature rowSignature;
 
   private AvailableSegmentMetadata(Builder builder)
   {
-    this.rowSignature = builder.rowSignature;
     this.isRealtime = builder.isRealtime;
     this.segmentServers = builder.segmentServers;
     this.numRows = builder.numRows;
@@ -98,41 +91,25 @@ public class AvailableSegmentMetadata
     return numRows;
   }
 
-  @Nullable
-  public RowSignature getRowSignature()
-  {
-    return rowSignature;
-  }
-
   public static class Builder
   {
     private final DataSegment segment;
 
     private long isRealtime;
     private Set<DruidServerMetadata> segmentServers;
-    @Nullable
-    private RowSignature rowSignature;
     private long numRows;
 
     private Builder(
         DataSegment segment,
         long isRealtime,
         Set<DruidServerMetadata> servers,
-        @Nullable RowSignature rowSignature,
         long numRows
     )
     {
       this.segment = segment;
       this.isRealtime = isRealtime;
       this.segmentServers = servers;
-      this.rowSignature = rowSignature;
       this.numRows = numRows;
-    }
-
-    public Builder withRowSignature(RowSignature rowSignature)
-    {
-      this.rowSignature = rowSignature;
-      return this;
     }
 
     public Builder withNumRows(long numRows)

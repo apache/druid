@@ -53,8 +53,10 @@ import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -326,6 +328,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  schema_id VARCHAR(255),\n"
+                + "  segment_stats %2$s,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getQuoteString(), getCollation()
@@ -519,20 +523,42 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Adds the used_status_last_updated column to the "segments" table.
+   * Adds new columns (used_status_last_updated, schema_id, segment_stats) to the "segments" table.
    */
-  protected void alterSegmentTableAddUsedFlagLastUpdated()
+  protected void alterSegmentTable()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
-    if (tableHasColumn(tableName, "used_status_last_updated")) {
-      log.info("Table[%s] already has column[used_status_last_updated].", tableName);
-    } else {
-      log.info("Adding column[used_status_last_updated] to table[%s].", tableName);
+
+    Map<String, String> columnNameTypes = new HashMap<>();
+    columnNameTypes.put("used_status_last_updated", "varchar(255)");
+    columnNameTypes.put("schema_id", "varchar(255)");
+    columnNameTypes.put("segment_stats", "BLOB");
+
+    Set<String> columnsToAdd = new HashSet<>();
+
+    for (String columnName : columnNameTypes.keySet()) {
+      if (tableHasColumn(tableName, columnName)) {
+        log.info("Table[%s] already has column[%s].", tableName, columnName);
+      } else {
+        columnsToAdd.add(columnName);
+      }
+    }
+
+    if (!columnsToAdd.isEmpty()) {
+      StringBuilder alterCommand = new StringBuilder("ALTER TABLE %1$s ADD");
+      for (String columnName : columnsToAdd) {
+        alterCommand.append(String.format(" %s %s,", columnName, columnNameTypes.get(columnName)));
+      }
+
+      alterCommand.deleteCharAt(alterCommand.length() - 1);
+
+      log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
+
       alterTable(
           tableName,
           ImmutableList.of(
               StringUtils.format(
-                  "ALTER TABLE %1$s ADD used_status_last_updated varchar(255)",
+                  alterCommand.toString(),
                   tableName
               )
           )
@@ -685,7 +711,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
-      alterSegmentTableAddUsedFlagLastUpdated();
+      alterSegmentTable();
     }
     // Called outside of the above conditional because we want to validate the table
     // regardless of cluster configuration for creating tables.
@@ -903,6 +929,31 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
     catch (Exception e) {
       log.warn(e, "Exception while deleting records from table");
+    }
+  }
+
+  public void createSegmentSchemaTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  payload %3$s NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getCollation(), getPayloadType()
+            )
+        )
+    );
+  }
+
+  @Override
+  public void createSegmentSchemaTable()
+  {
+    if (config.get().isCreateTables()) {
+      createSegmentSchemaTable(tablesConfigSupplier.get().getSegmentSchemaTable());
     }
   }
 
