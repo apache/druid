@@ -17,35 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
+import com.google.common.annotations.VisibleForTesting;
 import org.joda.time.Period;
 
 /**
- * Configuration properties for the Broker-side cache of segment metadata
- * used to infer datasources for SQL. This class shares the same config root
- * as {@link PlannerConfig} to maintain backward compatibility for when
- * the properties here resided in {@code PlannerConfig}.
+ * Coordinator-side configuration class for customizing properties related to the SegmentMetadata cache.
+ * See {@link CoordinatorSegmentMetadataCache}
  */
 public class SegmentMetadataCacheConfig
 {
+  // A flag indicating whether to wait for cache initialization during startup.
   @JsonProperty
-  private boolean awaitInitializationOnStart = true;
+  private boolean awaitInitializationOnStart = false;
 
-  @JsonProperty
-  private boolean metadataSegmentCacheEnable = false;
-
-  @JsonProperty
-  private long metadataSegmentPollPeriod = 60000;
-
+  // Cache refresh interval.
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
 
   @JsonProperty
-  private SegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
-      new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
+  private AbstractSegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
+      new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
 
   public static SegmentMetadataCacheConfig create()
   {
@@ -61,14 +55,10 @@ public class SegmentMetadataCacheConfig
     return config;
   }
 
-  public boolean isMetadataSegmentCacheEnable()
+  @VisibleForTesting
+  public void setMetadataRefreshPeriod(Period metadataRefreshPeriod)
   {
-    return metadataSegmentCacheEnable;
-  }
-
-  public Period getMetadataRefreshPeriod()
-  {
-    return metadataRefreshPeriod;
+    this.metadataRefreshPeriod = metadataRefreshPeriod;
   }
 
   public boolean isAwaitInitializationOnStart()
@@ -76,24 +66,22 @@ public class SegmentMetadataCacheConfig
     return awaitInitializationOnStart;
   }
 
-  public long getMetadataSegmentPollPeriod()
-  {
-    return metadataSegmentPollPeriod;
-  }
-
-  public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
+  public AbstractSegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
   {
     return metadataColumnTypeMergePolicy;
+  }
+
+  public Period getMetadataRefreshPeriod()
+  {
+    return metadataRefreshPeriod;
   }
 
   @Override
   public String toString()
   {
-    return "SegmentCacheConfig{" +
-           "metadataRefreshPeriod=" + metadataRefreshPeriod +
-           ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
-           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
-           ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+    return "SegmentMetadataCacheConfig{" +
+           "awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", metadataRefreshPeriod=" + metadataRefreshPeriod +
            ", metadataColumnTypeMergePolicy=" + metadataColumnTypeMergePolicy +
            '}';
   }

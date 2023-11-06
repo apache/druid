@@ -46,11 +46,13 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -308,7 +310,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return new InputEntityIteratingReader(
         getInputRowSchemaToUse(inputRowSchema),
         inputFormat,
-        entityIterator,
+        CloseableIterators.withEmptyBaggage(entityIterator),
+        SystemFieldDecoratorFactory.NONE,
         temporaryDirectory
     );
   }

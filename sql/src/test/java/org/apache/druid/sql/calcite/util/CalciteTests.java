@@ -59,6 +59,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -75,9 +76,9 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
@@ -417,9 +418,9 @@ public class CalciteTests
             druidLeaderClient,
             getJsonMapper(),
             new BrokerSegmentWatcherConfig(),
-            SegmentMetadataCacheConfig.create()
+            BrokerSegmentMetadataCacheConfig.create()
         ),
-        new TestServerInventoryView(walker.getSegments()),
+        new TestTimelineServerView(walker.getSegments()),
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,
