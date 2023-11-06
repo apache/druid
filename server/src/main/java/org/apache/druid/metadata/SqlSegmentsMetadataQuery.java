@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.UnmodifiableIterator;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -47,7 +48,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -355,27 +355,33 @@ public class SqlSegmentsMetadataQuery
   {
     if (intervals.isEmpty()) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit).getIterator()
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
       final List<Iterator<DataSegment>> resultingIterators = new ArrayList<>();
-      int totalFetched = 0;
+      Integer limitPerBatch = limit;
 
       for (final List<Interval> intervalList : intervalsLists) {
-        IteratorWithCount<DataSegment> resultIterator = retrieveSegmentsInIntervalsBatch(dataSource, intervalList, matchMode, used, limit);
-        resultingIterators.add(resultIterator.getIterator());
-        totalFetched += resultIterator.getCount();
-
-        if (null != limit && totalFetched >= limit) {
-          break;
+        final UnmodifiableIterator<DataSegment> iterator = retrieveSegmentsInIntervalsBatch(dataSource, intervalList, matchMode, used, limitPerBatch);
+        if (limitPerBatch != null) {
+          // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
+          // we have exceeded what was requestsed for.
+          final List<DataSegment> dataSegments = ImmutableList.copyOf(iterator);
+          resultingIterators.add(dataSegments.iterator());
+          if (dataSegments.size() >= limitPerBatch) {
+            break;
+          }
+          limitPerBatch -= dataSegments.size();
+        } else {
+          resultingIterators.add(iterator);
         }
       }
       return CloseableIterators.withEmptyBaggage(Iterators.concat(resultingIterators.iterator()));
     }
   }
 
-  private IteratorWithCount<DataSegment> retrieveSegmentsInIntervalsBatch(
+  private UnmodifiableIterator<DataSegment> retrieveSegmentsInIntervalsBatch(
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
@@ -383,12 +389,6 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit
   )
   {
-
-    // Currently the limit parameter is used only by the MarkSegmentsAsUnusedAction in the context of kill tasks,
-    // and they only support a single interval. So the combination of multiple intervals and limit isn't applicable.
-    // Therefore, the logic here for fetchedCounter is future proofing.
-    final AtomicInteger fetchedCounter = new AtomicInteger(0);
-
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
     final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
 
@@ -416,10 +416,9 @@ public class SqlSegmentsMetadataQuery
         sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
            .iterator();
 
-    Iterator<DataSegment> filteredIterator = Iterators.filter(
+    return Iterators.filter(
         resultIterator,
         dataSegment -> {
-          fetchedCounter.incrementAndGet();
           if (intervals.isEmpty()) {
             return true;
           } else {
@@ -436,7 +435,6 @@ public class SqlSegmentsMetadataQuery
           }
         }
     );
-    return new IteratorWithCount<>(filteredIterator, fetchedCounter.get());
   }
 
   private static int computeNumChangedSegments(List<String> segmentIds, int[] segmentChanges)

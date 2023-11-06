@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -1133,7 +1134,44 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsWithSmallLimit() throws IOException
+  public void testRetrieveUnusedSegmentsWithSingleIntervalAndLimitAtRange() throws IOException
+  {
+    final List<DataSegment> segments = new ArrayList<>();
+
+    for (int year = 1900; year < 1950; year++) {
+      Interval segmentInterval = Intervals.of("%d-01-01/%d-01-01", year, year + 1);
+      segments.add(
+          new DataSegment(
+              "foo",
+              segmentInterval,
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(0),
+              9,
+              100
+          )
+      );
+    }
+    final HashSet<DataSegment> segmentsSet = new HashSet<>(segments);
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
+    Assert.assertTrue(committedSegments.containsAll(segments));
+    markAllSegmentsUnused(segmentsSet);
+
+    final int limit = segments.size();
+    List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        "foo",
+        Intervals.of("1900-01-01/3000-01-01"),
+        limit
+    );
+
+    Assert.assertEquals(limit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithSingleIntervalAndLimitInRange() throws IOException
   {
     final List<DataSegment> segments = new ArrayList<>();
 
@@ -1170,7 +1208,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsWithLargeLimit() throws IOException
+  public void testRetrieveUnusedSegmentsWithSingleIntervalAndLimitOutOfRange() throws IOException
   {
     final Set<DataSegment> segments = new HashSet<>();
     for (int year = 1900; year < 2130; year++) {
@@ -1199,6 +1237,138 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "foo",
         Intervals.of("1900-01-01/3000-01-01"),
         limit
+    );
+
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithMultipleIntervalsAndLimitAtRange() throws IOException
+  {
+    final List<DataSegment> segments = new ArrayList<>();
+    final List<Interval> intervals = new ArrayList<>();
+
+    for (int year = 1900; year < 2240; year++) {
+      Interval segmentInterval = Intervals.of("%d-01-01/%d-01-01", year, year + 1);
+      segments.add(
+          new DataSegment(
+              "foo",
+              segmentInterval,
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(0),
+              9,
+              100
+          )
+      );
+      intervals.add(segmentInterval);
+    }
+    final Set<DataSegment> segmentsSet = new HashSet<>(segments);
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
+    Assert.assertTrue(committedSegments.containsAll(segments));
+
+    markAllSegmentsUnused(segmentsSet);
+
+    final int limit = segments.size();
+    final List<DataSegment> actualUnusedSegments = derbyConnector.inReadOnlyTransaction(
+        (handle, status) -> {
+          try (final CloseableIterator<DataSegment> iterator =
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper)
+                                           .retrieveUnusedSegments("foo", intervals, limit)) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
+
+    Assert.assertEquals(limit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(limit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithMultipleIntervalsAndLimitInRange() throws IOException
+  {
+    final List<DataSegment> segments = new ArrayList<>();
+    final List<Interval> intervals = new ArrayList<>();
+
+    for (int year = 1900; year < 2240; year++) {
+      Interval segmentInterval = Intervals.of("%d-01-01/%d-01-01", year, year + 1);
+      segments.add(
+          new DataSegment(
+              "foo",
+              segmentInterval,
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(0),
+              9,
+              100
+          )
+      );
+      intervals.add(segmentInterval);
+    }
+    final Set<DataSegment> segmentsSet = new HashSet<>(segments);
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
+    Assert.assertTrue(committedSegments.containsAll(segments));
+
+    markAllSegmentsUnused(segmentsSet);
+
+    final int limit = segments.size() - 1;
+    final List<DataSegment> actualUnusedSegments = derbyConnector.inReadOnlyTransaction(
+        (handle, status) -> {
+          try (final CloseableIterator<DataSegment> iterator =
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper)
+                                           .retrieveUnusedSegments("foo", intervals, limit)) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
+
+    Assert.assertEquals(limit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(limit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithMultipleIntervalsAndLimitOutOfRange() throws IOException
+  {
+    final List<DataSegment> segments = new ArrayList<>();
+    final List<Interval> intervals = new ArrayList<>();
+
+    for (int year = 1900; year < 2240; year++) {
+      Interval segmentInterval = Intervals.of("%d-01-01/%d-01-01", year, year + 1);
+      segments.add(
+          new DataSegment(
+              "foo",
+              segmentInterval,
+              "version",
+              ImmutableMap.of(),
+              ImmutableList.of("dim1"),
+              ImmutableList.of("m1"),
+              new LinearShardSpec(0),
+              9,
+              100
+          )
+      );
+      intervals.add(segmentInterval);
+    }
+    final Set<DataSegment> segmentsSet = new HashSet<>(segments);
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
+    Assert.assertTrue(committedSegments.containsAll(segments));
+
+    markAllSegmentsUnused(segmentsSet);
+
+    final int limit = segments.size() + 1;
+    final List<DataSegment> actualUnusedSegments = derbyConnector.inReadOnlyTransaction(
+        (handle, status) -> {
+          try (final CloseableIterator<DataSegment> iterator =
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper)
+                                           .retrieveUnusedSegments("foo", intervals, limit)) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
     );
 
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
