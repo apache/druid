@@ -86,13 +86,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     List<Object[]> results = ImmutableList.of(
         new Object[]{1L, ""},
-        new Object[]{
-            1L,
-            "10.1"
-        },
-        new Object[]{1L, "2"},
         new Object[]{1L, "1"},
+        new Object[]{1L, "10.1"},
         new Object[]{1L, "def"},
+        new Object[]{1L, "2"},
         new Object[]{1L, "abc"}
     );
 
@@ -129,11 +126,11 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                                MSQTestOverlordServiceClient.DURATION,
                                new ResultSetInformation(
                                    6L,
-                                   316L,
+                                   350L,
                                    null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
                                    results,
-                                   ImmutableList.of(new PageInformation(0, 6L, 316L))
+                                   ImmutableList.of(new PageInformation(0, 6L, 350L))
                                ),
                                null
         );
@@ -325,17 +322,17 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     ).getEntity();
 
     Assert.assertEquals(ImmutableList.of(
-        new PageInformation(0, 2L, 120L, 0, 0),
-        new PageInformation(1, 2L, 118L, 0, 1),
-        new PageInformation(2, 2L, 122L, 0, 2)
+        new PageInformation(0, 2L, 117L, 0, 0),
+        new PageInformation(1, 2L, 123L, 0, 1),
+        new PageInformation(2, 2L, 120L, 0, 2)
     ), sqlStatementResult.getResultSetInformation().getPages());
 
     assertExpectedResults(
         "{\"cnt\":1,\"dim1\":\"\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"2\"}\n"
         + "{\"cnt\":1,\"dim1\":\"1\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
         + "{\"cnt\":1,\"dim1\":\"def\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"2\"}\n"
         + "{\"cnt\":1,\"dim1\":\"abc\"}\n"
         + "\n",
         resource.doGetResults(
@@ -349,7 +346,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
     assertExpectedResults(
         "{\"cnt\":1,\"dim1\":\"\"}\n"
-        + "{\"cnt\":1,\"dim1\":\"10.1\"}\n"
+        + "{\"cnt\":1,\"dim1\":\"1\"}\n"
         + "\n",
         resource.doGetResults(
             sqlStatementResult.getQueryId(),
@@ -361,7 +358,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
 
     assertExpectedResults(
-        "{\"cnt\":1,\"dim1\":\"def\"}\n"
+        "{\"cnt\":1,\"dim1\":\"2\"}\n"
         + "{\"cnt\":1,\"dim1\":\"abc\"}\n"
         + "\n",
         resource.doGetResults(
@@ -500,10 +497,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
     List<Object[]> expectedRows = ImmutableList.of(
         new Object[]{1, ""},
-        new Object[]{1, "10.1"},
-        new Object[]{1, "2"},
         new Object[]{1, "1"},
+        new Object[]{1, "10.1"},
         new Object[]{1, "def"},
+        new Object[]{1, "2"},
         new Object[]{1, "abc"}
     );
 
@@ -556,10 +553,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
     List<List<Object>> rows = new ArrayList<>();
     rows.add(ImmutableList.of(1, ""));
-    rows.add(ImmutableList.of(1, "10.1"));
-    rows.add(ImmutableList.of(1, "2"));
     rows.add(ImmutableList.of(1, "1"));
+    rows.add(ImmutableList.of(1, "10.1"));
     rows.add(ImmutableList.of(1, "def"));
+    rows.add(ImmutableList.of(1, "2"));
     rows.add(ImmutableList.of(1, "abc"));
 
     Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
