@@ -14602,4 +14602,95 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .expectedResults(expectedResults)
         .run();
   }
+
+  @NotYetSupported(Modes.CANNOT_TRANSLATE)
+  @Test
+  public void testWindowingWithScanAndSort1()
+  {
+    skipVectorize();
+    cannotVectorize();
+    msqIncompatible();
+    String sql = ""
+        + "SELECT\n"
+        + "  FLOOR(__time TO DAY) t,\n"
+        + "  SUM(cnt) c,\n"
+        + "  SUM(SUM(cnt)) OVER (ORDER BY FLOOR(__time TO DAY)) cc\n"
+        + "FROM foo\n"
+        + "GROUP BY FLOOR(__time TO DAY)"
+        + "";
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L}
+    );
+
+    testBuilder()
+        .plannerConfig(PLANNER_CONFIG_NO_HLL)
+        .sql(sql)
+        .queryContext(
+            ImmutableMap.of(
+                PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+                QueryContexts.ENABLE_DEBUG, true
+            )
+        )
+        .expectedQuery(
+            WindowOperatorQueryBuilder.builder()
+            .setDataSource(
+                Druids.newTimeseriesQueryBuilder()
+                    .dataSource(CalciteTests.DATASOURCE1)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+//                    .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
+//                    .threshold(10)
+                    .aggregators(
+                        aggregators(
+                            useDefault
+                                ? new LongSumAggregatorFactory("cnt",null)
+                                : new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0"),
+                                    notNull("m1")
+                                )
+                        )
+                    )
+//                    .metric(new NumericTopNMetricSpec("a0"))
+                    .context(OUTER_LIMIT_CONTEXT)
+                    .build()
+            )
+            .setSignature(
+                RowSignature.builder()
+                    .add("d0", ColumnType.LONG)
+                    .add("a0", ColumnType.LONG)
+                    .add("w0", ColumnType.LONG)
+                    .build()
+            )
+            .setOperators(
+                OperatorFactoryBuilders.naivePartitionOperator(),
+                OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                    .setOffsetLimit(1, 2)
+                    .build()
+            )
+            .setLeafOperators(
+                OperatorFactoryBuilders.scanOperatorFactoryBuilder()
+                    .setOffsetLimit(0, Long.MAX_VALUE)
+                    .setFilter(
+                        range(
+                            "d0",
+                            ColumnType.LONG,
+                            2L,
+                            null,
+                            true,
+                            false
+                        )
+                    )
+                    .setProjectedColumns("a0", "d0")
+                    .build()
+            )
+            .build()
+        )
+        .expectedResults(expectedResults)
+        .run();
+  }
+
 }
