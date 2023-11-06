@@ -509,30 +509,4 @@ public class SqlSegmentsMetadataQuery
 
     public abstract boolean apply(Interval a, Interval b);
   }
-
-  /**
-   * A thin wrapper that holds the iterator and its size, so
-   * callers won't have to make a copy of the iterator or exhaust it.
-   */
-  private static class IteratorWithCount<DataSegment>
-  {
-    private final Iterator<DataSegment> iterator;
-    private final int count;
-
-    public IteratorWithCount(Iterator<DataSegment> iterator, int count)
-    {
-      this.iterator = iterator;
-      this.count = count;
-    }
-
-    public Iterator<DataSegment> getIterator()
-    {
-      return iterator;
-    }
-
-    public int getCount()
-    {
-      return count;
-    }
-  }
 }
