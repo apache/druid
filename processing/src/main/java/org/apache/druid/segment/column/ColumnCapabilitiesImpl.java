@@ -290,7 +290,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
-    this.hasMultipleValues = Capable.of(hasMultipleValues);
+    return setHasMultipleValues(Capable.of(hasMultipleValues));
+  }
+
+  public ColumnCapabilitiesImpl setHasMultipleValues(Capable hasMultipleValues)
+  {
+    this.hasMultipleValues = hasMultipleValues;
     return this;
   }
 

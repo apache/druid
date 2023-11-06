@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -125,6 +126,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
         inputRowSchema,
         format,
         createEntityIterator(),
+        SystemFieldDecoratorFactory.NONE,
         temporaryDirectory
     );
   }

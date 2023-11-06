@@ -48,10 +48,10 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -121,6 +121,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
         "SELECT\n"
         + "APPROX_QUANTILE(m1, 0.01),\n"
         + "APPROX_QUANTILE(m1, 0.5, 50),\n"
+        + "APPROX_QUANTILE(m1, CAST(0.5 AS DOUBLE), CAST(50 AS INTEGER)),\n"
         + "APPROX_QUANTILE(m1, 0.98, 200),\n"
         + "APPROX_QUANTILE(m1, 0.99),\n"
         + "APPROX_QUANTILE(m1 * 2, 0.97),\n"
@@ -144,28 +145,29 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                   )
                   .aggregators(ImmutableList.of(
                       new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null, false),
-                      new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null, false),
-                      new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null, false),
+                      new ApproximateHistogramAggregatorFactory("a3:agg", "m1", 200, null, null, null, false),
+                      new ApproximateHistogramAggregatorFactory("a5:agg", "v0", null, null, null, null, false),
                       new FilteredAggregatorFactory(
-                          new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null, false),
+                          new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null, false),
                           equality("dim1", "abc", ColumnType.STRING)
                       ),
                       new FilteredAggregatorFactory(
-                          new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null, false),
+                          new ApproximateHistogramAggregatorFactory("a7:agg", "m1", null, null, null, null, false),
                           not(equality("dim1", "abc", ColumnType.STRING))
                       ),
-                      new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null, false)
+                      new ApproximateHistogramAggregatorFactory("a9:agg", "cnt", null, null, null, null, false)
                   ))
                   .postAggregators(
                       new QuantilePostAggregator("a0", "a0:agg", 0.01f),
                       new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                      new QuantilePostAggregator("a2", "a2:agg", 0.98f),
-                      new QuantilePostAggregator("a3", "a0:agg", 0.99f),
-                      new QuantilePostAggregator("a4", "a4:agg", 0.97f),
-                      new QuantilePostAggregator("a5", "a5:agg", 0.99f),
-                      new QuantilePostAggregator("a6", "a6:agg", 0.999f),
-                      new QuantilePostAggregator("a7", "a5:agg", 0.999f),
-                      new QuantilePostAggregator("a8", "a8:agg", 0.50f)
+                      new QuantilePostAggregator("a2", "a0:agg", 0.50f),
+                      new QuantilePostAggregator("a3", "a3:agg", 0.98f),
+                      new QuantilePostAggregator("a4", "a0:agg", 0.99f),
+                      new QuantilePostAggregator("a5", "a5:agg", 0.97f),
+                      new QuantilePostAggregator("a6", "a6:agg", 0.99f),
+                      new QuantilePostAggregator("a7", "a7:agg", 0.999f),
+                      new QuantilePostAggregator("a8", "a6:agg", 0.999f),
+                      new QuantilePostAggregator("a9", "a9:agg", 0.50f)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -173,6 +175,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 1.0,
+                3.0,
                 3.0,
                 5.880000114440918,
                 5.940000057220459,

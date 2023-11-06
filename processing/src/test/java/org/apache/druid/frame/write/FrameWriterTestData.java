@@ -48,23 +48,47 @@ public class FrameWriterTestData
 {
   public static final Dataset<String> TEST_STRINGS_SINGLE_VALUE = new Dataset<>(
       ColumnType.STRING,
-      Stream.of(
+      Arrays.asList(
           null,
           NullHandling.emptyToNullIfNeeded(""), // Empty string in SQL-compatible mode, null otherwise
-          "\uD83D\uDE42",
-          "\uD83E\uDEE5",
-          "\uD83E\uDD20",
-          "thee", // To ensure "the" is before "thee"
-          "the",
-          "quick",
           "brown",
+          "dog",
           "fox",
           "jumps",
-          "over",
-          "the", // Repeated string
           "lazy",
-          "dog"
-      ).sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList())
+          "over",
+          "quick",
+          "the", // Repeated string
+          "the",
+          "thee", // To ensure "the" is before "thee"
+          "\uD83D\uDE42",
+          "\uD83E\uDD20",
+          "\uD83E\uDEE5"
+      )
+  );
+
+  /**
+   * Single-value strings, mostly, but with an empty list thrown in.
+   */
+  public static final Dataset<Object> TEST_STRINGS_SINGLE_VALUE_WITH_EMPTY = new Dataset<>(
+      ColumnType.STRING,
+      Arrays.asList(
+          Collections.emptyList(),
+          NullHandling.emptyToNullIfNeeded(""), // Empty string in SQL-compatible mode, null otherwise
+          "brown",
+          "dog",
+          "fox",
+          "jumps",
+          "lazy",
+          "over",
+          "quick",
+          "the", // Repeated string
+          "the",
+          "thee", // To ensure "the" is before "thee"
+          "\uD83D\uDE42",
+          "\uD83E\uDD20",
+          "\uD83E\uDEE5"
+      )
   );
 
   /**

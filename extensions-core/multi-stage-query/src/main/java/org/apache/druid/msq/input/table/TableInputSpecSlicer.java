@@ -33,6 +33,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -115,8 +116,10 @@ public class TableInputSpecSlicer implements InputSpecSlicer
 
       return DimFilterUtils.filterShards(
           tableInputSpec.getFilter(),
+          tableInputSpec.getFilterFields(),
           () -> dataSegmentIterator,
-          segment -> segment.getSegment().getShardSpec()
+          segment -> segment.getSegment().getShardSpec(),
+          new HashMap<>()
       );
     }
   }

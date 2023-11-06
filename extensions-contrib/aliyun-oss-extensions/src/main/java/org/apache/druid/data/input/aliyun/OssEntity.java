@@ -85,4 +85,9 @@ public class OssEntity extends RetryingInputEntity
   {
     return OssUtils.RETRYABLE;
   }
+
+  CloudObjectLocation getObject()
+  {
+    return object;
+  }
 }

@@ -84,6 +84,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
+        null,
         maxWorkerCount,
         minStageNumber,
         false

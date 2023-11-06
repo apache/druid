@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -85,7 +86,8 @@ public class MSQWarningsTest extends MSQTestBase
                                        null,
                                        ImmutableList.of(
                                            toRead.getAbsoluteFile()
-                                       )
+                                       ),
+                                       SystemFields.none()
                                    ),
                                    new JsonInputFormat(null, null, null, null, null),
                                    RowSignature.builder()

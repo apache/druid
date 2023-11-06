@@ -205,8 +205,12 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable final Object object)
   {
-    if (!shouldFinalize || object == null) {
+    if (!shouldFinalize) {
       return object;
+    }
+
+    if (object == null) {
+      return 0.0D;
     }
 
     final HllSketchHolder sketch = HllSketchHolder.fromObj(object);
