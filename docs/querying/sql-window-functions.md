@@ -40,7 +40,7 @@ Window functions in Apache Druid produce values based upon the relationship of o
 
 The following example organizes results with the same `channel` value into windows. For each window, the query returns the rank of each row in ascending order based upon its `delta` value.
 
-Window functions in Druid require a GROUP BY statement. Druid performs the row-level aggregations for the GROUP BY before pefroming the window function calculations.
+Window functions in Druid require a GROUP BY statement. Druid performs the row-level aggregations for the GROUP BY before performing the window function calculations.
 
 ```sql
 SELECT FLOOR(__time TO DAY) AS event_time,

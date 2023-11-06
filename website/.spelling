@@ -2324,3 +2324,4 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+LAST_VALUE
