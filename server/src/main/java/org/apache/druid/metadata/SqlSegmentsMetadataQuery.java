@@ -366,7 +366,7 @@ public class SqlSegmentsMetadataQuery
         final UnmodifiableIterator<DataSegment> iterator = retrieveSegmentsInIntervalsBatch(dataSource, intervalList, matchMode, used, limitPerBatch);
         if (limitPerBatch != null) {
           // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
-          // we have exceeded what was requestsed for.
+          // we have reached what was requested for.
           final List<DataSegment> dataSegments = ImmutableList.copyOf(iterator);
           resultingIterators.add(dataSegments.iterator());
           if (dataSegments.size() >= limitPerBatch) {
