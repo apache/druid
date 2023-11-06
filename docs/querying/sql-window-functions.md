@@ -29,8 +29,6 @@ This document describes the SQL language.
 
 Window functions are an [experimental](../development/experimental.md) feature.
 Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
-Window functions are an [experimental](../development/experimental.md) feature.
-Feel free to try window functions and provide your feedback.
 Windows functions are not currently supported by multi-stage-query engine so you cannot use them in SQL-based ingestion. 
 
 
@@ -175,7 +173,7 @@ WINDOW w AS (PARTITION BY channel ORDER BY ABS(delta) ASC)
 
 </details>
 
-The following example demonstrates applying a window to the SUM() function to calculate the cumulative changes to a channel over time:
+The following example demonstrates applying the SUM() function over the values in a window to calculate the cumulative changes to a channel over time:
 
 ```sql
 SELECT
