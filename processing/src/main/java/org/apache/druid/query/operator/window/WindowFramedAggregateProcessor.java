@@ -28,6 +28,7 @@ import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Objects;
 
 public class WindowFramedAggregateProcessor implements Processor
 {
@@ -96,4 +97,28 @@ public class WindowFramedAggregateProcessor implements Processor
            ", aggregations=" + Arrays.toString(aggregations) +
            '}';
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(frame, aggregations);
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    WindowFramedAggregateProcessor other = (WindowFramedAggregateProcessor) obj;
+    return Arrays.equals(aggregations, other.aggregations) && Objects.equals(frame, other.frame);
+  }
+
+
 }
