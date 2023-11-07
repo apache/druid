@@ -14609,10 +14609,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testWindowingWithScanAndSort1()
   {
     skipVectorize();
-    cannotVectorize();
     msqIncompatible();
     testBuilder()
-        .plannerConfig(PLANNER_CONFIG_NO_HLL)
         .sql(
             "SELECT\n"
                 + "  FLOOR(__time TO DAY) t,\n"
