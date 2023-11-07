@@ -98,6 +98,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
@@ -14619,12 +14620,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "GROUP BY FLOOR(__time TO DAY)"
         + "";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L}
+        new Object[]{946684800000L, 1L, 1L},
+        new Object[]{946771200000L, 1L, 2L},
+        new Object[]{946857600000L, 1L, 3L},
+        new Object[]{978307200000L, 1L, 4L},
+        new Object[]{978393600000L, 1L, 5L},
+        new Object[]{978480000000L, 1L, 6L}
     );
 
     testBuilder()
@@ -14638,56 +14639,45 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .expectedQuery(
             WindowOperatorQueryBuilder.builder()
-            .setDataSource(
-                Druids.newTimeseriesQueryBuilder()
-                    .dataSource(CalciteTests.DATASOURCE1)
-                    .intervals(querySegmentSpec(Filtration.eternity()))
-//                    .dimension(new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE))
-//                    .threshold(10)
-                    .aggregators(
-                        aggregators(
-                            useDefault
-                                ? new LongSumAggregatorFactory("cnt",null)
-                                : new FilteredAggregatorFactory(
-                                    new CountAggregatorFactory("a0"),
-                                    notNull("m1")
-                                )
+                .setDataSource(
+                    Druids.newTimeseriesQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .granularity(Granularities.DAY)
+                        // .dimension(new DefaultDimensionSpec("m2", "d0",
+                        // ColumnType.DOUBLE))
+                        // .threshold(10)
+                        .aggregators(
+                            aggregators(
+                                useDefault
+                                    ? new LongSumAggregatorFactory("a0", "cnt")
+                                    : new FilteredAggregatorFactory(
+                                        new CountAggregatorFactory("a0"),
+                                        notNull("m1")
+                                    )
+                            )
+                        )
+                        // .metric(new NumericTopNMetricSpec("a0"))
+                        .context(OUTER_LIMIT_CONTEXT)
+                        .build()
+                )
+                .setSignature(
+                    RowSignature.builder()
+                        .add("d0", ColumnType.LONG)
+                        .add("a0", ColumnType.LONG)
+                        .add("w0", ColumnType.LONG)
+                        .build()
+                )
+                .setOperators(
+                    OperatorFactoryBuilders.naivePartitionOperator(),
+                    OperatorFactoryBuilders.windowOperators(
+                        OperatorFactoryBuilders.framedAggregateProcessor(
+                            new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0),
+                            new LongSumAggregatorFactory("w0", "a0")
                         )
                     )
-//                    .metric(new NumericTopNMetricSpec("a0"))
-                    .context(OUTER_LIMIT_CONTEXT)
-                    .build()
-            )
-            .setSignature(
-                RowSignature.builder()
-                    .add("d0", ColumnType.LONG)
-                    .add("a0", ColumnType.LONG)
-                    .add("w0", ColumnType.LONG)
-                    .build()
-            )
-            .setOperators(
-                OperatorFactoryBuilders.naivePartitionOperator(),
-                OperatorFactoryBuilders.scanOperatorFactoryBuilder()
-                    .setOffsetLimit(1, 2)
-                    .build()
-            )
-            .setLeafOperators(
-                OperatorFactoryBuilders.scanOperatorFactoryBuilder()
-                    .setOffsetLimit(0, Long.MAX_VALUE)
-                    .setFilter(
-                        range(
-                            "d0",
-                            ColumnType.LONG,
-                            2L,
-                            null,
-                            true,
-                            false
-                        )
-                    )
-                    .setProjectedColumns("a0", "d0")
-                    .build()
-            )
-            .build()
+                )
+                .build()
         )
         .expectedResults(expectedResults)
         .run();
