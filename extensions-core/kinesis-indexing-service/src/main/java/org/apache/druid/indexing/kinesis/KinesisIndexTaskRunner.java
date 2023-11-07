@@ -118,9 +118,9 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   @Override
   protected void possiblyResetDataSourceMetadata(
-          TaskToolbox toolbox,
-          RecordSupplier<String, String, ByteEntity> recordSupplier,
-          Set<StreamPartition<String>> assignment
+      TaskToolbox toolbox,
+      RecordSupplier<String, String, ByteEntity> recordSupplier,
+      Set<StreamPartition<String>> assignment
   )
   {
     if (!task.getTuningConfig().isSkipSequenceNumberAvailabilityCheck()) {
@@ -136,8 +136,8 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       if (!shardResetMap.isEmpty()) {
         for (Map.Entry<StreamPartition<String>, String> partitionToReset : shardResetMap.entrySet()) {
           log.warn("Starting sequence number [%s] is no longer available for partition [%s]",
-                  partitionToReset.getValue(),
-                  partitionToReset.getKey().getPartitionId()
+                   partitionToReset.getValue(),
+                   partitionToReset.getKey().getPartitionId()
           );
         }
         if (task.getTuningConfig().isResetOffsetAutomatically()) {
