@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -167,6 +168,22 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public LookupIntrospectHandler getIntrospectHandler()
   {
     return lookupIntrospectHandler;
+  }
+
+  @Override
+  public void awaitInitialization() throws InterruptedException, TimeoutException
+  {
+    long timeout = extractionNamespace.getLoadTimeoutMills();
+    if (entry.getCacheState() == CacheScheduler.NoCache.CACHE_NOT_INITIALIZED) {
+      LOG.info("Cache not initialized yet for namespace %s waiting for %s mills", extractionNamespace, timeout);
+      entry.awaitTotalUpdatesWithTimeout(1, timeout);
+    }
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return entry.getCacheState() instanceof CacheScheduler.VersionedCache;
   }
 
   @JsonProperty

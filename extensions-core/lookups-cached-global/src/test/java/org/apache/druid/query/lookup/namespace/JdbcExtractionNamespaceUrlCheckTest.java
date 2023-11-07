@@ -63,7 +63,9 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
-          0, new JdbcAccessSecurityConfig()
+          0,
+          1000L,
+          new JdbcAccessSecurityConfig()
           {
             @Override
             public Set<String> getAllowedProperties()
@@ -102,6 +104,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           null,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -139,6 +142,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           null,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -178,6 +182,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           null,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -221,6 +226,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           null,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -260,6 +266,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           10L,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -296,7 +303,9 @@ public class JdbcExtractionNamespaceUrlCheckTest
           "some filter",
           new Period(10),
           null,
-          0, new JdbcAccessSecurityConfig()
+          0,
+          null,
+          new JdbcAccessSecurityConfig()
           {
             @Override
             public Set<String> getAllowedProperties()
@@ -335,6 +344,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           null,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -380,6 +390,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           null,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
@@ -423,6 +434,7 @@ public class JdbcExtractionNamespaceUrlCheckTest
           new Period(10),
           null,
           0,
+          null,
           new JdbcAccessSecurityConfig()
           {
             @Override
