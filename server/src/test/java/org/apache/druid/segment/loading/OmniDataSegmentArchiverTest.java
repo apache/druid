@@ -40,8 +40,7 @@ public class OmniDataSegmentArchiverTest
   public void testArchiveSegmentWithType() throws SegmentLoadingException
   {
     final DataSegmentArchiver archiver = Mockito.mock(DataSegmentArchiver.class);
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane"));
+    final DataSegment segment = new CreateMockDataSegment("type", "sane").getSegment();
 
     final Injector injector = createInjector(archiver);
     final DataSegmentArchiver segmentArchiver = injector.getInstance(OmniDataSegmentArchiver.class);
@@ -52,8 +51,7 @@ public class OmniDataSegmentArchiverTest
   @Test
   public void testArchiveSegmentUnknowType()
   {
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "unknown-type"));
+    final DataSegment segment = new CreateMockDataSegment("type", "unknown-type").getSegment();
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentArchiver segmentArchiver = injector.getInstance(OmniDataSegmentArchiver.class);
@@ -67,8 +65,7 @@ public class OmniDataSegmentArchiverTest
   @Test
   public void testBadSegmentArchiverAccessException()
   {
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "bad"));
+    final DataSegment segment = new CreateMockDataSegment("type", "bad").getSegment();
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentArchiver segmentArchiver = injector.getInstance(OmniDataSegmentArchiver.class);
