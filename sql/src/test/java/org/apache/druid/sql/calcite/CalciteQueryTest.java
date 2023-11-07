@@ -14644,20 +14644,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .dataSource(CalciteTests.DATASOURCE1)
                         .intervals(querySegmentSpec(Filtration.eternity()))
                         .granularity(Granularities.DAY)
-                        // .dimension(new DefaultDimensionSpec("m2", "d0",
-                        // ColumnType.DOUBLE))
-                        // .threshold(10)
                         .aggregators(
-                            aggregators(
-                                useDefault
-                                    ? new LongSumAggregatorFactory("a0", "cnt")
-                                    : new FilteredAggregatorFactory(
-                                        new CountAggregatorFactory("a0"),
-                                        notNull("m1")
-                                    )
-                            )
+                            new LongSumAggregatorFactory("a0", "cnt")
                         )
-                        // .metric(new NumericTopNMetricSpec("a0"))
                         .context(OUTER_LIMIT_CONTEXT)
                         .build()
                 )
