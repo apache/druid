@@ -64,7 +64,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   public static final boolean DUMP_ACTUAL_RESULTS = Boolean.parseBoolean(
       System.getProperty("druid.tests.sql.dumpActualResults")
-  );
+  ) || true;
 
   static {
     NullHandling.initializeForTests();

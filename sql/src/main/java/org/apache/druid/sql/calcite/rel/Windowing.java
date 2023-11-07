@@ -47,6 +47,7 @@ import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
+import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.operator.window.ranking.WindowCumeDistProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowDenseRankProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowPercentileProcessor;
@@ -159,6 +160,10 @@ public class Windowing
         // Sort order doesn't need to change, but partitioning does. Only repartition.
         ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
         priorPartitionColumns = group.getPartitionColumns();
+      }
+
+      if(group.getWindowFrame().getPeerType() == PeerType.RANGE) {
+        throw new RuntimeException();
       }
 
       // Add aggregations.
@@ -356,7 +361,7 @@ public class Windowing
     public WindowFrame getWindowFrame()
     {
       return new WindowFrame(
-          WindowFrame.PeerType.ROWS,
+          group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),
           figureOutOffset(group.lowerBound),
           group.upperBound.isUnbounded(),
