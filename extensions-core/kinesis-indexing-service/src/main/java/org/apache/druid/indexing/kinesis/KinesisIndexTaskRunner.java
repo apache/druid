@@ -42,12 +42,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 
 public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String, ByteEntity>
 {
@@ -118,35 +118,38 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   @Override
   protected void possiblyResetDataSourceMetadata(
-      TaskToolbox toolbox,
-      RecordSupplier<String, String, ByteEntity> recordSupplier,
-      Set<StreamPartition<String>> assignment
+          TaskToolbox toolbox,
+          RecordSupplier<String, String, ByteEntity> recordSupplier,
+          Set<StreamPartition<String>> assignment
   )
   {
     if (!task.getTuningConfig().isSkipSequenceNumberAvailabilityCheck()) {
       final ConcurrentMap<String, String> currOffsets = getCurrentOffsets();
+      final Map<StreamPartition<String>, String> shardResetMap = new HashMap<>();
       for (final StreamPartition<String> streamPartition : assignment) {
         String sequence = currOffsets.get(streamPartition.getPartitionId());
         if (!recordSupplier.isOffsetAvailable(streamPartition, KinesisSequenceNumber.of(sequence))) {
-          if (task.getTuningConfig().isResetOffsetAutomatically()) {
-            log.info("Attempting to reset sequences automatically for all partitions");
-            try {
-              sendResetRequestAndWait(
-                  assignment.stream()
-                            .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
-                  toolbox
-              );
-            }
-            catch (IOException e) {
-              throw new ISE(e, "Exception while attempting to automatically reset sequences");
-            }
-          } else {
-            throw new ISE(
-                "Starting sequenceNumber [%s] is no longer available for partition [%s] and resetOffsetAutomatically is not enabled",
-                sequence,
-                streamPartition.getPartitionId()
-            );
+          shardResetMap.put(streamPartition, sequence);
+        }
+      }
+
+      if (!shardResetMap.isEmpty()) {
+        for (Map.Entry<StreamPartition<String>, String> partitionToReset : shardResetMap.entrySet()) {
+          log.warn("Starting sequence number [%s] is no longer available for partition [%s]",
+                  partitionToReset.getValue(),
+                  partitionToReset.getKey().getPartitionId()
+          );
+        }
+        if (task.getTuningConfig().isResetOffsetAutomatically()) {
+          log.info("Attempting to reset offsets for [%d] partitions.", shardResetMap.size());
+          try {
+            sendResetRequestAndWait(shardResetMap, toolbox);
           }
+          catch (IOException e) {
+            throw new ISE(e, "Exception while attempting to automatically reset sequences");
+          }
+        } else {
+          throw new ISE("Sequence numbers are unavailable but automatic offset reset is disabled.");
         }
       }
     }
