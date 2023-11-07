@@ -48,7 +48,6 @@ If your metadata store doesn’t support instant ADD COLUMN semantics, like vers
 
 :::
 
-
 In the example commands below:
 
 - `lib` is the Druid lib directory
