@@ -42,8 +42,7 @@ public class OmniDataSegmentMoverTest
   public void testMoveSegmentWithType() throws SegmentLoadingException
   {
     final DataSegmentMover mover = Mockito.mock(DataSegmentMover.class);
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane"));
+    final DataSegment segment = new CreateMockDataSegment("type", "sane").getSegment();
 
     final Injector injector = createInjector(mover);
     final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);
@@ -54,8 +53,7 @@ public class OmniDataSegmentMoverTest
   @Test
   public void testMoveSegmentUnknownType()
   {
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "unknown-type"));
+    final DataSegment segment = new CreateMockDataSegment("type", "unknown-type").getSegment();
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);
@@ -69,8 +67,7 @@ public class OmniDataSegmentMoverTest
   @Test
   public void testBadSegmentMoverAccessException()
   {
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "bad"));
+    final DataSegment segment = new CreateMockDataSegment("type", "bad").getSegment();
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentMover segmentMover = injector.getInstance(OmniDataSegmentMover.class);

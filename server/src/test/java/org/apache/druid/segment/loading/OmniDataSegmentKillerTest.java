@@ -49,10 +49,7 @@ public class OmniDataSegmentKillerTest
   public void testKillSegmentWithType() throws SegmentLoadingException
   {
     final DataSegmentKiller killer = Mockito.mock(DataSegmentKiller.class);
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.isTombstone()).thenReturn(false);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "sane"));
-
+    final DataSegment segment = new CreateMockDataSegment("type", "sane",false).getSegment();
     final Injector injector = createInjector(killer);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
     segmentKiller.kill(segment);
@@ -62,8 +59,7 @@ public class OmniDataSegmentKillerTest
   @Test
   public void testKillSegmentUnknowType()
   {
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "unknown-type"));
+    final DataSegment segment = new CreateMockDataSegment("type", "unknown-type").getSegment();
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
@@ -77,8 +73,7 @@ public class OmniDataSegmentKillerTest
   @Test
   public void testBadSegmentKillerAccessException()
   {
-    final DataSegment segment = Mockito.mock(DataSegment.class);
-    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "bad"));
+    final DataSegment segment = new CreateMockDataSegment("type", "bad").getSegment();
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
