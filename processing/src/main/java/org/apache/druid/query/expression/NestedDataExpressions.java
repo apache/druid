@@ -514,6 +514,7 @@ public class NestedDataExpressions
     final class JsonQueryExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
       private final List<NestedPathPart> parts;
+
       public JsonQueryExpr(List<Expr> args)
       {
         super(name(), args);
