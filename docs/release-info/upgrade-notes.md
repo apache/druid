@@ -42,6 +42,13 @@ Although you can manually alter your table to add the new `used_flag_last_update
 
 [#12599](https://github.com/apache/druid/pull/12599)
 
+:::warning
+
+If your metadata store doesn’t support instant ADD COLUMN semantics, like versions of MySQL prior to 8.0, and you have a very large segments table, adding a column to segments table can take a long time, block other metadata operations, and use large amounts of disk.
+
+:::
+
+
 In the example commands below:
 
 - `lib` is the Druid lib directory
