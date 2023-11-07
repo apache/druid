@@ -33,7 +33,8 @@ public class WindowOffsetProcessor extends WindowValueProcessorBase
   public WindowOffsetProcessor(
       @JsonProperty("inputColumn") String inputColumn,
       @JsonProperty("outputColumn") String outputColumn,
-      @JsonProperty("offset") int offset
+      @JsonProperty("offset") int offset,
+      @JsonProperty("offset") DruidExpression defaultExpression
   )
   {
     super(inputColumn, outputColumn);

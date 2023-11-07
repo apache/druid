@@ -3,8 +3,14 @@ type: "operatorValidation"
 sql: |
   SELECT
     FLOOR(__time TO DAY) t,
-    COUNT(1) OVER ()
-  FROM ( select * from foo offset 3 ) f
+    cnt,
+    FLOOR(m1/3),
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), --ok
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), -- bad
+    LAST_VALUE(cnt) OVER (ORDER BY __time), -- last value of the window
+    LAG(cnt) OVER (),  -- ok
+    LAG(cnt,1,999) OVER () -- default value ignored
+  FROM foo
 
 expectedOperators:
   - { type: "naivePartition", partitionColumns: [ ] }
@@ -22,3 +28,19 @@ expectedResults:
   - [ 978307200000, 1, 4 ]
   - [ 978393600000, 1, 5 ]
   - [ 978480000000, 1, 6 ]
+
+  
+  '{"type":"inline","data":"
+  channel,time,delta\n
+  \"a\",\"2023-10-01 00:00:00\",5\n
+  \"a\",\"2023-10-01 00:00:00\",5\n
+  \"a\",\"2023-10-01 00:00:00\",5\n
+  \"a\",\"2023-10-01 00:00:01\",10\n
+  \"a\",\"2023-10-01 00:00:02\",10\n
+  \"b\",\"2023-10-01 00:00:00\",5\n
+  \"b\",\"2023-10-01 00:00:01\",5\n
+  \"b\",\"2023-10-01 00:00:02\",5\n
+  \"b\",\"2023-10-01 00:00:03\",10\n
+  \"b\",\"2023-10-01 00:00:04\",10\n
+  "}',
+      '{"type":"csv","findColumnsFromHeader":true}'

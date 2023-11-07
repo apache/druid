@@ -32,6 +32,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.java.util.common.ISE;
@@ -88,9 +89,9 @@ public class Windowing
   private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
       .put("LAG", (agg) ->
-          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1)))
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1), agg.getConstantArgument(2, null)))
       .put("LEAD", (agg) ->
-          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1, 1)))
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1, 1), agg.getConstantArgument(2, null)))
       .put("FIRST_VALUE", (agg) ->
           new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
       .put("LAST_VALUE", (agg) ->
@@ -438,6 +439,18 @@ public class Windowing
     public RexLiteral getConstantArgument(int argPosition)
     {
       return constants.get(call.getArgList().get(argPosition) - sig.size());
+    }
+
+    public DruidExpression getConstantArgument(int argPosition, RexLiteral defaultValue)
+    {
+      final RexLiteral arg;
+      if (argPosition >= call.getArgList().size()) {
+        arg = defaultValue;
+      } else {
+        arg = getConstantArgument(argPosition);
+      }
+      DruidExpression expr = Expressions.toDruidExpression(context, sig, arg);
+      return expr;
     }
 
     public int getConstantInt(int argPosition)
