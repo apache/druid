@@ -44,7 +44,9 @@ See [Metadata storage configuration](../configuration/index.md#metadata-storage)
 
 ## Available metadata stores
 
-Druid supports Derby, MySQL, and PostgreSQL for storing metadata. 
+Druid supports Derby, MySQL, and PostgreSQL for storing metadata.
+
+To avoid issues with upgrades that require scehma changes to a large metadata table, chose a metadata store version that supports instant ADD COLUMN semantics.
 
 ### Derby
 
