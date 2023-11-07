@@ -42,6 +42,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 {
+  // FIXME less crappy
+  public static final String CHANGE_COL_NAME = "changeCol";
   private final AppendableRowsAndColumns rac;
 
   public DefaultFramedOnHeapAggregatable(
@@ -85,8 +87,15 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
       }
     } else {
-      throw new UOE("RANGE peer groupings are unsupported");
+      return computeRangeAggregates(aggFactories, frame, CHANGE_COL_NAME);
     }
+  }
+
+  private RowsAndColumns computeRangeAggregates(AggregatorFactory[] aggFactories, WindowFrame frame,
+      String changeColName)
+  {
+
+    throw new RuntimeException();
   }
 
   private AppendableRowsAndColumns computeUnboundedAggregates(AggregatorFactory[] aggFactories)
