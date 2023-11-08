@@ -61,7 +61,7 @@ Depending on the MariaDB client library version, the connector supports both `jd
 
 ## Setting up MySQL
 
-To avoid issues with upgrades that require scehma changes to a large metadata table, chose a MySQL version that supports instant ADD COLUMN semantics. For example, MySQL 8.
+To avoid issues with upgrades that require schema changes to a large metadata table, chose a MySQL version that supports instant ADD COLUMN semantics. For example, MySQL 8.
 
 1. Install MySQL
 

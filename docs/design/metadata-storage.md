@@ -46,7 +46,7 @@ See [Metadata storage configuration](../configuration/index.md#metadata-storage)
 
 Druid supports Derby, MySQL, and PostgreSQL for storing metadata.
 
-To avoid issues with upgrades that require scehma changes to a large metadata table, consider a metadata store version that supports instant ADD COLUMN semantics.
+To avoid issues with upgrades that require schema changes to a large metadata table, consider a metadata store version that supports instant ADD COLUMN semantics.
 See the database-specific docs for guidance on versions.
 
 ### MySQL
