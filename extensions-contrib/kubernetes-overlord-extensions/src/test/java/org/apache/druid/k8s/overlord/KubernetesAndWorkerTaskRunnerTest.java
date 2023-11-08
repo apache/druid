@@ -362,4 +362,13 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     runner.updateStatus(task, TaskStatus.running(ID));
     verifyAll();
   }
+
+  @Test
+  public void test_updateLocation()
+  {
+    kubernetesTaskRunner.updateLocation(task, TaskLocation.unknown());
+    replayAll();
+    runner.updateLocation(task, TaskLocation.unknown());
+    verifyAll();
+  }
 }
