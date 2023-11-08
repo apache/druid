@@ -168,7 +168,6 @@ public class JdbcListColumns {
         // Any property from https://druid.apache.org/docs/latest/querying/sql-query-context.html can go here.
         Properties connectionProperties = new Properties();
 
-
         try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
             try (
                     final Statement statement = connection.createStatement();
