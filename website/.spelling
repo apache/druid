@@ -504,6 +504,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+sub-condition
 subarray
 subnet
 subqueries

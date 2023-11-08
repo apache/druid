@@ -772,7 +772,7 @@ public class MSQSelectTest extends MSQTestBase
                                                DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
                                                DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
                                            ),
-                                           JoinType.LEFT
+                                           JoinType.INNER
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -797,12 +797,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of(
-                new Object[]{"xabc", 1L}
-            )
-            : ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 3L},
+            ImmutableList.of(
                 new Object[]{"xabc", 1L}
             )
         )

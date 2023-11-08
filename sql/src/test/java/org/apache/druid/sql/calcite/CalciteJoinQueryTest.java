@@ -773,12 +773,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{NULL_STRING, 3L},
-            new Object[]{"xabc", 1L}
-        )
-        :
         ImmutableList.of(
             new Object[]{"xabc", 1L}
         )
@@ -826,12 +820,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{NULL_STRING, 6L},
-            new Object[]{"xabc", 2L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"xabc", 2L}
         )
     );
@@ -3502,6 +3491,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             )
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
+        .filters(not(selector("j0.d0", null)))
         .columns("dim1", "j0.d0")
         .context(queryContext)
         .build();
