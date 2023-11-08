@@ -27,10 +27,10 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
@@ -41,6 +41,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
 public class DruidJoinRuleTest
@@ -69,6 +70,7 @@ public class DruidJoinRuleTest
   @Before
   public void setup()
   {
+    NullHandling.initializeForTests();
     PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
     Mockito.when(plannerContext.queryContext()).thenReturn(QueryContext.empty());
     Mockito.when(plannerContext.getJoinAlgorithm()).thenReturn(JoinAlgorithm.BROADCAST);
@@ -164,6 +166,48 @@ public class DruidJoinRuleTest
             leftType,
             null,
             JoinRelType.INNER, ImmutableList.of(), rexBuilder
+        )
+    );
+  }
+
+  @Test
+  public void test_canHandleCondition_leftEqRightFn_leftJoin()
+  {
+    Assert.assertFalse(
+        druidJoinRule.canHandleCondition(
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.EQUALS,
+                rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 0),
+                rexBuilder.makeCall(
+                    SqlStdOperatorTable.CONCAT,
+                    rexBuilder.makeLiteral("foo"),
+                    rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1)
+                )
+            ),
+            leftType,
+            null,
+            JoinRelType.LEFT, ImmutableList.of(), rexBuilder
+        )
+    );
+  }
+
+  @Test
+  public void test_canHandleCondition_leftEqRightFn_systemFields()
+  {
+    Assert.assertFalse(
+        druidJoinRule.canHandleCondition(
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.EQUALS,
+                rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 0),
+                rexBuilder.makeCall(
+                    SqlStdOperatorTable.CONCAT,
+                    rexBuilder.makeLiteral("foo"),
+                    rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1)
+                )
+            ),
+            leftType,
+            null,
+            JoinRelType.INNER, Collections.singletonList(null), rexBuilder
         )
     );
   }

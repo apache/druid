@@ -53,7 +53,6 @@ import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -78,6 +77,11 @@ public class DruidJoinRule extends RelOptRule
     );
     this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
     this.plannerContext = plannerContext;
+  }
+
+  public static DruidJoinRule instance(PlannerContext plannerContext)
+  {
+    return new DruidJoinRule(plannerContext);
   }
   
   @Override
@@ -118,8 +122,7 @@ public class DruidJoinRule extends RelOptRule
     ConditionAnalysis conditionAnalysis = analyzeCondition(
         join.getCondition(),
         join.getLeft().getRowType(),
-        rexBuilder,
-        plannerContext
+        rexBuilder
     );
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
@@ -205,6 +208,8 @@ public class DruidJoinRule extends RelOptRule
                     RelOptUtil.getFieldTypeList(druidJoin.getRowType())
                 )
             );
+
+    // Build a post-join filter with whatever join sub-conditions were not supported.
     RexNode postJoinFilter = RexUtil.composeConjunction(rexBuilder, conditionAnalysis.getUnsupportedSubConditions(), true);
     if (postJoinFilter != null) {
       relBuilder = relBuilder.filter(postJoinFilter);
@@ -227,15 +232,20 @@ public class DruidJoinRule extends RelOptRule
   }
 
   /**
-   * Returns whether {@link DruidJoinRule#analyzeCondition} would return something.
+   * Returns whether we can handle the join condition. In case, some conditions in an AND expression are not supported,
+   * they are extracted into a post-join filter instead.
    */
   @VisibleForTesting
-  public boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right,
-                                    JoinRelType joinType,
-                                    List<RelDataTypeField> systemFieldList,
-                                    final RexBuilder rexBuilder)
+  public boolean canHandleCondition(
+      final RexNode condition,
+      final RelDataType leftRowType,
+      DruidRel<?> right,
+      JoinRelType joinType,
+      List<RelDataTypeField> systemFieldList,
+      final RexBuilder rexBuilder
+  )
   {
-    ConditionAnalysis conditionAnalysis = analyzeCondition(condition, leftRowType, rexBuilder, plannerContext);
+    ConditionAnalysis conditionAnalysis = analyzeCondition(condition, leftRowType, rexBuilder);
     // if the right side requires a subquery, then even lookup will be transformed to a QueryDataSource
     // thereby allowing join conditions on both k and v columns of the lookup
     if (right != null
@@ -255,6 +265,8 @@ public class DruidJoinRule extends RelOptRule
     }
 
     if (joinType != JoinRelType.INNER || !systemFieldList.isEmpty()) {
+      // I am not sure in what case, the list of system fields will be not empty. I have just picked up this logic
+      // directly from https://github.com/apache/calcite/blob/calcite-1.35.0/core/src/main/java/org/apache/calcite/rel/rules/AbstractJoinExtractFilterRule.java#L58
       return conditionAnalysis.getUnsupportedSubConditions().isEmpty();
     }
     
@@ -307,6 +319,7 @@ public class DruidJoinRule extends RelOptRule
       final int rhsShift =
           leftProject.getInput().getRowType().getFieldCount() - leftProject.getRowType().getFieldCount();
 
+      // We leave unsupportedSubConditions un-touched as they are evaluated above join anyway.
       return new ConditionAnalysis(
           leftProject.getInput().getRowType().getFieldCount(),
           equalitySubConditions
@@ -329,6 +342,7 @@ public class DruidJoinRule extends RelOptRule
     {
       Preconditions.checkArgument(onlyUsesMappingsFromRightProject(rightProject), "Cannot push through");
 
+      // We leave unsupportedSubConditions un-touched as they are evaluated above join anyway.
       return new ConditionAnalysis(
           numLeftFields,
           equalitySubConditions
@@ -397,11 +411,6 @@ public class DruidJoinRule extends RelOptRule
              ", rightColumns=" + rightColumns +
              '}';
     }
-  }
-
-  public static DruidJoinRule instance(PlannerContext plannerContext)
-  {
-    return new DruidJoinRule(plannerContext);
   }
 
   /**
