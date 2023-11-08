@@ -25,6 +25,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.operator.window.WindowFrame;
+import org.apache.druid.query.operator.window.ranking.WindowDenseRankProcessor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
@@ -37,7 +38,10 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
@@ -91,11 +95,127 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
-  private RowsAndColumns computeRangeAggregates(AggregatorFactory[] aggFactories, WindowFrame frame,
+  private RowsAndColumns computeRangeAggregates(
+      AggregatorFactory[] aggFactories,
+      WindowFrame frame,
       String changeColName)
   {
+    new WindowDenseRankProcessor(
+        frame.getOrderByColNames(),
+        DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME
+    ).process(rac);
+
+    AtomicInteger rowIdProvider = new AtomicInteger(rac.numRows() - 1);
+    final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
+    ColumnValueSelector<?> changeColSelector = columnSelectorFactory.makeColumnValueSelector(changeColName);
+    long lastRangeId = changeColSelector.getLong();
+    rowIdProvider.set(rac.numRows() - 1);
+    // FIXME need (int) ?
+    int numRanges = (int) changeColSelector.getLong();
+
+
+    SlidingWindowPopulator swp = new SlidingWindowPopulator(
+        new AggDispatcher(aggFactories, columnSelectorFactory),
+        rac.numRows(),
+        numRanges,
+        frame
+    );
+
+    for (int i = 0; i < rac.numRows(); i++) {
+      rowIdProvider.set(i);
+      long currentRangeId = changeColSelector.getLong();
+      if(currentRangeId != lastRangeId) {
+        swp.boundary();
+      }
+      swp.aggregate();
+    }
+
+
+
 
     throw new RuntimeException();
+  }
+
+  static class SlidingWindowPopulator  {
+
+    private int width;
+    private int centerOffset;
+    private Deque<AggDispatcher.AggCell> frameStates;
+
+    public SlidingWindowPopulator(
+        AggDispatcher aggDispatcher,
+        int numRows,
+        int numRanges,
+        WindowFrame frame)
+    {
+      int lowerOffsetClamped = frame.getLowerOffsetClamped(numRanges);
+      int upperOffsetClamped = frame.getUpperOffsetClamped(numRanges);
+      width = Math.min(numRanges, lowerOffsetClamped + 1 + upperOffsetClamped);
+      centerOffset = upperOffsetClamped;
+
+      frameStates = new ArrayDeque<>();
+      for (int i = 0; i < lowerOffsetClamped + 1; i++) {
+        frameStates.addLast(aggDispatcher.newCell());
+      }
+    }
+
+    public void aggregate()
+    {
+      for (AggDispatcher.AggCell aggCell : frameStates) {
+        aggCell.aggregate();
+      }
+    }
+
+    public void boundary()
+    {
+      if(frameStates.size() >= centerOffset) {
+
+        if (centerOffset < width) {
+          centerOffset++;
+        }
+      }
+    }
+
+  }
+
+  // pretty close to AggregatorAdapters ; but for plain aggs
+  static class AggDispatcher {
+
+    private final AggregatorFactory[] aggFactories;
+    private ColumnSelectorFactory columnSelectorFactory;
+
+    public AggDispatcher(AggregatorFactory[] aggFactories, ColumnSelectorFactory columnSelectorFactory)
+    {
+      this.aggFactories = aggFactories;
+      this.columnSelectorFactory = columnSelectorFactory;
+    }
+
+    class AggCell
+    {
+      private final Aggregator[] aggregators;
+
+      AggCell()
+      {
+        aggregators = new Aggregator[aggFactories.length];
+        for (int i = 0; i < aggFactories.length; i++) {
+          aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
+        }
+      }
+
+      public void aggregate()
+      {
+        for (int i = 0; i < aggFactories.length; i++) {
+          aggregators[i].aggregate();
+        }
+
+      }
+    }
+
+    public AggCell newCell()
+    {
+      return new AggCell();
+    }
+
   }
 
   private AppendableRowsAndColumns computeUnboundedAggregates(AggregatorFactory[] aggFactories)

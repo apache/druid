@@ -381,7 +381,8 @@ public class Windowing
           group.lowerBound.isUnbounded(),
           figureOutOffset(group.lowerBound),
           group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound)
+          figureOutOffset(group.upperBound),
+          group.isRows ? null : getOrdering()
       );
     }
 

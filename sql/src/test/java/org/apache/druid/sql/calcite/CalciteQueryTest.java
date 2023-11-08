@@ -14649,7 +14649,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     OperatorFactoryBuilders.naivePartitionOperator(),
                     OperatorFactoryBuilders.windowOperators(
                         OperatorFactoryBuilders.framedAggregateProcessor(
-                            new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0),
+                            WindowFrame.forOrderBy(),
                             new LongSumAggregatorFactory("w0", "a0")
                         )
                     )
