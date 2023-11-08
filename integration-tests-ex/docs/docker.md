@@ -270,8 +270,7 @@ smaller pieces, which it assembles prior to launch.
 | Enviornment Viable | Description |
 | ------------------ | ----------- |
 | `DRUID_SERVICE` | Name of the Druid service to run in the `server $DRUID_SERVICE` option |
-| `DRUID_INSTANCE` | Suffix added to the `DRUID_SERVICE` to create the log file name.
-Use when running more than one of the same service. |
+| `DRUID_INSTANCE` | Suffix added to the `DRUID_SERVICE` to create the log file name. Use when running more than one of the same service. |
 | `DRUID_COMMON_JAVA_OPTS` | Java options common to all services |
 | `DRUID_SERVICE_JAVA_OPTS` | Java options for this one service or instance |
 | `DEBUG_OPTS` | Optional debugging Java options |
