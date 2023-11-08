@@ -121,7 +121,7 @@ public class AzureStorage
 
     try (FileInputStream stream = new FileInputStream(file)) {
       // By default this creates a Block blob, no need to use a specific Block blob client.
-      blobContainerClient.getBlobClient(blobPath).upload(stream);
+      blobContainerClient.getBlobClient(blobPath).upload(stream, file.length());
     }
   }
 
