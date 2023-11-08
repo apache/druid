@@ -25,6 +25,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -37,6 +38,8 @@ import static org.mockito.Mockito.when;
 
 public class UpdateStatusActionTest
 {
+
+  private static final String ID = "id";
 
   @Test
   public void testActionCallsTaskRunner()
@@ -63,14 +66,35 @@ public class UpdateStatusActionTest
   }
 
   @Test
+  public void testTaskStatusFull()
+  {
+    Task task = NoopTask.create();
+    TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
+    TaskRunner runner = mock(TaskRunner.class);
+    when(toolbox.getTaskRunner()).thenReturn(Optional.of(runner));
+    TaskStatus taskStatus = TaskStatus.failure(task.getId(), "custom error message");
+    UpdateStatusAction action = new UpdateStatusAction("failure", taskStatus);
+    action.perform(task, toolbox);
+    verify(runner, times(1)).updateStatus(eq(task), eq(taskStatus));
+  }
+
+  @Test
   public void testNoTaskRunner()
   {
-    UpdateStatusAction action = new UpdateStatusAction("successful");
+    UpdateStatusAction action = new UpdateStatusAction("", TaskStatus.success(ID));
     Task task = NoopTask.create();
     TaskActionToolbox toolbox = mock(TaskActionToolbox.class);
     TaskRunner runner = mock(TaskRunner.class);
     when(toolbox.getTaskRunner()).thenReturn(Optional.absent());
     action.perform(task, toolbox);
     verify(runner, never()).updateStatus(any(), any());
+  }
+
+  @Test
+  public void testEquals()
+  {
+    UpdateStatusAction one = new UpdateStatusAction("", TaskStatus.failure(ID, "error"));
+    UpdateStatusAction two = new UpdateStatusAction("", TaskStatus.failure(ID, "error"));
+    Assert.assertEquals(one, two);
   }
 }

@@ -138,6 +138,7 @@ public class JdbcCacheGeneratorTest
         Period.ZERO,
         null,
         0,
+        null,
         new JdbcAccessSecurityConfig()
     );
   }

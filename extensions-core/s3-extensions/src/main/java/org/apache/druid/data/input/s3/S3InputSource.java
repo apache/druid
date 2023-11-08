@@ -47,6 +47,8 @@ import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
@@ -109,13 +111,14 @@ public class S3InputSource extends CloudObjectInputSource
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("objectGlob") @Nullable String objectGlob,
+      @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields,
       @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig,
       @JsonProperty("proxyConfig") @Nullable AWSProxyConfig awsProxyConfig,
       @JsonProperty("endpointConfig") @Nullable AWSEndpointConfig awsEndpointConfig,
       @JsonProperty("clientConfig") @Nullable AWSClientConfig awsClientConfig
   )
   {
-    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob);
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob, systemFields);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
     Preconditions.checkNotNull(s3Client, "s3Client");
     this.s3InputSourceConfig = s3InputSourceConfig;
@@ -200,6 +203,7 @@ public class S3InputSource extends CloudObjectInputSource
         prefixes,
         objects,
         objectGlob,
+        SystemFields.none(),
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
@@ -216,6 +220,7 @@ public class S3InputSource extends CloudObjectInputSource
       List<URI> prefixes,
       List<CloudObjectLocation> objects,
       String objectGlob,
+      SystemFields systemFields,
       S3InputSourceConfig s3InputSourceConfig,
       AWSProxyConfig awsProxyConfig,
       AWSEndpointConfig awsEndpointConfig,
@@ -232,6 +237,7 @@ public class S3InputSource extends CloudObjectInputSource
         prefixes,
         objects,
         objectGlob,
+        systemFields,
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,
@@ -369,6 +375,7 @@ public class S3InputSource extends CloudObjectInputSource
         null,
         split.get(),
         getObjectGlob(),
+        systemFields,
         getS3InputSourceConfig(),
         getAwsProxyConfig(),
         getAwsEndpointConfig(),
@@ -377,9 +384,33 @@ public class S3InputSource extends CloudObjectInputSource
   }
 
   @Override
+  public Object getSystemFieldValue(InputEntity entity, SystemField field)
+  {
+    final S3Entity s3Entity = (S3Entity) entity;
+
+    switch (field) {
+      case URI:
+        return s3Entity.getUri().toString();
+      case BUCKET:
+        return s3Entity.getObject().getBucket();
+      case PATH:
+        return s3Entity.getObject().getPath();
+      default:
+        return null;
+    }
+  }
+
+  @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), s3InputSourceConfig);
+    return Objects.hash(
+        super.hashCode(),
+        s3InputSourceConfig,
+        awsProxyConfig,
+        awsClientConfig,
+        awsEndpointConfig,
+        maxRetries
+    );
   }
 
   @Override
@@ -398,7 +429,8 @@ public class S3InputSource extends CloudObjectInputSource
     return Objects.equals(s3InputSourceConfig, that.s3InputSourceConfig) &&
            Objects.equals(awsProxyConfig, that.awsProxyConfig) &&
            Objects.equals(awsClientConfig, that.awsClientConfig) &&
-           Objects.equals(awsEndpointConfig, that.awsEndpointConfig);
+           Objects.equals(awsEndpointConfig, that.awsEndpointConfig) &&
+           maxRetries == that.maxRetries;
   }
 
   @Override
@@ -409,6 +441,7 @@ public class S3InputSource extends CloudObjectInputSource
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
            ", objectGlob=" + getObjectGlob() +
+           (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
            ", s3InputSourceConfig=" + getS3InputSourceConfig() +
            ", awsProxyConfig=" + getAwsProxyConfig() +
            ", awsEndpointConfig=" + getAwsEndpointConfig() +

@@ -82,7 +82,7 @@ public class HllSketchAggregatorFactoryTest
   @Test
   public void testFinalizeComputationNull()
   {
-    Assert.assertNull(target.finalizeComputation(null));
+    Assert.assertEquals(0.0D, target.finalizeComputation(null));
   }
 
   @Test

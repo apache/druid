@@ -20,13 +20,8 @@
 package org.apache.druid.k8s.overlord;
 
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskRunnerListener;
-import org.apache.druid.java.util.common.Pair;
-
-import java.util.List;
-import java.util.concurrent.Executor;
 
 public interface PeonLifecycleFactory
 {
-  KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener, List<Pair<TaskRunnerListener, Executor>> listeners);
+  KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener);
 }
