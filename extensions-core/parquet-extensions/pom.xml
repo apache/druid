@@ -194,17 +194,6 @@
           <version>${hadoop.compile.version}</version>
           <scope>runtime</scope>
         </dependency>
-        <dependency>
-          <groupId>org.json</groupId>
-          <artifactId>json</artifactId>
-          <version>20210307</version>
-        </dependency>
-        <dependency>
-          <groupId>org.skyscreamer</groupId>
-          <artifactId>jsonassert</artifactId>
-          <version>1.5.1</version>
-          <scope>test</scope>
-        </dependency>
       </dependencies>
       <properties>
         <parquet.version>1.13.0</parquet.version>

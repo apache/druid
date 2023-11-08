@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.parquet;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
@@ -28,10 +29,8 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.json.JSONException;
 import org.junit.Assert;
 import org.junit.Test;
-import org.skyscreamer.jsonassert.JSONAssert;
 
 import java.io.IOException;
 import java.util.List;
@@ -84,6 +83,8 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
         schemaAsDate,
         JSONPathSpec.DEFAULT
     );
+    ObjectMapper objectMapperString = new ObjectMapper();
+    ObjectMapper objectMapperDate = new ObjectMapper();
     List<InputRowListPlusRawValues> sampledAsString = sampleAllRows(readerAsString);
     List<InputRowListPlusRawValues> sampledAsDate = sampleAllRows(readerAsDate);
     final String expectedJson = "{\n"
@@ -93,13 +94,8 @@ public class TimestampsParquetReaderTest extends BaseParquetReaderTest
                                       + "  \"idx\" : 1,\n"
                                       + "  \"date_as_date\" : 1497744000000\n"
                                       + "}";
-    try {
-      JSONAssert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues()), false);
-      JSONAssert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues()), false);
-    } 
-    catch (JSONException jse) {
-      throw new RuntimeException(jse);
-    }
+    Assert.assertEquals(objectMapperString.readTree(expectedJson), objectMapperString.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsString.get(0).getRawValues())));
+    Assert.assertEquals(objectMapperDate.readTree(expectedJson), objectMapperDate.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsDate.get(0).getRawValues())));
   }
 
   @Test
