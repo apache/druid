@@ -216,16 +216,16 @@ public class AzureStorage
     return files;
   }
 
-  public boolean getBlockBlobExists(String container, String blobPath) throws BlobStorageException
+  public boolean getBlockBlobExists(String container, String blobPath) throws BlobStorageException, UnsupportedEncodingException
   {
     return getBlockBlobExists(container, blobPath, null);
   }
 
 
   public boolean getBlockBlobExists(String container, String blobPath, Integer maxAttempts)
-      throws BlobStorageException
+      throws BlobStorageException, UnsupportedEncodingException
   {
-    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(blobPath).exists();
+    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(URLEncoder.encode(blobPath, StandardCharsets.UTF_8.name())).exists();
   }
 
   @VisibleForTesting
