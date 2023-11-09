@@ -256,8 +256,6 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           columnConfig
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      builder.setType(logicalType);
-      builder.setNestedCommonFormatColumnSupplier(supplier);
       // if we are a mixed type, don't call ourself dictionary encoded for now so we don't end up doing the wrong thing
       // in places. technically we could probably get by with indicating that our dictionary ids are not unique/sorted
       // but just in case that still causes problems, skip it all...
@@ -265,9 +263,10 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         capabilitiesBuilder.setDictionaryEncoded(true);
         capabilitiesBuilder.setDictionaryValuesSorted(true);
         capabilitiesBuilder.setDictionaryValuesUnique(true);
-        builder.setIndexSupplier(supplier, true, false);
       }
-
+      builder.setType(logicalType);
+      builder.setNestedCommonFormatColumnSupplier(supplier);
+      builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(
           logicalType,
           capabilitiesBuilder.hasNulls().isTrue()
