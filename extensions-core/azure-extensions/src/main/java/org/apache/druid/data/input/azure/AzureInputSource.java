@@ -41,6 +41,7 @@ import org.apache.druid.storage.azure.AzureStorage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Iterator;
@@ -167,7 +168,7 @@ public class AzureInputSource extends CloudObjectInputSource
 
           return blobWithAttributes.getProperties().getBlobSize();
         }
-        catch (BlobStorageException e) {
+        catch (BlobStorageException | UnsupportedEncodingException e) {
           throw new RuntimeException(e);
         }
       }
