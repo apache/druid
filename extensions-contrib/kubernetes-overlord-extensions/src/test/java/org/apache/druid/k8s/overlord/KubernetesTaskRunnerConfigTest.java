@@ -47,7 +47,7 @@ public class KubernetesTaskRunnerConfigTest
     Assert.assertNull(config.getGraceTerminationPeriodSeconds());
     Assert.assertTrue(config.isDisableClientProxy());
     Assert.assertEquals(new Period("PT4H"), config.getTaskTimeout());
-    Assert.assertEquals(new Period("PT1H"), config.getTaskCleanupDelay());
+    Assert.assertEquals(new Period("P2D"), config.getTaskCleanupDelay());
     Assert.assertEquals(new Period("PT10m"), config.getTaskCleanupInterval());
     Assert.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
     Assert.assertEquals(ImmutableList.of(), config.getPeonMonitors());
@@ -72,7 +72,7 @@ public class KubernetesTaskRunnerConfigTest
     Assert.assertNull(config.getGraceTerminationPeriodSeconds());
     Assert.assertTrue(config.isDisableClientProxy());
     Assert.assertEquals(new Period("PT4H"), config.getTaskTimeout());
-    Assert.assertEquals(new Period("PT1H"), config.getTaskCleanupDelay());
+    Assert.assertEquals(new Period("P2D"), config.getTaskCleanupDelay());
     Assert.assertEquals(new Period("PT10m"), config.getTaskCleanupInterval());
     Assert.assertEquals(new Period("PT1H"), config.getTaskLaunchTimeout());
     Assert.assertEquals(ImmutableList.of(), config.getPeonMonitors());

@@ -44,6 +44,13 @@ java.util.LinkedList @ Use ArrayList or ArrayDeque instead
 java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)
 java.lang.Math#random() @ Use ThreadLocalRandom.current()
 java.util.regex.Pattern#matches(java.lang.String,java.lang.CharSequence) @ Use String.startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
+org.apache.calcite.sql.type.OperandTypes#LITERAL @ LITERAL type checker throws when literals with CAST are passed. Use org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker instead.
+org.apache.calcite.sql.type.OperandTypes#BOOLEAN_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
+org.apache.calcite.sql.type.OperandTypes#ARRAY_BOOLEAN_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
+org.apache.calcite.sql.type.OperandTypes#POSITIVE_INTEGER_LITERAL @ Use org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL instead
+org.apache.calcite.sql.type.OperandTypes#UNIT_INTERVAL_NUMERIC_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
+org.apache.calcite.sql.type.OperandTypes#NUMERIC_UNIT_INTERVAL_NUMERIC_LITERAL @ Create a type checker like org.apache.calcite.sql.type.POSITIVE_INTEGER_LITERAL and use that instead
+org.apache.calcite.sql.type.OperandTypes#NULLABLE_LITERAL @ Create an instance of org.apache.calcite.sql.type.CastedLiteralOperandTypeChecker that allows nulls and use that instead
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
 org.apache.commons.io.FileUtils#deleteDirectory(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils#deleteDirectory()
 org.apache.commons.io.FileUtils#forceMkdir(java.io.File) @ Use org.apache.druid.java.util.common.FileUtils.mkdirp instead

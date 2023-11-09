@@ -3477,7 +3477,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.0
+version: 4.2.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -4987,7 +4987,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.21.1
+version: 0.21.4
 
 ---
 

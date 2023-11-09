@@ -86,7 +86,7 @@
              default_config.fmpp
           -->
         <calcite.version>1.35.0</calcite.version>
-        <datasketches.version>4.1.0</datasketches.version>
+        <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
@@ -1809,7 +1809,7 @@
               <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.14.0</version>
+                <version>1.14.2</version>
               </plugin>
             </plugins>
         </pluginManagement>

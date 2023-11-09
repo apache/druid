@@ -868,6 +868,11 @@ public class Druids
       dataSource = new TableDataSource(ds);
       return this;
     }
+    public ScanQueryBuilder dataSource(Query<?> q)
+    {
+      dataSource = new QueryDataSource(q);
+      return this;
+    }
 
     public ScanQueryBuilder dataSource(DataSource ds)
     {

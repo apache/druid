@@ -45,6 +45,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   private static final Logger LOG = new Logger(JdbcExtractionNamespace.class);
 
   long DEFAULT_MAX_HEAP_PERCENTAGE = 10L;
+  long DEFAULT_LOOKUP_LOAD_TIME_SECONDS = 120;
 
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
@@ -63,6 +64,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   @JsonProperty
   private final long maxHeapPercentage;
   @JsonProperty
+  private final long loadTimeoutSeconds;
+  @JsonProperty
   private final int jitterSeconds;
 
   @JsonCreator
@@ -77,6 +80,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
       @Min(0) @JsonProperty(value = "pollPeriod") @Nullable final Period pollPeriod,
       @JsonProperty(value = "maxHeapPercentage") @Nullable final Long maxHeapPercentage,
       @JsonProperty(value = "jitterSeconds") @Nullable Integer jitterSeconds,
+      @JsonProperty(value = "loadTimeoutSeconds") @Nullable final Long loadTimeoutSeconds,
       @JacksonInject JdbcAccessSecurityConfig securityConfig
   )
   {
@@ -101,6 +105,7 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
     }
     this.jitterSeconds = jitterSeconds == null ? 0 : jitterSeconds;
     this.maxHeapPercentage = maxHeapPercentage == null ? DEFAULT_MAX_HEAP_PERCENTAGE : maxHeapPercentage;
+    this.loadTimeoutSeconds = loadTimeoutSeconds == null ? DEFAULT_LOOKUP_LOAD_TIME_SECONDS : loadTimeoutSeconds;
   }
 
   /**
@@ -177,6 +182,12 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
+  public long getLoadTimeoutMills()
+  {
+    return 1000L * loadTimeoutSeconds;
+  }
+
+  @Override
   public String toString()
   {
     return "JdbcExtractionNamespace{" +
@@ -187,6 +198,8 @@ public class JdbcExtractionNamespace implements ExtractionNamespace
            ", tsColumn='" + tsColumn + '\'' +
            ", filter='" + filter + '\'' +
            ", pollPeriod=" + pollPeriod +
+           ", jitterSeconds=" + jitterSeconds +
+           ", loadTimeoutSeconds=" + loadTimeoutSeconds +
            ", maxHeapPercentage=" + maxHeapPercentage +
            '}';
   }

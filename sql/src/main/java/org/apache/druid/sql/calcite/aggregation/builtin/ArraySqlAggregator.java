@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.CastedLiteralOperandTypeCheckers;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
@@ -179,7 +180,11 @@ public class ArraySqlAggregator implements SqlAggregator
           OperandTypes.or(
             OperandTypes.ANY,
             OperandTypes.and(
-                OperandTypes.sequence(StringUtils.format("'%s(expr, maxSizeBytes)'", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
+                OperandTypes.sequence(
+                    StringUtils.format("'%s(expr, maxSizeBytes)'", NAME),
+                    OperandTypes.ANY,
+                    CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
+                ),
                 OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
             )
           ),

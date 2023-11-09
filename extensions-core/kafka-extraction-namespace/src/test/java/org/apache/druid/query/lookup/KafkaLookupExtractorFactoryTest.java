@@ -83,11 +83,13 @@ public class KafkaLookupExtractorFactoryTest
         mapper.writeValueAsString(expected),
         KafkaLookupExtractorFactory.class
     );
+    result.awaitInitialization();
     Assert.assertEquals(expected.getKafkaTopic(), result.getKafkaTopic());
     Assert.assertEquals(expected.getKafkaProperties(), result.getKafkaProperties());
     Assert.assertEquals(cacheManager, result.getCacheManager());
     Assert.assertEquals(0, expected.getCompletedEventCount());
     Assert.assertEquals(0, result.getCompletedEventCount());
+    Assert.assertTrue(result.isInitialized());
   }
 
   @Test

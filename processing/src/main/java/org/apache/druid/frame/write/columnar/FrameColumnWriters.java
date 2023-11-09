@@ -130,7 +130,7 @@ public class FrameColumnWriters
     return new StringFrameColumnWriterImpl(
         selector,
         allocator,
-        capabilities == null || capabilities.hasMultipleValues().isMaybeTrue()
+        capabilities == null ? ColumnCapabilities.Capable.UNKNOWN : capabilities.hasMultipleValues()
     );
   }
 

@@ -49,10 +49,10 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -128,6 +128,9 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
             6.494999885559082,
             5.497499942779541,
             6.499499797821045,
+            6.499499797821045,
+            6.499499797821045,
+            6.499499797821045,
             1.25
         }
     );
@@ -142,6 +145,9 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
         + "APPROX_QUANTILE_FIXED_BUCKETS(m1, 0.99, 20, 0.0, 10.0) FILTER(WHERE dim1 = 'abc'),\n"
         + "APPROX_QUANTILE_FIXED_BUCKETS(m1, 0.999, 20, 0.0, 10.0) FILTER(WHERE dim1 <> 'abc'),\n"
         + "APPROX_QUANTILE_FIXED_BUCKETS(m1, 0.999, 20, 0.0, 10.0) FILTER(WHERE dim1 = 'abc'),\n"
+        + "APPROX_QUANTILE_FIXED_BUCKETS(m1, 0.999, 20, 0.0, 10.0, 'ignore') FILTER(WHERE dim1 = 'abc'),\n"
+        + "APPROX_QUANTILE_FIXED_BUCKETS(m1, 0.999, 20, 0.0, 10.0, 'clip') FILTER(WHERE dim1 = 'abc'),\n"
+        + "APPROX_QUANTILE_FIXED_BUCKETS(m1, 0.999, 20, 0.0, 10.0, 'overflow') FILTER(WHERE dim1 = 'abc'),\n"
         + "APPROX_QUANTILE_FIXED_BUCKETS(cnt, 0.5, 20, 0.0, 10.0)\n"
         + "FROM foo",
         ImmutableList.of(
@@ -200,8 +206,32 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
                           ),
                           not(equality("dim1", "abc", ColumnType.STRING))
                       ),
+                      new FilteredAggregatorFactory(
+                          new FixedBucketsHistogramAggregatorFactory(
+                              "a9:agg",
+                              "m1",
+                              20,
+                              0.0d,
+                              10.0d,
+                              FixedBucketsHistogram.OutlierHandlingMode.CLIP,
+                              false
+                          ),
+                          equality("dim1", "abc", ColumnType.STRING)
+                      ),
+                      new FilteredAggregatorFactory(
+                          new FixedBucketsHistogramAggregatorFactory(
+                              "a10:agg",
+                              "m1",
+                              20,
+                              0.0d,
+                              10.0d,
+                              FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+                              false
+                          ),
+                          equality("dim1", "abc", ColumnType.STRING)
+                      ),
                       new FixedBucketsHistogramAggregatorFactory(
-                          "a8:agg",
+                          "a11:agg",
                           "cnt",
                           20,
                           0.0d,
@@ -219,7 +249,55 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
                       new QuantilePostAggregator("a5", "a5:agg", 0.99f),
                       new QuantilePostAggregator("a6", "a6:agg", 0.999f),
                       new QuantilePostAggregator("a7", "a5:agg", 0.999f),
-                      new QuantilePostAggregator("a8", "a8:agg", 0.50f)
+                      new QuantilePostAggregator("a8", "a5:agg", 0.999f),
+                      new QuantilePostAggregator("a9", "a9:agg", 0.999f),
+                      new QuantilePostAggregator("a10", "a10:agg", 0.999f),
+                      new QuantilePostAggregator("a11", "a11:agg", 0.50f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        expectedResults
+    );
+  }
+
+  @Test
+  public void testQuantileWithCastedLiteralArguments()
+  {
+    final List<Object[]> expectedResults = ImmutableList.of(new Object[]{6.499499797821045});
+    testQuery(
+        "SELECT\n"
+        + "APPROX_QUANTILE_FIXED_BUCKETS("
+        + "m1, "
+        + "CAST(0.999 AS DOUBLE), "
+        + "CAST(20 AS INTEGER), "
+        + "CAST(0.0 AS DOUBLE), "
+        + "CAST(10.0 AS DOUBLE), "
+        + "CAST('overflow' AS VARCHAR)"
+        + ") "
+        + "FILTER(WHERE dim1 = 'abc')\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(ImmutableList.of(
+                      new FilteredAggregatorFactory(
+                          new FixedBucketsHistogramAggregatorFactory(
+                              "a0:agg",
+                              "m1",
+                              20,
+                              0.0d,
+                              10.0d,
+                              FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+                              false
+                          ),
+                          equality("dim1", "abc", ColumnType.STRING)
+                      )
+                  ))
+                  .postAggregators(
+                      new QuantilePostAggregator("a0", "a0:agg", 0.999f)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
