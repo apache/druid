@@ -417,7 +417,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
       return Suppliers.memoize(() -> input -> {
         final ExprEval<?> inputEval = ExprEval.bestEffortOf(StructuredData.unwrap(input));
         final Predicate<Object[]> matcher = new FallbackPredicate<>(
-            arrayPredicates.get(ExpressionType.toColumnType(inputEval.asArrayType())),
+            makeArrayPredicate(ExpressionType.toColumnType(inputEval.asArrayType())),
             inputEval.asArrayType()
         );
         return matcher.apply(inputEval.asArray());
