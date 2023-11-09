@@ -57,6 +57,8 @@ public class LoadingLookupFactoryTest
     EasyMock.expectLastCall().once();
     EasyMock.replay(loadingLookup);
     Assert.assertTrue(loadingLookupFactory.start());
+    loadingLookupFactory.awaitInitialization();
+    Assert.assertTrue(loadingLookupFactory.isInitialized());
     Assert.assertTrue(loadingLookupFactory.close());
     EasyMock.verify(loadingLookup);
 

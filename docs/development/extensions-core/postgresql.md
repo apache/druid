@@ -27,6 +27,8 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 
 ## Setting up PostgreSQL
 
+To avoid issues with upgrades that require schema changes to a large metadata table, consider a PostgreSQL version that supports instant ADD COLUMN semantics.
+
 1. Install PostgreSQL
 
   Use your favorite package manager to install PostgreSQL, e.g.:

@@ -17,48 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.segment.metadata;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.client.BrokerInternalQueryConfig;
-import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
+import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.client.FilteredServerInventoryView;
-import org.apache.druid.client.FilteringSegmentCallback;
+import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.client.ServerView;
 import org.apache.druid.client.ServerView.CallbackAction;
-import org.apache.druid.client.ServerView.SegmentCallback;
-import org.apache.druid.client.ServerView.ServerRemovedCallback;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.TimelineServerView.TimelineCallback;
-import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.RandomServerSelectorStrategy;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
-import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
@@ -87,41 +76,92 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
+public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
 {
   private static final String DATASOURCE = "datasource";
-
+  static final SegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = SegmentMetadataCacheConfig.create("PT1S");
   private File tmpDir;
-  private SpecificSegmentsQuerySegmentWalker walker;
   private TestServerInventoryView inventoryView;
-  private BrokerServerView serverView;
-  private SegmentMetadataCache schema;
+  private CoordinatorServerView serverView;
+  private AbstractSegmentMetadataCache schema;
   private ExecutorService exec;
+  private TestSegmentMetadataQueryWalker walker;
 
   @Before
   public void setUp() throws Exception
   {
+    setUpData();
+    setUpCommon();
     tmpDir = temporaryFolder.newFolder();
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
     inventoryView = new TestServerInventoryView();
-    serverView = newBrokerServerView(inventoryView);
+    serverView = newCoordinatorServerView(inventoryView);
+    walker = new TestSegmentMetadataQueryWalker(
+        serverView,
+        new DruidHttpClientConfig()
+        {
+          @Override
+          public long getMaxQueuedBytes()
+          {
+            return 0L;
+          }
+        },
+        queryToolChestWarehouse,
+        new ServerConfig(),
+        new NoopServiceEmitter(),
+        conglomerate,
+        new HashMap<>()
+    );
+
+    CountDownLatch initLatch = new CountDownLatch(1);
+    serverView.registerTimelineCallback(
+        Execs.singleThreaded("ServerViewInit-DruidSchemaConcurrencyTest-%d"),
+        new TimelineServerView.TimelineCallback()
+        {
+          @Override
+          public ServerView.CallbackAction timelineInitialized()
+          {
+            initLatch.countDown();
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
+          {
+            return null;
+          }
+
+          @Override
+          public CallbackAction segmentRemoved(DataSegment segment)
+          {
+            return null;
+          }
+
+          @Override
+          public CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            return null;
+          }
+        }
+    );
+
     inventoryView.init();
-    serverView.awaitInitialization();
+    initLatch.await();
     exec = Execs.multiThreaded(4, "DruidSchemaConcurrencyTest-%d");
   }
 
   @After
+  @Override
   public void tearDown() throws Exception
   {
+    super.tearDown();
     exec.shutdownNow();
-    walker.close();
   }
 
   /**
-   * This tests the contention between three components, {@link SegmentMetadataCache},
+   * This tests the contention between three components, {@link AbstractSegmentMetadataCache},
    * {@code InventoryView}, and {@link BrokerServerView}. It first triggers
    * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
-   * {@link SegmentMetadataCache#lock}, {@link SegmentMetadataCache#buildDruidTable}
+   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDataSourceRowSignature}
    * is overridden to sleep before doing real work. While refreshing
    * {@code SegmentMetadataCache}, more new segments are added to
    * {@code InventoryView}, which triggers updates of {@code BrokerServerView}.
@@ -133,19 +173,17 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   public void testSegmentMetadataRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+    schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
       @Override
-      DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(final String dataSource)
+      public RowSignature buildDataSourceRowSignature(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -156,7 +194,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
             throw new RuntimeException(e);
           }
         });
-        return super.buildDruidTable(dataSource);
+        return super.buildDataSourceRowSignature(dataSource);
       }
     };
 
@@ -216,10 +254,8 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     Assert.assertFalse(refreshFuture.isDone());
 
     for (int i = 0; i < 1000; i++) {
-      boolean hasTimeline = exec.submit(
-          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)).getAnalysis())
-                          .isPresent()
-      ).get(100, TimeUnit.MILLISECONDS);
+      boolean hasTimeline = exec.submit(() -> (serverView.getTimeline(new TableDataSource(DATASOURCE)) != null))
+                                .get(100, TimeUnit.MILLISECONDS);
       Assert.assertTrue(hasTimeline);
       // We want to call getTimeline while BrokerServerView is being updated. Sleep might help with timing.
       Thread.sleep(2);
@@ -229,11 +265,11 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   }
 
   /**
-   * This tests the contention between two methods of {@link SegmentMetadataCache}:
-   * {@link SegmentMetadataCache#refresh} and
-   * {@link SegmentMetadataCache#getSegmentMetadataSnapshot()}. It first triggers
+   * This tests the contention between two methods of {@link AbstractSegmentMetadataCache}:
+   * {@link AbstractSegmentMetadataCache#refresh} and
+   * {@link AbstractSegmentMetadataCache#getSegmentMetadataSnapshot()}. It first triggers
    * refreshing {@code SegmentMetadataCache}. To mimic some heavy work done with
-   * {@link SegmentMetadataCache#lock}, {@link SegmentMetadataCache#buildDruidTable}
+   * {@link AbstractSegmentMetadataCache#lock}, {@link AbstractSegmentMetadataCache#buildDataSourceRowSignature}
    * is overridden to sleep before doing real work. While refreshing
    * {@code SegmentMetadataCache}, {@code getSegmentMetadataSnapshot()} is continuously
    * called to mimic reading the segments table of SystemSchema. All these calls
@@ -243,19 +279,17 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
   public void testSegmentMetadataRefreshAndDruidSchemaGetSegmentMetadata()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    schema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+    schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
         serverView,
-        segmentManager,
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
+        new InternalQueryConfig(),
         new NoopServiceEmitter()
     )
     {
       @Override
-      DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(final String dataSource)
+      public RowSignature buildDataSourceRowSignature(final String dataSource)
       {
         doInLock(() -> {
           try {
@@ -266,7 +300,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
             throw new RuntimeException(e);
           }
         });
-        return super.buildDruidTable(dataSource);
+        return super.buildDataSourceRowSignature(dataSource);
       }
     };
 
@@ -335,9 +369,9 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     for (int i = 0; i < numSegments; i++) {
       DataSegment segment = newSegment(i + partitionIdStart);
       QueryableIndex index = newQueryableIndex(i + partitionIdStart);
-      walker.add(segment, index);
       int serverIndex = i % numServers;
       inventoryView.addServerSegment(newServer("server_" + serverIndex), segment);
+      walker.add(segment, index);
     }
   }
 
@@ -360,17 +394,13 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     }
   }
 
-  private static BrokerServerView newBrokerServerView(FilteredServerInventoryView baseView)
+  private static CoordinatorServerView newCoordinatorServerView(ServerInventoryView baseView)
   {
-    return new BrokerServerView(
-        EasyMock.createMock(QueryToolChestWarehouse.class),
-        EasyMock.createMock(QueryWatcher.class),
-        new DefaultObjectMapper(),
-        EasyMock.createMock(HttpClient.class),
+    return new CoordinatorServerView(
         baseView,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        EasyMock.createMock(CoordinatorSegmentWatcherConfig.class),
         new NoopServiceEmitter(),
-        new BrokerSegmentWatcherConfig()
+        null
     );
   }
 
@@ -422,7 +452,7 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
                        .buildMMappedIndex();
   }
 
-  private static class TestServerInventoryView implements FilteredServerInventoryView
+  private static class TestServerInventoryView implements ServerInventoryView
   {
     private final Map<String, DruidServer> serverMap = new HashMap<>();
     private final Map<String, Set<DataSegment>> segmentsMap = new HashMap<>();
@@ -458,11 +488,10 @@ public class SegmentDataCacheConcurrencyTest extends SegmentMetadataCacheCommon
     @Override
     public void registerSegmentCallback(
         Executor exec,
-        SegmentCallback callback,
-        Predicate<Pair<DruidServerMetadata, DataSegment>> filter
+        SegmentCallback callback
     )
     {
-      segmentCallbacks.add(new NonnullPair<>(new FilteringSegmentCallback(callback, filter), exec));
+      segmentCallbacks.add(new NonnullPair<>(callback, exec));
     }
 
     @Override

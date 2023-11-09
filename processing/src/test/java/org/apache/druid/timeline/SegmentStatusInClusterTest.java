@@ -49,6 +49,8 @@ public class SegmentStatusInClusterTest
   private static final ImmutableMap<String, Object> LOAD_SPEC = ImmutableMap.of("something", "or_other");
   private static final boolean OVERSHADOWED = true;
   private static final Integer REPLICATION_FACTOR = 2;
+  private static final Long NUM_ROWS = 10L;
+  private static final boolean REALTIME = true;
   private static final int TEST_VERSION = 0x9;
   private static final SegmentStatusInCluster SEGMENT = createSegmentForTest();
 
@@ -76,7 +78,7 @@ public class SegmentStatusInClusterTest
         1
     );
 
-    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, NUM_ROWS, REALTIME);
   }
 
   @Test
@@ -87,7 +89,7 @@ public class SegmentStatusInClusterTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(12, objectMap.size());
+    Assert.assertEquals(14, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
@@ -99,6 +101,8 @@ public class SegmentStatusInClusterTest
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
     Assert.assertEquals(REPLICATION_FACTOR, objectMap.get("replicationFactor"));
+    Assert.assertEquals(NUM_ROWS.intValue(), objectMap.get("numRows"));
+    Assert.assertEquals(REALTIME, objectMap.get("realtime"));
 
     final String json = MAPPER.writeValueAsString(SEGMENT);
 

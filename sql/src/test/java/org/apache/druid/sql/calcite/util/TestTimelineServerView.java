@@ -44,7 +44,7 @@ import java.util.concurrent.Executor;
 /**
  * This class is used for testing and benchmark
  */
-public class TestServerInventoryView implements TimelineServerView
+public class TestTimelineServerView implements TimelineServerView
 {
   private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
       "dummy",
@@ -80,12 +80,12 @@ public class TestServerInventoryView implements TimelineServerView
   private List<Pair<Executor, SegmentCallback>> segmentCallbackExecs = new ArrayList<>();
   private List<Pair<Executor, TimelineCallback>> timelineCallbackExecs = new ArrayList<>();
 
-  public TestServerInventoryView(List<DataSegment> segments)
+  public TestTimelineServerView(List<DataSegment> segments)
   {
     this.segments.addAll(segments);
   }
 
-  public TestServerInventoryView(List<DataSegment> segments, List<DataSegment> realtimeSegments)
+  public TestTimelineServerView(List<DataSegment> segments, List<DataSegment> realtimeSegments)
   {
     this.segments.addAll(segments);
     this.realtimeSegments.addAll(realtimeSegments);
