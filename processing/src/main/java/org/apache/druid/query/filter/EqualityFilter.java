@@ -169,7 +169,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     DimFilter.DimFilterToStringBuilder bob =
         new DimFilter.DimFilterToStringBuilder().appendDimension(column, null)
                                                 .append(" = ")
-                                                .append(matchValueEval.value());
+                                                .append(
+                                                    matchValueEval.isArray()
+                                                    ? Arrays.deepToString(matchValueEval.asArray())
+                                                    : matchValueEval.value()
+                                                );
 
     if (!ColumnType.STRING.equals(matchValueType)) {
       bob.append(" (" + matchValueType.asTypeString() + ")");

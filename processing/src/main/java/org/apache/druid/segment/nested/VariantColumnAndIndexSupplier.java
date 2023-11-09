@@ -386,19 +386,19 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
-          final int id = dictionary.indexOf(ids) + arrayOffset;
+          final int localId = dictionary.indexOf(ids);
           if (includeUnknown) {
-            if (id < 0) {
+            if (localId < 0) {
               return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
             }
             return bitmapResultFactory.unionDimensionValueBitmaps(
-                ImmutableList.of(getBitmap(id), nullValueBitmap)
+                ImmutableList.of(getBitmap(localId + arrayOffset), nullValueBitmap)
             );
           }
-          if (id < 0) {
+          if (localId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
-          return bitmapResultFactory.wrapDimensionValue(getBitmap(id));
+          return bitmapResultFactory.wrapDimensionValue(getBitmap(localId + arrayOffset));
         }
       };
     }
