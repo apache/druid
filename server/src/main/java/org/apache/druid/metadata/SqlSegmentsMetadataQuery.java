@@ -141,6 +141,10 @@ public class SqlSegmentsMetadataQuery
   /**
    * Marks the provided segments as either used or unused.
    *
+   * For better performance, please try to
+   * 1) ensure that the caller passes only used segments to this method when marking them as unused.
+   * 2) Similarly, please try to call this method only on unused segments when marking segments as used with this method.
+   *
    * Returns the number of segments actually modified.
    */
   public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
@@ -176,7 +180,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all segments for a datasource unused that are *fully contained by* a particular interval.
+   * Marks all used segments that are *fully contained by* a particular interval as unused.
    *
    * Returns the number of segments actually modified.
    */
@@ -186,7 +190,8 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+                  + "WHERE dataSource = :dataSource AND used = true",
                   dbTables.getSegmentsTable()
               )
           )
@@ -202,7 +207,8 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource AND %s",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+                  + "WHERE dataSource = :dataSource AND used = true AND %s",
                   dbTables.getSegmentsTable(),
                   IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
               )
