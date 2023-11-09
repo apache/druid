@@ -814,7 +814,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.4</version>
+                <version>1.1.10.5</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>

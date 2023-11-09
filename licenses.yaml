@@ -3115,7 +3115,7 @@ name: snappy-java
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.0.4.1
+version: 1.1.10.5
 libraries:
   - org.xerial.snappy: snappy-java
 notices:
@@ -3565,7 +3565,7 @@ name: snappy-java
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
-version: 1.1.8.4
+version: 1.1.10.5
 libraries:
   - org.xerial.snappy: snappy-java
 
@@ -4774,7 +4774,7 @@ libraries:
 
 name: snappy-java
 license_category: binary
-version: 1.1.8.4
+version: 1.1.10.5
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
