@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
+import javax.annotation.CheckReturnValue;
 import java.nio.ByteBuffer;
 
 interface RowBasedKeySerdeHelper
@@ -43,7 +46,21 @@ interface RowBasedKeySerdeHelper
    *
    * @return true if the value was added to the key, false otherwise
    */
+
+  @com.google.errorprone.annotations.CheckReturnValue
+  @CheckReturnValue
   boolean putToKeyBuffer(RowBasedKey key, int idx);
+
+  @FormatMethod
+  static void doX(RowBasedKeySerdeHelper r, @FormatString String fmt, Object... dimValues)
+  {
+    r.putToKeyBuffer(null, 0);
+  }
+
+  static void doY(RowBasedKeySerdeHelper r)
+  {
+    doX(r, r.toString(), "asd");
+  }
 
   /**
    * Read a value from a ByteBuffer containing a grouping key in the same format as RowBasedKeySerde's keyBuffer and
