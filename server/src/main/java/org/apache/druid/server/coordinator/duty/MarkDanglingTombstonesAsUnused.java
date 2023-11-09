@@ -21,7 +21,9 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -39,9 +41,21 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Marks dangling tombstones not overshadowed by currently served segments as unused.
- * Dangling tombstones are tombstone segments with their start or end interval as eternity. So each datasource
- * can have at most two dangling segments.
+ * Marks dangling tombstones not overshadowed by currently served segments as unused. A dangling segment must satisfy both criteria:
+ * <li> It is a tombstone that starts at {@link DateTimes#MIN} or ends at {@link DateTimes#MAX} and </li>
+ * <li> It does not overlap with any segment in the datasource's used segments timeline </li>
+ *
+ * <p>
+ * Only infinite-interval tombstones are considered as candidate segments in this duty because they
+ * don't honor the preferred segment granularity specified at ingest time to cover an underlying segment with
+ * {@link Granularities#ALL} as it can generate too many segments per time chunk and cause an OOM. The infinite-interval
+ * tombstones make it hard to append data on the end of a data set that started out with an {@link Granularities#ALL} eternity and then
+ * moved to actual time grains, so the compromise is that the coordinator will remove these segments as long as it doesn't overlap anything.
+ * </p>
+ * <p>
+ * The overlapping condition is necessary as an underlying segment that partially or fully overlaps with an infinite-interval
+ * tombstone can otherwise be incorrectly exposed.
+ *</p>
  */
 public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
 {
@@ -66,7 +80,7 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
       return params;
     }
 
-    log.debug("Found [%d] datasource dangling tombstones  [%s]",
+    log.debug("Found [%d] datasource dangling tombstones[%s]",
               datasourceToDanglingTombstones.size(), datasourceToDanglingTombstones
     );
 
@@ -76,7 +90,7 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
       stats.add(Stats.Segments.DANGLING_TOMBSTONE, datasourceKey, unusedSegments.size());
       int unusedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
       log.info(
-          "Successfully marked [%d] dangling tombstones as unused for datasource[%s].",
+          "Successfully marked [%d] dangling tombstones of datasource[%s] as unused.",
           unusedCount,
           datasource
       );
@@ -86,12 +100,14 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
   }
 
   /**
-   * Computes the set of dangling tombstones using the datasources snapshot.
+   * Computes the set of dangling tombstones per datasource using the datasources snapshot. The computation is as follows:
    *
    * <li> Determine the set of used and non-overshadowed segments from the used segments' timeline. </li>
-   * <li> For each such segment that is dangling, look at the set of used segments in the timeline to see if the intervals overlap.
-   * There can at most be two such dangling tombstones per datasource. </li>
-   * <li> If there is no overlap, add the dangling segment to the result set to be marked as unused. </li>
+   * <li> For each such candidate segment that is a tombstone with an infinite start or end, look at the set of used
+   * segments in the timeline to see if at least one of the intervals overlaps with the candidate segment.
+   * <li> If there is no overlap, add the candidate segment to the dangling segments result set. </li>
+   * There can at most be two such dangling tombstones per datasource  -- one that starts at {@link DateTimes#MIN}
+   * and another that ends at {@link DateTimes#MAX}. </li>
    * </p>
    *
    * @param dataSourcesSnapshot the datasources snapshot for segments timeline
@@ -114,21 +130,19 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
                   ));
 
       if (usedNonOvershadowedSegments.isPresent()) {
-        usedNonOvershadowedSegments.get().forEach(usedNonOvershadowedSegment -> {
-          if (isDanglingTombstone(usedNonOvershadowedSegment)) {
+        usedNonOvershadowedSegments.get().forEach(candidateSegment -> {
+          if (isTombstoneWithInfiniteStartOrEnd(candidateSegment)) {
             boolean overlaps = usedSegmentsTimeline.iterateAllObjects().stream()
                                                   .anyMatch(
                                                       usedSegment ->
-                                                          datasource.equals(usedSegment.getDataSource()) &&
-                                                          !usedNonOvershadowedSegment.getId().equals(usedSegment.getId()) &&
-                                                          isDanglingTombstone(usedNonOvershadowedSegment) &&
-                                                          usedNonOvershadowedSegment.getInterval()
-                                                                                    .overlaps(usedSegment.getInterval())
+                                                          !candidateSegment.getId().equals(usedSegment.getId()) &&
+                                                          candidateSegment.getInterval()
+                                                                          .overlaps(usedSegment.getInterval())
                                                   );
             if (!overlaps) {
               datasourceToDanglingTombstones
                   .computeIfAbsent(datasource, ds -> new HashSet<>())
-                  .add(usedNonOvershadowedSegment.getId());
+                  .add(candidateSegment.getId());
             }
           }
         });
@@ -138,10 +152,10 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
     return datasourceToDanglingTombstones;
   }
 
-  private boolean isDanglingTombstone(final DataSegment segment)
+  private boolean isTombstoneWithInfiniteStartOrEnd(final DataSegment segment)
   {
     return segment.isTombstone() && (
-        Intervals.ETERNITY.getStart().equals(segment.getInterval().getStart()) ||
-        Intervals.ETERNITY.getEnd().equals(segment.getInterval().getEnd()));
+        DateTimes.MIN.equals(segment.getInterval().getStart()) ||
+        DateTimes.MAX.equals(segment.getInterval().getEnd()));
   }
 }

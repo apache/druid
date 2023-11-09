@@ -73,12 +73,12 @@ that are removed from the database.
 Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are
 marked as unused. During the next Coordinator's run, they will be unloaded from Historical nodes in the cluster.
 
-### Cleaning up dangling tombstone segments
+### Cleaning up dangling segments
 
-On each run, the Druid coordinator will clean up any dangling tombstone segments.
-Dangling tombstones have eternity as their start or end -- for example,
-segments with an interval of `-146136543-09-08T08:23:32.096Z/2000-01-01` or `2020-01-01/146140482-04-24T15:36:27.903Z`.
-The coordinator will drop a dangling segment if its interval doesn't overlap with any overshadowed segment.
+On each run, the Druid coordinator will determine and clean up dangling segments for each datasource. Dangling segments must
+satisfy the following criteria:
+- It is a tombstone segment that starts at -INF or ends at INF (e.g., a tombstone with an interval of `-146136543-09-08T08:23:32.096Z/2000-01-01` or `2020-01-01/146140482-04-24T15:36:27.903Z`) and
+- It does not overlap with any used segment
 
 ### Segment availability
 

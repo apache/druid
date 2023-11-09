@@ -87,13 +87,6 @@ public class MarkDanglingSegmentsAsUnusedTest
   final DataSegment ds1TombstoneSegment2001ToMaxV2 = ds1TombstoneSegment2001ToMaxV1.withVersion("2");
 
 
-  private final DataSegment ds2TombstoneSegment1995To1996V0 = DataSegment.builder().dataSource(ds2)
-                                                                        .shardSpec(new TombstoneShardSpec())
-                                                                        .interval(Intervals.of("1995/1996"))
-                                                                        .version("0")
-                                                                        .size(0)
-                                                                        .build();
-
   private final DataSegment ds2TombstoneSegment1995To2005V0 = DataSegment.builder().dataSource(ds2)
                                                                          .shardSpec(new TombstoneShardSpec())
                                                                          .interval(Intervals.of("1995/2005"))
@@ -272,7 +265,7 @@ public class MarkDanglingSegmentsAsUnusedTest
     );
 
     // ds2TombstoneSegment1995To2005V0 isn't overshadowed by ds2TombstoneSegmentMinTo2000V1 since there's
-    // only partial overlap. So we have to keep all the segments as used.
+    // only a partial overlap. So both the segments should be used.
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of(
         ds2TombstoneSegment1995To2005V0,
         ds2TombstoneSegmentMinTo2000V1,
