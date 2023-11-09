@@ -137,15 +137,18 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     {
       assert(frame.getPeerType() == PeerType.RANGE);
 
+      // FIXME: unique by hashCode
+      String changeColName = DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME + hashCode();
+
       new WindowDenseRankProcessor(
           frame.getOrderByColNames(),
-          DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME
+          changeColName
       ).process(rac);
 
       numRows = rac.numRows();
       AtomicInteger rowIdProvider = new AtomicInteger(numRows - 1);
       final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
-      ColumnValueSelector<?> changeColSelector = columnSelectorFactory.makeColumnValueSelector(DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME);
+      ColumnValueSelector<?> changeColSelector = columnSelectorFactory.makeColumnValueSelector(changeColName);
       numRanges = (int) changeColSelector.getLong();
 
       rangeToRowId = new int[numRanges+1];
