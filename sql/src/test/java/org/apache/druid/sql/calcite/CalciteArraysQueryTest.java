@@ -53,6 +53,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.ArrayContainsFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -1091,7 +1092,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    expressionFilter("array_contains(\"arrayStringNulls\",array('a','b'))")
+                    new ArrayContainsFilter("arrayStringNulls", ColumnType.STRING_ARRAY, new Object[]{"a", "b"}, null)
                 )
                 .columns("arrayStringNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1117,7 +1118,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    expressionFilter("array_contains(\"arrayLongNulls\",array(1,null))")
+                    new ArrayContainsFilter("arrayLongNulls", ColumnType.LONG_ARRAY, new Object[]{1, null}, null)
                 )
                 .columns("arrayLongNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1142,7 +1143,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    expressionFilter("array_contains(\"arrayDoubleNulls\",array(1.1,null))")
+                    new ArrayContainsFilter("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY, new Object[]{1.1, null}, null)
                 )
                 .columns("arrayDoubleNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -6980,7 +6981,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(
-                      expressionFilter("array_contains(\"arrayLongNulls\",array(2))")
+                      new ArrayContainsFilter("arrayLongNulls", ColumnType.LONG, 2L, null)
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)

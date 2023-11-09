@@ -31,6 +31,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.ArrayContainsFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -136,6 +137,35 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           }
 
           return filters.size() == 1 ? filters.get(0) : new AndDimFilter(filters);
+        }
+      }
+    }
+    // if the input is a direct array column, we can use sweet array filter
+    if (leftExpr.isDirectColumnAccess() && isArray(leftExpr)) {
+      Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
+      // To convert this expression filter into an And of ArrayContains filters, we need to extract all array elements.
+      // For now, we can optimize only when rightExpr is a literal because there is no way to extract the array elements
+      // by traversing the Expr. Note that all implementations of Expr are defined as package-private classes in a
+      // different package.
+      if (expr.isLiteral()) {
+        // Evaluate the expression to get out the array elements.
+        // We can safely pass a nil ObjectBinding if the expression is literal.
+        ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
+        Object[] arrayElements = exprEval.asArray();
+        if (arrayElements != null && arrayElements.length == 1) {
+          return new ArrayContainsFilter(
+              leftExpr.getSimpleExtraction().getColumn(),
+              ExpressionType.toColumnType(exprEval.isArray() ? (ExpressionType) exprEval.type().getElementType() : exprEval.type()),
+              arrayElements[0],
+              null
+          );
+        } else {
+          return new ArrayContainsFilter(
+              leftExpr.getSimpleExtraction().getColumn(),
+              ExpressionType.toColumnType(exprEval.type()),
+              exprEval.value(),
+              null
+          );
         }
       }
     }

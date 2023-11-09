@@ -266,6 +266,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       }
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
+      builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(
           logicalType,
           capabilitiesBuilder.hasNulls().isTrue()
