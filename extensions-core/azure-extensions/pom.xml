@@ -130,7 +130,11 @@
             <artifactId>commons-lang</artifactId>
             <scope>provided</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>

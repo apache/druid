@@ -30,6 +30,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.guice.Binders;
@@ -116,7 +118,7 @@ public class AzureStorageDruidModule implements DruidModule
   @LazySingleton
   public AzureClientFactory getAzureClientFactory(final AzureAccountConfig config)
   {
-    if (config.getKey() == null && config.getSharedAccessStorageToken() == null && !config.getUseAzureCredentialsChain()) {
+    if (StringUtils.isEmpty(config.getKey()) && StringUtils.isEmpty(config.getSharedAccessStorageToken()) && BooleanUtils.isNotTrue(config.getUseAzureCredentialsChain())) {
       throw new ISE("Either set 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config."
           + " Please refer to azure documentation.");
     }
@@ -125,9 +127,9 @@ public class AzureStorageDruidModule implements DruidModule
     but any form of auth supported by the DefaultAzureCredentialChain is not mutually exclusive, e.g. you can have
     environment credentials or workload credentials or managed credentials using the same chain.
     **/
-    if (config.getKey() != null && config.getSharedAccessStorageToken() != null ||
-        config.getKey() != null && config.getUseAzureCredentialsChain() ||
-        config.getSharedAccessStorageToken() != null && config.getUseAzureCredentialsChain()
+    if (!StringUtils.isEmpty(config.getKey()) && !StringUtils.isEmpty(config.getSharedAccessStorageToken()) ||
+        !StringUtils.isEmpty(config.getKey()) && BooleanUtils.isTrue(config.getUseAzureCredentialsChain()) ||
+        !StringUtils.isEmpty(config.getSharedAccessStorageToken()) && BooleanUtils.isTrue(config.getUseAzureCredentialsChain())
     ) {
       throw new ISE("Set only one of 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config."
           + " Please refer to azure documentation.");
