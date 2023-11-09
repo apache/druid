@@ -171,7 +171,7 @@ public class Windowing
       final List<AggregatorFactory> aggregations = new ArrayList<>();
 
       if (group.getWindowFrame().getPeerType() == PeerType.RANGE) {
-        processors.add(buildRangeChangeDetector(sortColumns));
+//        processors.add(buildRangeChangeDetector(sortColumns));
       }
 
       for (AggregateCall aggregateCall : aggregateCalls) {

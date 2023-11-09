@@ -25,10 +25,12 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.operator.window.WindowFrame;
+import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.operator.window.ranking.WindowDenseRankProcessor;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
+import org.apache.druid.query.rowsandcols.semantic.DefaultFramedOnHeapAggregatable.AggDispatcher.AggCell;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -42,6 +44,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
@@ -100,6 +103,141 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       WindowFrame frame,
       String changeColName)
   {
+    AtomicInteger rowIdProvider = new AtomicInteger(0);
+    final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
+
+    RangeIteratorForWindow iter = new RangeIteratorForWindow(rac, frame);
+
+    AggDispatcher aggDispatcher = new AggDispatcher(aggFactories, columnSelectorFactory);
+
+    int numRows=rac.numRows();
+    Object[][] results = new Object[aggFactories.length][numRows];
+
+
+    for (XRange xRange : iter) {
+
+      AggCell cell = aggDispatcher.newCell();
+      cell.aggregateX(rowIdProvider, xRange, results);
+
+    }
+
+    return makeReturnRAC(aggFactories, results);
+  }
+
+
+  static class RangeIteratorForWindow implements Iterable<XRange>{
+
+    private final int[] rangeToRowId;
+    private final int numRows;
+    private final int numRanges;
+    private int lowerOffset;
+    private int upperOffset;
+
+    public RangeIteratorForWindow(AppendableRowsAndColumns rac, WindowFrame frame)
+    {
+      assert(frame.getPeerType() == PeerType.RANGE);
+
+      new WindowDenseRankProcessor(
+          frame.getOrderByColNames(),
+          DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME
+      ).process(rac);
+
+      numRows = rac.numRows();
+      AtomicInteger rowIdProvider = new AtomicInteger(numRows - 1);
+      final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
+      ColumnValueSelector<?> changeColSelector = columnSelectorFactory.makeColumnValueSelector(DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME);
+      numRanges = (int) changeColSelector.getLong();
+
+      rangeToRowId = new int[numRanges+1];
+
+      for (int i = 0; i < numRows; i++) {
+        rowIdProvider.set(i);
+        int currentVal = (int) changeColSelector.getLong();
+        rangeToRowId[currentVal] = i + 1;
+      }
+      lowerOffset=frame.getLowerOffsetClamped(numRanges);
+      upperOffset=frame.getUpperOffsetClamped(numRanges)+1;
+    }
+
+    @Override
+    public Iterator<XRange> iterator()
+    {
+      return new Iterator<XRange>(){
+        int currentRowIndex = 0;
+        int currentRangeIndex = 0;
+
+        @Override
+        public boolean hasNext()
+        {
+          return currentRowIndex < numRows;
+        }
+
+        @Override
+        public XRange next()
+        {
+          if(!hasNext()) {
+            throw new RuntimeException();
+          }
+
+          XRange r = new XRange(
+              currentRowIndex,
+              rangeToRowIndex( relativeRangeId( -lowerOffset ) ),
+              rangeToRowIndex( relativeRangeId( upperOffset ) )
+              );
+
+          currentRowIndex++;
+          if(hasNext()) {
+            if(currentRowIndex == rangeToRowIndex(currentRangeIndex+1)) {
+              currentRangeIndex++;
+            }
+          }
+          return r;
+        }
+
+        private int rangeToRowIndex(int rangeId)
+        {
+          return rangeToRowId[rangeId];
+        }
+
+        private int relativeRangeId(int rangeOffset)
+        {
+          int rangeId= currentRangeIndex+rangeOffset;
+          if(rangeId < 0) {
+            return 0;
+          }
+          if(rangeId >= numRanges) {
+            return numRanges;
+          }
+          return rangeId;
+        }
+      };
+    }
+  }
+
+  /**
+   * Represents a range between U (inclusive) and V (exclusive)
+   */
+  static class XRange {
+
+    public final int u;
+    public final int v;
+    private int rowIdx;
+
+    public XRange(int rowIdx, int u, int v)
+    {
+      this.rowIdx = rowIdx;
+      this.u = u;
+      this.v = v;
+    }
+  }
+
+
+  private RowsAndColumns computeRangeAggregates0(
+      AggregatorFactory[] aggFactories,
+      WindowFrame frame,
+      String changeColName)
+  {
+
     new WindowDenseRankProcessor(
         frame.getOrderByColNames(),
         DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME
@@ -112,7 +250,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     rowIdProvider.set(rac.numRows() - 1);
     // FIXME need (int) ?
     int numRanges = (int) changeColSelector.getLong();
-
 
     SlidingWindowPopulator swp = new SlidingWindowPopulator(
         new AggDispatcher(aggFactories, columnSelectorFactory),
@@ -200,6 +337,18 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         for (int i = 0; i < aggFactories.length; i++) {
           aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
         }
+      }
+
+      public void aggregateX(AtomicInteger rowIdProvider, XRange xRange, Object[][] results)
+      {
+        for (int i = xRange.u; i < xRange.v; i++) {
+          rowIdProvider.set(i);
+          aggregate();
+        }
+        for (int i = 0; i < aggFactories.length; i++) {
+          results[i][xRange.rowIdx] = aggregators[i].get();
+        }
+
       }
 
       public void aggregate()
