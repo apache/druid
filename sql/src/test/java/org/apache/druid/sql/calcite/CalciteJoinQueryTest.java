@@ -3491,7 +3491,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             )
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
-        .filters(not(selector("j0.d0", null)))
         .columns("dim1", "j0.d0")
         .context(queryContext)
         .build();
