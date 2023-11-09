@@ -451,6 +451,9 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
       if (eval.isArray()) {
         final Object[] matchElements = castForComparison.asArray();
+        if (matchElements == null) {
+          return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
+        }
         List<ImmutableBitmap> elementBitmaps = Lists.newArrayListWithCapacity(matchElements.length);
         for (Object o : matchElements) {
           int index;

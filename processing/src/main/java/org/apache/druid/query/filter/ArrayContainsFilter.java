@@ -163,11 +163,11 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
   public String toString()
   {
     DimFilter.DimFilterToStringBuilder bob =
-    new DimFilter.DimFilterToStringBuilder().append("array_contains(")
-                                            .appendDimension(column, null)
-                                            .append(", ")
-                                            .append(elementMatchValueEval.value())
-                                            .append(")");
+        new DimFilter.DimFilterToStringBuilder().append("array_contains(")
+                                                .appendDimension(column, null)
+                                                .append(", ")
+                                                .append(elementMatchValueEval.value())
+                                                .append(")");
     if (!ColumnType.STRING.equals(elementMatchValueType)) {
       bob.append(" (" + elementMatchValueType.asTypeString() + ")");
     }
@@ -393,7 +393,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
 
     private Supplier<Predicate<String>> makeStringPredicateSupplier()
     {
-      if (elementMatchValue.isArray() && elementMatchValue.value() != null  && elementMatchValue.asArray().length > 1) {
+      if (elementMatchValue.isArray() && elementMatchValue.value() != null && elementMatchValue.asArray().length > 1) {
         return () -> Predicates.alwaysFalse();
       }
       return Suppliers.memoize(() -> {
