@@ -425,6 +425,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
     Assert.assertEquals(6, segments.size());
+
+    // verify that dim3 column isn't present in schema for datasource foo
+    DataSourceInformation fooDs = schema.getDatasource("foo");
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().noneMatch("dim3"::equals));
+
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
@@ -435,7 +440,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.removeSegment(segmentToRemove);
 
     // we will add a segment to another datasource and
-    // check if columns for this segment is reflected in the datasoruce schema
+    // check if columns in this segment is reflected in the datasource schema
     DataSegment newSegment =
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -448,9 +453,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     final File tmpDir = temporaryFolder.newFolder();
 
     List<InputRow> rows = ImmutableList.of(
-        createRow(ImmutableMap.of("t", "2002-01-01", "m1", "1.0", "dim1", "", "dim2", "x")),
-        createRow(ImmutableMap.of("t", "2002-01-02", "m1", "2.0", "dim1", "10.1", "dim2", "x")),
-        createRow(ImmutableMap.of("t", "2002-01-03", "m1", "3.0", "dim1", "2", "dim2", "x"))
+        createRow(ImmutableMap.of("t", "2002-01-01", "m1", "1.0", "dim1", "", "dim3", "c1")),
+        createRow(ImmutableMap.of("t", "2002-01-02", "m1", "2.0", "dim1", "10.1", "dim3", "c2")),
+        createRow(ImmutableMap.of("t", "2002-01-03", "m1", "3.0", "dim1", "2", "dim3", "c3"))
     );
 
     QueryableIndex index = IndexBuilder.create()
@@ -482,7 +487,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     dataSourcesToRefresh.add("foo2");
     dataSourcesToRefresh.addAll(dataSources);
 
-    segments = segmentMetadatas.values()
+    segments = schema.getSegmentMetadataSnapshot().values()
                     .stream()
                     .map(AvailableSegmentMetadata::getSegment)
                     .collect(Collectors.toList());
@@ -490,11 +495,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), dataSourcesToRefresh);
     Assert.assertEquals(6, schema.getSegmentMetadataSnapshot().size());
 
-    final DataSourceInformation fooDs = schema.getDatasource("foo");
+    fooDs = schema.getDatasource("foo");
 
     // check if the new column present in the added segment is present in the datasource schema
     // ensuring that the schema is rebuilt
-    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim2"::equals));
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim3"::equals));
   }
 
   @Test
