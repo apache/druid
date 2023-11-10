@@ -41,8 +41,6 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import static org.junit.Assert.assertArrayEquals;
-
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
@@ -142,39 +140,12 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     public RangeIteratorForWindow(AppendableRowsAndColumns rac, WindowFrame frame)
     {
-      assert(frame.getPeerType() == PeerType.RANGE);
-
-      // FIXME: unique by hashCode
-      String changeColName = DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME + hashCode();
-
-      new WindowDenseRankProcessor(
-          frame.getOrderByColNames(),
-          changeColName
-      ).process(rac);
-
-      int[] ranges2 = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
-
-      //ClusteredGroupPartitioner
+      assert (frame.getPeerType() == PeerType.RANGE);
+      rangeToRowId = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
       numRows = rac.numRows();
-      AtomicInteger rowIdProvider = new AtomicInteger(numRows - 1);
-      final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
-      ColumnValueSelector<?> changeColSelector = columnSelectorFactory.makeColumnValueSelector(changeColName);
-      numRanges = (int) changeColSelector.getLong();
-
-      rangeToRowId = new int[numRanges+1];
-
-
-
-      for (int i = 0; i < numRows; i++) {
-        rowIdProvider.set(i);
-        int currentVal = (int) changeColSelector.getLong();
-        rangeToRowId[currentVal] = i + 1;
-      }
-//      rangeToRowId=ranges2;
-//      numRanges=
-      assertArrayEquals(ranges2, rangeToRowId);
-      lowerOffset=frame.getLowerOffsetClamped(numRanges);
-      upperOffset=frame.getUpperOffsetClamped(numRanges)+1;
+      numRanges = rangeToRowId.length - 1;
+      lowerOffset = frame.getLowerOffsetClamped(numRanges);
+      upperOffset = frame.getUpperOffsetClamped(numRanges) + 1;
     }
 
     @Override
