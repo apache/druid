@@ -17,10 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.emitter.kafka;
+package org.apache.druid.java.util.common;
 
+import com.google.common.base.Preconditions;
+
+import java.util.Collection;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 /**
  * Similar to LinkedBlockingQueue but can be bounded by the total byte size of the items present in the queue
@@ -53,6 +58,25 @@ public class MemoryBoundLinkedBlockingQueue<T>
     return false;
   }
 
+  public boolean offer(ObjectContainer<T> item, long timeout, TimeUnit unit) throws InterruptedException
+  {
+    final long itemLength = item.getSize();
+
+    try {
+      if (currentMemory.addAndGet(itemLength) <= memoryBound) {
+        if (queue.offer(item, timeout, unit)) {
+          return true;
+        }
+      }
+    }
+    catch (InterruptedException e) {
+      currentMemory.addAndGet(-itemLength);
+      throw e;
+    }
+    currentMemory.addAndGet(-itemLength);
+    return false;
+  }
+
   // blocks until at least one item is available to take
   public ObjectContainer<T> take() throws InterruptedException
   {
@@ -61,12 +85,63 @@ public class MemoryBoundLinkedBlockingQueue<T>
     return ret;
   }
 
+  public Stream<ObjectContainer<T>> stream()
+  {
+    return queue.stream();
+  }
+
+  // This code is taken from {om.google.common.collect.Queues#Drain}}
+  public int drain(Collection<? super ObjectContainer<T>> buffer, int numElements, long timeout, TimeUnit unit)
+      throws InterruptedException
+  {
+    Preconditions.checkNotNull(buffer);
+    long deadline = System.nanoTime() + unit.toNanos(timeout);
+    int added = 0;
+
+    while (added < numElements) {
+      added += queue.drainTo(buffer, numElements - added);
+      buffer.forEach(
+          i -> {
+            currentMemory.addAndGet(-((ObjectContainer<T>) i).getSize());
+          }
+      );
+      if (added < numElements) {
+        ObjectContainer<T> e = queue.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
+
+        if (e == null) {
+          break;
+        }
+
+        currentMemory.addAndGet(-e.getSize());
+        buffer.add(e);
+        ++added;
+      }
+    }
+
+    return added;
+  }
+
+  public int size()
+  {
+    return queue.size();
+  }
+
+  public long byteSize()
+  {
+    return currentMemory.get();
+  }
+
+  public long remainingCapacity()
+  {
+    return memoryBound - currentMemory.get();
+  }
+
   public static class ObjectContainer<T>
   {
-    private T data;
-    private long size;
+    private final T data;
+    private final long size;
 
-    ObjectContainer(T data, long size)
+    public ObjectContainer(T data, long size)
     {
       this.data = data;
       this.size = size;
@@ -83,3 +158,4 @@ public class MemoryBoundLinkedBlockingQueue<T>
     }
   }
 }
+
