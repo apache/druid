@@ -41,6 +41,8 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import static org.junit.Assert.assertArrayEquals;
+
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
@@ -115,8 +117,13 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
 
     for (XRange xRange : iter) {
+//      [0,0];
+//      [0,1];
+//      [0,2];
+
 
       AggCell cell = aggDispatcher.newCell();
+
       cell.aggregateX(rowIdProvider, xRange, results);
 
     }
@@ -145,6 +152,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
           changeColName
       ).process(rac);
 
+      int[] ranges2 = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
+
+      //ClusteredGroupPartitioner
       numRows = rac.numRows();
       AtomicInteger rowIdProvider = new AtomicInteger(numRows - 1);
       final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
@@ -153,11 +163,16 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
       rangeToRowId = new int[numRanges+1];
 
+
+
       for (int i = 0; i < numRows; i++) {
         rowIdProvider.set(i);
         int currentVal = (int) changeColSelector.getLong();
         rangeToRowId[currentVal] = i + 1;
       }
+//      rangeToRowId=ranges2;
+//      numRanges=
+      assertArrayEquals(ranges2, rangeToRowId);
       lowerOffset=frame.getLowerOffsetClamped(numRanges);
       upperOffset=frame.getUpperOffsetClamped(numRanges)+1;
     }
