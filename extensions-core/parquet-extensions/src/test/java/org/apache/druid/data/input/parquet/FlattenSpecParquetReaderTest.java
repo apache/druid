@@ -96,11 +96,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
 
-    ObjectMapper obj = new ObjectMapper();
-    JsonNode expectedJson = obj.readTree(FLAT_JSON);
-
-    JsonNode sampledAsStringJson = obj.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
-    Assert.assertEquals(expectedJson, sampledAsStringJson);
+    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
