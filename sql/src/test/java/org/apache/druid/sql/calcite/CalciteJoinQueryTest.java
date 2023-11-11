@@ -723,7 +723,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("k"), makeColumnExpression("j0.dim2")),
-                                JoinType.INNER
+                                NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.RIGHT
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -734,7 +734,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{NULL_STRING, 3L},
+            new Object[]{"xabc", 1L}
+        )
+        : ImmutableList.of(
             new Object[]{"xabc", 1L}
         )
     );
@@ -762,7 +767,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
-                                JoinType.INNER
+                                NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -773,7 +778,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{NULL_STRING, 3L},
+            new Object[]{"xabc", 1L}
+        )
+        : ImmutableList.of(
             new Object[]{"xabc", 1L}
         )
     );
@@ -809,7 +819,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
-                                JoinType.INNER
+                                NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -820,7 +830,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{NULL_STRING, 6L},
+            new Object[]{"xabc", 2L}
+        )
+        : ImmutableList.of(
             new Object[]{"xabc", 2L}
         )
     );
@@ -1948,17 +1963,25 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   .build()
                           ),
                           "_j0.",
+                          NullHandling.sqlCompatible() ?
                           equalsCondition(
-                                  DruidExpression.fromExpression("CAST(\"j0.k\", 'LONG')"),
-                                    DruidExpression.ofColumn(ColumnType.LONG, "_j0.cnt")
-                          ),
+                              DruidExpression.fromExpression("CAST(\"j0.k\", 'LONG')"),
+                              DruidExpression.ofColumn(ColumnType.LONG, "_j0.cnt")
+                          )
+                                                       : "1",
                           JoinType.INNER
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .filters(expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"))
+                  .filters(
+                      NullHandling.sqlCompatible() ?
+                      expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))")
+                                                   : and(
+                                                       expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"),
+                                                       expressionFilter("(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")")
+                                                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3469,7 +3492,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize due to 'concat' expression.
     cannotVectorize();
 
-    ScanQuery expectedQuery = newScanQueryBuilder()
+    ScanQuery nullCompatibleModePlan = newScanQueryBuilder()
         .dataSource(
             join(
                 new TableDataSource(CalciteTests.DATASOURCE1),
@@ -3495,6 +3518,33 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
+    ScanQuery nonNullCompatibleModePlan = newScanQueryBuilder()
+        .dataSource(
+            join(
+                new TableDataSource(CalciteTests.DATASOURCE1),
+                new QueryDataSource(
+                    GroupByQuery
+                        .builder()
+                        .setDataSource(new LookupDataSource("lookyloo"))
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "concat(\"k\",'')", ColumnType.STRING)
+                        )
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0"))
+                        .build()
+                ),
+                "j0.",
+                equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.d0")),
+                JoinType.LEFT
+            )
+        )
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("dim1", "j0.d0")
+        .filters(notNull("j0.d0"))
+        .context(queryContext)
+        .build();
+
     boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
                                                      .toString()
                                                      .equals("true");
@@ -3504,7 +3554,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         + "LEFT JOIN (select k || '' as k from lookup.lookyloo group by 1) l1 ON foo.dim1 = l1.k\n"
         + "WHERE l1.k IS NOT NULL\n",
         queryContext,
-        ImmutableList.of(expectedQuery),
+        ImmutableList.of(NullHandling.sqlCompatible() ? nullCompatibleModePlan : nonNullCompatibleModePlan),
         NullHandling.sqlCompatible() || !isJoinFilterRewriteEnabled
         ? ImmutableList.of(new Object[]{"abc", "abc"})
         : ImmutableList.of(
@@ -4522,6 +4572,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // cross join with a filter.
     cannotVectorize();
 
+    // We don't handle non-equi join conditions for non-sql compatible mode.
+    Assume.assumeFalse(NullHandling.replaceWithDefault());
+
     testQuery(
         "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 > y.m1",
         queryContext,
@@ -4580,6 +4633,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
     // cross join with a filter.
     cannotVectorize();
+
+    // We don't handle non-equi join conditions for non-sql compatible mode.
+    Assume.assumeFalse(NullHandling.replaceWithDefault());
 
     testQuery(
         "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 = y.m1 AND x.m1 + y.m1 = 6.0",

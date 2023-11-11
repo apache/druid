@@ -45,6 +45,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -264,9 +265,14 @@ public class DruidJoinRule extends RelOptRule
       }
     }
 
-    if (joinType != JoinRelType.INNER || !systemFieldList.isEmpty()) {
+    if (joinType != JoinRelType.INNER || !systemFieldList.isEmpty() || NullHandling.replaceWithDefault()) {
       // I am not sure in what case, the list of system fields will be not empty. I have just picked up this logic
       // directly from https://github.com/apache/calcite/blob/calcite-1.35.0/core/src/main/java/org/apache/calcite/rel/rules/AbstractJoinExtractFilterRule.java#L58
+
+      // Also to avoid results changes for existing queries in non-null handling mode, we don't handle unsupported
+      // conditions. Otherwise, some left/right joins with a condition that doesn't allow nulls on join input will
+      // be converted to inner joins. See Test CalciteJoinQueryTest#testFilterAndGroupByLookupUsingJoinOperatorBackwards
+      // for an example.
       return conditionAnalysis.getUnsupportedSubConditions().isEmpty();
     }
     
