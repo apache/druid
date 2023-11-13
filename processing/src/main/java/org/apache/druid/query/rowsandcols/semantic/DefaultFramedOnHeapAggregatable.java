@@ -107,21 +107,27 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     int numRows = rac.numRows();
     Object[][] results = new Object[aggFactories.length][numRows];
 
-    for (XRange xRange : iter) {
+    AggCell cell = aggDispatcher.newCell();
+
+    for (Range xRange : iter) {
       // [0,0];
       // [0,1];
       // [0,2];
 
-      AggCell cell = aggDispatcher.newCell();
+      cell.moveTo(rowIdProvider, xRange.inputRows);
 
-      cell.aggregateX(rowIdProvider, xRange, results);
+      // note: would be better with results.setX()?
+
+      cell.setOutputs(results, xRange.outputRows);
+
+//      cell.aggregateX(rowIdProvider, xRange, results);
 
     }
 
     return makeReturnRAC(aggFactories, results);
   }
 
-  static class RangeIteratorForWindow implements Iterable<XRange>{
+  static class RangeIteratorForWindow implements Iterable<Range>{
 
     private final int[] rangeToRowId;
     private final int numRows;
@@ -140,9 +146,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     @Override
-    public Iterator<XRange> iterator()
+    public Iterator<Range> iterator()
     {
-      return new Iterator<XRange>(){
+      return new Iterator<Range>(){
         int currentRowIndex = 0;
         int currentRangeIndex = 0;
 
@@ -153,13 +159,13 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
 
         @Override
-        public XRange next()
+        public Range next()
         {
           if(!hasNext()) {
             throw new IllegalStateException();
           }
 
-          XRange r = new XRange(
+          Range r = new Range(
               Interval.of(
                   rangeToRowIndex(relativeRangeId(0)),
                   rangeToRowIndex(relativeRangeId(1))
@@ -244,25 +250,15 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   /**
    * Represents a range between U (inclusive) and V (exclusive).
    */
-  static class XRange {
-    Interval rows;
-    Interval cols;
+  static class Range
+  {
+    Interval outputRows;
+    Interval inputRows;
 
-    public XRange(int rowIdx, int u, int v)
+    public Range(Interval outputRows, Interval inputRows)
     {
-      rows = Interval.of(rowIdx);
-      cols = Interval.of(u, v);
-    }
-    public XRange(int rowIdx, int r2,int u, int v)
-    {
-      rows = Interval.of(rowIdx,r2);
-      cols = Interval.of(u, v);
-    }
-
-    public XRange(Interval rows,Interval cols)
-    {
-      this.rows = rows;
-      this.cols = cols;
+      this.outputRows = outputRows;
+      this.inputRows = inputRows;
     }
   }
 
@@ -286,25 +282,65 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       AggCell()
       {
         aggregators = new Aggregator[aggFactories.length];
+        newAggregators();
+      }
+
+      private void newAggregators()
+      {
         for (int i = 0; i < aggFactories.length; i++) {
           aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
         }
       }
 
-      public void aggregateX(AtomicInteger rowIdProvider, XRange xRange, Object[][] results)
+      public void setOutputs(Object[][] results, Interval outputRows)
       {
-        for (int i : xRange.cols) {
+        for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
+          Object aggValue = aggregators[aggIdx].get();
+          for (int rowIdx : outputRows) {
+            results[aggIdx][rowIdx] = aggValue;
+          }
+        }
+      }
+
+      Interval currentRows = new Interval(0, 0);
+
+      /**
+       * Reposition aggregation window to reflect the given rows.
+       */
+      public void moveTo(AtomicInteger rowIdProvider, Interval newRows)
+      {
+        // incremental addition of additional values
+        if (currentRows.a == newRows.a && currentRows.b < newRows.b) {
+          for (int i = currentRows.b; i < newRows.b; i++) {
+            rowIdProvider.set(i);
+            aggregate();
+          }
+          currentRows = newRows;
+          return;
+        }
+        newAggregators();
+        for (int i : newRows) {
+          rowIdProvider.set(i);
+          aggregate();
+        }
+        currentRows = newRows;
+      }
+
+      public void aggregateX(AtomicInteger rowIdProvider, Range xRange, Object[][] results)
+      {
+        for (int i : xRange.inputRows) {
           rowIdProvider.set(i);
           aggregate();
         }
         for (int i = 0; i < aggFactories.length; i++) {
           Object aggValue = aggregators[i].get();
-          for (int rowIdx : xRange.rows) {
+          for (int rowIdx : xRange.outputRows) {
             results[i][rowIdx] = aggValue;
           }
         }
       }
 
+      @Deprecated
       public void aggregate()
       {
         for (int i = 0; i < aggFactories.length; i++) {
