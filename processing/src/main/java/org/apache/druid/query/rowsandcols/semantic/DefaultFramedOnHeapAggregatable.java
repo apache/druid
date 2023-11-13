@@ -101,16 +101,17 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     int numRows = rac.numRows();
     Object[][] results = new Object[aggFactories.length][numRows];
 
-    AggCell cell = new AggCell(rac,aggFactories);;
+    AggCell cell = new AggCell(rac, aggFactories);
 
     for (Range xRange : iter) {
 
       cell.moveTo(xRange.inputRows);
+      // TODO: if(xRange.outputRows.a ==0 && xRange.outputRows.b == numRows) {
+      // return Const };
 
       // note: would be better with results.setX()?
       cell.setOutputs(results, xRange.outputRows);
     }
-
     return makeReturnRAC(aggFactories, results);
   }
 
@@ -151,7 +152,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
           if(!hasNext()) {
             throw new IllegalStateException();
           }
-
+          // TODO: invert listing order at the end to get benefits of incremenental aggregations
           Range r = new Range(
               Interval.of(
                   rangeToRowIndex(relativeRangeId(0)),
@@ -281,12 +282,11 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     {
       for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
         Object aggValue = aggregators[aggIdx].get();
-        for (int rowIdx : outputRows) {
+        for (int rowIdx = outputRows.a; rowIdx < outputRows.b; rowIdx++) {
           results[aggIdx][rowIdx] = aggValue;
         }
       }
     }
-
 
     /**
      * Reposition aggregation window to reflect the given rows.
