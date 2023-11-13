@@ -21,8 +21,10 @@ package org.apache.druid.query.operator.window;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
 import org.apache.druid.query.operator.ColumnWithDirection;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -151,15 +153,16 @@ public class WindowFrame
            '}';
   }
 
-  public static WindowFrame forOrderBy(ColumnWithDirection...orderBy)
+  public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    // FIXME: this should be RANGE; non-null
-    return new WindowFrame(PeerType.ROWS, true, 0, false, 0, null);
+    return new WindowFrame(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
   }
 
   public List<String> getOrderByColNames()
   {
-    //FIXME NPE
+    if (orderBy == null) {
+      return Collections.emptyList();
+    }
     return orderBy.stream().map(ColumnWithDirection::getColumn).collect(Collectors.toList());
   }
 

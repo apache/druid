@@ -107,27 +107,6 @@ public class AggregatorAdapters implements Closeable
     return new AggregatorAdapters(Arrays.asList(adapters));
   }
 
-
-  /**
-   * Create an adapters object based on {@link BufferAggregator}.
-   */
-  public static AggregatorAdapters factorize(
-      final ColumnSelectorFactory columnSelectorFactory,
-      final List<AggregatorFactory> aggregatorFactories
-  )
-  {
-    final Adapter[] adapters = new Adapter[aggregatorFactories.size()];
-    for (int i = 0; i < aggregatorFactories.size(); i++) {
-      final AggregatorFactory aggregatorFactory = aggregatorFactories.get(i);
-      adapters[i] = new AggregatorAdapter(
-          aggregatorFactory,
-          aggregatorFactory.factorize(columnSelectorFactory)
-      );
-    }
-
-    return new AggregatorAdapters(Arrays.asList(adapters));
-  }
-
   /**
    * Return the amount of buffer bytes needed by all aggregators wrapped up in this object.
    */
@@ -405,65 +384,6 @@ public class AggregatorAdapters implements Closeable
     public VectorAggregator asVectorAggregator()
     {
       throw new ISE("Not a VectorAggregator!");
-    }
-  }
-
-  private static class AggregatorAdapter implements Adapter
-  {
-    private final AggregatorFactory factory;
-    private final Aggregator aggregator;
-
-    AggregatorAdapter(final AggregatorFactory factory, final Aggregator aggregator)
-    {
-      this.factory = factory;
-      this.aggregator = aggregator;
-    }
-
-    @Override
-    public void init(final ByteBuffer buf, final int position)
-    {
-      throw new ISE("Not supported!");
-    }
-
-    @Override
-    public Object get(final ByteBuffer buf, final int position)
-    {
-      throw new ISE("Not supported!");
-    }
-
-    @Override
-    public void close()
-    {
-      throw new ISE("Not supported!");
-    }
-
-    @Override
-    public void relocate(
-        final int oldPosition,
-        final int newPosition,
-        final ByteBuffer oldBuffer,
-        final ByteBuffer newBuffer
-    )
-    {
-      throw new ISE("Not supported!");
-    }
-
-    @Override
-    public AggregatorFactory getFactory()
-    {
-      return factory;
-    }
-
-    @Override
-    public BufferAggregator asBufferAggregator()
-    {
-      throw new ISE("Not supported!");
-    }
-
-    @Override
-    public VectorAggregator asVectorAggregator()
-    {
-      throw new ISE("Not supported!");
     }
   }
 }
