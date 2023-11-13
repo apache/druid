@@ -283,6 +283,26 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       }
     }
 
+    /**
+     * Reposition aggregation window to reflect the given rows.
+     */
+    public void moveTo(Interval newRows)
+    {
+      // incremental addition of additional values
+      if (currentRows.a == newRows.a && currentRows.b < newRows.b) {
+        for (int i = currentRows.b; i < newRows.b; i++) {
+          aggregate(i);
+        }
+        currentRows = newRows;
+        return;
+      }
+      newAggregators();
+      for (int i : newRows) {
+        aggregate(i);
+      }
+      currentRows = newRows;
+    }
+
     public void setOutputs(Object[][] results, Interval outputRows)
     {
       for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
@@ -293,49 +313,12 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       }
     }
 
-    /**
-     * Reposition aggregation window to reflect the given rows.
-     */
-    public void moveTo(Interval newRows)
+    private void aggregate(int rowIdx)
     {
-      // incremental addition of additional values
-      if (currentRows.a == newRows.a && currentRows.b < newRows.b) {
-        for (int i = currentRows.b; i < newRows.b; i++) {
-          rowIdProvider.set(i);
-          aggregate();
-        }
-        currentRows = newRows;
-        return;
-      }
-      newAggregators();
-      for (int i : newRows) {
-        rowIdProvider.set(i);
-        aggregate();
-      }
-      currentRows = newRows;
-    }
-
-    public void aggregateX(AtomicInteger rowIdProvider, Range xRange, Object[][] results)
-    {
-      for (int i : xRange.inputRows) {
-        rowIdProvider.set(i);
-        aggregate();
-      }
-      for (int i = 0; i < aggFactories.length; i++) {
-        Object aggValue = aggregators[i].get();
-        for (int rowIdx : xRange.outputRows) {
-          results[i][rowIdx] = aggValue;
-        }
-      }
-    }
-
-    @Deprecated
-    public void aggregate()
-    {
+      rowIdProvider.set(rowIdx);
       for (int i = 0; i < aggFactories.length; i++) {
         aggregators[i].aggregate();
       }
-
     }
   }
   private AppendableRowsAndColumns computeUnboundedAggregates(AggregatorFactory[] aggFactories)

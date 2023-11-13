@@ -14606,7 +14606,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.CANNOT_TRANSLATE)
   @Test
-  public void testWindowingWithScanAndSort1()
+  public void testWindowingWithOrderBy()
   {
     skipVectorize();
     msqIncompatible();
@@ -14668,5 +14668,4 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
-
 }
