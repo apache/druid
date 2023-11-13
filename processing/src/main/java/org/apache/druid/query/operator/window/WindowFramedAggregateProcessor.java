@@ -70,16 +70,10 @@ public class WindowFramedAggregateProcessor implements Processor
   @Override
   public RowsAndColumns process(RowsAndColumns inputPartition)
   {
-//    WindowDenseRankProcessor w = new WindowDenseRankProcessor(colNames, DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME);
-//    RowsAndColumns res = w.process(inputPartition);
-//    RowsAndColumns
-
-
     FramedOnHeapAggregatable agger = inputPartition.as(FramedOnHeapAggregatable.class);
     if (agger == null) {
       agger = new DefaultFramedOnHeapAggregatable(RowsAndColumns.expectAppendable(inputPartition));
     }
-
     return agger.aggregateAll(frame, aggregations);
   }
 

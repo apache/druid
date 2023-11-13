@@ -114,13 +114,13 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     return makeReturnRAC(aggFactories, results);
   }
 
-  static class RangeIteratorForWindow implements Iterable<Range>{
-
+  static class RangeIteratorForWindow implements Iterable<Range>
+  {
     private final int[] rangeToRowId;
     private final int numRows;
     private final int numRanges;
-    private int lowerOffset;
-    private int upperOffset;
+    private final int lowerOffset;
+    private final int upperOffset;
 
     public RangeIteratorForWindow(AppendableRowsAndColumns rac, WindowFrame frame)
     {
@@ -135,7 +135,8 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     @Override
     public Iterator<Range> iterator()
     {
-      return new Iterator<Range>(){
+      return new Iterator<Range>()
+      {
         int currentRowIndex = 0;
         int currentRangeIndex = 0;
 
@@ -148,7 +149,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         @Override
         public Range next()
         {
-          if(!hasNext()) {
+          if (!hasNext()) {
             throw new IllegalStateException();
           }
           // TODO: invert listing order at the end to get benefits of incremenental aggregations
@@ -176,10 +177,10 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         private int relativeRangeId(int rangeOffset)
         {
           int rangeId = currentRangeIndex + rangeOffset;
-          if(rangeId < 0) {
+          if (rangeId < 0) {
             return 0;
           }
-          if(rangeId >= numRanges) {
+          if (rangeId >= numRanges) {
             return numRanges;
           }
           return rangeId;
@@ -192,22 +193,27 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   /**
    * Basic [a,b) interval; left inclusive/right exclusive.
    */
-  static class Interval implements Iterable<Integer> {
+  static class Interval implements Iterable<Integer>
+  {
     int a;
     int b;
+
     public Interval(int u, int v)
     {
       this.a = u;
       this.b = v;
     }
+
     public static Interval of(int u)
     {
       return new Interval(u, u + 1);
     }
+
     public static Interval of(int u, int v)
     {
       return new Interval(u, v);
     }
+
     @Override
     public Iterator<Integer> iterator()
     {
