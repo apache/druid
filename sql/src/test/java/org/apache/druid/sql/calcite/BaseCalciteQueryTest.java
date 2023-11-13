@@ -146,7 +146,8 @@ import static org.junit.Assert.assertEquals;
 public class BaseCalciteQueryTest extends CalciteTestBase
     implements QueryComponentSupplier, PlannerComponentSupplier
 {
-  public static final double ASSERTION_EPSILON = 1e-5;
+  public static final float ASSERTION_ERROR_ULPS = 1000;
+
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
@@ -1113,14 +1114,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
         if (expectedCell instanceof Float) {
-          float eps = 1000*Math.ulp((Float) expectedCell);
+          float eps = ASSERTION_ERROR_ULPS * Math.ulp((Float) expectedCell);
           assertEquals(
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
               eps);
         } else if (expectedCell instanceof Double) {
-          double eps = 1000*Math.ulp((Double) expectedCell);
+          double eps = ASSERTION_ERROR_ULPS * Math.ulp((Double) expectedCell);
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
