@@ -198,7 +198,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   /**
    * Basic [a,b) interval; left inclusive/right exclusive.
    */
-  static class Interval {
+  static class Interval implements Iterable<Integer> {
     int a;
     int b;
     public Interval(int u, int v)
@@ -208,41 +208,49 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
     public static Interval of(int u)
     {
-      return new Interval(u, u);
+      return new Interval(u, u + 1);
     }
     public static Interval of(int u, int v)
     {
       return new Interval(u, v);
+    }
+    @Override
+    public Iterator<Integer> iterator()
+    {
+      return new Iterator<Integer>()
+      {
+        int current = a;
+
+        @Override
+        public Integer next()
+        {
+          if (!hasNext()) {
+            throw new IllegalStateException();
+          }
+          return current++;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+          return current < b;
+        }
+      };
+
     }
   }
 
   /**
    * Represents a range between U (inclusive) and V (exclusive).
    */
-  static class XRange2 {
+  static class XRange {
     Interval rows;
     Interval cols;
 
-    public XRange2(int rowIdx, int u, int v)
+    public XRange(int rowIdx, int u, int v)
     {
       rows = Interval.of(rowIdx);
       cols = Interval.of(u, v);
-    }
-  }
-  /**
-   * Represents a range between U (inclusive) and V (exclusive)
-   */
-  static class XRange {
-
-    public final int rowIdx;
-    public final int u;
-    public final int v;
-
-    public XRange(int rowIdx, int u, int v)
-    {
-      this.rowIdx = rowIdx;
-      this.u = u;
-      this.v = v;
     }
   }
 
@@ -273,14 +281,16 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
       public void aggregateX(AtomicInteger rowIdProvider, XRange xRange, Object[][] results)
       {
-        for (int i = xRange.u; i < xRange.v; i++) {
+        for (int i : xRange.cols) {
           rowIdProvider.set(i);
           aggregate();
         }
         for (int i = 0; i < aggFactories.length; i++) {
-          results[i][xRange.rowIdx] = aggregators[i].get();
+          Object aggValue = aggregators[i].get();
+          for (int rowIdx : xRange.rows) {
+            results[i][rowIdx] = aggValue;
+          }
         }
-
       }
 
       public void aggregate()
