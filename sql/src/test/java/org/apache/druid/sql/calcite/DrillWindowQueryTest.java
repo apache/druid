@@ -371,7 +371,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         }
-        assertResultsValid(ResultMatchMode.EQUALS_EPS, expectedResults, queryResults);
+        assertResultsValid(ResultMatchMode.EQUALS_RELATIVE_1000_ULPS, expectedResults, queryResults);
       }
       catch (AssertionError e) {
         log.info("query: %s", sql);

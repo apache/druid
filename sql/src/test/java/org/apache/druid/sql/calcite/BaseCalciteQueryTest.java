@@ -146,8 +146,7 @@ import static org.junit.Assert.assertEquals;
 public class BaseCalciteQueryTest extends CalciteTestBase
     implements QueryComponentSupplier, PlannerComponentSupplier
 {
-  public static final float ASSERTION_ERROR_ULPS = 1000;
-
+  public static final double ASSERTION_EPSILON = 1e-5;
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
@@ -1114,19 +1113,48 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
         if (expectedCell instanceof Float) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Float) expectedCell,
+              (Float) resultCell,
+              ASSERTION_EPSILON);
+        } else if (expectedCell instanceof Double) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Double) expectedCell,
+              (Double) resultCell,
+              ASSERTION_EPSILON);
+        } else {
+          EQUALS.validate(row, column, type, expectedCell, resultCell);
+        }
+      }
+    },
+    /**
+     * Comparision which accepts 1000 units of least precision.
+     */
+    EQUALS_RELATIVE_1000_ULPS
+    {
+      static final int ASSERTION_ERROR_ULPS = 1000;
+
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell instanceof Float) {
           float eps = ASSERTION_ERROR_ULPS * Math.ulp((Float) expectedCell);
           assertEquals(
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              eps);
+              eps
+          );
         } else if (expectedCell instanceof Double) {
           double eps = ASSERTION_ERROR_ULPS * Math.ulp((Double) expectedCell);
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              eps);
+              eps
+          );
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
