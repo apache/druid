@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator.window;
 
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -92,5 +93,13 @@ public class WindowFramedAggregateProcessorTest
         .expectColumn("sum", new int[]{1, 3, 6})
         .allColumnsRegistered()
         .validate(processed);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(WindowFramedAggregateProcessor.class)
+        .usingGetClass()
+        .verify();
   }
 }
