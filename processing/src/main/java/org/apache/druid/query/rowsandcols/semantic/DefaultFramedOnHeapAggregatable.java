@@ -198,20 +198,15 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     int a;
     int b;
 
+    public static Interval of(int u, int v)
+    {
+      return new Interval(u, v);
+    }
+
     public Interval(int u, int v)
     {
       this.a = u;
       this.b = v;
-    }
-
-    public static Interval of(int u)
-    {
-      return new Interval(u, u + 1);
-    }
-
-    public static Interval of(int u, int v)
-    {
-      return new Interval(u, v);
     }
 
     @Override
