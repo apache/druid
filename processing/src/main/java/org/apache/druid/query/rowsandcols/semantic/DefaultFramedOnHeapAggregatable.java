@@ -156,21 +156,22 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         public XRange next()
         {
           if(!hasNext()) {
-            throw new RuntimeException();
+            throw new IllegalStateException();
           }
 
           XRange r = new XRange(
-              currentRowIndex,
-              rangeToRowIndex( relativeRangeId( -lowerOffset ) ),
-              rangeToRowIndex( relativeRangeId( upperOffset ) )
-              );
+              Interval.of(
+                  rangeToRowIndex(relativeRangeId(0)),
+                  rangeToRowIndex(relativeRangeId(1))
+              ),
+              Interval.of(
+                  rangeToRowIndex(relativeRangeId(-lowerOffset)),
+                  rangeToRowIndex(relativeRangeId(upperOffset))
+              )
+          );
 
-          currentRowIndex++;
-          if(hasNext()) {
-            if(currentRowIndex == rangeToRowIndex(currentRangeIndex+1)) {
-              currentRangeIndex++;
-            }
-          }
+          currentRowIndex = rangeToRowIndex(currentRangeIndex + 1);
+          currentRangeIndex++;
           return r;
         }
 
@@ -181,7 +182,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
         private int relativeRangeId(int rangeOffset)
         {
-          int rangeId= currentRangeIndex+rangeOffset;
+          int rangeId = currentRangeIndex + rangeOffset;
           if(rangeId < 0) {
             return 0;
           }
@@ -251,6 +252,17 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     {
       rows = Interval.of(rowIdx);
       cols = Interval.of(u, v);
+    }
+    public XRange(int rowIdx, int r2,int u, int v)
+    {
+      rows = Interval.of(rowIdx,r2);
+      cols = Interval.of(u, v);
+    }
+
+    public XRange(Interval rows,Interval cols)
+    {
+      this.rows = rows;
+      this.cols = cols;
     }
   }
 
