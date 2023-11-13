@@ -355,6 +355,9 @@ public class Windowing
 
     public WindowFrame getWindowFrame()
     {
+      if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
+        return WindowFrame.unbounded();
+      }
       return new WindowFrame(
           group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),

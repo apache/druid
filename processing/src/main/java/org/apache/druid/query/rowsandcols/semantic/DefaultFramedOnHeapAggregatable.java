@@ -106,8 +106,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     for (Range xRange : iter) {
 
       cell.moveTo(xRange.inputRows);
-      // TODO: if(xRange.outputRows.a ==0 && xRange.outputRows.b == numRows) {
-      // return Const };
+      // TODO: if(xRange.outputRows.a ==0 && xRange.outputRows.b == numRows) { return Const };
 
       // note: would be better with results.setX()?
       cell.setOutputs(results, xRange.outputRows);

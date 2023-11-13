@@ -128,13 +128,14 @@ public class WindowFrame
            && lowerOffset == that.lowerOffset
            && upperUnbounded == that.upperUnbounded
            && upperOffset == that.upperOffset
-           && peerType == that.peerType;
+           && peerType == that.peerType
+           && Objects.equals(orderBy, that.orderBy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(peerType, lowerUnbounded, lowerOffset, upperUnbounded, upperOffset);
+    return Objects.hash(peerType, lowerUnbounded, lowerOffset, upperUnbounded, upperOffset, orderBy);
   }
 
   @Override
@@ -146,6 +147,7 @@ public class WindowFrame
            ", lowerOffset=" + lowerOffset +
            ", upperUnbounded=" + upperUnbounded +
            ", upperOffset=" + upperOffset +
+           ", orderBy=" + orderBy +
            '}';
   }
 

@@ -1,0 +1,18 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    FLOOR(m1/3),
+    --DENSE_RANK() OVER (ORDER BY FLOOR(m1/3)),
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), --ok
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) -- bad
+    --1
+  FROM foo
+
+expectedResults:
+  - [0.0,1,2]
+  - [0.0,2,2]
+  - [1.0,3,5]
+  - [1.0,4,5]
+  - [1.0,5,5]
+  - [2.0,6,6]
