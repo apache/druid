@@ -104,15 +104,13 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     AggDispatcher aggDispatcher = new AggDispatcher(aggFactories, columnSelectorFactory);
 
-    int numRows=rac.numRows();
+    int numRows = rac.numRows();
     Object[][] results = new Object[aggFactories.length][numRows];
 
-
     for (XRange xRange : iter) {
-//      [0,0];
-//      [0,1];
-//      [0,2];
-
+      // [0,0];
+      // [0,1];
+      // [0,2];
 
       AggCell cell = aggDispatcher.newCell();
 
@@ -122,7 +120,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     return makeReturnRAC(aggFactories, results);
   }
-
 
   static class RangeIteratorForWindow implements Iterable<XRange>{
 
@@ -197,6 +194,41 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
+
+  /**
+   * Basic [a,b) interval; left inclusive/right exclusive.
+   */
+  static class Interval {
+    int a;
+    int b;
+    public Interval(int u, int v)
+    {
+      this.a = u;
+      this.b = v;
+    }
+    public static Interval of(int u)
+    {
+      return new Interval(u, u);
+    }
+    public static Interval of(int u, int v)
+    {
+      return new Interval(u, v);
+    }
+  }
+
+  /**
+   * Represents a range between U (inclusive) and V (exclusive).
+   */
+  static class XRange2 {
+    Interval rows;
+    Interval cols;
+
+    public XRange2(int rowIdx, int u, int v)
+    {
+      rows = Interval.of(rowIdx);
+      cols = Interval.of(u, v);
+    }
+  }
   /**
    * Represents a range between U (inclusive) and V (exclusive)
    */
