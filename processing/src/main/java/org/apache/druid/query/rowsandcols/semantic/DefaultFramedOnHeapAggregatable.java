@@ -29,7 +29,6 @@ import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
-import org.apache.druid.query.rowsandcols.semantic.DefaultFramedOnHeapAggregatable.AggDispatcher.AggCell;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -97,31 +96,19 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       AggregatorFactory[] aggFactories,
       WindowFrame frame)
   {
-    AtomicInteger rowIdProvider = new AtomicInteger(0);
-    final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
-
     RangeIteratorForWindow iter = new RangeIteratorForWindow(rac, frame);
-
-    AggDispatcher aggDispatcher = new AggDispatcher(aggFactories, columnSelectorFactory);
 
     int numRows = rac.numRows();
     Object[][] results = new Object[aggFactories.length][numRows];
 
-    AggCell cell = aggDispatcher.newCell();
+    AggCell cell = new AggCell(rac,aggFactories);;
 
     for (Range xRange : iter) {
-      // [0,0];
-      // [0,1];
-      // [0,2];
 
-      cell.moveTo(rowIdProvider, xRange.inputRows);
+      cell.moveTo(xRange.inputRows);
 
       // note: would be better with results.setX()?
-
       cell.setOutputs(results, xRange.outputRows);
-
-//      cell.aggregateX(rowIdProvider, xRange, results);
-
     }
 
     return makeReturnRAC(aggFactories, results);
@@ -262,101 +249,90 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
-  // pretty close to AggregatorAdapters ; but for plain aggs
-  static class AggDispatcher
+  static class AggCell
   {
+    private AggregatorFactory[] aggFactories;
+    Interval currentRows = new Interval(0, 0);
+    private final AtomicInteger rowIdProvider;
+    private final ColumnSelectorFactory columnSelectorFactory;
 
-    private final AggregatorFactory[] aggFactories;
-    private ColumnSelectorFactory columnSelectorFactory;
+    private final Aggregator[] aggregators;
 
-    public AggDispatcher(AggregatorFactory[] aggFactories, ColumnSelectorFactory columnSelectorFactory)
+
+    AggCell(AppendableRowsAndColumns rac, AggregatorFactory[] aggFactories)
     {
       this.aggFactories = aggFactories;
-      this.columnSelectorFactory = columnSelectorFactory;
+      aggregators = new Aggregator[aggFactories.length];
+
+      rowIdProvider = new AtomicInteger(0);
+      columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
+
+      newAggregators();
     }
 
-    class AggCell
+    private void newAggregators()
     {
-      private final Aggregator[] aggregators;
-
-      AggCell()
-      {
-        aggregators = new Aggregator[aggFactories.length];
-        newAggregators();
+      for (int i = 0; i < aggFactories.length; i++) {
+        aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
       }
+    }
 
-      private void newAggregators()
-      {
-        for (int i = 0; i < aggFactories.length; i++) {
-          aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
+    public void setOutputs(Object[][] results, Interval outputRows)
+    {
+      for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
+        Object aggValue = aggregators[aggIdx].get();
+        for (int rowIdx : outputRows) {
+          results[aggIdx][rowIdx] = aggValue;
         }
       }
+    }
 
-      public void setOutputs(Object[][] results, Interval outputRows)
-      {
-        for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
-          Object aggValue = aggregators[aggIdx].get();
-          for (int rowIdx : outputRows) {
-            results[aggIdx][rowIdx] = aggValue;
-          }
-        }
-      }
 
-      Interval currentRows = new Interval(0, 0);
-
-      /**
-       * Reposition aggregation window to reflect the given rows.
-       */
-      public void moveTo(AtomicInteger rowIdProvider, Interval newRows)
-      {
-        // incremental addition of additional values
-        if (currentRows.a == newRows.a && currentRows.b < newRows.b) {
-          for (int i = currentRows.b; i < newRows.b; i++) {
-            rowIdProvider.set(i);
-            aggregate();
-          }
-          currentRows = newRows;
-          return;
-        }
-        newAggregators();
-        for (int i : newRows) {
+    /**
+     * Reposition aggregation window to reflect the given rows.
+     */
+    public void moveTo(Interval newRows)
+    {
+      // incremental addition of additional values
+      if (currentRows.a == newRows.a && currentRows.b < newRows.b) {
+        for (int i = currentRows.b; i < newRows.b; i++) {
           rowIdProvider.set(i);
           aggregate();
         }
         currentRows = newRows;
+        return;
       }
-
-      public void aggregateX(AtomicInteger rowIdProvider, Range xRange, Object[][] results)
-      {
-        for (int i : xRange.inputRows) {
-          rowIdProvider.set(i);
-          aggregate();
-        }
-        for (int i = 0; i < aggFactories.length; i++) {
-          Object aggValue = aggregators[i].get();
-          for (int rowIdx : xRange.outputRows) {
-            results[i][rowIdx] = aggValue;
-          }
-        }
+      newAggregators();
+      for (int i : newRows) {
+        rowIdProvider.set(i);
+        aggregate();
       }
-
-      @Deprecated
-      public void aggregate()
-      {
-        for (int i = 0; i < aggFactories.length; i++) {
-          aggregators[i].aggregate();
-        }
-
-      }
+      currentRows = newRows;
     }
 
-    public AggCell newCell()
+    public void aggregateX(AtomicInteger rowIdProvider, Range xRange, Object[][] results)
     {
-      return new AggCell();
+      for (int i : xRange.inputRows) {
+        rowIdProvider.set(i);
+        aggregate();
+      }
+      for (int i = 0; i < aggFactories.length; i++) {
+        Object aggValue = aggregators[i].get();
+        for (int rowIdx : xRange.outputRows) {
+          results[i][rowIdx] = aggValue;
+        }
+      }
     }
 
-  }
+    @Deprecated
+    public void aggregate()
+    {
+      for (int i = 0; i < aggFactories.length; i++) {
+        aggregators[i].aggregate();
+      }
 
+    }
+  }
   private AppendableRowsAndColumns computeUnboundedAggregates(AggregatorFactory[] aggFactories)
   {
     Aggregator[] aggs = new Aggregator[aggFactories.length];
