@@ -46,8 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 {
-  // FIXME less crappy
-  public static final String CHANGE_COL_NAME = "changeCol";
   private final AppendableRowsAndColumns rac;
 
   public DefaultFramedOnHeapAggregatable(
@@ -91,14 +89,13 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
       }
     } else {
-      return computeRangeAggregates(aggFactories, frame, CHANGE_COL_NAME);
+      return computeRangeAggregates(aggFactories, frame);
     }
   }
 
   private RowsAndColumns computeRangeAggregates(
       AggregatorFactory[] aggFactories,
-      WindowFrame frame,
-      String changeColName)
+      WindowFrame frame)
   {
     AtomicInteger rowIdProvider = new AtomicInteger(0);
     final ColumnSelectorFactory columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);

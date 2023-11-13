@@ -47,7 +47,6 @@ import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
-import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.operator.window.ranking.WindowCumeDistProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowDenseRankProcessor;
 import org.apache.druid.query.operator.window.ranking.WindowPercentileProcessor;
@@ -56,7 +55,6 @@ import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.operator.window.value.WindowFirstProcessor;
 import org.apache.druid.query.operator.window.value.WindowLastProcessor;
 import org.apache.druid.query.operator.window.value.WindowOffsetProcessor;
-import org.apache.druid.query.rowsandcols.semantic.DefaultFramedOnHeapAggregatable;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -72,7 +70,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Maps onto a {@link org.apache.druid.query.operator.WindowOperatorQuery}.
@@ -170,10 +167,6 @@ public class Windowing
       final List<Processor> processors = new ArrayList<>();
       final List<AggregatorFactory> aggregations = new ArrayList<>();
 
-      if (group.getWindowFrame().getPeerType() == PeerType.RANGE) {
-//        processors.add(buildRangeChangeDetector(sortColumns));
-      }
-
       for (AggregateCall aggregateCall : aggregateCalls) {
         final String aggName = outputNamePrefix + outputNameCounter++;
         windowOutputColumns.add(aggName);
@@ -269,20 +262,6 @@ public class Windowing
           ops
       );
     }
-  }
-
-  private static Processor buildRangeChangeDetector(LinkedHashSet<ColumnWithDirection> sortColumns)
-  {
-    List<String> colNames = sortColumns.stream().map( ColumnWithDirection::getColumn).collect(Collectors.toList());
-    WindowDenseRankProcessor w = new WindowDenseRankProcessor(colNames, DefaultFramedOnHeapAggregatable.CHANGE_COL_NAME);
-    return w;
-//    return
-//    new WindowFramedAggregateProcessor(
-//
-//        WindowFrame.unbounded(),
-//        aggregations.toArray(new AggregatorFactory[0])
-//    )
-
   }
 
   private final RowSignature signature;
