@@ -371,13 +371,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
         }
-        assertResultsEquals(sql, expectedResults, results);
+        assertResultsValid(ResultMatchMode.EQUALS_EPS, expectedResults, queryResults);
       }
       catch (AssertionError e) {
         log.info("query: %s", sql);
         log.info(resultsToString("Expected", expectedResults));
         log.info(resultsToString("Actual", results));
-        throw e;
+        throw new AssertionError(sql, e);
       }
     }
 
@@ -6581,7 +6581,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/woPrtnBy_4")
   @Test
   public void test_aggregates_woPrtnBy_4()

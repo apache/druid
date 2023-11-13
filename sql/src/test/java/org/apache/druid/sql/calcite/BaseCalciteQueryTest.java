@@ -1113,17 +1113,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
         if (expectedCell instanceof Float) {
+          float eps = 1000*Math.ulp((Float) expectedCell);
           assertEquals(
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              ASSERTION_EPSILON);
+              eps);
         } else if (expectedCell instanceof Double) {
+          double eps = 1000*Math.ulp((Double) expectedCell);
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              ASSERTION_EPSILON);
+              eps);
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
