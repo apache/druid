@@ -44,7 +44,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Before
   public void setup()
   {
-    task = NoopTask.create("id", 0);
+    task = NoopTask.create();
     workItem = new KubernetesWorkItem(task, null);
   }
 
@@ -75,7 +75,6 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   public void test_shutdown_withoutKubernetesPeonLifecycle()
   {
     workItem.shutdown();
-    Assert.assertTrue(workItem.isShutdownRequested());
   }
 
   @Test
@@ -91,7 +90,6 @@ public class KubernetesWorkItemTest extends EasyMockSupport
 
     workItem.shutdown();
     verifyAll();
-    Assert.assertTrue(workItem.isShutdownRequested());
   }
 
   @Test

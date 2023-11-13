@@ -84,6 +84,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
+        null,
         maxWorkerCount,
         minStageNumber,
         false
@@ -311,8 +312,17 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     }
   }
 
+  /**
+   * Only allow ordering the queries from the MSQ engine, ignoring the comparator that is set in the query. This
+   * function checks if it is safe to do so, which is the case if the natural comparator is used for the dimension.
+   * Since MSQ executes the queries planned by the SQL layer, this is a sanity check as we always add the natural
+   * comparator for the dimensions there
+   */
   private static boolean isNaturalComparator(final ValueType type, final StringComparator comparator)
   {
+    if (StringComparators.NATURAL.equals(comparator)) {
+      return true;
+    }
     return ((type == ValueType.STRING && StringComparators.LEXICOGRAPHIC.equals(comparator))
             || (type.isNumeric() && StringComparators.NUMERIC.equals(comparator)))
            && !type.isArray();

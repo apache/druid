@@ -59,12 +59,12 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
     emitTimeCounterMetrics(emitter, httpPostEmitter.getSuccessfulSendingTimeCounter(), "emitter/successfulSending/");
     emitTimeCounterMetrics(emitter, httpPostEmitter.getFailedSendingTimeCounter(), "emitter/failedSending/");
 
-    emitter.emit(builder.build("emitter/events/emitQueue", httpPostEmitter.getEventsToEmit()));
-    emitter.emit(builder.build("emitter/events/large/emitQueue", httpPostEmitter.getLargeEventsToEmit()));
+    emitter.emit(builder.setMetric("emitter/events/emitQueue", httpPostEmitter.getEventsToEmit()));
+    emitter.emit(builder.setMetric("emitter/events/large/emitQueue", httpPostEmitter.getLargeEventsToEmit()));
 
-    emitter.emit(builder.build("emitter/buffers/emitQueue", httpPostEmitter.getBuffersToEmit()));
+    emitter.emit(builder.setMetric("emitter/buffers/emitQueue", httpPostEmitter.getBuffersToEmit()));
 
-    emitter.emit(builder.build("emitter/buffers/reuseQueue", httpPostEmitter.getBuffersToReuse()));
+    emitter.emit(builder.setMetric("emitter/buffers/reuseQueue", httpPostEmitter.getBuffersToReuse()));
 
     return true;
   }
@@ -73,7 +73,7 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   {
     long newTotalEmittedEvents = httpPostEmitter.getTotalEmittedEvents();
     long emittedEventsDelta = newTotalEmittedEvents - lastTotalEmittedEvents;
-    emitter.emit(builder.build("emitter/events/emitted/delta", emittedEventsDelta));
+    emitter.emit(builder.setMetric("emitter/events/emitted/delta", emittedEventsDelta));
     lastTotalEmittedEvents = newTotalEmittedEvents;
   }
 
@@ -81,7 +81,7 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   {
     int newTotalDroppedBuffers = httpPostEmitter.getTotalDroppedBuffers();
     int droppedBuffersDelta = newTotalDroppedBuffers - lastTotalDroppedBuffers;
-    emitter.emit(builder.build("emitter/buffers/dropped/delta", droppedBuffersDelta));
+    emitter.emit(builder.setMetric("emitter/buffers/dropped/delta", droppedBuffersDelta));
     lastTotalDroppedBuffers = newTotalDroppedBuffers;
   }
 
@@ -89,7 +89,7 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   {
     int newTotalAllocatedBuffers = httpPostEmitter.getTotalAllocatedBuffers();
     int allocatedBuffersDelta = newTotalAllocatedBuffers - lastTotalAllocatedBuffers;
-    emitter.emit(builder.build("emitter/buffers/allocated/delta", allocatedBuffersDelta));
+    emitter.emit(builder.setMetric("emitter/buffers/allocated/delta", allocatedBuffersDelta));
     lastTotalAllocatedBuffers = newTotalAllocatedBuffers;
   }
 
@@ -97,7 +97,7 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
   {
     int newTotalFailedBuffers = httpPostEmitter.getTotalFailedBuffers();
     int failedBuffersDelta = newTotalFailedBuffers - lastTotalFailedBuffers;
-    emitter.emit(builder.build("emitter/buffers/failed/delta", failedBuffersDelta));
+    emitter.emit(builder.setMetric("emitter/buffers/failed/delta", failedBuffersDelta));
     lastTotalFailedBuffers = newTotalFailedBuffers;
   }
 
@@ -107,16 +107,16 @@ public class HttpPostEmitterMonitor extends FeedDefiningMonitor
     int timeSum = ConcurrentTimeCounter.timeSum(timeSumAndCount);
     int count = ConcurrentTimeCounter.count(timeSumAndCount);
     if (count != 0) {
-      emitter.emit(builder.build(metricNameBase + "timeMsSum", timeSum));
-      emitter.emit(builder.build(metricNameBase + "count", count));
+      emitter.emit(builder.setMetric(metricNameBase + "timeMsSum", timeSum));
+      emitter.emit(builder.setMetric(metricNameBase + "count", count));
     }
     Integer maxTime = timeCounter.getAndResetMaxTime();
     if (maxTime != null) {
-      emitter.emit(builder.build(metricNameBase + "maxTimeMs", maxTime));
+      emitter.emit(builder.setMetric(metricNameBase + "maxTimeMs", maxTime));
     }
     Integer minTime = timeCounter.getAndResetMinTime();
     if (minTime != null) {
-      emitter.emit(builder.build(metricNameBase + "minTimeMs", minTime));
+      emitter.emit(builder.setMetric(metricNameBase + "minTimeMs", minTime));
     }
   }
 

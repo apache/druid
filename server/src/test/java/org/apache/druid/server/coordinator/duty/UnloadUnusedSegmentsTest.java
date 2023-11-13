@@ -259,7 +259,7 @@ public class UnloadUnusedSegmentsTest
                 .addRealtimes(new ServerHolder(indexerServer, indexerPeon, false))
                 .build()
         )
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegments(usedSegments)
         .withBroadcastDatasources(Collections.singleton(broadcastDatasource))
         .withDatabaseRuleManager(databaseRuleManager)
         .build();

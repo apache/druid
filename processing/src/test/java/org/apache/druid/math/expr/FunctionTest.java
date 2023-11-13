@@ -23,10 +23,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.Expr.ObjectBinding;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -38,10 +40,17 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
@@ -117,6 +126,36 @@ public class FunctionTest extends InitializedNullHandlingTest
         builder.build(), InputBindings.inspectorFromTypeMap(inputTypesBuilder.build())
     );
     allBindings = new Expr.ObjectBinding[]{bestEffortBindings, typedBindings};
+  }
+
+  @Test
+  public void testUnknownErrorsAreWrappedAndReported()
+  {
+    final Expr expr = Parser.parse("abs(x)", ExprMacroTable.nil());
+
+    ObjectBinding bind = new ObjectBinding()
+    {
+
+      @Override
+      public ExpressionType getType(String name)
+      {
+        return ExpressionType.LONG_ARRAY;
+      }
+
+      @Override
+      public Object get(String name)
+      {
+        throw new RuntimeException("nested-exception");
+      }
+    };
+    DruidException e = Assert.assertThrows(DruidException.class,
+        () -> {
+          expr.eval(bind);
+        });
+
+    assertEquals("Invocation of function 'abs' encountered exception.", e.getMessage());
+    assertNotNull(e.getCause());
+    assertEquals("nested-exception", e.getCause().getMessage());
   }
 
   @Test
@@ -926,6 +965,15 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testDecodeBase64UTF()
+  {
+    assertExpr("decode_base64_utf8('aGVsbG8=')", "hello");
+    assertExpr("decode_base64_utf8('V2hlbiBhbiBvbmlvbiBpcyBjdXQsIGNlcnRhaW4gKGxhY2hyeW1hdG9yKSBjb21wb3VuZHMgYXJlIHJlbGVhc2VkIGNhdXNpbmcgdGhlIG5lcnZlcyBhcm91bmQgdGhlIGV5ZXMgKGxhY3JpbWFsIGdsYW5kcykgdG8gYmVjb21lIGlycml0YXRlZC4=')", "When an onion is cut, certain (lachrymator) compounds are released causing the nerves around the eyes (lacrimal glands) to become irritated.");
+    assertExpr("decode_base64_utf8('eyJ0ZXN0IjogMX0=')", "{\"test\": 1}");
+    assertExpr("decode_base64_utf8('')", NullHandling.sqlCompatible() ? "" : null);
+  }
+
+  @Test
   public void testComplexDecode()
   {
     TypeStrategiesTest.NullableLongPair expected = new TypeStrategiesTest.NullableLongPair(1L, 2L);
@@ -943,14 +991,60 @@ public class FunctionTest extends InitializedNullHandlingTest
         ),
         expected
     );
+    // test with alias
+    assertExpr(
+        StringUtils.format(
+            "decode_base64_complex('%s', '%s')",
+            TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
+            StringUtils.encodeBase64String(bytes)
+        ),
+        expected
+    );
   }
 
+  @Test
+  public void testMacrosWithMultipleAliases()
+  {
+    ExprMacroTable.ExprMacro drinkMacro = new ExprMacroTable.ExprMacro()
+    {
+      @Override
+      public Expr apply(List<Expr> args)
+      {
+        return new StringExpr("happiness");
+      }
+
+      @Override
+      public String name()
+      {
+        return "drink";
+      }
+    };
+    List<ExprMacroTable.ExprMacro> macros = new ArrayList<>();
+    macros.add(drinkMacro);
+    List<String> aliases = Arrays.asList("tea", "coffee", "chai", "chaha", "kevha", "chay");
+    for (String tea : aliases) {
+      macros.add(new ExprMacroTable.AliasExprMacro(drinkMacro, tea));
+    }
+    final ExprMacroTable exprMacroTable = new ExprMacroTable(macros);
+    final Expr happiness = new StringExpr("happiness");
+    Assert.assertEquals(happiness, Parser.parse("drink(1,2)", exprMacroTable));
+    for (String tea : aliases) {
+      Assert.assertEquals(happiness, Parser.parse(StringUtils.format("%s(1,2)", tea), exprMacroTable));
+    }
+  }
   @Test
   public void testComplexDecodeNull()
   {
     assertExpr(
         StringUtils.format(
             "complex_decode_base64('%s', null)",
+            TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
+        ),
+        null
+    );
+    assertExpr(
+        StringUtils.format(
+            "decode_base64_complex('%s', null)",
             TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName()
         ),
         null

@@ -48,7 +48,7 @@ public class CollectSegmentAndServerStatsTest
     DruidCoordinatorRuntimeParams runtimeParams =
         DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc())
                                      .withDruidCluster(DruidCluster.EMPTY)
-                                     .withUsedSegmentsInTest()
+                                     .withUsedSegments()
                                      .withBalancerStrategy(new RandomBalancerStrategy())
                                      .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
                                      .build();

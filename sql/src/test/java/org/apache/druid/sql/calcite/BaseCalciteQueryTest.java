@@ -59,6 +59,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -77,15 +78,18 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -97,7 +101,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
@@ -120,17 +123,21 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
-import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
@@ -139,6 +146,7 @@ import java.util.stream.Collectors;
 public class BaseCalciteQueryTest extends CalciteTestBase
     implements QueryComponentSupplier, PlannerComponentSupplier
 {
+  public static final double ASSERTION_EPSILON = 1e-5;
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
@@ -203,7 +211,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ImmutableMap.<String, Object>builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .put(PlannerContext.CTX_ENABLE_UNNEST, true)
                   .build();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY =
@@ -284,10 +291,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   private static SqlTestFramework queryFramework;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
-  @Rule
+  @Rule(order = 1)
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Rule
+  @Rule(order = 2)
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
@@ -357,6 +364,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static NotDimFilter not(DimFilter filter)
   {
     return new NotDimFilter(filter);
+  }
+
+  public static IsTrueDimFilter istrue(DimFilter filter)
+  {
+    return new IsTrueDimFilter(filter);
   }
 
   public static InDimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
@@ -590,9 +602,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return StringUtils.format("(%s == %s)", left.getExpression(), right.getExpression());
   }
 
-  public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression)
+  public static ExpressionPostAggregator expressionPostAgg(final String name, final String expression, ColumnType outputType)
   {
-    return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
+    return new ExpressionPostAggregator(name, expression, null, outputType, CalciteTests.createExprMacroTable());
   }
 
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
@@ -786,7 +798,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
                   StringUtils.format(
-                      "Query planning failed for unknown reason, our best guess is this [%s]",
+                      "Query could not be planned. A possible reason is [%s]",
                       expectedError
                   )
               )
@@ -836,6 +848,20 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .sql(sql)
         .expectedQueries(expectedQueries)
         .expectedResults(expectedResults)
+        .run();
+  }
+
+  public void testQuery(
+      final String sql,
+      final List<Query<?>> expectedQueries,
+      final ResultMatchMode resultsMatchMode,
+      final List<Object[]> expectedResults
+  )
+  {
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(resultsMatchMode, expectedResults)
         .run();
   }
 
@@ -1033,11 +1059,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     @Override
     public ResultsVerifier defaultResultsVerifier(
         List<Object[]> expectedResults,
+        ResultMatchMode expectedResultMatchMode,
         RowSignature expectedResultSignature
     )
     {
       return BaseCalciteQueryTest.this.defaultResultsVerifier(
           expectedResults,
+          expectedResultMatchMode,
           expectedResultSignature
       );
     }
@@ -1055,9 +1083,118 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
+  public enum ResultMatchMode
+  {
+    EQUALS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        assertEquals(
+            mismatchMessage(row, column),
+            expectedCell,
+            resultCell);
+      }
+    },
+    RELAX_NULLS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS.validate(row, column, type, expectedCell, resultCell);
+      }
+    },
+    EQUALS_EPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell instanceof Float) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Float) expectedCell,
+              (Float) resultCell,
+              ASSERTION_EPSILON);
+        } else if (expectedCell instanceof Double) {
+          assertEquals(
+              mismatchMessage(row, column),
+              (Double) expectedCell,
+              (Double) resultCell,
+              ASSERTION_EPSILON);
+        } else {
+          EQUALS.validate(row, column, type, expectedCell, resultCell);
+        }
+      }
+    };
+
+    abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);
+
+    private static String mismatchMessage(int row, int column)
+    {
+      return StringUtils.format("column content mismatch at %d,%d", row, column);
+    }
+
+  }
+
+  /**
+   * Validates the results with slight loosening in case {@link NullHandling} is not sql compatible.
+   *
+   * In case {@link NullHandling#replaceWithDefault()} is true, if the expected result is <code>null</code> it accepts
+   * both <code>null</code> and the default value for that column as actual result.
+   */
+  public void assertResultsValid(final ResultMatchMode matchMode, final List<Object[]> expected, final QueryResults queryResults)
+  {
+    final List<Object[]> results = queryResults.results;
+    Assert.assertEquals("Result count mismatch", expected.size(), results.size());
+
+    final List<ValueType> types = new ArrayList<>();
+
+    final boolean isMSQ = isMSQRowType(queryResults.signature);
+
+    if (!isMSQ) {
+      for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
+        Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
+        if (columnType.isPresent()) {
+          types.add(columnType.get().getType());
+        } else {
+          types.add(null);
+        }
+      }
+    }
+
+    final int numRows = results.size();
+    for (int row = 0; row < numRows; row++) {
+      final Object[] expectedRow = expected.get(row);
+      final Object[] resultRow = results.get(row);
+      assertEquals("column count mismatch; at row#" + row, expectedRow.length, resultRow.length);
+
+      for (int i = 0; i < resultRow.length; i++) {
+        final Object resultCell = resultRow[i];
+        final Object expectedCell = expectedRow[i];
+
+        matchMode.validate(
+            row,
+            i,
+            isMSQ ? null : types.get(i),
+            expectedCell,
+            resultCell);
+      }
+    }
+  }
+
+  private boolean isMSQRowType(RowSignature signature)
+  {
+    List<String> colNames = signature.getColumnNames();
+    return colNames.size() == 1 && "TASK".equals(colNames.get(0));
+  }
+
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
-    for (int i = 0; i < results.size(); i++) {
+    int minSize = Math.min(results.size(), expectedResults.size());
+    for (int i = 0; i < minSize; i++) {
       Assert.assertArrayEquals(
           StringUtils.format("result #%d: %s", i + 1, sql),
           expectedResults.get(i),
@@ -1171,7 +1308,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     skipVectorize = true;
   }
 
-  protected void notMsqCompatible()
+  protected void msqIncompatible()
   {
     msqCompatible = false;
   }
@@ -1198,8 +1335,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
     }
     catch (Exception e) {
-      Assert.fail(e.getMessage());
-      return null;
+      throw new RuntimeException(e);
     }
   }
 
@@ -1330,15 +1466,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       // do nothing
     }
 
-    void verify(String sql, List<Object[]> results);
+    void verify(String sql, QueryResults queryResults);
   }
 
   private ResultsVerifier defaultResultsVerifier(
       final List<Object[]> expectedResults,
+      ResultMatchMode expectedResultMatchMode,
       final RowSignature expectedSignature
   )
   {
-    return new DefaultResultsVerifier(expectedResults, expectedSignature);
+    return new DefaultResultsVerifier(expectedResults, expectedResultMatchMode, expectedSignature);
   }
 
   public class DefaultResultsVerifier implements ResultsVerifier
@@ -1346,11 +1483,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     protected final List<Object[]> expectedResults;
     @Nullable
     protected final RowSignature expectedResultRowSignature;
+    protected final ResultMatchMode expectedResultMatchMode;
+
+    public DefaultResultsVerifier(List<Object[]> expectedResults, ResultMatchMode expectedResultMatchMode, RowSignature expectedSignature)
+    {
+      this.expectedResults = expectedResults;
+      this.expectedResultMatchMode = expectedResultMatchMode;
+      this.expectedResultRowSignature = expectedSignature;
+    }
 
     public DefaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedSignature)
     {
-      this.expectedResults = expectedResults;
-      this.expectedResultRowSignature = expectedSignature;
+      this(expectedResults, ResultMatchMode.EQUALS, expectedSignature);
     }
 
     @Override
@@ -1362,17 +1506,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
 
     @Override
-    public void verify(String sql, List<Object[]> results)
+    public void verify(String sql, QueryResults queryResults)
     {
       try {
-        Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResults.size(), results.size());
-        assertResultsEquals(sql, expectedResults, results);
+        assertResultsValid(expectedResultMatchMode, expectedResults, queryResults);
       }
       catch (AssertionError e) {
-        displayResults(results);
+        log.info("sql: %s", sql);
+        log.info(resultsToString("Expected", expectedResults));
+        log.info(resultsToString("Actual", queryResults.results));
         throw e;
       }
     }
+
   }
 
   /**
@@ -1381,58 +1527,84 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * expected results: let the test fail with empty results. The actual results
    * are printed to the console. Copy them into the test.
    */
-  public static void displayResults(List<Object[]> results)
+  public static String resultsToString(String name, List<Object[]> results)
   {
-    PrintStream out = System.out;
-    out.println("-- Actual results --");
-    for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
-      printArray(results.get(rowIndex), out);
-      if (rowIndex < results.size() - 1) {
-        out.print(",");
+    return new ResultsPrinter(name, results).getResult();
+  }
+
+  static class ResultsPrinter
+  {
+    private StringBuilder sb;
+
+    private ResultsPrinter(String name, List<Object[]> results)
+    {
+      sb = new StringBuilder();
+      sb.append("-- ");
+      sb.append(name);
+      sb.append(" results --\n");
+
+      for (int rowIndex = 0; rowIndex < results.size(); rowIndex++) {
+        printArray(results.get(rowIndex));
+        if (rowIndex < results.size() - 1) {
+          outprint(",");
+        }
+        sb.append('\n');
       }
-      out.println();
+      sb.append("----");
     }
-    out.println("----");
-  }
 
-  private static void printArray(final Object[] array, final PrintStream out)
-  {
-    printArrayImpl(array, out, "new Object[]{", "}");
-  }
-
-  private static void printList(final List<?> list, final PrintStream out)
-  {
-    printArrayImpl(list.toArray(new Object[0]), out, "ImmutableList.of(", ")");
-  }
-
-  private static void printArrayImpl(final Object[] array, final PrintStream out, final String pre, final String post)
-  {
-    out.print(pre);
-    for (int colIndex = 0; colIndex < array.length; colIndex++) {
-      Object col = array[colIndex];
-      if (colIndex > 0) {
-        out.print(", ");
-      }
-      if (col == null) {
-        out.print("null");
-      } else if (col instanceof String) {
-        out.print("\"");
-        out.print(StringEscapeUtils.escapeJava((String) col));
-        out.print("\"");
-      } else if (col instanceof Long) {
-        out.print(col);
-        out.print("L");
-      } else if (col instanceof Double) {
-        out.print(col);
-        out.print("D");
-      } else if (col instanceof Object[]) {
-        printArray(array, out);
-      } else if (col instanceof List) {
-        printList((List<?>) col, out);
-      } else {
-        out.print(col);
-      }
+    private String getResult()
+    {
+      return sb.toString();
     }
-    out.print(post);
+
+    private void printArray(final Object[] array)
+    {
+      printArrayImpl(array, "new Object[]{", "}");
+    }
+
+    private void printList(final List<?> list)
+    {
+      printArrayImpl(list.toArray(new Object[0]), "ImmutableList.of(", ")");
+    }
+
+    private void printArrayImpl(final Object[] array, final String pre, final String post)
+    {
+      sb.append(pre);
+      for (int colIndex = 0; colIndex < array.length; colIndex++) {
+        Object col = array[colIndex];
+        if (colIndex > 0) {
+          sb.append(", ");
+        }
+        if (col == null) {
+          sb.append("null");
+        } else if (col instanceof String) {
+          outprint("\"");
+          outprint(StringEscapeUtils.escapeJava((String) col));
+          outprint("\"");
+        } else if (col instanceof Long) {
+          outprint(col);
+          outprint("L");
+        } else if (col instanceof Double) {
+          outprint(col);
+          outprint("D");
+        } else if (col instanceof Float) {
+          outprint(col);
+          outprint("F");
+        } else if (col instanceof Object[]) {
+          printArray(array);
+        } else if (col instanceof List) {
+          printList((List<?>) col);
+        } else {
+          outprint(col);
+        }
+      }
+      outprint(post);
+    }
+
+    private void outprint(Object post)
+    {
+      sb.append(post);
+    }
   }
 }

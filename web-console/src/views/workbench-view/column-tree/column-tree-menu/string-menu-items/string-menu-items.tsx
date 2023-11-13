@@ -19,11 +19,11 @@
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { C, F, N, SqlJoinPart, T } from '@druid-toolkit/query';
+import { C, F, N, SqlJoinPart, SqlPlaceholder, T } from '@druid-toolkit/query';
 import type { JSX } from 'react';
 import React from 'react';
 
-import { EMPTY_LITERAL, prettyPrintSql } from '../../../../../utils';
+import { prettyPrintSql } from '../../../../../utils';
 import { getJoinColumns } from '../../column-tree';
 
 export interface StringMenuItemsProps {
@@ -53,9 +53,9 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     return (
       <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(column.isNotNull())}
-        {filterMenuItem(column.equal(EMPTY_LITERAL), false)}
-        {filterMenuItem(column.like(EMPTY_LITERAL), false)}
-        {filterMenuItem(F('REGEXP_LIKE', column, EMPTY_LITERAL), false)}
+        {filterMenuItem(column.equal(SqlPlaceholder.PLACEHOLDER), false)}
+        {filterMenuItem(column.like(SqlPlaceholder.PLACEHOLDER), false)}
+        {filterMenuItem(F('REGEXP_LIKE', column, SqlPlaceholder.PLACEHOLDER), false)}
       </MenuItem>
     );
   }
@@ -136,7 +136,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(F.countDistinct(column), `dist_${columnName}`)}
         {aggregateMenuItem(
-          F.count().addWhereExpression(column.equal(EMPTY_LITERAL)),
+          F.count().addWhereExpression(column.equal(SqlPlaceholder.PLACEHOLDER)),
           `filtered_dist_${columnName}`,
           false,
         )}

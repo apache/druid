@@ -25,6 +25,8 @@ import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputStats;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -80,7 +82,10 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             false,
             0
         ),
-        files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator(),
+        CloseableIterators.withEmptyBaggage(
+            files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
+        ),
+        SystemFieldDecoratorFactory.NONE,
         temporaryFolder.newFolder()
     );
 
@@ -123,23 +128,28 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             false,
             0
         ),
-        ImmutableList.of(
-            new HttpEntity(new URI("testscheme://some/path"), null, null)
-            {
-              @Override
-              protected int getMaxRetries()
-              {
-                // override so this test does not take like 4 minutes to run
-                return 2;
-              }
-            }
+        CloseableIterators.withEmptyBaggage(
+            ImmutableList.of(
+                new HttpEntity(new URI("testscheme://some/path"), null, null)
+                {
+                  @Override
+                  protected int getMaxRetries()
+                  {
+                    // override so this test does not take like 4 minutes to run
+                    return 2;
+                  }
+                }
 
-        ).iterator(),
+            ).iterator()
+        ),
+        SystemFieldDecoratorFactory.NONE,
         temporaryFolder.newFolder()
     );
-    String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
-    Exception exception = Assert.assertThrows(RuntimeException.class, firehose::read);
 
-    Assert.assertTrue(exception.getMessage().contains(expectedMessage));
+    try (CloseableIterator<InputRow> readIterator = firehose.read()) {
+      String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
+      Exception exception = Assert.assertThrows(RuntimeException.class, readIterator::hasNext);
+      Assert.assertTrue(exception.getMessage().contains(expectedMessage));
+    }
   }
 }

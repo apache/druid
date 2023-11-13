@@ -333,17 +333,26 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
             final String aggregatorName = entry.getKey();
             final AggregatorFactory aggregator = entry.getValue();
-            AggregatorFactory merged = aggregators.get(aggregatorName);
-            if (merged != null) {
-              try {
-                merged = merged.getMergingFactory(aggregator);
-              }
-              catch (AggregatorFactoryNotMergeableException e) {
+            final boolean isMergedYet = aggregators.containsKey(aggregatorName);
+            AggregatorFactory merged;
+
+            if (!isMergedYet) {
+              merged = aggregator;
+            } else {
+              merged = aggregators.get(aggregatorName);
+
+              if (merged != null && aggregator != null) {
+                try {
+                  merged = merged.getMergingFactory(aggregator);
+                }
+                catch (AggregatorFactoryNotMergeableException e) {
+                  merged = null;
+                }
+              } else {
                 merged = null;
               }
-            } else {
-              merged = aggregator;
             }
+
             aggregators.put(aggregatorName, merged);
           }
         }

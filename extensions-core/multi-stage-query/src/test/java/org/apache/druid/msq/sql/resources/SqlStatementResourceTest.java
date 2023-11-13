@@ -75,8 +75,13 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authorizer;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.ResultFormat;
@@ -239,8 +244,10 @@ public class SqlStatementResourceTest extends MSQTestBase
               new ArrayDeque<>(),
               null,
               0,
+              new HashMap<>(),
               1,
-              2
+              2,
+              null
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
@@ -304,8 +311,10 @@ public class SqlStatementResourceTest extends MSQTestBase
               new ArrayDeque<>(),
               null,
               0,
+              new HashMap<>(),
               1,
-              2
+              2,
+              null
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
@@ -319,8 +328,6 @@ public class SqlStatementResourceTest extends MSQTestBase
       )
   );
   private static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
-  private static final Map<String, Object> ROW1 = ImmutableMap.of("_time", 123, "alias", "foo", "market", "bar");
-  private static final Map<String, Object> ROW2 = ImmutableMap.of("_time", 234, "alias", "foo1", "market", "bar1");
   public static final ImmutableList<ColumnNameAndTypes> COL_NAME_AND_TYPES = ImmutableList.of(
       new ColumnNameAndTypes(
           "_time",
@@ -340,6 +347,47 @@ public class SqlStatementResourceTest extends MSQTestBase
   );
   private static final String FAILURE_MSG = "failure msg";
   private static SqlStatementResource resource;
+
+  private static String SUPERUSER = "superuser";
+  private static String STATE_R_USER = "stateR";
+  private static String STATE_W_USER = "stateW";
+  private static String STATE_RW_USER = "stateRW";
+
+  private AuthorizerMapper authorizerMapper = new AuthorizerMapper(null)
+  {
+    @Override
+    public Authorizer getAuthorizer(String name)
+    {
+      return (authenticationResult, resource, action) -> {
+        if (SUPERUSER.equals(authenticationResult.getIdentity())) {
+          return Access.OK;
+        }
+
+        switch (resource.getType()) {
+          case ResourceType.DATASOURCE:
+          case ResourceType.VIEW:
+          case ResourceType.QUERY_CONTEXT:
+          case ResourceType.EXTERNAL:
+            return Access.OK;
+          case ResourceType.STATE:
+            String identity = authenticationResult.getIdentity();
+            if (action == Action.READ) {
+              if (STATE_R_USER.equals(identity) || STATE_RW_USER.equals(identity)) {
+                return Access.OK;
+              }
+            } else if (action == Action.WRITE) {
+              if (STATE_W_USER.equals(identity) || STATE_RW_USER.equals(identity)) {
+                return Access.OK;
+              }
+            }
+            return Access.DENIED;
+
+          default:
+            return Access.DENIED;
+        }
+      };
+    }
+  };
 
   @Mock
   private OverlordClient overlordClient;
@@ -633,12 +681,22 @@ public class SqlStatementResourceTest extends MSQTestBase
     return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
   }
 
-  public static MockHttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
+  private static MockHttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
   {
     MockHttpServletRequest req = new MockHttpServletRequest();
     req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
     req.remoteAddr = "1.2.3.4";
     return req;
+  }
+
+  private static AuthenticationResult makeAuthResultForUser(String user)
+  {
+    return new AuthenticationResult(
+        user,
+        AuthConfig.ALLOW_ALL_NAME,
+        null,
+        null
+    );
   }
 
   @Before
@@ -648,10 +706,10 @@ public class SqlStatementResourceTest extends MSQTestBase
     setupMocks(overlordClient);
     resource = new SqlStatementResource(
         sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         overlordClient,
-        new LocalFileStorageConnector(tmpFolder.newFolder("local"))
+        new LocalFileStorageConnector(tmpFolder.newFolder("local")),
+        authorizerMapper
     );
   }
 
@@ -917,13 +975,42 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-  public void testForbiddenRequest()
+  public void testAPIBehaviourWithSuperUsers()
   {
+    Assert.assertEquals(
+        Response.Status.OK.getStatusCode(),
+        resource.doGetStatus(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(makeAuthResultForUser(SUPERUSER))
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.BAD_REQUEST.getStatusCode(),
+        resource.doGetResults(
+            RUNNING_SELECT_MSQ_QUERY,
+            1L,
+            null,
+            makeExpectedReq(makeAuthResultForUser(SUPERUSER))
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.ACCEPTED.getStatusCode(),
+        resource.deleteQuery(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(makeAuthResultForUser(SUPERUSER))
+        ).getStatus()
+    );
+  }
+
+  @Test
+  public void testAPIBehaviourWithDifferentUserAndNoStatePermission()
+  {
+    AuthenticationResult differentUserAuthResult = makeAuthResultForUser("differentUser");
     Assert.assertEquals(
         Response.Status.FORBIDDEN.getStatusCode(),
         resource.doGetStatus(
             RUNNING_SELECT_MSQ_QUERY,
-            makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)
+            makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
     Assert.assertEquals(
@@ -932,14 +1019,101 @@ public class SqlStatementResourceTest extends MSQTestBase
             RUNNING_SELECT_MSQ_QUERY,
             1L,
             null,
-            makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)
+            makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
     Assert.assertEquals(
         Response.Status.FORBIDDEN.getStatusCode(),
         resource.deleteQuery(
             RUNNING_SELECT_MSQ_QUERY,
-            makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+  }
+
+  @Test
+  public void testAPIBehaviourWithDifferentUserAndStateRPermission()
+  {
+    AuthenticationResult differentUserAuthResult = makeAuthResultForUser(STATE_R_USER);
+    Assert.assertEquals(
+        Response.Status.OK.getStatusCode(),
+        resource.doGetStatus(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.BAD_REQUEST.getStatusCode(),
+        resource.doGetResults(
+            RUNNING_SELECT_MSQ_QUERY,
+            1L,
+            null,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.FORBIDDEN.getStatusCode(),
+        resource.deleteQuery(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+  }
+
+  @Test
+  public void testAPIBehaviourWithDifferentUserAndStateWPermission()
+  {
+    AuthenticationResult differentUserAuthResult = makeAuthResultForUser(STATE_W_USER);
+    Assert.assertEquals(
+        Response.Status.FORBIDDEN.getStatusCode(),
+        resource.doGetStatus(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.FORBIDDEN.getStatusCode(),
+        resource.doGetResults(
+            RUNNING_SELECT_MSQ_QUERY,
+            1L,
+            null,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.ACCEPTED.getStatusCode(),
+        resource.deleteQuery(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+  }
+
+  @Test
+  public void testAPIBehaviourWithDifferentUserAndStateRWPermission()
+  {
+    AuthenticationResult differentUserAuthResult = makeAuthResultForUser(STATE_RW_USER);
+    Assert.assertEquals(
+        Response.Status.OK.getStatusCode(),
+        resource.doGetStatus(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.BAD_REQUEST.getStatusCode(),
+        resource.doGetResults(
+            RUNNING_SELECT_MSQ_QUERY,
+            1L,
+            null,
+            makeExpectedReq(differentUserAuthResult)
+        ).getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.ACCEPTED.getStatusCode(),
+        resource.deleteQuery(
+            RUNNING_SELECT_MSQ_QUERY,
+            makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
   }

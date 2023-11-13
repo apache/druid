@@ -20,8 +20,10 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.net.HostAndPort;
 import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
@@ -100,6 +102,25 @@ public class TaskLocation
   public String getK8sPodName()
   {
     return k8sPodName;
+  }
+
+  @JsonIgnore
+  @Nullable
+  public String getLocation()
+  {
+    if (k8sPodName != null) {
+      return k8sPodName;
+    } else if (host == null) {
+      return null;
+    } else {
+      final int thePort;
+      if (tlsPort >= 0) {
+        thePort = tlsPort;
+      } else {
+        thePort = port;
+      }
+      return HostAndPort.fromParts(host, thePort).toString();
+    }
   }
 
   public URL makeURL(final String encodedPathAndQueryString) throws MalformedURLException

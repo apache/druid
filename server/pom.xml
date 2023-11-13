@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>28.0.0-SNAPSHOT</version>
+        <version>29.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -47,6 +47,11 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-gcp-common</artifactId>
             <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -134,8 +139,8 @@
             <artifactId>tesla-aether</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.spy</groupId>
-            <artifactId>spymemcached</artifactId>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>elasticache-java-cluster-client</artifactId>
         </dependency>
         <dependency>
             <groupId>org.lz4</groupId>
@@ -307,10 +312,10 @@
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-guice</artifactId>
         </dependency>
-    	<dependency>
+    	  <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-    	</dependency>
+    	  </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -443,6 +448,8 @@
                       <!-- Tested in the SQL layer, but, oddly, not in this module. -->
                         <exclude>org/apache/druid/server/QueryResponse.class</exclude>
                         <exclude>org/apache/druid/curator/CuratorModule.class</exclude>
+                        <!-- Guice providers where unit tests would be tightly-coupled and not useful -->
+                        <exclude>org/apache/druid/server/SubqueryGuardrailHelperProvider.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>

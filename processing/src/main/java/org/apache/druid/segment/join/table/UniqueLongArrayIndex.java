@@ -24,13 +24,19 @@ import it.unimi.dsi.fastutil.ints.IntSortedSets;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nullable;
+
 /**
  * An {@link IndexedTable.Index} backed by an int array.
  *
- * This is for long-typed keys whose values all fall in a "reasonable" range.
+ * This is for nonnull long-typed keys whose values all fall in a "reasonable" range. Built by
+ * {@link RowBasedIndexBuilder#build()} when these conditions are met.
  */
 public class UniqueLongArrayIndex implements IndexedTable.Index
 {
+  /**
+   * Array index is the key, value is the row number.
+   */
   private final int[] index;
   private final long minKey;
 
@@ -55,14 +61,19 @@ public class UniqueLongArrayIndex implements IndexedTable.Index
   }
 
   @Override
-  public boolean areKeysUnique()
+  public boolean areKeysUnique(final boolean includeNull)
   {
     return true;
   }
 
   @Override
-  public IntSortedSet find(Object key)
+  public IntSortedSet find(@Nullable Object key)
   {
+    if (key == null) {
+      // This index class never contains null keys.
+      return IntSortedSets.EMPTY_SET;
+    }
+
     final Long longKey = DimensionHandlerUtils.convertObjectToLong(key);
 
     if (longKey != null) {

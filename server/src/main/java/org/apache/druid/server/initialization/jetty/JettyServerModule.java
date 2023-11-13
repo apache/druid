@@ -512,15 +512,15 @@ public class JettyServerModule extends JerseyServletModule
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-      emitter.emit(builder.build("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
+      emitter.emit(builder.setMetric("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
       if (jettyServerThreadPool != null) {
-        emitter.emit(builder.build("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
-        emitter.emit(builder.build("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
-        emitter.emit(builder.build("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
-        emitter.emit(builder.build("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
-        emitter.emit(builder.build("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
-        emitter.emit(builder.build("jetty/threadPool/queueSize", jettyServerThreadPool.getQueueSize()));
-        emitter.emit(builder.build("jetty/threadPool/busy", jettyServerThreadPool.getBusyThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
+        emitter.emit(builder.setMetric("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/queueSize", jettyServerThreadPool.getQueueSize()));
+        emitter.emit(builder.setMetric("jetty/threadPool/busy", jettyServerThreadPool.getBusyThreads()));
       }
 
       return true;

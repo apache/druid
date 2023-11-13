@@ -81,38 +81,38 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
   @Test
   public void testNullDimensionSelectorCanBeBoolean()
   {
-    Boolean resultMatchNull = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNull = ValueMatchers.toConstantMatcherTypeIfPossible(
         DimensionSelector.constant(null),
         false,
         string -> string == null
     );
     Assert.assertNotNull(resultMatchNull);
-    Assert.assertTrue(resultMatchNull);
+    Assert.assertEquals(ConstantMatcherType.ALL_TRUE, resultMatchNull);
 
-    Boolean resultMatchNotNull = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNotNull = ValueMatchers.toConstantMatcherTypeIfPossible(
         DimensionSelector.constant(null),
         false,
         string -> string != null
     );
     Assert.assertNotNull(resultMatchNotNull);
-    Assert.assertFalse(resultMatchNotNull);
+    Assert.assertEquals(ConstantMatcherType.ALL_UNKNOWN, resultMatchNotNull);
 
-    Boolean resultMatchNonNilConstant = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNonNilConstant = ValueMatchers.toConstantMatcherTypeIfPossible(
         supplierSingleConstant.get().makeDimensionSelector(new SimpleAscendingOffset(1), null),
         false,
         string -> string != null
     );
     Assert.assertNotNull(resultMatchNonNilConstant);
-    Assert.assertTrue(resultMatchNonNilConstant);
+    Assert.assertEquals(ConstantMatcherType.ALL_TRUE, resultMatchNonNilConstant);
 
-    Boolean resultMatchNonNil = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNonNil = ValueMatchers.toConstantMatcherTypeIfPossible(
         supplierSingle.get().makeDimensionSelector(new SimpleAscendingOffset(1), null),
         false,
         string -> string != null
     );
     Assert.assertNull(resultMatchNonNil);
 
-    Boolean resultMatchNonNilMulti = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNonNilMulti = ValueMatchers.toConstantMatcherTypeIfPossible(
         supplierMulti.get().makeDimensionSelector(new SimpleAscendingOffset(1), null),
         true,
         string -> string != null
@@ -123,38 +123,38 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
   @Test
   public void testNilVectorSelectorCanBeBoolean()
   {
-    Boolean resultMatchNull = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNull = ValueMatchers.toConstantMatcherTypeIfPossible(
         NilVectorSelector.create(new NoFilterVectorOffset(10, 0, 100)),
         false,
         string -> string == null
     );
     Assert.assertNotNull(resultMatchNull);
-    Assert.assertTrue(resultMatchNull);
+    Assert.assertEquals(ConstantMatcherType.ALL_TRUE, resultMatchNull);
 
-    Boolean resultMatchNotNull = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNotNull = ValueMatchers.toConstantMatcherTypeIfPossible(
         NilVectorSelector.create(new NoFilterVectorOffset(10, 0, 100)),
         false,
         string -> string != null
     );
     Assert.assertNotNull(resultMatchNotNull);
-    Assert.assertFalse(resultMatchNotNull);
+    Assert.assertEquals(ConstantMatcherType.ALL_UNKNOWN, resultMatchNotNull);
 
-    Boolean resultMatchNotNilConstant = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNotNilConstant = ValueMatchers.toConstantMatcherTypeIfPossible(
         supplierSingleConstant.get().makeSingleValueDimensionVectorSelector(new NoFilterVectorOffset(10, 0, 1)),
         false,
         string -> string != null
     );
     Assert.assertNotNull(resultMatchNotNilConstant);
-    Assert.assertTrue(resultMatchNotNilConstant);
+    Assert.assertEquals(ConstantMatcherType.ALL_TRUE, resultMatchNotNilConstant);
 
-    Boolean resultMatchNotNil = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNotNil = ValueMatchers.toConstantMatcherTypeIfPossible(
         supplierSingle.get().makeSingleValueDimensionVectorSelector(new NoFilterVectorOffset(10, 0, 1)),
         false,
         string -> string != null
     );
     Assert.assertNull(resultMatchNotNil);
 
-    Boolean resultMatchNotNilMulti = ValueMatchers.toBooleanIfPossible(
+    ConstantMatcherType resultMatchNotNilMulti = ValueMatchers.toConstantMatcherTypeIfPossible(
         supplierMulti.get().makeSingleValueDimensionVectorSelector(new NoFilterVectorOffset(10, 0, 1)),
         true,
         string -> string != null

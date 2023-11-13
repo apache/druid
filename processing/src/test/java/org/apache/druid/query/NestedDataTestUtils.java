@@ -44,6 +44,7 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
@@ -113,6 +114,20 @@ public class NestedDataTestUtils
                         )
                     )
                     .build();
+
+  public static final DimensionsSpec TSV_V4_SCHEMA =
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        Arrays.asList(
+                            new NestedDataColumnSchema("dim", 4),
+                            new NestedDataColumnSchema("nest_json", 4),
+                            new NestedDataColumnSchema("nester_json", 4),
+                            new NestedDataColumnSchema("variant_json", 4),
+                            new NestedDataColumnSchema("list_json", 4),
+                            new NestedDataColumnSchema("nonexistent", 4)
+                        )
+                    )
+                    .build();
   public static final InputRowSchema AUTO_SCHEMA = new InputRowSchema(
       TIMESTAMP_SPEC,
       AUTO_DISCOVERY,
@@ -165,6 +180,21 @@ public class NestedDataTestUtils
         closer,
         Granularities.NONE,
         TSV_SCHEMA,
+        true
+    );
+  }
+
+  public static List<Segment> createSimpleSegmentsTsvV4(
+      TemporaryFolder tempFolder,
+      Closer closer
+  )
+      throws Exception
+  {
+    return createSimpleNestedTestDataTsvSegments(
+        tempFolder,
+        closer,
+        Granularities.NONE,
+        TSV_V4_SCHEMA,
         true
     );
   }

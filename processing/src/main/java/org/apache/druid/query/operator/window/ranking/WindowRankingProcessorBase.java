@@ -28,6 +28,7 @@ import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -100,4 +101,27 @@ public abstract class WindowRankingProcessorBase implements Processor
     return "groupingCols=" + groupingCols +
            ", outputColumn='" + outputColumn + '\'';
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(groupingCols, outputColumn);
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    WindowRankingProcessorBase other = (WindowRankingProcessorBase) obj;
+    return Objects.equals(groupingCols, other.groupingCols) && Objects.equals(outputColumn, other.outputColumn);
+  }
+
 }

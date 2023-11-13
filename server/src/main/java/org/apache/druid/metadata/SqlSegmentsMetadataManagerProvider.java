@@ -17,14 +17,12 @@
  * under the License.
  */
 
-
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-
 
 public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManagerProvider
 {
@@ -60,6 +58,7 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
           public void start()
           {
             connector.createSegmentTable();
+            connector.createUpgradeSegmentsTable();
           }
 
           @Override

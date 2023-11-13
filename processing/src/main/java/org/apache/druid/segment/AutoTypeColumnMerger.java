@@ -228,13 +228,12 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       } else {
         // all the bells and whistles
         logicalType = ColumnType.NESTED_DATA;
-        final NestedDataColumnSerializer defaultSerializer = new NestedDataColumnSerializer(
+        serializer = new NestedDataColumnSerializer(
             name,
             indexSpec,
             segmentWriteOutMedium,
             closer
         );
-        serializer = defaultSerializer;
       }
 
       serializer.openDictionaryWriter();

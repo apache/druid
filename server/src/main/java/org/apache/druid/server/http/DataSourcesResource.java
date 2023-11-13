@@ -61,6 +61,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -95,6 +96,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @Path("/druid/coordinator/v1/datasources")
 public class DataSourcesResource
@@ -185,7 +187,8 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(
+        dataSourceName);
     return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
   }
 
@@ -479,7 +482,8 @@ public class DataSourcesResource
       return Response.ok(
           ImmutableMap.of(
               dataSourceName,
-              100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments()) / (double) segmentsLoadStatistics.getNumPublishedSegments())
+              100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments())
+                     / (double) segmentsLoadStatistics.getNumPublishedSegments())
           )
       ).build();
     }
@@ -487,7 +491,7 @@ public class DataSourcesResource
 
   private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments)
   {
-    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
+    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getLoadInfoForAllSegments();
     int numPublishedSegments = 0;
     int numUnavailableSegments = 0;
     int numLoadedSegments = 0;
@@ -870,27 +874,33 @@ public class DataSourcesResource
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
-      // dropped means a segment will never be handed off, i.e it completed hand off
-      // init to true, reset to false only if this segment can be loaded by rules
-      boolean dropped = true;
+
+      // A segment that is not eligible for load will never be handed off
+      boolean eligibleForLoad = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(theInterval, now)) {
-          if (rule instanceof LoadRule) {
-            dropped = false;
-          }
+          eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
           break;
         }
       }
-      if (dropped) {
+      if (!eligibleForLoad) {
         return Response.ok(true).build();
       }
 
-      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+      VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
           new TableDataSource(dataSourceName)
       );
       if (timeline == null) {
-        log.debug("No timeline found for datasource[%s]", dataSourceName);
+        log.error("No timeline found for datasource[%s]", dataSourceName);
         return Response.ok(false).build();
+      }
+
+      // A segment with version lower than that of the latest chunk might never get handed off
+      // If there are multiple versions of this segment (due to a concurrent replace task),
+      // only the latest version would get handed off
+      List<TimelineObjectHolder<String, SegmentLoadInfo>> timelineObjects = timeline.lookup(Intervals.of(interval));
+      if (!timelineObjects.isEmpty() && timelineObjects.get(0).getVersion().compareTo(version) > 0) {
+        return Response.ok(true).build();
       }
 
       Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =

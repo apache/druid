@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -2221,6 +2222,236 @@ public interface Function extends NamedFunction
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
+    }
+  }
+
+  /**
+   * SQL function "x IS NOT DISTINCT FROM y". Very similar to "x = y", i.e. {@link BinEqExpr}, except this function
+   * never returns null, and this function considers NULL as a value, so NULL itself is not-distinct-from NULL. For
+   * example: `x == null` returns `null` in SQL-compatible null handling mode, but `notdistinctfrom(x, null)` is
+   * true if `x` is null.
+   */
+  class IsNotDistinctFromFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notdistinctfrom";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval leftVal = args.get(0).eval(bindings);
+      final ExprEval rightVal = args.get(1).eval(bindings);
+
+      if (leftVal.value() == null || rightVal.value() == null) {
+        return ExprEval.ofLongBoolean(leftVal.value() == null && rightVal.value() == null);
+      }
+
+      // Code copied and adapted from BinaryBooleanOpExprBase and BinEqExpr.
+      // The code isn't shared due to differences in code structure: BinaryBooleanOpExprBase + BinEqExpr have logic
+      // interleaved between parent and child class, but we can't use BinaryBooleanOpExprBase as a parent here, because
+      // (a) this is a function, not an expr; and (b) our logic for handling and returning nulls is different from most
+      // binary exprs, where null in means null out.
+      final ExpressionType comparisonType = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
+      switch (comparisonType.getType()) {
+        case STRING:
+          return ExprEval.ofLongBoolean(Objects.equals(leftVal.asString(), rightVal.asString()));
+        case LONG:
+          return ExprEval.ofLongBoolean(leftVal.asLong() == rightVal.asLong());
+        case ARRAY:
+          final ExpressionType type = Preconditions.checkNotNull(
+              ExpressionTypeConversion.leastRestrictiveType(leftVal.type(), rightVal.type()),
+              "Cannot be null because ExprEval type is not nullable"
+          );
+          return ExprEval.ofLongBoolean(
+              type.getNullableStrategy().compare(leftVal.castTo(type).asArray(), rightVal.castTo(type).asArray()) == 0
+          );
+        case DOUBLE:
+        default:
+          if (leftVal.isNumericNull() || rightVal.isNumericNull()) {
+            return ExprEval.ofLongBoolean(leftVal.isNumericNull() && rightVal.isNumericNull());
+          } else {
+            return ExprEval.ofLongBoolean(leftVal.asDouble() == rightVal.asDouble());
+          }
+      }
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 2);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "x IS DISTINCT FROM y". Very similar to "x <> y", i.e. {@link BinNeqExpr}, except this function
+   * never returns null.
+   *
+   * Implemented as a subclass of IsNotDistinctFromFunc to keep the code simple, and because we expect "notdistinctfrom"
+   * to be more common than "isdistinctfrom" in actual usage.
+   */
+  class IsDistinctFromFunc extends IsNotDistinctFromFunc
+  {
+    @Override
+    public String name()
+    {
+      return "isdistinctfrom";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      return ExprEval.ofLongBoolean(!super.apply(args, bindings).asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 2);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "IS NOT FALSE". Different from "IS TRUE" in that it returns true for NULL as well.
+   */
+  class IsNotFalseFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notfalse";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.value() == null || arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "IS NOT TRUE". Different from "IS FALSE" in that it returns true for NULL as well.
+   */
+  class IsNotTrueFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "nottrue";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.value() == null || !arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "IS FALSE".
+   */
+  class IsFalseFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "isfalse";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.value() != null && !arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "IS TRUE".
+   */
+  class IsTrueFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "istrue";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final ExprEval arg = args.get(0).eval(bindings);
+      return ExprEval.ofLongBoolean(arg.asBoolean());
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
     }
   }
 

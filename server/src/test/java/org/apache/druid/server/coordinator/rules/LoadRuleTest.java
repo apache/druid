@@ -114,6 +114,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 2));
+    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
@@ -145,7 +146,7 @@ public class LoadRuleTest
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(balancerStrategy)
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegments(usedSegments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withSmartSegmentLoading(false)
@@ -267,6 +268,7 @@ public class LoadRuleTest
         .build();
 
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 0, Tier.T2, 0));
+    Assert.assertFalse(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
@@ -284,7 +286,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
     LoadRule rule = loadForever(ImmutableMap.of("invalidTier", 1, Tier.T1, 1));
-
+    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "invalidTier", DS_WIKI));
@@ -335,7 +337,7 @@ public class LoadRuleTest
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(balancerStrategy)
-        .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
+        .withUsedSegments(dataSegment1, dataSegment2, dataSegment3)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withSmartSegmentLoading(false)
@@ -347,6 +349,7 @@ public class LoadRuleTest
         .build();
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
+    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats1 = runRuleAndGetStats(rule, dataSegment1, params);
     CoordinatorRunStats stats2 = runRuleAndGetStats(rule, dataSegment2, params);
     CoordinatorRunStats stats3 = runRuleAndGetStats(rule, dataSegment3, params);
@@ -370,6 +373,7 @@ public class LoadRuleTest
 
     // Load rule requires 1 replica on each tier
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 1));
+    Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
     DataSegment segment = createDataSegment(DS_WIKI);
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
@@ -427,7 +431,7 @@ public class LoadRuleTest
 
     DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, segment1, segment2);
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 0));
-
+    Assert.assertFalse(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment1, params);
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, segment1.getDataSource()));
     Assert.assertTrue(server1.getPeon().getSegmentsToDrop().contains(segment1));
@@ -531,6 +535,7 @@ public class LoadRuleTest
   {
     EqualsVerifier.forClass(LoadRule.class)
                   .withNonnullFields("tieredReplicants")
+                  .withIgnoredFields("shouldSegmentBeLoaded")
                   .usingGetClass()
                   .verify();
   }

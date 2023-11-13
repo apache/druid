@@ -114,7 +114,7 @@ public class RunRulesTest
   /**
    * Nodes:
    * normal - 2 replicants
-   * maxNonPrimaryReplicantsToLoad - 10
+   * replicationThrottleLimit - 10
    * Expect only 34 segments to be loaded despite there being 48 primary + non-primary replicants to load!
    */
   @Test
@@ -152,7 +152,7 @@ public class RunRulesTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
-                .withMaxNonPrimaryReplicantsToLoad(10)
+                .withReplicationThrottleLimit(10)
                 .withSmartSegmentLoading(false)
                 .build()
         )
@@ -171,7 +171,7 @@ public class RunRulesTest
    * Nodes:
    * normal - 2 replicants
    * hot - 2 replicants
-   * maxNonPrimaryReplicantsToLoad - 48
+   * replicationThrottleLimit - 48
    * Expect only 72 segments to be loaded despite there being 96 primary + non-primary replicants to load!
    */
   @Test
@@ -216,7 +216,7 @@ public class RunRulesTest
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
-                                    .withMaxNonPrimaryReplicantsToLoad(10)
+                                    .withReplicationThrottleLimit(10)
                                     .withSmartSegmentLoading(false)
                                     .build()
         )
@@ -225,7 +225,6 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    // maxNonPrimaryReplicantsToLoad takes effect on hot tier, but not normal tier
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
 
@@ -337,7 +336,7 @@ public class RunRulesTest
     return DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc().minusDays(1))
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(dataSegments)
+        .withUsedSegments(dataSegments)
         .withDatabaseRuleManager(databaseRuleManager);
   }
 
@@ -830,7 +829,7 @@ public class RunRulesTest
 
     stats = runDutyAndGetStats(
         createCoordinatorRuntimeParams(druidCluster)
-            .withUsedSegmentsInTest(overFlowSegment)
+            .withUsedSegments(overFlowSegment)
             .withBalancerStrategy(balancerStrategy)
             .withSegmentAssignerUsing(loadQueueManager)
             .build()
@@ -950,7 +949,7 @@ public class RunRulesTest
                     .build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegmentsInTest(longerUsedSegments)
+        .withUsedSegments(longerUsedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
@@ -1004,7 +1003,7 @@ public class RunRulesTest
     ).build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegments(usedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .withSegmentAssignerUsing(loadQueueManager)

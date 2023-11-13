@@ -77,7 +77,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.apache.druid.segment.transform.Transformer;
+import org.apache.druid.segment.transform.TransformedInputRow;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -713,8 +713,8 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
       return ((MapBasedInputRow) inputRow).getEvent().toString();
     }
 
-    if (inputRow instanceof Transformer.TransformedInputRow) {
-      InputRow innerRow = ((Transformer.TransformedInputRow) inputRow).getBaseRow();
+    if (inputRow instanceof TransformedInputRow) {
+      InputRow innerRow = ((TransformedInputRow) inputRow).getBaseRow();
       if (innerRow instanceof MapBasedInputRow) {
         return ((MapBasedInputRow) innerRow).getEvent().toString();
       }

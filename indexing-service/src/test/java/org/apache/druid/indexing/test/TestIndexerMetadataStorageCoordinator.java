@@ -30,6 +30,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -88,7 +89,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval)
   {
     return ImmutableList.of();
   }
@@ -112,7 +113,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval, @Nullable Integer limit)
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit
+  )
   {
     synchronized (unusedSegments) {
       Stream<DataSegment> resultStream = unusedSegments.stream();
@@ -134,7 +139,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+  public Set<DataSegment> commitSegments(Set<DataSegment> segments)
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
@@ -157,14 +162,43 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public SegmentPublishResult announceHistoricalSegments(
+  public SegmentPublishResult commitReplaceSegments(
+      Set<DataSegment> replaceSegments,
+      Set<ReplaceTaskLock> locksHeldByReplaceTask
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(replaceSegments));
+  }
+
+  @Override
+  public SegmentPublishResult commitAppendSegments(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(appendSegments));
+  }
+
+  @Override
+  public SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  )
+  {
+    return SegmentPublishResult.ok(commitSegments(appendSegments));
+  }
+
+  @Override
+  public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
-      DataSourceMetadata oldCommitMetadata,
-      DataSourceMetadata newCommitMetadata
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata
   )
   {
     // Don't actually compare metadata, just do it!
-    return SegmentPublishResult.ok(announceHistoricalSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(segments));
   }
 
   @Override
@@ -201,6 +235,15 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         maxVersion,
         partialShardSpec.complete(objectMapper, 0, 0)
     );
+  }
+
+  @Override
+  public Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+      Set<DataSegment> replaceSegments,
+      Set<String> activeBaseSequenceNames
+  )
+  {
+    return Collections.emptyMap();
   }
 
   @Override

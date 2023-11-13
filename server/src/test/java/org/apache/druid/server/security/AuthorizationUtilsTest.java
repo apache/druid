@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import com.google.common.base.Function;
+import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -110,5 +111,13 @@ public class AuthorizationUtilsTest
                      .anyMatch(ra -> action == ra.getAction() && ".*".equals(ra.getResource().getName()))
       );
     }
+  }
+
+  @Test
+  public void testAuthorizationAttributeIfNeeded()
+  {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
+    Assert.assertEquals(true, request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED));
   }
 }

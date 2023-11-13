@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -46,6 +47,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -364,17 +366,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .postAggregators(
-                    expressionPostAgg("p0", "'foo'"),
-                    expressionPostAgg("p1", "'xfoo'"),
-                    expressionPostAgg("p2", "'foo'"),
-                    expressionPostAgg("p3", "' foo'"),
-                    expressionPostAgg("p4", "'foo'"),
-                    expressionPostAgg("p5", "'foo'"),
-                    expressionPostAgg("p6", "'foo'"),
-                    expressionPostAgg("p7", "'foo '"),
-                    expressionPostAgg("p8", "'foox'"),
-                    expressionPostAgg("p9", "' foo'"),
-                    expressionPostAgg("p10", "'xfoo'")
+                    expressionPostAgg("p0", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p1", "'xfoo'", ColumnType.STRING),
+                    expressionPostAgg("p2", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p3", "' foo'", ColumnType.STRING),
+                    expressionPostAgg("p4", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p5", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p6", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p7", "'foo '", ColumnType.STRING),
+                    expressionPostAgg("p8", "'foox'", ColumnType.STRING),
+                    expressionPostAgg("p9", "' foo'", ColumnType.STRING),
+                    expressionPostAgg("p10", "'xfoo'", ColumnType.STRING)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -405,12 +407,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .postAggregators(
-                    expressionPostAgg("p0", "'xxfoo'"),
-                    expressionPostAgg("p1", "'fo'"),
-                    expressionPostAgg("p2", "'  foo'"),
-                    expressionPostAgg("p3", "'fooxx'"),
-                    expressionPostAgg("p4", "'fo'"),
-                    expressionPostAgg("p5", "'foo  '")
+                    expressionPostAgg("p0", "'xxfoo'", ColumnType.STRING),
+                    expressionPostAgg("p1", "'fo'", ColumnType.STRING),
+                    expressionPostAgg("p2", "'  foo'", ColumnType.STRING),
+                    expressionPostAgg("p3", "'fooxx'", ColumnType.STRING),
+                    expressionPostAgg("p4", "'fo'", ColumnType.STRING),
+                    expressionPostAgg("p5", "'foo  '", ColumnType.STRING)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1003,7 +1005,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                    new DoubleSumAggregatorFactory("a1", "m2")
                                ))
                                .postAggregators(
-                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)", ColumnType.DOUBLE)
                                )
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
@@ -1028,7 +1030,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 new DoubleSumAggregatorFactory("a1", "m2")
             ))
             .postAggregators(
-                expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                expressionPostAgg("p0", "(exp(\"a0\") + 10)", ColumnType.DOUBLE)
             )
             .context(QUERY_CONTEXT_DEFAULT)
             .build()),
@@ -1945,5 +1947,160 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()),
         ImmutableList.of(new Object[] {0L}));
+  }
+
+  @Test
+  public void testCountDistinctNonApproximateEmptySet()
+  {
+    cannotVectorize();
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) from druid.foo where m1 < -1.0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
+                        .setDimFilter(
+                            range("m1", ColumnType.DOUBLE, null, -1.0, false, true))
+                        .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(
+                    useDefault
+                        ? new CountAggregatorFactory("a0")
+                        : new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("a0"),
+                            notNull("d0"))))
+                .build()
+
+        ),
+        ImmutableList.of(new Object[] {0L}));
+  }
+
+  @Test
+  public void testCountDistinctNonApproximateBasic()
+  {
+    cannotVectorize();
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) from druid.foo where m1 < 111.0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)))
+                        .setDimFilter(
+                            range("m1", ColumnType.DOUBLE, null, 111.0, false, true))
+                        .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(useDefault
+                    ? new CountAggregatorFactory("a0")
+                    : new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0"),
+                        notNull("d0"))))
+                .build()
+
+        ),
+        ImmutableList.of(new Object[] {6L}));
+  }
+
+  @Test
+  public void testCountDistinctNonApproximateWithFilter()
+  {
+    cannotVectorize();
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.FLOAT)))
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"m1\",null)",
+                                ColumnType.FLOAT))
+                        .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(aggregators(
+                    useDefault
+                        ? new CountAggregatorFactory("a0")
+                        : new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("a0"),
+                            notNull("d0"))))
+                .build()
+
+        ),
+        // returning 1 is incorrect result; but with nulls as default that should be expected
+        ImmutableList.of(new Object[] {useDefault ? 1L : 0L}));
+  }
+
+  @Test
+  public void testCountDistinctNonApproximateWithFilterHaving()
+  {
+    cannotVectorize();
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+        "select count(distinct m1) FILTER (where m1 < -1.0) c from druid.foo HAVING c > 3",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(
+                    GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.FLOAT)))
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "case_searched((\"m1\" < -1.0),\"m1\",null)",
+                                ColumnType.FLOAT))
+                        .build())
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setHavingSpec(having(
+                    range("a0", ColumnType.LONG, 3L, null, true, false)
+                    ))
+                .setAggregatorSpecs(aggregators(
+                    useDefault
+                        ? new CountAggregatorFactory("a0")
+                        : new FilteredAggregatorFactory(
+                            new CountAggregatorFactory("a0"),
+                            notNull("d0"))))
+                .build()
+
+        ),
+        ImmutableList.of());
   }
 }

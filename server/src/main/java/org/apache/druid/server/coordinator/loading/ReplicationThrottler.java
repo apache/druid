@@ -19,12 +19,10 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The ReplicationThrottler is used to throttle the number of segment replicas
@@ -33,62 +31,53 @@ import java.util.Set;
  * <ul>
  *   <li>{@link CoordinatorDynamicConfig#getReplicationThrottleLimit()} - Maximum
  *   number of replicas that can be assigned to a tier in a single run.</li>
- *   <li>{@link CoordinatorDynamicConfig#getMaxNonPrimaryReplicantsToLoad()} -
- *   Maximum number of total replicas that can be assigned across all tiers in a
- *   single run.</li>
  * </ul>
  */
 public class ReplicationThrottler
 {
   private final int replicationThrottleLimit;
-  private final int maxReplicaAssignmentsInRun;
 
-  private final Map<String, Integer> tierToNumAssigned = new HashMap<>();
-  private final Set<String> tiersLoadingReplicas = new HashSet<>();
-
-  private int totalReplicasAssignedInRun;
+  private final Object2IntOpenHashMap<String> tierToNumAssigned = new Object2IntOpenHashMap<>();
+  private final Object2IntOpenHashMap<String> tierToMaxAssignments = new Object2IntOpenHashMap<>();
 
   /**
    * Creates a new ReplicationThrottler for use during a single coordinator run.
+   * The number of replicas loading on a tier must always be within the current
+   * {@code replicationThrottleLimit}. Thus, if a tier was already loading {@code k}
+   * replicas at the start of a coordinator run, it may be assigned only
+   * {@code replicationThrottleLimit - k} more replicas during the run.
    *
-   * @param tiersLoadingReplicas       Set of tier names which are already loading
-   *                                   replicas and will not be eligible for loading
-   *                                   more replicas in this run.
-   * @param replicationThrottleLimit   Maximum number of replicas that can be
-   *                                   assigned to a single tier in the current run.
-   * @param maxReplicaAssignmentsInRun Max number of total replicas that can be
-   *                                   assigned across all tiers in the current run.
+   * @param tierToLoadingReplicaCount Map from tier name to number of replicas
+   *                                  already being loaded.
+   * @param replicationThrottleLimit  Maximum number of replicas that can be
+   *                                  assigned to a single tier in the current run.
    */
   public ReplicationThrottler(
-      Set<String> tiersLoadingReplicas,
-      int replicationThrottleLimit,
-      int maxReplicaAssignmentsInRun
+      Map<String, Integer> tierToLoadingReplicaCount,
+      int replicationThrottleLimit
   )
   {
     this.replicationThrottleLimit = replicationThrottleLimit;
-    this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
-    this.totalReplicasAssignedInRun = 0;
-    if (tiersLoadingReplicas != null) {
-      this.tiersLoadingReplicas.addAll(tiersLoadingReplicas);
+
+    if (tierToLoadingReplicaCount != null) {
+      tierToLoadingReplicaCount.forEach(
+          (tier, numLoadingReplicas) -> tierToMaxAssignments.addTo(
+              tier,
+              Math.max(0, replicationThrottleLimit - numLoadingReplicas)
+          )
+      );
     }
   }
 
-  public boolean isTierLoadingReplicas(String tier)
+  public boolean isReplicationThrottledForTier(String tier)
   {
-    return tiersLoadingReplicas.contains(tier);
-  }
-
-  public boolean canAssignReplica(String tier)
-  {
-    return !tiersLoadingReplicas.contains(tier)
-           && totalReplicasAssignedInRun < maxReplicaAssignmentsInRun
-           && tierToNumAssigned.computeIfAbsent(tier, t -> 0) < replicationThrottleLimit;
+    return tierToNumAssigned.getOrDefault(tier, 0)
+           >= tierToMaxAssignments.getOrDefault(tier, replicationThrottleLimit);
   }
 
   public void incrementAssignedReplicas(String tier)
   {
-    ++totalReplicasAssignedInRun;
-    tierToNumAssigned.compute(tier, (t, count) -> (count == null) ? 1 : count + 1);
+    tierToNumAssigned.addTo(tier, 1);
   }
 
 }

@@ -137,6 +137,10 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/dr
     "dimensions": [],
     "type": "gauge"
   },
+  "segment/scan/active": {
+    "dimensions": [],
+    "type": "gauge"
+  },
   "query/segmentAndCache/time": {
     "dimensions": [],
     "type": "timer",

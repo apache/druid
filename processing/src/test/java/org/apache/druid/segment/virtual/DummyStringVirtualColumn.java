@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelector;
@@ -248,7 +248,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
         throw new UnsupportedOperationException("not supported");
       }

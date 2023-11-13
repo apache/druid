@@ -30,7 +30,8 @@ sidebar_label: SQL JDBC driver
 
 
 You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
-We recommend using Avatica JDBC driver version 1.22.0 or later.
+We recommend using Avatica JDBC driver version 1.23.0 or later. Note that starting with Avatica 1.21.0, you may need to set the [`transparent_reconnection`](https://calcite.apache.org/avatica/docs/client_reference.html#transparent_reconnection) property to `true` if you notice intermittent query failures.
+
 Once you've downloaded the Avatica client jar, add it to your classpath.
 
 Example connection string:

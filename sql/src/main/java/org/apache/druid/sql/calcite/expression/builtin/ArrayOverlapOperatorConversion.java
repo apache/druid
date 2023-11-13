@@ -41,9 +41,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
@@ -138,9 +136,14 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
           );
         }
       } else {
+        final InDimFilter.ValuesSet valuesSet = InDimFilter.ValuesSet.create();
+        for (final Object arrayElement : arrayElements) {
+          valuesSet.add(Evals.asString(arrayElement));
+        }
+
         return new InDimFilter(
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            new InDimFilter.ValuesSet(Arrays.stream(arrayElements).map(Evals::asString).collect(Collectors.toList())),
+            valuesSet,
             simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
             null
         );

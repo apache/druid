@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { SqlBase } from '@druid-toolkit/query';
 import {
   SqlColumn,
   SqlExpression,
@@ -27,6 +28,10 @@ import {
 
 import type { RowColumn } from './general';
 import { offsetToRowColumn } from './general';
+
+export function prettyPrintSql(b: SqlBase): string {
+  return b.prettyTrim(50).toString();
+}
 
 export function timeFormatToSql(timeFormat: string): SqlExpression | undefined {
   switch (timeFormat) {

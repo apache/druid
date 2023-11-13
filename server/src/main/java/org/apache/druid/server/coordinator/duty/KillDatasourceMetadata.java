@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Strings;
-import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.metadata.MetadataSupervisorManager;
@@ -44,7 +43,6 @@ public class KillDatasourceMetadata extends MetadataCleanupDuty
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final MetadataSupervisorManager metadataSupervisorManager;
 
-  @Inject
   public KillDatasourceMetadata(
       DruidCoordinatorConfig config,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
@@ -54,6 +52,7 @@ public class KillDatasourceMetadata extends MetadataCleanupDuty
     super(
         "datasources",
         "druid.coordinator.kill.datasource",
+        config.isDatasourceKillEnabled(),
         config.getCoordinatorDatasourceKillPeriod(),
         config.getCoordinatorDatasourceKillDurationToRetain(),
         Stats.Kill.DATASOURCES,

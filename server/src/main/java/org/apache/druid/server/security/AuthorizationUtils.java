@@ -22,6 +22,7 @@ package org.apache.druid.server.security;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
@@ -173,6 +174,23 @@ public class AuthorizationUtils
 
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, access.isAllowed());
     return access;
+  }
+
+  /**
+   * Sets the {@link AuthConfig#DRUID_AUTHORIZATION_CHECKED} attribute in the {@link HttpServletRequest} to true. This method is generally used
+   * when no {@link ResourceAction} need to be checked for the API. If resources are present, users should call
+   * {@link AuthorizationUtils#authorizeAllResourceActions(HttpServletRequest, Iterable, AuthorizerMapper)}
+   */
+  public static void setRequestAuthorizationAttributeIfNeeded(final HttpServletRequest request)
+  {
+    if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
+      // do nothing since request allows unsecured paths to proceed. Generally, this is used for custom urls.
+      return;
+    }
+    if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
+      throw DruidException.defensive("Request already had authorization check.");
+    }
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
   }
 
   /**

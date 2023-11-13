@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
@@ -48,7 +49,7 @@ public class IterableRowsCursorHelperTest
   @Test
   public void getCursorFromIterable()
   {
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(rows, rowSignature);
+    Cursor cursor = IterableRowsCursorHelper.getCursorFromIterable(rows, rowSignature).lhs;
     testCursorMatchesRowSequence(cursor, rowSignature, rows);
   }
 
@@ -56,7 +57,14 @@ public class IterableRowsCursorHelperTest
   public void getCursorFromSequence()
   {
 
-    Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(Sequences.simple(rows), rowSignature);
+    Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(Sequences.simple(rows), rowSignature).lhs;
+    testCursorMatchesRowSequence(cursor, rowSignature, rows);
+  }
+
+  @Test
+  public void getCursorFromYielder()
+  {
+    Cursor cursor = IterableRowsCursorHelper.getCursorFromYielder(Yielders.each(Sequences.simple(rows)), rowSignature).lhs;
     testCursorMatchesRowSequence(cursor, rowSignature, rows);
   }
 

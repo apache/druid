@@ -19,7 +19,6 @@
 
 package org.apache.druid.client;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -27,8 +26,6 @@ import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.EscalatedClient;
-import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -36,10 +33,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -70,40 +64,28 @@ public class BrokerServerView implements TimelineServerView
   private static final Logger log = new Logger(BrokerServerView.class);
 
   private final Object lock = new Object();
-
   private final ConcurrentMap<String, QueryableDruidServer> clients = new ConcurrentHashMap<>();
   private final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
-
-  private final QueryToolChestWarehouse warehouse;
-  private final QueryWatcher queryWatcher;
-  private final ObjectMapper smileMapper;
-  private final HttpClient httpClient;
-  private final FilteredServerInventoryView baseView;
+  private final DirectDruidClientFactory druidClientFactory;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
-
   private final CountDownLatch initialized = new CountDownLatch(1);
+  private final FilteredServerInventoryView baseView;
 
   @Inject
   public BrokerServerView(
-      final QueryToolChestWarehouse warehouse,
-      final QueryWatcher queryWatcher,
-      final @Smile ObjectMapper smileMapper,
-      final @EscalatedClient HttpClient httpClient,
+      final DirectDruidClientFactory directDruidClientFactory,
       final FilteredServerInventoryView baseView,
       final TierSelectorStrategy tierSelectorStrategy,
       final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig
   )
   {
-    this.warehouse = warehouse;
-    this.queryWatcher = queryWatcher;
-    this.smileMapper = smileMapper;
-    this.httpClient = httpClient;
+    this.druidClientFactory = directDruidClientFactory;
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
@@ -184,7 +166,7 @@ public class BrokerServerView implements TimelineServerView
       awaitInitialization();
       final long endMillis = System.currentTimeMillis();
       log.info("BrokerServerView initialized in [%,d] ms.", endMillis - startMillis);
-      emitter.emit(ServiceMetricEvent.builder().build(
+      emitter.emit(ServiceMetricEvent.builder().setMetric(
           "serverview/init/time",
           endMillis - startMillis
       ));
@@ -232,26 +214,13 @@ public class BrokerServerView implements TimelineServerView
 
   private QueryableDruidServer addServer(DruidServer server)
   {
-    QueryableDruidServer retVal = new QueryableDruidServer<>(server, makeDirectClient(server));
+    QueryableDruidServer retVal = new QueryableDruidServer<>(server, druidClientFactory.makeDirectClient(server));
     QueryableDruidServer exists = clients.put(server.getName(), retVal);
     if (exists != null) {
       log.warn("QueryRunner for server[%s] already exists!? Well it's getting replaced", server);
     }
 
     return retVal;
-  }
-
-  private DirectDruidClient makeDirectClient(DruidServer server)
-  {
-    return new DirectDruidClient(
-        warehouse,
-        queryWatcher,
-        smileMapper,
-        httpClient,
-        server.getScheme(),
-        server.getHost(),
-        emitter
-    );
   }
 
   private QueryableDruidServer removeServer(DruidServer server)
