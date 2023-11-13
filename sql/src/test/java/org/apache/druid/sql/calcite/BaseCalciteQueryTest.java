@@ -1132,8 +1132,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     /**
      * Comparision which accepts 1000 units of least precision.
      */
-    EQUALS_RELATIVE_1000_ULPS
-    {
+    EQUALS_RELATIVE_1000_ULPS {
       static final int ASSERTION_ERROR_ULPS = 1000;
 
       @Override
