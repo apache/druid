@@ -6317,7 +6317,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/winFnQry_51")
   @Test
   public void test_aggregates_winFnQry_51()
@@ -6339,7 +6338,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/winFnQry_54")
   @Test
   public void test_aggregates_winFnQry_54()
@@ -6475,7 +6473,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/woPrtnBy_14")
   @Test
   public void test_aggregates_woPrtnBy_14()
@@ -6504,7 +6501,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/woPrtnBy_19")
   @Test
   public void test_aggregates_woPrtnBy_19()
@@ -7654,7 +7650,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.T_ALLTYPES_ISSUES)
   @DrillTest("frameclause/multipl_wnwds/rnkNoFrm03")
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm03()
