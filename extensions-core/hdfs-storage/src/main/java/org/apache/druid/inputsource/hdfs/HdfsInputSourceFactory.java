@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.guice.Hdfs;
 import org.apache.hadoop.conf.Configuration;
 
@@ -46,6 +47,6 @@ public class HdfsInputSourceFactory implements InputSourceFactory
   @Override
   public SplittableInputSource create(List<String> inputFilePaths)
   {
-    return new HdfsInputSource(inputFilePaths, configuration, inputSourceConfig);
+    return new HdfsInputSource(inputFilePaths, SystemFields.none(), configuration, inputSourceConfig);
   }
 }

@@ -62,4 +62,4 @@ spec:
               ephemeral-storage: 1Gi
       hostname: "id-3e70afe5cd823dfc7dd308eea616426b"
       restartPolicy: "Never"
-  ttlSecondsAfterFinished: 3600
+  ttlSecondsAfterFinished: 172800

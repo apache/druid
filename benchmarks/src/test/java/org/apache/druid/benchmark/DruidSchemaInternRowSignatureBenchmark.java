@@ -22,8 +22,9 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.client.BrokerInternalQueryConfig;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -37,9 +38,9 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
+import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -71,27 +72,26 @@ public class DruidSchemaInternRowSignatureBenchmark
 {
   private SegmentMetadataCacheForBenchmark cache;
 
-  private static class SegmentMetadataCacheForBenchmark extends SegmentMetadataCache
+  private static class SegmentMetadataCacheForBenchmark extends BrokerSegmentMetadataCache
   {
     public SegmentMetadataCacheForBenchmark(
         final QueryLifecycleFactory queryLifecycleFactory,
         final TimelineServerView serverView,
         final SegmentManager segmentManager,
         final JoinableFactory joinableFactory,
-        final PlannerConfig config,
         final Escalator escalator,
-        final BrokerInternalQueryConfig brokerInternalQueryConfig
+        final InternalQueryConfig brokerInternalQueryConfig
     )
     {
       super(
           queryLifecycleFactory,
           serverView,
-          segmentManager,
-          joinableFactory,
-          SegmentMetadataCacheConfig.create(),
+          BrokerSegmentMetadataCacheConfig.create(),
           escalator,
           brokerInternalQueryConfig,
-          new NoopServiceEmitter()
+          new NoopServiceEmitter(),
+          new PhysicalDatasourceMetadataFactory(joinableFactory, segmentManager),
+          new NoopCoordinatorClient()
       );
     }
 
@@ -109,7 +109,7 @@ public class DruidSchemaInternRowSignatureBenchmark
     }
 
     @Override
-    protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
+    public Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
     {
       final int numColumns = 1000;
       LinkedHashMap<String, ColumnAnalysis> columnToAnalysisMap = new LinkedHashMap<>();
@@ -178,10 +178,10 @@ public class DruidSchemaInternRowSignatureBenchmark
         EasyMock.mock(TimelineServerView.class),
         null,
         null,
-        EasyMock.mock(PlannerConfig.class),
         null,
         null
     );
+
     DruidServerMetadata serverMetadata = new DruidServerMetadata(
         "dummy",
         "dummy",

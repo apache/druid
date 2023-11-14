@@ -30,6 +30,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -41,40 +42,62 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
+@RunWith(Parameterized.class)
 public class CoordinatorServerViewTest extends CuratorTestBase
 {
-  private final ObjectMapper jsonMapper;
-  private final ZkPathsConfig zkPathsConfig;
-  private final String inventoryPath;
+  private ObjectMapper jsonMapper;
+  private ZkPathsConfig zkPathsConfig;
+  private String inventoryPath;
 
   private CountDownLatch segmentViewInitLatch;
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
-  private BatchServerInventoryView baseView;
-  private CoordinatorServerView overlordServerView;
+  private CountDownLatch callbackSegmentViewInitLatch;
+  private CountDownLatch callbackSegmentAddedLatch;
+  private CountDownLatch callbackSegmentRemovedLatch;
+  private CountDownLatch callbackServerSegmentRemovedLatch;
 
-  public CoordinatorServerViewTest()
+  private BatchServerInventoryView baseView;
+  private CoordinatorServerView coordinatorServerView;
+  private ExecutorService callbackExec;
+
+  private boolean setDruidClientFactory;
+
+  @Parameterized.Parameters
+  public static Object[] data()
   {
-    jsonMapper = TestHelper.makeJsonMapper();
-    zkPathsConfig = new ZkPathsConfig();
-    inventoryPath = zkPathsConfig.getLiveSegmentsPath();
+    return new Object[]{true, false};
+  }
+
+  public CoordinatorServerViewTest(boolean setDruidClientFactory)
+  {
+    this.setDruidClientFactory = setDruidClientFactory;
   }
 
   @Before
   public void setUp() throws Exception
   {
+    jsonMapper = TestHelper.makeJsonMapper();
+    zkPathsConfig = new ZkPathsConfig();
+    inventoryPath = zkPathsConfig.getLiveSegmentsPath();
+    callbackExec = Execs.singleThreaded("CoordinatorServerViewTest-%s");
+
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
@@ -86,8 +109,12 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(1);
     segmentRemovedLatch = new CountDownLatch(1);
+    callbackSegmentViewInitLatch = new CountDownLatch(1);
+    callbackSegmentAddedLatch = new CountDownLatch(1);
+    callbackServerSegmentRemovedLatch = new CountDownLatch(1);
+    callbackSegmentRemovedLatch = new CountDownLatch(1);
 
-    setupViews();
+    setupViews(setDruidClientFactory);
 
     final DruidServer druidServer = new DruidServer(
         "localhost:1234",
@@ -108,7 +135,16 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
-    TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentAddedLatch));
+
+    if (setDruidClientFactory) {
+      Assert.assertNotNull(coordinatorServerView.getQueryRunner(druidServer.getName()));
+    } else {
+      Assert.assertNull(coordinatorServerView.getQueryRunner(druidServer.getName()));
+    }
+
+    TimelineLookup timeline = coordinatorServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     List<TimelineObjectHolder> serverLookupRes = (List<TimelineObjectHolder>) timeline.lookup(
         intervals
     );
@@ -132,6 +168,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     unannounceSegmentForServer(druidServer, segment);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackServerSegmentRemovedLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentRemovedLatch));
 
     Assert.assertEquals(
         0,
@@ -149,7 +187,12 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     // temporarily set latch count to 1
     segmentRemovedLatch = new CountDownLatch(1);
 
-    setupViews();
+    callbackSegmentViewInitLatch = new CountDownLatch(1);
+    callbackSegmentAddedLatch = new CountDownLatch(5);
+    callbackServerSegmentRemovedLatch = new CountDownLatch(1);
+    callbackSegmentRemovedLatch = new CountDownLatch(1);
+
+    setupViews(setDruidClientFactory);
 
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
@@ -197,8 +240,18 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentViewInitLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentAddedLatch));
 
-    TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
+    for (int i = 0; i < 5; ++i) {
+      if (setDruidClientFactory) {
+        Assert.assertNotNull(coordinatorServerView.getQueryRunner(druidServers.get(i).getName()));
+      } else {
+        Assert.assertNull(coordinatorServerView.getQueryRunner(druidServers.get(i).getName()));
+      }
+    }
+
+    TimelineLookup timeline = coordinatorServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
@@ -215,11 +268,15 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")
     unannounceSegmentForServer(druidServers.get(2), segments.get(2));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentRemovedLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackServerSegmentRemovedLatch));
 
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(4);
+    callbackServerSegmentRemovedLatch = new CountDownLatch(4);
+    callbackSegmentRemovedLatch = new CountDownLatch(4);
 
-    timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
+    timeline = coordinatorServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
@@ -238,6 +295,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       }
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackSegmentRemovedLatch));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(callbackServerSegmentRemovedLatch));
 
     Assert.assertEquals(
         0,
@@ -284,10 +343,11 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       Assert.assertFalse(segmentLoadInfo.isEmpty());
       Assert.assertEquals(expectedPair.rhs.rhs.lhs.getMetadata(),
                           Iterables.getOnlyElement(segmentLoadInfo.toImmutableSegmentLoadInfo().getServers()));
+      Assert.assertEquals(expectedPair.rhs.rhs.lhs.getMetadata(), segmentLoadInfo.pickOne());
     }
   }
 
-  private void setupViews() throws Exception
+  private void setupViews(boolean setDruidClientFactory) throws Exception
   {
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
@@ -332,14 +392,68 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       }
     };
 
-    overlordServerView = new CoordinatorServerView(
+    DirectDruidClientFactory druidClientFactory = null;
+
+    if (setDruidClientFactory) {
+      druidClientFactory = EasyMock.createMock(DirectDruidClientFactory.class);
+      DirectDruidClient directDruidClient = EasyMock.mock(DirectDruidClient.class);
+      EasyMock.expect(druidClientFactory.makeDirectClient(EasyMock.anyObject(DruidServer.class)))
+              .andReturn(directDruidClient)
+              .anyTimes();
+
+      EasyMock.replay(druidClientFactory);
+    }
+
+    coordinatorServerView = new CoordinatorServerView(
         baseView,
         new CoordinatorSegmentWatcherConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        druidClientFactory
     );
 
     baseView.start();
-    overlordServerView.start();
+    initServerViewTimelineCallback(coordinatorServerView);
+    coordinatorServerView.start();
+  }
+
+  private void initServerViewTimelineCallback(final CoordinatorServerView serverView)
+  {
+    serverView.registerTimelineCallback(
+        callbackExec,
+        new TimelineServerView.TimelineCallback()
+        {
+          @Override
+          public ServerView.CallbackAction timelineInitialized()
+          {
+            callbackSegmentViewInitLatch.countDown();
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
+          {
+            callbackSegmentAddedLatch.countDown();
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
+          {
+            callbackSegmentRemovedLatch.countDown();
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction serverSegmentRemoved(
+              final DruidServerMetadata server,
+              final DataSegment segment
+          )
+          {
+            callbackServerSegmentRemovedLatch.countDown();
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)

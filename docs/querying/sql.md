@@ -87,7 +87,7 @@ documentation.
 
 ## UNNEST
 
-The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
+The UNNEST clause unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like [`MV_TO_ARRAY`](./sql-multivalue-string-functions.md) or [`ARRAY`](./sql-array-functions.md).
 
 The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
 
@@ -98,7 +98,7 @@ SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression1) A
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
   * A table, such as  `FROM a_table`.
   * A subset of a table based on a query, a filter, or a JOIN. For example, `FROM (SELECT columnA,columnB,columnC from a_table)`.
-* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
+* The `source_expression` for the UNNEST function must be an array and can come from any expression. UNNEST works directly on Druid ARRAY typed columns. If the column you are unnesting is a multi-value VARCHAR, you must specify `MV_TO_ARRAY(dimension)` to convert it to an ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
   * `ARRAY[dim1,dim2]` if you want to make an array out of two dimensions. 
   * `ARRAY_CONCAT(dim1,dim2)` if you want to concatenate two multi-value dimensions. 
 * The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
@@ -115,8 +115,9 @@ For examples, see the [Unnest arrays tutorial](../tutorials/tutorial-unnest-arra
 The UNNEST function has the following limitations:
 
 - The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created.
-- Arrays inside complex JSON types are not supported.
-- You cannot perform an UNNEST at ingestion time, including SQL-based ingestion using the MSQ task engine.
+- Arrays of complex objects inside complex JSON types are not supported.
+  
+UNNEST is the SQL equivalent of the [unnest datasource](./datasource.md#unnest).
 
 ## WHERE
 

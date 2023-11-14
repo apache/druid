@@ -116,6 +116,12 @@ public final class CacheScheduler
     }
 
     @VisibleForTesting
+    public void awaitTotalUpdatesWithTimeout(int totalUpdates, long timeoutMills)
+        throws InterruptedException, TimeoutException
+    {
+      impl.updateCounter.awaitCount(totalUpdates, timeoutMills, TimeUnit.MILLISECONDS);
+    }
+    @VisibleForTesting
     void awaitNextUpdates(int nextUpdates) throws InterruptedException
     {
       impl.updateCounter.awaitNextIncrements(nextUpdates);

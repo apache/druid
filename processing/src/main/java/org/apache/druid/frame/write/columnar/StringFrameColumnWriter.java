@@ -28,6 +28,7 @@ import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -45,7 +46,8 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
 
   private final T selector;
   private final byte typeCode;
-  protected final boolean multiValue;
+  protected final ColumnCapabilities.Capable multiValue;
+  protected boolean encounteredMultiValueRow;
 
   /**
    * Row lengths: one int per row with the number of values contained by that row and all previous rows.
@@ -73,14 +75,14 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       final T selector,
       final MemoryAllocator allocator,
       final byte typeCode,
-      final boolean multiValue
+      final ColumnCapabilities.Capable multiValue
   )
   {
     this.selector = selector;
     this.typeCode = typeCode;
     this.multiValue = multiValue;
 
-    if (multiValue) {
+    if (multiValue.isMaybeTrue()) {
       this.cumulativeRowLengths = AppendableMemory.create(allocator, INITIAL_ALLOCATION_SIZE);
     } else {
       this.cumulativeRowLengths = null;
@@ -107,7 +109,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       return false;
     }
 
-    if (multiValue && !cumulativeRowLengths.reserveAdditional(Integer.BYTES)) {
+    if (multiValue.isMaybeTrue() && !cumulativeRowLengths.reserveAdditional(Integer.BYTES)) {
       return false;
     }
 
@@ -119,8 +121,16 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       return false;
     }
 
+    if (utf8Count != 1) {
+      encounteredMultiValueRow = true;
+
+      if (multiValue.isFalse()) {
+        throw new ISE("Encountered unexpected multi-value row, size[%d]", utf8Count);
+      }
+    }
+
     // Enough space has been reserved to write what we need to write; let's start.
-    if (multiValue) {
+    if (multiValue.isMaybeTrue()) {
       final MemoryRange<WritableMemory> rowLengthsCursor = cumulativeRowLengths.cursor();
 
       if (utf8Data == null && typeCode == FrameColumnWriters.TYPE_STRING_ARRAY) {
@@ -189,7 +199,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       throw new ISE("Cannot undo");
     }
 
-    if (multiValue) {
+    if (multiValue.isMaybeTrue()) {
       cumulativeRowLengths.rewindCursor(Integer.BYTES);
       cumulativeStringLengths.rewindCursor(Integer.BYTES * lastRowLength);
       lastCumulativeRowLength -= lastRowLength;
@@ -207,7 +217,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   public long size()
   {
     return DATA_OFFSET
-           + (multiValue ? cumulativeRowLengths.size() : 0)
+           + (isWriteMultiValue() ? cumulativeRowLengths.size() : 0)
            + cumulativeStringLengths.size()
            + stringData.size();
   }
@@ -215,13 +225,14 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   @Override
   public long writeTo(final WritableMemory memory, final long startPosition)
   {
+    final boolean writeMultiValue = isWriteMultiValue();
     long currentPosition = startPosition;
 
     memory.putByte(currentPosition, typeCode);
-    memory.putByte(currentPosition + 1, multiValue ? (byte) 1 : (byte) 0);
+    memory.putByte(currentPosition + 1, writeMultiValue ? (byte) 1 : (byte) 0);
     currentPosition += 2;
 
-    if (multiValue) {
+    if (writeMultiValue) {
       currentPosition += cumulativeRowLengths.writeTo(memory, currentPosition);
     }
 
@@ -234,7 +245,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   @Override
   public void close()
   {
-    if (multiValue) {
+    if (multiValue.isMaybeTrue()) {
       cumulativeRowLengths.close();
     }
 
@@ -248,6 +259,15 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
    */
   @Nullable
   public abstract List<ByteBuffer> getUtf8ByteBuffersFromSelector(T selector);
+
+  /**
+   * Whether, given the current state of the writer, a call to {@link #writeTo(WritableMemory, long)} at this point
+   * would generate a multi-value column.
+   */
+  private boolean isWriteMultiValue()
+  {
+    return multiValue.isTrue() || encounteredMultiValueRow;
+  }
 
   /**
    * Returns the sum of remaining bytes in the provided list of byte buffers.
@@ -277,7 +297,7 @@ class StringFrameColumnWriterImpl extends StringFrameColumnWriter<DimensionSelec
   StringFrameColumnWriterImpl(
       DimensionSelector selector,
       MemoryAllocator allocator,
-      boolean multiValue
+      ColumnCapabilities.Capable multiValue
   )
   {
     super(selector, allocator, FrameColumnWriters.TYPE_STRING, multiValue);
@@ -286,7 +306,7 @@ class StringFrameColumnWriterImpl extends StringFrameColumnWriter<DimensionSelec
   @Override
   public List<ByteBuffer> getUtf8ByteBuffersFromSelector(final DimensionSelector selector)
   {
-    return FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, multiValue);
+    return FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, multiValue.isMaybeTrue());
   }
 }
 
@@ -300,7 +320,7 @@ class StringArrayFrameColumnWriterImpl extends StringFrameColumnWriter<ColumnVal
       MemoryAllocator allocator
   )
   {
-    super(selector, allocator, FrameColumnWriters.TYPE_STRING_ARRAY, true);
+    super(selector, allocator, FrameColumnWriters.TYPE_STRING_ARRAY, ColumnCapabilities.Capable.TRUE);
   }
 
   @Override

@@ -141,6 +141,11 @@ public interface TaskRunner
     // do nothing
   }
 
+  default void updateLocation(Task task, TaskLocation location)
+  {
+    // do nothing
+  }
+
   /**
    * The maximum number of tasks this TaskRunner can run concurrently.
    * Can return -1 if this method is not implemented or capacity can't be found.
