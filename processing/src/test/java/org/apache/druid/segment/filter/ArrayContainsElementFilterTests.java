@@ -497,6 +497,11 @@ public class ArrayContainsElementFilterTests
             ? ImmutableList.of("1", "2", "4")
             : ImmutableList.of("1", "2", "4", "5")
         );
+        // [""] becomes [null] in default value mode
+        assertFilterMatches(
+            new ArrayContainsElementFilter("dim2", ColumnType.STRING, null, null),
+            NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("2")
+        );
       } else {
         // multi-value dimension treats [] as null, so in sql compatible mode row 1 ends up as not matching
         assertFilterMatches(
@@ -505,12 +510,13 @@ public class ArrayContainsElementFilterTests
             ? ImmutableList.of("2", "4")
             : ImmutableList.of("1", "2", "4", "5")
         );
+        assertFilterMatches(
+            new ArrayContainsElementFilter("dim2", ColumnType.STRING, null, null),
+            ImmutableList.of()
+        );
       }
 
-      assertFilterMatches(
-          new ArrayContainsElementFilter("dim2", ColumnType.STRING, null, null),
-          ImmutableList.of()
-      );
+
     }
   }
 

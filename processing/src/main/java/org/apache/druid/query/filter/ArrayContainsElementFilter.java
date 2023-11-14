@@ -235,7 +235,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
       return elementIndexes.containsValue(elementMatchValueEval.value(), elementMatchValueType);
     }
 
-    if (elementMatchValue != null && selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
+    if (elementMatchValueEval.valueOrDefault() != null && selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
       // column is not an array, behave like a normal equality filter
       return EqualityFilter.getEqualityIndex(column, elementMatchValueEval, elementMatchValueType, selector);
     }
@@ -258,7 +258,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
   {
     final ColumnCapabilities capabilities = factory.getColumnCapabilities(column);
 
-    if (elementMatchValue != null && elementMatchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive())) {
+    if (elementMatchValueEval.valueOrDefault() != null && elementMatchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive())) {
       return ColumnProcessors.makeVectorProcessor(
           column,
           VectorValueMatcherColumnProcessorFactory.instance(),
@@ -334,7 +334,8 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
       this.elementMatchValue = elementMatchValue;
       this.equalityPredicateFactory = new EqualityFilter.EqualityPredicateFactory(elementMatchValue);
       // if element match value is an array, scalar matches can never be true
-      if (elementMatchValue.valueOrDefault() == null || (elementMatchValue.isArray() && elementMatchValue.value() != null && elementMatchValue.asArray().length > 1)) {
+      final Object matchVal = elementMatchValue.valueOrDefault();
+      if (matchVal == null || (elementMatchValue.isArray() && elementMatchValue.asArray().length > 1)) {
         this.stringPredicateSupplier = Predicates::alwaysFalse;
         this.longPredicateSupplier = () -> DruidLongPredicate.ALWAYS_FALSE;
         this.doublePredicateSupplier = () -> DruidDoublePredicate.ALWAYS_FALSE;
