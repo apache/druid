@@ -5889,7 +5889,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_COUNT_MISMATCH)
   @DrillTest("frameclause/subQueries/frmInSubQry_27")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_27()

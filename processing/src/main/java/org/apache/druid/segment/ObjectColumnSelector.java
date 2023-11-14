@@ -88,6 +88,6 @@ public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
   @Override
   public final boolean isNull()
   {
-    return false;
+    return getObject() == null;
   }
 }
