@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.util.Collection;
@@ -39,9 +40,15 @@ public class MemoryBoundLinkedBlockingQueue<T>
 
   public MemoryBoundLinkedBlockingQueue(long memoryBound)
   {
+    this(new LinkedBlockingQueue<>(), memoryBound);
+  }
+
+  @VisibleForTesting
+  MemoryBoundLinkedBlockingQueue(LinkedBlockingQueue<ObjectContainer<T>> queue, long memoryBound)
+  {
     this.memoryBound = memoryBound;
     this.currentMemory = new AtomicLong(0L);
-    this.queue = new LinkedBlockingQueue<>();
+    this.queue = queue;
   }
 
   // returns true/false depending on whether item was added or not
