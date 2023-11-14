@@ -64,6 +64,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -91,7 +92,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
+      @JsonProperty("dropSegmentDelayMillis") @Nullable Long dropSegmentDelayMillis
   )
   {
     super(
@@ -113,7 +115,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        dropSegmentDelayMillis
     );
     this.workerThreads = workerThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
@@ -199,6 +202,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
+           ", dropSegmentDelayMillis=" + getDropSegmentDelayMillis() +
            '}';
   }
 
@@ -224,7 +228,8 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getIntermediateHandoffPeriod(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getDropSegmentDelayMillis()
     );
   }
 }

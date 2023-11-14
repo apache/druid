@@ -205,6 +205,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private boolean logParseExceptions = true;
   private Integer maxParseExceptions = null;
   private Integer maxSavedParseExceptions = null;
+  private Long dropSegmentDelayMillis = null;
   private boolean resetOffsetAutomatically = false;
   private boolean doHandoff = true;
   private Integer maxRowsPerSegment = null;
@@ -2851,7 +2852,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        dropSegmentDelayMillis
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
       final TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints = new TreeMap<>();

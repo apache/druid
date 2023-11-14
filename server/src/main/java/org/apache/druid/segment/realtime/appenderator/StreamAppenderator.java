@@ -95,6 +95,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -170,6 +172,8 @@ public class StreamAppenderator implements Appenderator
 
   private volatile Throwable persistError;
 
+  private final ScheduledExecutorService exec;
+
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -221,6 +225,11 @@ public class StreamAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+
+    this.exec = Executors.newScheduledThreadPool(
+        1,
+        Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
+    );
   }
 
   @Override
@@ -1400,24 +1409,41 @@ public class StreamAppenderator implements Appenderator
                  .emit();
             }
 
-            droppingSinks.remove(identifier);
-            sinkTimeline.remove(
-                sink.getInterval(),
-                sink.getVersion(),
-                identifier.getShardSpec().createChunk(sink)
+            log.info(
+                "Unannounced segment[%s], scheduling drop in [%d] millisecs",
+                identifier,
+                tuningConfig.getDropSegmentDelayMillis()
             );
-            for (FireHydrant hydrant : sink) {
-              if (cache != null) {
-                cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+
+            Runnable removeRunnable = () -> {
+              droppingSinks.remove(identifier);
+              sinkTimeline.remove(
+                  sink.getInterval(),
+                  sink.getVersion(),
+                  identifier.getShardSpec().createChunk(sink)
+              );
+              for (FireHydrant hydrant : sink) {
+                if (cache != null) {
+                  cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+                }
+                hydrant.swapSegment(null);
               }
-              hydrant.swapSegment(null);
-            }
 
-            if (removeOnDiskData) {
-              removeDirectory(computePersistDir(identifier));
-            }
+              if (removeOnDiskData) {
+                removeDirectory(computePersistDir(identifier));
+              }
 
-            log.info("Dropped segment[%s].", identifier);
+              log.info("Dropped segment[%s].", identifier);
+            };
+
+            // Keep the segments in the cache and sinkTimeline for dropSegmentDelay after unannouncing the segments
+            // This way, in transit queries which still see the segments in this peon would be able to query the
+            // segments and not throw NullPtr exceptions.
+            exec.schedule(
+                removeRunnable,
+                tuningConfig.getDropSegmentDelayMillis(),
+                TimeUnit.MILLISECONDS
+            );
 
             return null;
           }

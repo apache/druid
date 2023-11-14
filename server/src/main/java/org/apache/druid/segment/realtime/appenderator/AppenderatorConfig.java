@@ -64,6 +64,11 @@ public interface AppenderatorConfig extends TuningConfig
   @Nullable
   SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
 
+  default long getDropSegmentDelayMillis()
+  {
+    return TuningConfig.DEFAULT_DROP_SEGMENT_DELAY;
+  }
+
   default int getMaxColumnsToMerge()
   {
     return -1;

@@ -183,6 +183,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private Integer maxRowsPerSegment = null;
   private Long maxTotalRows = null;
   private final Period intermediateHandoffPeriod = null;
+  private final Long dropSegmentDelayMillis = null;
   private int maxRecordsPerPoll;
 
   @BeforeClass
@@ -2362,7 +2363,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
-        intermediateHandoffPeriod
+        intermediateHandoffPeriod,
+        dropSegmentDelayMillis
     );
     return createTask(taskId, dataSchema, ioConfig, tuningConfig, context);
   }

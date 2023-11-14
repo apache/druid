@@ -26,6 +26,8 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -54,6 +56,7 @@ public interface TuningConfig
   int DEFAULT_MAX_ROWS_IN_MEMORY_REALTIME = 150_000;
   boolean DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK = false;
   long DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS = 0L;
+  long DEFAULT_DROP_SEGMENT_DELAY = TimeUnit.SECONDS.toMillis(30);
 
   /**
    * The incremental index implementation to use

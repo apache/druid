@@ -61,6 +61,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
 
+  private final long dropSegmentDelayMillis;
+
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
       @Nullable Integer maxRowsInMemory,
@@ -81,7 +83,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Period intermediateHandoffPeriod,
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
-      @Nullable Integer maxSavedParseExceptions
+      @Nullable Integer maxSavedParseExceptions,
+      @Nullable Long dropSegmentDelayMillis
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -134,6 +137,9 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     this.logParseExceptions = logParseExceptions == null
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
+    this.dropSegmentDelayMillis = dropSegmentDelayMillis == null
+                                  ? TuningConfig.DEFAULT_DROP_SEGMENT_DELAY
+                                  : dropSegmentDelayMillis;
   }
 
   @Override
@@ -278,6 +284,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   }
 
   @Override
+  @JsonProperty
+  public long getDropSegmentDelayMillis()
+  {
+    return dropSegmentDelayMillis;
+  }
+
+  @Override
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -302,6 +315,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
            logParseExceptions == that.logParseExceptions &&
            maxParseExceptions == that.maxParseExceptions &&
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
+           dropSegmentDelayMillis == that.dropSegmentDelayMillis &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -333,7 +347,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         skipSequenceNumberAvailabilityCheck,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        dropSegmentDelayMillis
     );
   }
 

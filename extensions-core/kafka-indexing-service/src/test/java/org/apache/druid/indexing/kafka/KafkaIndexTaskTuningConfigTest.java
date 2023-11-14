@@ -148,6 +148,7 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         null,
         null,
+        null,
         null
     );
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
@@ -187,7 +188,8 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         true,
         42,
-        42
+        42,
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -236,6 +238,7 @@ public class KafkaIndexTaskTuningConfigTest
         true,
         42,
         42,
+        null,
         "extra string"
     );
 
