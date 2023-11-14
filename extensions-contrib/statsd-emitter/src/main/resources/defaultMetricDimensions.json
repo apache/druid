@@ -138,8 +138,8 @@
   "sys/storage/used" : { "dimensions" : ["fsDirName"], "type" : "gauge"},
   "sys/cpu" : { "dimensions" : ["cpuName", "cpuTime"], "type" : "gauge"},
 
-  "coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
+  "druid/coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "druid/historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
 
   "jetty/numOpenConnections": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/total": { "dimensions" : [], "type" : "gauge" },

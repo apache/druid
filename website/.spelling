@@ -29,6 +29,7 @@ APIs
 apache.org
 AvroStorage
 ARN
+ASC
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -2326,3 +2327,4 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+LAST_VALUE

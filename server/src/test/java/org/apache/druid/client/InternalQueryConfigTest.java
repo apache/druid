@@ -39,7 +39,7 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-public class BrokerInternalQueryConfigTest
+public class InternalQueryConfigTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
@@ -49,11 +49,11 @@ public class BrokerInternalQueryConfigTest
     //defaults
     String json = "{}";
 
-    BrokerInternalQueryConfig config = MAPPER.readValue(
+    InternalQueryConfig config = MAPPER.readValue(
         MAPPER.writeValueAsString(
-            MAPPER.readValue(json, BrokerInternalQueryConfig.class)
+            MAPPER.readValue(json, InternalQueryConfig.class)
         ),
-        BrokerInternalQueryConfig.class
+        InternalQueryConfig.class
     );
 
     Assert.assertEquals(ImmutableMap.of(), config.getContext());
@@ -63,9 +63,9 @@ public class BrokerInternalQueryConfigTest
 
     config = MAPPER.readValue(
         MAPPER.writeValueAsString(
-            MAPPER.readValue(json, BrokerInternalQueryConfig.class)
+            MAPPER.readValue(json, InternalQueryConfig.class)
         ),
-        BrokerInternalQueryConfig.class
+        InternalQueryConfig.class
     );
 
     Map<String, Object> expected = new HashMap<>();
@@ -84,9 +84,9 @@ public class BrokerInternalQueryConfigTest
     String malformedJson = "{\"priority: 5}";
     MAPPER.readValue(
         MAPPER.writeValueAsString(
-            MAPPER.readValue(malformedJson, BrokerInternalQueryConfig.class)
+            MAPPER.readValue(malformedJson, InternalQueryConfig.class)
         ),
-        BrokerInternalQueryConfig.class
+        InternalQueryConfig.class
     );
   }
 
@@ -104,7 +104,7 @@ public class BrokerInternalQueryConfigTest
           {
             binder.install(new ConfigModule());
             binder.install(new DruidGuiceExtensions());
-            JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", BrokerInternalQueryConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.internal.query.config", InternalQueryConfig.class);
           }
 
           @Provides
@@ -115,7 +115,7 @@ public class BrokerInternalQueryConfigTest
           }
         }
     );
-    BrokerInternalQueryConfig config = injector.getInstance(BrokerInternalQueryConfig.class);
+    InternalQueryConfig config = injector.getInstance(InternalQueryConfig.class);
     Assert.assertEquals(ImmutableMap.of(), config.getContext());
   }
 }

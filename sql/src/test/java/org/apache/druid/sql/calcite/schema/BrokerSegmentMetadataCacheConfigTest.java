@@ -17,68 +17,66 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
-import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
+import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
+import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Properties;
 
-/**
- * Pathetic little unit test just to keep Jacoco happy.
- */
-public class SegmentMetadataCacheConfigTest
+public class BrokerSegmentMetadataCacheConfigTest
 {
+
+  private static final String CONFIG_BASE = CalcitePlannerModule.CONFIG_BASE;
+
   @Test
   public void testDefaultConfig()
   {
     final Injector injector = createInjector();
-    final JsonConfigProvider<SegmentMetadataCacheConfig> provider = JsonConfigProvider.of(
-        CalcitePlannerModule.CONFIG_BASE,
-        SegmentMetadataCacheConfig.class
+    final JsonConfigProvider<BrokerSegmentMetadataCacheConfig> provider = JsonConfigProvider.of(
+        CONFIG_BASE,
+        BrokerSegmentMetadataCacheConfig.class
     );
+
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final SegmentMetadataCacheConfig config = provider.get();
+    final BrokerSegmentMetadataCacheConfig config = provider.get();
     Assert.assertTrue(config.isAwaitInitializationOnStart());
     Assert.assertFalse(config.isMetadataSegmentCacheEnable());
     Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(60_000, config.getMetadataSegmentPollPeriod());
-    Assert.assertEquals(new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
+    Assert.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
 
   @Test
   public void testCustomizedConfig()
   {
     final Injector injector = createInjector();
-    final JsonConfigProvider<SegmentMetadataCacheConfig> provider = JsonConfigProvider.of(
-        CalcitePlannerModule.CONFIG_BASE,
-        SegmentMetadataCacheConfig.class
+    final JsonConfigProvider<BrokerSegmentMetadataCacheConfig> provider = JsonConfigProvider.of(
+        CONFIG_BASE,
+        BrokerSegmentMetadataCacheConfig.class
     );
     final Properties properties = new Properties();
     properties.setProperty(
-        CalcitePlannerModule.CONFIG_BASE + ".metadataColumnTypeMergePolicy",
+        CONFIG_BASE + ".metadataColumnTypeMergePolicy",
         "latestInterval"
     );
-    properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".metadataRefreshPeriod", "PT2M");
-    properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".metadataSegmentPollPeriod", "15000");
-    properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".metadataSegmentCacheEnable", "true");
-    properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".awaitInitializationOnStart", "false");
+    properties.setProperty(CONFIG_BASE + ".metadataRefreshPeriod", "PT2M");
+    properties.setProperty(CONFIG_BASE + ".awaitInitializationOnStart", "false");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final SegmentMetadataCacheConfig config = provider.get();
+    final BrokerSegmentMetadataCacheConfig config = provider.get();
     Assert.assertFalse(config.isAwaitInitializationOnStart());
-    Assert.assertTrue(config.isMetadataSegmentCacheEnable());
+    Assert.assertFalse(config.isMetadataSegmentCacheEnable());
     Assert.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(15_000, config.getMetadataSegmentPollPeriod());
     Assert.assertEquals(
-        new SegmentMetadataCache.FirstTypeMergePolicy(),
+        new AbstractSegmentMetadataCache.FirstTypeMergePolicy(),
         config.getMetadataColumnTypeMergePolicy()
     );
   }
@@ -88,7 +86,7 @@ public class SegmentMetadataCacheConfigTest
     return GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             binder -> {
-              JsonConfigProvider.bind(binder, CalcitePlannerModule.CONFIG_BASE, SegmentMetadataCacheConfig.class);
+              JsonConfigProvider.bind(binder, CONFIG_BASE, BrokerSegmentMetadataCacheConfig.class);
             }
         )
     );

@@ -103,7 +103,11 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   @Override
   public double[] compute(final Map<String, Object> combinedAggregators)
   {
-    final HllSketchHolder sketch = HllSketchHolder.fromObj(field.compute(combinedAggregators));
+    Object hllSketchHolderObject = field.compute(combinedAggregators);
+    if (hllSketchHolderObject == null) {
+      return new double[] {0.0D, 0.0D, 0.0D};
+    }
+    final HllSketchHolder sketch = HllSketchHolder.fromObj(hllSketchHolderObject);
     return new double[] {sketch.getEstimate(), sketch.getLowerBound(numStdDevs), sketch.getUpperBound(numStdDevs)};
   }
 
