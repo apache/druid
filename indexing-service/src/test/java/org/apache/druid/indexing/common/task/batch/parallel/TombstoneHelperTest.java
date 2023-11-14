@@ -43,6 +43,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -617,6 +618,98 @@ public class TombstoneHelperTest
         dropIntervals.stream()
                      .mapToLong(interval -> interval.toDuration().getStandardDays())
                      .sum(),
+        tombstoneIntervals.size()
+    );
+  }
+
+  @Test
+  public void testTombstoneIntervalsForReplaceOverMultipleUsedIntervals() throws IOException
+  {
+    Interval usedInterval1 = Intervals.of("1000-01-01/1001-01-01");
+    Interval usedInterval2 = Intervals.of("3000-01-01/3001-01-01");
+    Interval replaceInterval = Intervals.of("1000-01-01/9000-12-31");
+    List<Interval> dropIntervals = ImmutableList.of(
+        Intervals.of("1000-01-01/3001-01-01")
+    );
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment1 =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval1)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    DataSegment existingUsedSegment2 =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval2)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment1.isTombstone());
+    Assert.assertFalse(existingUsedSegment2.isTombstone());
+
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Arrays.asList(existingUsedSegment1, existingUsedSegment2));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Assert.assertThrows(
+        TooManyBucketsException.class,
+        () -> tombstoneHelper.computeTombstoneIntervalsForReplace(
+            dropIntervals,
+            ImmutableList.of(replaceInterval),
+            "test",
+            replaceGranularity,
+            MAX_BUCKETS
+        )
+    );
+  }
+
+  @Test
+  public void testTombstoneIntervalsForReplaceOverMultipleUsedIntervalsAndMaxBucket() throws IOException
+  {
+    Interval usedInterval1 = Intervals.of("1000-01-01/1001-01-01");
+    Interval usedInterval2 = Intervals.of("3000-01-01/3001-01-01");
+    Interval replaceInterval = Intervals.of("1000-01-01/9000-12-31");
+    List<Interval> dropIntervals = ImmutableList.of(
+        Intervals.of("1000-01-01/3001-01-01")
+    );
+    Granularity replaceGranularity = Granularities.DAY;
+
+    DataSegment existingUsedSegment1 =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval1)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    DataSegment existingUsedSegment2 =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval2)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment1.isTombstone());
+    Assert.assertFalse(existingUsedSegment2.isTombstone());
+
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Arrays.asList(existingUsedSegment1, existingUsedSegment2));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+
+    Set<Interval> tombstoneIntervals =  tombstoneHelper.computeTombstoneIntervalsForReplace(
+        dropIntervals,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity,
+        800
+    );
+
+    // (365 * 2) ~= 730 day intervals
+    Assert.assertEquals(
+        usedInterval1.toDuration().getStandardDays() + usedInterval2.toDuration().getStandardDays(),
         tombstoneIntervals.size()
     );
   }

@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -46,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -217,11 +217,11 @@ public class TombstoneHelper
 
         if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
           // Generate a tombstone interval covering the negative eternity interval.
-          buckets = validateAndGetBuckets(buckets + 1, maxBuckets);
+          buckets = validateAndIncrementBuckets(buckets, maxBuckets);
           retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketStart(overlap.getEnd())));
         } else if ((Intervals.ETERNITY.getEnd()).equals(overlap.getEnd())) {
           // Generate a tombstone interval covering the positive eternity interval.
-          buckets = validateAndGetBuckets(buckets + 1, maxBuckets);
+          buckets = validateAndIncrementBuckets(buckets, maxBuckets);
           retVal.add(new Interval(replaceGranularity.bucketStart(overlap.getStart()), overlap.getEnd()));
         } else {
           // Overlap might not be aligned with the granularity if the used interval is not aligned with the granularity
@@ -242,11 +242,11 @@ public class TombstoneHelper
               replaceGranularity
           );
 
-          // Helps in deduplication if required. Since all the intervals are uniformly granular, there should be no
-          // no overlap post deduplication
-          HashSet<Interval> intervals = Sets.newHashSet(intervalsToDropByGranularity.granularityIntervalsIterator());
-          buckets = validateAndGetBuckets(buckets + intervals.size(), maxBuckets);
-          retVal.addAll(intervals);
+          Iterator<Interval> intervalIterator = intervalsToDropByGranularity.granularityIntervalsIterator();
+          while (intervalIterator.hasNext()) {
+            buckets = validateAndIncrementBuckets(buckets, maxBuckets);
+            retVal.add(intervalIterator.next());
+          }
         }
       }
     }
@@ -322,12 +322,12 @@ public class TombstoneHelper
     return JodaUtils.condenseIntervals(retVal);
   }
 
-  private int validateAndGetBuckets(final int buckets, final int maxBuckets)
+  private int validateAndIncrementBuckets(final int buckets, final int maxBuckets)
   {
     if (buckets >= maxBuckets) {
       throw new TooManyBucketsException(maxBuckets);
     }
-    return buckets;
+    return buckets + 1;
   }
 
 }

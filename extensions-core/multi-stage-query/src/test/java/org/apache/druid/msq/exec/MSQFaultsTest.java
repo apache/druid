@@ -459,6 +459,51 @@ public class MSQFaultsTest extends MSQTestBase
                      .verifyExecutionError();
   }
 
+  @Test
+  public void testReplaceTombstonesWithTooManyBucketsThrowsFault2()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Create a datasegment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2000-01-01T/2003-01-04T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
+
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + "OVERWRITE ALL "
+                         + "SELECT  __time, dim1 , count(*) as cnt "
+                         + "FROM foo "
+                         + "GROUP BY 1, 2 "
+                         + "PARTITIONED by HOUR "
+                         + "CLUSTERED by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedExecutionErrorMatcher(
+                         CoreMatchers.allOf(
+                             CoreMatchers.instanceOf(ISE.class),
+                             ThrowableMessageMatcher.hasMessage(
+                                 CoreMatchers.containsString(expectedError)
+                             )
+                         )
+                     )
+                     .verifyExecutionError();
+  }
+
   private void testLockTypes(TaskLockType contextTaskLockType, String sql, String errorMessage)
   {
     Map<String, Object> context = new HashMap<>(DEFAULT_MSQ_CONTEXT);
