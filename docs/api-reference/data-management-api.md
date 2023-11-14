@@ -289,7 +289,7 @@ Druid only updates the segments completely contained within the specified interv
 
 #### Request body
 
-The group of segments is sent as a JSON request payload that accepts the following properties:
+The group of segments is sent as a JSON request payload that accepts one of the following properties:
 
 |Property|Type|Description|Example|
 |----------|---|-------------|---------|
