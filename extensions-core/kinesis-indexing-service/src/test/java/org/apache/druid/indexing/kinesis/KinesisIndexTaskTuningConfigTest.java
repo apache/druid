@@ -100,7 +100,7 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
-                     + "  \"recordBufferSize\": 1000,\n"
+                     + "  \"recordBufferSizeBytes\": 1000,\n"
                      + "  \"recordBufferOfferTimeout\": 500,\n"
                      + "  \"recordBufferFullWait\": 500,\n"
                      + "  \"resetOffsetAutomatically\": false,\n"

@@ -144,7 +144,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
-      @JsonProperty("recordBufferSize") Integer recordBufferSizeBytes,
+      @JsonProperty("recordBufferSizeBytes") Integer recordBufferSizeBytes,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
       @JsonProperty("fetchThreads") Integer fetchThreads,
@@ -186,7 +186,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   }
 
   @Nullable
-  @JsonProperty("recordBufferSize")
+  @JsonProperty("recordBufferSizeBytes")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getRecordBufferSizeConfigured()
   {
@@ -319,7 +319,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
            ", skipSequenceNumberAvailabilityCheck=" + isSkipSequenceNumberAvailabilityCheck() +
-           ", recordBufferSize=" + recordBufferSizeBytes +
+           ", recordBufferSizeBytes=" + recordBufferSizeBytes +
            ", recordBufferOfferTimeout=" + recordBufferOfferTimeout +
            ", recordBufferFullWait=" + recordBufferFullWait +
            ", fetchThreads=" + fetchThreads +
