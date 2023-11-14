@@ -698,8 +698,7 @@ public class TombstoneHelperTest
            .thenReturn(Arrays.asList(existingUsedSegment1, existingUsedSegment2));
     TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
 
-
-    Set<Interval> tombstoneIntervals =  tombstoneHelper.computeTombstoneIntervalsForReplace(
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
         dropIntervals,
         ImmutableList.of(replaceInterval),
         "test",
