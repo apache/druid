@@ -38,6 +38,7 @@ import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFac
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
@@ -65,10 +66,17 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements Filter
+/**
+ * Check to see if an array contains a specific element. This filter is not an exact replica of SQL ARRAY_CONTAINS
+ * or the native array_contains expression, which when given something like ARRAY_CONTAINS(arrayColumn, ARRAY[1,2,3])
+ * will check that arrayColumn contains all elements of the match value. To model this functionality, use an
+ * {@link AndDimFilter} with an element filter for each element to match.
+ */
+public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter implements Filter
 {
   private final String column;
   private final ColumnType elementMatchValueType;
+  @Nullable
   private final Object elementMatchValue;
   private final ExprEval<?> elementMatchValueEval;
 
@@ -77,10 +85,10 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
   private final DruidPredicateFactory predicateFactory;
 
   @JsonCreator
-  public ArrayContainsFilter(
+  public ArrayContainsElementFilter(
       @JsonProperty("column") String column,
       @JsonProperty("elementMatchValueType") ColumnType elementMatchValueType,
-      @JsonProperty("elementMatchValue") Object elementMatchValue,
+      @JsonProperty("elementMatchValue") @Nullable Object elementMatchValue,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
@@ -157,10 +165,14 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
   public String toString()
   {
     DimFilter.DimFilterToStringBuilder bob =
-        new DimFilter.DimFilterToStringBuilder().append("array_contains(")
+        new DimFilter.DimFilterToStringBuilder().append("array_contains_element(")
                                                 .appendDimension(column, null)
                                                 .append(", ")
-                                                .append(elementMatchValueEval.value())
+                                                .append(
+                                                    elementMatchValueType.isArray()
+                                                    ? Arrays.deepToString(elementMatchValueEval.asArray())
+                                                    : elementMatchValueEval.value()
+                                                )
                                                 .append(")");
     if (!ColumnType.STRING.equals(elementMatchValueType)) {
       bob.append(" (" + elementMatchValueType.asTypeString() + ")");
@@ -177,7 +189,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ArrayContainsFilter that = (ArrayContainsFilter) o;
+    ArrayContainsElementFilter that = (ArrayContainsElementFilter) o;
     if (!column.equals(that.column)) {
       return false;
     }
@@ -223,7 +235,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
       return elementIndexes.containsValue(elementMatchValueEval.value(), elementMatchValueType);
     }
 
-    if (selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
+    if (elementMatchValue != null && selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
       // column is not an array, behave like a normal equality filter
       return EqualityFilter.getEqualityIndex(column, elementMatchValueEval, elementMatchValueType, selector);
     }
@@ -246,7 +258,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
   {
     final ColumnCapabilities capabilities = factory.getColumnCapabilities(column);
 
-    if (elementMatchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive())) {
+    if (elementMatchValue != null && elementMatchValueType.isPrimitive() && (capabilities == null || capabilities.isPrimitive())) {
       return ColumnProcessors.makeVectorProcessor(
           column,
           VectorValueMatcherColumnProcessorFactory.instance(),
@@ -257,7 +269,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
         column,
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
-    ).makeMatcher(new ArrayContainsPredicateFactory(elementMatchValueEval));
+    ).makeMatcher(predicateFactory);
   }
 
   @Override
@@ -297,7 +309,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
       );
     }
 
-    return new ArrayContainsFilter(
+    return new ArrayContainsElementFilter(
         rewriteDimensionTo,
         elementMatchValueType,
         elementMatchValue,
@@ -308,6 +320,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
   private static class ArrayContainsPredicateFactory implements DruidPredicateFactory
   {
     private final ExprEval<?> elementMatchValue;
+    private final EqualityFilter.EqualityPredicateFactory equalityPredicateFactory;
     private final Supplier<Predicate<String>> stringPredicateSupplier;
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
@@ -319,10 +332,19 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
     public ArrayContainsPredicateFactory(ExprEval<?> elementMatchValue)
     {
       this.elementMatchValue = elementMatchValue;
-      this.stringPredicateSupplier = makeStringPredicateSupplier();
-      this.longPredicateSupplier = makeLongPredicateSupplier();
-      this.floatPredicateSupplier = makeFloatPredicateSupplier();
-      this.doublePredicateSupplier = makeDoublePredicateSupplier();
+      this.equalityPredicateFactory = new EqualityFilter.EqualityPredicateFactory(elementMatchValue);
+      // if element match value is an array, scalar matches can never be true
+      if (elementMatchValue.valueOrDefault() == null || (elementMatchValue.isArray() && elementMatchValue.value() != null && elementMatchValue.asArray().length > 1)) {
+        this.stringPredicateSupplier = Predicates::alwaysFalse;
+        this.longPredicateSupplier = () -> DruidLongPredicate.ALWAYS_FALSE;
+        this.doublePredicateSupplier = () -> DruidDoublePredicate.ALWAYS_FALSE;
+        this.floatPredicateSupplier = () -> DruidFloatPredicate.ALWAYS_FALSE;
+      } else {
+        this.stringPredicateSupplier = equalityPredicateFactory::makeStringPredicate;
+        this.longPredicateSupplier = equalityPredicateFactory::makeLongPredicate;
+        this.doublePredicateSupplier = equalityPredicateFactory::makeDoublePredicate;
+        this.floatPredicateSupplier = equalityPredicateFactory::makeFloatPredicate;
+      }
       this.objectPredicateSupplier = makeObjectPredicateSupplier();
       this.arrayPredicates = new ConcurrentHashMap<>();
       this.typeDetectingArrayPredicateSupplier = makeTypeDetectingArrayPredicate();
@@ -372,49 +394,12 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
       return objectPredicateSupplier.get();
     }
 
-    private Supplier<Predicate<String>> makeStringPredicateSupplier()
-    {
-      // if element match value is an array, this will never be true
-      if (elementMatchValue.isArray() && elementMatchValue.value() != null && elementMatchValue.asArray().length > 1) {
-        return Predicates::alwaysFalse;
-      }
-      // else it is a simple equality match
-      return EqualityFilter.makeStringPredicateSupplier(elementMatchValue);
-    }
-
-    private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
-    {
-      // if element match value is an array, this will never be true
-      if (elementMatchValue.isArray() && elementMatchValue.value() != null && elementMatchValue.asArray().length > 1) {
-        return () -> DruidLongPredicate.ALWAYS_FALSE;
-      }
-      // else it is a simple equality match
-      return EqualityFilter.makeLongPredicateSupplier(elementMatchValue);
-    }
-
-    private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
-    {
-      // if element match value is an array, this will never be true
-      if (elementMatchValue.isArray() && elementMatchValue.value() != null && elementMatchValue.asArray().length > 1) {
-        return () -> DruidFloatPredicate.ALWAYS_FALSE;
-      }
-      // else it is a simple equality
-      return EqualityFilter.makeFloatPredicateSupplier(elementMatchValue);
-    }
-
-    private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
-    {
-      // if element match value is an array, this will never be true
-      if (elementMatchValue.isArray() && elementMatchValue.value() != null && elementMatchValue.asArray().length > 1) {
-        return () -> DruidDoublePredicate.ALWAYS_FALSE;
-      }
-      // else it is a simple equality match
-      return EqualityFilter.makeDoublePredicateSupplier(elementMatchValue);
-    }
-
     private Supplier<Predicate<Object>> makeObjectPredicateSupplier()
     {
       return Suppliers.memoize(() -> input -> {
+        if (input == null) {
+          return false;
+        }
         final ExprEval<?> inputEval = ExprEval.bestEffortOf(StructuredData.unwrap(input));
         final Predicate<Object[]> matcher = new FallbackPredicate<>(
             makeArrayPredicate(ExpressionType.toColumnType(inputEval.asArrayType())),
@@ -427,6 +412,9 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
     private Supplier<Predicate<Object[]>> makeTypeDetectingArrayPredicate()
     {
       return Suppliers.memoize(() -> input -> {
+        if (input == null) {
+          return false;
+        }
         // just use object predicate logic
         final Predicate<Object> objectPredicate = objectPredicateSupplier.get();
         return objectPredicate.apply(input);
@@ -438,46 +426,25 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
       final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(arrayType);
 
       final Comparator elementComparator = arrayType.getElementType().getNullableStrategy();
-      if (elementMatchValue.isArray()) {
-        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(elementMatchValue, expressionType);
-        if (castForComparison == null) {
-          return Predicates.alwaysFalse();
-        }
-        final Object[] matchArray = castForComparison.asArray();
-        return input -> {
-          if (input == null) {
-            return false;
-          }
-          boolean allMatch = true;
-          for (Object matchElement : matchArray) {
-            boolean innerMatch = false;
-            for (Object element : input) {
-              innerMatch = innerMatch || elementComparator.compare(element, matchElement) == 0;
-            }
-            allMatch = allMatch && innerMatch;
-          }
-          return allMatch;
-        };
-      } else {
-        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
-            elementMatchValue,
-            (ExpressionType) expressionType.getElementType()
-        );
-        if (castForComparison == null) {
-          return Predicates.alwaysFalse();
-        }
-        final Object matchVal = castForComparison.value();
-        return input -> {
-          if (input == null) {
-            return false;
-          }
-          boolean anyMatch = false;
-          for (Object elem : input) {
-            anyMatch = anyMatch || elementComparator.compare(elem, matchVal) == 0;
-          }
-          return anyMatch;
-        };
+
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+          elementMatchValue,
+          (ExpressionType) expressionType.getElementType()
+      );
+      if (castForComparison == null) {
+        return Predicates.alwaysFalse();
       }
+      final Object matchVal = castForComparison.value();
+      return input -> {
+        if (input == null) {
+          return false;
+        }
+        boolean anyMatch = false;
+        for (Object elem : input) {
+          anyMatch = anyMatch || elementComparator.compare(elem, matchVal) == 0;
+        }
+        return anyMatch;
+      };
     }
 
     @Override
@@ -519,7 +486,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
     @Override
     public ValueMatcher makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
     {
-      if (matchValue.isArray()) {
+      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeDimensionProcessor(selector, multiValue);
       }
       return super.makeDimensionProcessor(selector, multiValue);
@@ -528,7 +495,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
     @Override
     public ValueMatcher makeFloatProcessor(BaseFloatColumnValueSelector selector)
     {
-      if (matchValue.isArray()) {
+      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeFloatProcessor(selector);
       }
       return super.makeFloatProcessor(selector);
@@ -537,7 +504,7 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
     @Override
     public ValueMatcher makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
     {
-      if (matchValue.isArray()) {
+      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeDoubleProcessor(selector);
       }
       return super.makeDoubleProcessor(selector);
@@ -546,10 +513,25 @@ public class ArrayContainsFilter extends AbstractOptimizableDimFilter implements
     @Override
     public ValueMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
-      if (matchValue.isArray()) {
+      if (matchValue.valueOrDefault() == null || matchValue.isArray()) {
         return predicateMatcherFactory.makeLongProcessor(selector);
       }
       return super.makeLongProcessor(selector);
+    }
+
+    @Override
+    public ValueMatcher makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        @Nullable ColumnCapabilities columnCapabilities
+    )
+    {
+      return super.makeArrayProcessor(selector, columnCapabilities);
+    }
+
+    @Override
+    public ValueMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
+    {
+      return super.makeComplexProcessor(selector);
     }
   }
 }

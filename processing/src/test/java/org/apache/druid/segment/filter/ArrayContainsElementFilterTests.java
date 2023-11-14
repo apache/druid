@@ -30,7 +30,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.filter.ArrayContainsFilter;
+import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -50,12 +50,12 @@ import java.io.Closeable;
 import java.util.Arrays;
 
 @RunWith(Enclosed.class)
-public class ArrayContainsFilterTests
+public class ArrayContainsElementFilterTests
 {
   @RunWith(Parameterized.class)
-  public static class ArrayContainsFilterTest extends BaseFilterTest
+  public static class ArrayContainsElementFilterTest extends BaseFilterTest
   {
-    public ArrayContainsFilterTest(
+    public ArrayContainsElementFilterTest(
         String testName,
         IndexBuilder indexBuilder,
         Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
@@ -69,7 +69,7 @@ public class ArrayContainsFilterTests
     @AfterClass
     public static void tearDown() throws Exception
     {
-      BaseFilterTest.tearDown(ArrayContainsFilterTest.class.getName());
+      BaseFilterTest.tearDown(ArrayContainsElementFilterTest.class.getName());
     }
 
     @Test
@@ -88,7 +88,7 @@ public class ArrayContainsFilterTests
          */
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayString",
               ColumnType.STRING,
               "a",
@@ -98,7 +98,7 @@ public class ArrayContainsFilterTests
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayString",
                   ColumnType.STRING,
                   "a",
@@ -111,7 +111,7 @@ public class ArrayContainsFilterTests
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayString",
               ColumnType.STRING,
               "c",
@@ -121,7 +121,7 @@ public class ArrayContainsFilterTests
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayString",
                   ColumnType.STRING,
                   "c",
@@ -134,7 +134,7 @@ public class ArrayContainsFilterTests
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayString",
               ColumnType.STRING,
               null,
@@ -144,7 +144,7 @@ public class ArrayContainsFilterTests
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayString",
                   ColumnType.STRING,
                   null,
@@ -172,7 +172,7 @@ public class ArrayContainsFilterTests
             "5", .. [123L, 345L]
          */
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayLong",
               ColumnType.LONG,
               2L,
@@ -182,7 +182,7 @@ public class ArrayContainsFilterTests
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayLong",
                   ColumnType.LONG,
                   2L,
@@ -195,7 +195,7 @@ public class ArrayContainsFilterTests
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayLong",
               ColumnType.LONG,
               null,
@@ -205,7 +205,7 @@ public class ArrayContainsFilterTests
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayLong",
                   ColumnType.LONG,
                   null,
@@ -218,7 +218,7 @@ public class ArrayContainsFilterTests
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayLong",
               ColumnType.DOUBLE,
               2.0,
@@ -228,7 +228,7 @@ public class ArrayContainsFilterTests
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayLong",
               ColumnType.STRING,
               "2",
@@ -254,7 +254,7 @@ public class ArrayContainsFilterTests
          */
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayDouble",
               ColumnType.DOUBLE,
               2.2,
@@ -264,7 +264,7 @@ public class ArrayContainsFilterTests
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayDouble",
                   ColumnType.DOUBLE,
                   2.2,
@@ -277,7 +277,7 @@ public class ArrayContainsFilterTests
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayDouble",
               ColumnType.STRING,
               "2.2",
@@ -287,7 +287,7 @@ public class ArrayContainsFilterTests
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayDouble",
               ColumnType.DOUBLE,
               null,
@@ -302,28 +302,19 @@ public class ArrayContainsFilterTests
     {
       // only auto schema supports array columns... skip other segment types
       Assume.assumeTrue(isAutoSchema());
-        /*
-            dim0 .. arrayString
-            "0", .. ["a", "b", "c"]
-            "1", .. []
-            "2", .. null
-            "3", .. ["a", "b", "c"]
-            "4", .. ["c", "d"]
-            "5", .. [null]
-         */
-
+      // these are not nested arrays, expect no matches
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayString",
               ColumnType.STRING_ARRAY,
               ImmutableList.of("a", "b", "c"),
               null
           ),
-          ImmutableList.of("0", "3")
+          ImmutableList.of()
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayString",
                   ColumnType.STRING_ARRAY,
                   ImmutableList.of("a", "b", "c"),
@@ -331,48 +322,8 @@ public class ArrayContainsFilterTests
               )
           ),
           NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "4", "5")
-          : ImmutableList.of("1", "2", "4", "5")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayString",
-              ColumnType.STRING_ARRAY,
-              new Object[]{"a", "b", "c"},
-              null
-          ),
-          ImmutableList.of("0", "3")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayString",
-              ColumnType.STRING_ARRAY,
-              new Object[]{null},
-              null
-          ),
-          ImmutableList.of("5")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayString",
-              ColumnType.STRING_ARRAY,
-              new Object[]{null, null},
-              null
-          ),
-          ImmutableList.of("5")
-      );
-      assertFilterMatches(
-          NotDimFilter.of(
-              new ArrayContainsFilter(
-                  "arrayString",
-                  ColumnType.STRING_ARRAY,
-                  new Object[]{null, null},
-                  null
-              )
-          ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "3", "4")
-          : ImmutableList.of("0", "1", "2", "3", "4")
+          ? ImmutableList.of("0", "1", "3", "4", "5")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
       );
     }
 
@@ -382,28 +333,19 @@ public class ArrayContainsFilterTests
       // only auto schema supports array columns... skip other segment types
       Assume.assumeTrue(isAutoSchema());
 
-        /*
-            dim0 .. arrayLong
-            "0", .. [1L, 2L, 3L]
-            "1", .. []
-            "2", .. [1L, 2L, 3L]
-            "3", .. null
-            "4", .. [null]
-            "5", .. [123L, 345L]
-         */
-
+      // these are not nested arrays, expect no matches
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayLong",
               ColumnType.LONG_ARRAY,
               ImmutableList.of(1L, 2L, 3L),
               null
           ),
-          ImmutableList.of("0", "2")
+          ImmutableList.of()
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayLong",
                   ColumnType.LONG_ARRAY,
                   ImmutableList.of(1L, 2L, 3L),
@@ -411,77 +353,8 @@ public class ArrayContainsFilterTests
               )
           ),
           NullHandling.sqlCompatible()
-          ? ImmutableList.of("1", "4", "5")
-          : ImmutableList.of("1", "3", "4", "5")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayLong",
-              ColumnType.LONG_ARRAY,
-              new Object[]{1L, 2L, 3L},
-              null
-          ),
-          ImmutableList.of("0", "2")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayLong",
-              ColumnType.LONG_ARRAY,
-              new Object[]{null},
-              null
-          ),
-          ImmutableList.of("4")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayLong",
-              ColumnType.LONG_ARRAY,
-              new Object[]{null, null},
-              null
-          ),
-          ImmutableList.of("4")
-      );
-      assertFilterMatches(
-          NotDimFilter.of(
-              new ArrayContainsFilter(
-                  "arrayLong",
-                  ColumnType.LONG_ARRAY,
-                  new Object[]{null, null},
-                  null
-              )
-          ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("0", "1", "2", "5")
-          : ImmutableList.of("0", "1", "2", "3", "5")
-      );
-
-      // test loss of precision matching long arrays with double array match values
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayLong",
-              ColumnType.DOUBLE_ARRAY,
-              new Object[]{1.0, 2.0, 3.0},
-              null
-          ),
-          ImmutableList.of("0", "2")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayLong",
-              ColumnType.DOUBLE_ARRAY,
-              new Object[]{1.1, 2.2, 3.3},
-              null
-          ),
-          ImmutableList.of()
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayLong",
-              ColumnType.DOUBLE_ARRAY,
-              new Object[]{null},
-              null
-          ),
-          ImmutableList.of("4")
+          ? ImmutableList.of("0", "1", "2", "4", "5")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
       );
     }
 
@@ -490,62 +363,22 @@ public class ArrayContainsFilterTests
     {
       // only auto schema supports array columns... skip other segment types
       Assume.assumeTrue(isAutoSchema());
-        /*
-            dim0 .. arrayDouble
-            "0", .. [1.1, 2.2, 3.3]
-            "1", .. [1.1, 2.2, 3.3]
-            "2", .. [null]
-            "3", .. []
-            "4", .. [-1.1, -333.3]
-            "5", .. null
-         */
-
+      // these are not nested arrays, expect no matches
       assertFilterMatches(
-          new ArrayContainsFilter(
+          new ArrayContainsElementFilter(
               "arrayDouble",
               ColumnType.DOUBLE_ARRAY,
               ImmutableList.of(1.1, 2.2, 3.3),
               null
           ),
-          ImmutableList.of("0", "1")
+          ImmutableList.of()
       );
       assertFilterMatches(
           NotDimFilter.of(
-              new ArrayContainsFilter(
+              new ArrayContainsElementFilter(
                   "arrayDouble",
                   ColumnType.DOUBLE_ARRAY,
                   ImmutableList.of(1.1, 2.2, 3.3),
-                  null
-              )
-          ),
-          NullHandling.sqlCompatible()
-          ? ImmutableList.of("2", "3", "4")
-          : ImmutableList.of("2", "3", "4", "5")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayDouble",
-              ColumnType.DOUBLE_ARRAY,
-              new Object[]{1.1, 2.2, 3.3},
-              null
-          ),
-          ImmutableList.of("0", "1")
-      );
-      assertFilterMatches(
-          new ArrayContainsFilter(
-              "arrayDouble",
-              ColumnType.DOUBLE_ARRAY,
-              new Object[]{null},
-              null
-          ),
-          ImmutableList.of("2")
-      );
-      assertFilterMatches(
-          NotDimFilter.of(
-              new ArrayContainsFilter(
-                  "arrayDouble",
-                  ColumnType.DOUBLE_ARRAY,
-                  ImmutableList.of(1.1, 2.2, 3.4),
                   null
               )
           ),
@@ -559,158 +392,204 @@ public class ArrayContainsFilterTests
     public void testScalarColumnContains()
     {
       assertFilterMatches(
-          new ArrayContainsFilter("s0", ColumnType.STRING, "a", null),
+          new ArrayContainsElementFilter("s0", ColumnType.STRING, "a", null),
           ImmutableList.of("1", "5")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("s0", ColumnType.STRING, "b", null),
+          new ArrayContainsElementFilter("s0", ColumnType.STRING, "b", null),
           ImmutableList.of("2")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("s0", ColumnType.STRING, "c", null),
+          new ArrayContainsElementFilter("s0", ColumnType.STRING, "c", null),
           ImmutableList.of("4")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("s0", ColumnType.STRING, "noexist", null),
+          new ArrayContainsElementFilter("s0", ColumnType.STRING, "noexist", null),
           ImmutableList.of()
       );
       assertFilterMatches(
-          new ArrayContainsFilter("s0", ColumnType.STRING_ARRAY, ImmutableList.of("c"), null),
+          new ArrayContainsElementFilter("s0", ColumnType.STRING_ARRAY, ImmutableList.of("c"), null),
           ImmutableList.of("4")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("s0", ColumnType.STRING_ARRAY, ImmutableList.of("a", "c"), null),
+          new ArrayContainsElementFilter("s0", ColumnType.STRING_ARRAY, ImmutableList.of("a", "c"), null),
           ImmutableList.of()
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter("d0", ColumnType.DOUBLE, 10.1, null),
+          new ArrayContainsElementFilter("d0", ColumnType.DOUBLE, 10.1, null),
           ImmutableList.of("1")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("d0", ColumnType.DOUBLE, 120.0245, null),
+          new ArrayContainsElementFilter("d0", ColumnType.DOUBLE, 120.0245, null),
           ImmutableList.of("3")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("d0", ColumnType.DOUBLE, 765.432, null),
+          new ArrayContainsElementFilter("d0", ColumnType.DOUBLE, 765.432, null),
           ImmutableList.of("5")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("d0", ColumnType.DOUBLE, 765.431, null),
+          new ArrayContainsElementFilter("d0", ColumnType.DOUBLE, 765.431, null),
           ImmutableList.of()
       );
       assertFilterMatches(
-          new ArrayContainsFilter("d0", ColumnType.DOUBLE_ARRAY, new Object[]{10.1}, null),
+          new ArrayContainsElementFilter("d0", ColumnType.DOUBLE_ARRAY, new Object[]{10.1}, null),
           ImmutableList.of("1")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("d0", ColumnType.DOUBLE_ARRAY, new Object[]{10.1, 120.0245}, null),
+          new ArrayContainsElementFilter("d0", ColumnType.DOUBLE_ARRAY, new Object[]{10.1, 120.0245}, null),
           ImmutableList.of()
       );
 
       assertFilterMatches(
-          new ArrayContainsFilter("l0", ColumnType.LONG, 100L, null),
+          new ArrayContainsElementFilter("l0", ColumnType.LONG, 100L, null),
           ImmutableList.of("1")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("l0", ColumnType.LONG, 40L, null),
+          new ArrayContainsElementFilter("l0", ColumnType.LONG, 40L, null),
           ImmutableList.of("2")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("l0", ColumnType.LONG, 9001L, null),
+          new ArrayContainsElementFilter("l0", ColumnType.LONG, 9001L, null),
           ImmutableList.of("4")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("l0", ColumnType.LONG, 9000L, null),
+          new ArrayContainsElementFilter("l0", ColumnType.LONG, 9000L, null),
           ImmutableList.of()
       );
       assertFilterMatches(
-          new ArrayContainsFilter("l0", ColumnType.LONG_ARRAY, ImmutableList.of(9001L), null),
+          new ArrayContainsElementFilter("l0", ColumnType.LONG_ARRAY, ImmutableList.of(9001L), null),
           ImmutableList.of("4")
       );
       assertFilterMatches(
-          new ArrayContainsFilter("l0", ColumnType.LONG_ARRAY, ImmutableList.of(40L, 9001L), null),
+          new ArrayContainsElementFilter("l0", ColumnType.LONG_ARRAY, ImmutableList.of(40L, 9001L), null),
+          ImmutableList.of()
+      );
+    }
+
+    @Test
+    public void testArrayContainsNestedArray()
+    {
+      // only auto schema supports array columns... skip other segment types
+      Assume.assumeTrue(isAutoSchema());
+      assertFilterMatchesSkipVectorize(
+          new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L, 3L}, null),
+          ImmutableList.of("0", "2")
+      );
+
+      assertFilterMatchesSkipVectorize(
+          new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L}, null),
+          ImmutableList.of()
+      );
+    }
+
+    @Test
+    public void testArrayContainsMvd()
+    {
+      assertFilterMatches(
+          new ArrayContainsElementFilter("dim2", ColumnType.STRING, "a", null),
+          ImmutableList.of("0", "3")
+      );
+      if (isAutoSchema()) {
+        assertFilterMatches(
+            NotDimFilter.of(new ArrayContainsElementFilter("dim2", ColumnType.STRING, "a", null)),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("1", "2", "4")
+            : ImmutableList.of("1", "2", "4", "5")
+        );
+      } else {
+        // multi-value dimension treats [] as null, so in sql compatible mode row 1 ends up as not matching
+        assertFilterMatches(
+            NotDimFilter.of(new ArrayContainsElementFilter("dim2", ColumnType.STRING, "a", null)),
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of("2", "4")
+            : ImmutableList.of("1", "2", "4", "5")
+        );
+      }
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter("dim2", ColumnType.STRING, null, null),
           ImmutableList.of()
       );
     }
   }
 
-  public static class ArrayContainsFilterNonParameterizedTests extends InitializedNullHandlingTest
+  public static class ArrayContainsElementFilterNonParameterizedTests extends InitializedNullHandlingTest
   {
     @Test
     public void testSerde() throws JsonProcessingException
     {
       ObjectMapper mapper = new DefaultObjectMapper();
-      ArrayContainsFilter filter = new ArrayContainsFilter("x", ColumnType.STRING, "hello", null);
+      ArrayContainsElementFilter filter = new ArrayContainsElementFilter("x", ColumnType.STRING, "hello", null);
       String s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.LONG, 1L, null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.LONG, 1L, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.LONG, 1, null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.LONG, 1, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.DOUBLE, 111.111, null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.DOUBLE, 111.111, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.FLOAT, 1234.0f, null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.FLOAT, 1234.0f, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.STRING_ARRAY, new Object[]{"a", "b", null, "c"}, null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.STRING_ARRAY, new Object[]{"a", "b", null, "c"}, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.STRING_ARRAY, Arrays.asList("a", "b", null, "c"), null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.STRING_ARRAY, Arrays.asList("a", "b", null, "c"), null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.LONG_ARRAY, new Object[]{1L, null, 2L, 3L}, null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.LONG_ARRAY, new Object[]{1L, null, 2L, 3L}, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.LONG_ARRAY, Arrays.asList(1L, null, 2L, 3L), null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.LONG_ARRAY, Arrays.asList(1L, null, 2L, 3L), null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.1, 2.1, null, 3.1}, null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.1, 2.1, null, 3.1}, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter("x", ColumnType.DOUBLE_ARRAY, Arrays.asList(1.1, 2.1, null, 3.1), null);
+      filter = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, Arrays.asList(1.1, 2.1, null, 3.1), null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
 
-      filter = new ArrayContainsFilter(
+      filter = new ArrayContainsElementFilter(
           "x",
           ColumnType.NESTED_DATA,
           ImmutableMap.of("x", ImmutableList.of(1, 2, 3)),
           null
       );
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsFilter.class));
+      Assert.assertEquals(filter, mapper.readValue(s, ArrayContainsElementFilter.class));
     }
 
     @Test
     public void testRewrite()
     {
-      ArrayContainsFilter filter = new ArrayContainsFilter("x", ColumnType.STRING, "hello", null);
+      ArrayContainsElementFilter filter = new ArrayContainsElementFilter("x", ColumnType.STRING, "hello", null);
       Filter rewrite = filter.rewriteRequiredColumns(ImmutableMap.of("x", "y"));
-      ArrayContainsFilter expected = new ArrayContainsFilter("y", ColumnType.STRING, "hello", null);
+      ArrayContainsElementFilter expected = new ArrayContainsElementFilter("y", ColumnType.STRING, "hello", null);
       Assert.assertEquals(expected, rewrite);
     }
 
     @Test
     public void testGetCacheKey()
     {
-      ArrayContainsFilter f1 = new ArrayContainsFilter("x", ColumnType.STRING, "hello", null);
-      ArrayContainsFilter f1_2 = new ArrayContainsFilter("x", ColumnType.STRING, "hello", null);
-      ArrayContainsFilter f2 = new ArrayContainsFilter("x", ColumnType.STRING, "world", null);
-      ArrayContainsFilter f3 = new ArrayContainsFilter(
+      ArrayContainsElementFilter f1 = new ArrayContainsElementFilter("x", ColumnType.STRING, "hello", null);
+      ArrayContainsElementFilter f1_2 = new ArrayContainsElementFilter("x", ColumnType.STRING, "hello", null);
+      ArrayContainsElementFilter f2 = new ArrayContainsElementFilter("x", ColumnType.STRING, "world", null);
+      ArrayContainsElementFilter f3 = new ArrayContainsElementFilter(
           "x",
           ColumnType.STRING,
           "hello",
@@ -720,34 +599,34 @@ public class ArrayContainsFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsFilter("x", ColumnType.LONG, 1L, null);
-      f1_2 = new ArrayContainsFilter("x", ColumnType.LONG, 1, null);
-      f2 = new ArrayContainsFilter("x", ColumnType.LONG, 2L, null);
-      f3 = new ArrayContainsFilter("x", ColumnType.LONG, 1L, new FilterTuning(true, null, null));
+      f1 = new ArrayContainsElementFilter("x", ColumnType.LONG, 1L, null);
+      f1_2 = new ArrayContainsElementFilter("x", ColumnType.LONG, 1, null);
+      f2 = new ArrayContainsElementFilter("x", ColumnType.LONG, 2L, null);
+      f3 = new ArrayContainsElementFilter("x", ColumnType.LONG, 1L, new FilterTuning(true, null, null));
       Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsFilter("x", ColumnType.DOUBLE, 1.1, null);
-      f1_2 = new ArrayContainsFilter("x", ColumnType.DOUBLE, 1.1, null);
-      f2 = new ArrayContainsFilter("x", ColumnType.DOUBLE, 2.2, null);
-      f3 = new ArrayContainsFilter("x", ColumnType.DOUBLE, 1.1, new FilterTuning(true, null, null));
+      f1 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE, 1.1, null);
+      f1_2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE, 1.1, null);
+      f2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE, 2.2, null);
+      f3 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE, 1.1, new FilterTuning(true, null, null));
       Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsFilter("x", ColumnType.FLOAT, 1.1f, null);
-      f1_2 = new ArrayContainsFilter("x", ColumnType.FLOAT, 1.1f, null);
-      f2 = new ArrayContainsFilter("x", ColumnType.FLOAT, 2.2f, null);
-      f3 = new ArrayContainsFilter("x", ColumnType.FLOAT, 1.1f, new FilterTuning(true, null, null));
+      f1 = new ArrayContainsElementFilter("x", ColumnType.FLOAT, 1.1f, null);
+      f1_2 = new ArrayContainsElementFilter("x", ColumnType.FLOAT, 1.1f, null);
+      f2 = new ArrayContainsElementFilter("x", ColumnType.FLOAT, 2.2f, null);
+      f3 = new ArrayContainsElementFilter("x", ColumnType.FLOAT, 1.1f, new FilterTuning(true, null, null));
       Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsFilter("x", ColumnType.STRING_ARRAY, new Object[]{"a", "b", null, "c"}, null);
-      f1_2 = new ArrayContainsFilter("x", ColumnType.STRING_ARRAY, Arrays.asList("a", "b", null, "c"), null);
-      f2 = new ArrayContainsFilter("x", ColumnType.STRING_ARRAY, new Object[]{"a", "b", "c"}, null);
-      f3 = new ArrayContainsFilter(
+      f1 = new ArrayContainsElementFilter("x", ColumnType.STRING_ARRAY, new Object[]{"a", "b", null, "c"}, null);
+      f1_2 = new ArrayContainsElementFilter("x", ColumnType.STRING_ARRAY, Arrays.asList("a", "b", null, "c"), null);
+      f2 = new ArrayContainsElementFilter("x", ColumnType.STRING_ARRAY, new Object[]{"a", "b", "c"}, null);
+      f3 = new ArrayContainsElementFilter(
           "x",
           ColumnType.STRING_ARRAY,
           new Object[]{"a", "b", null, "c"},
@@ -757,10 +636,10 @@ public class ArrayContainsFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsFilter("x", ColumnType.LONG_ARRAY, new Object[]{100L, 200L, null, 300L}, null);
-      f1_2 = new ArrayContainsFilter("x", ColumnType.LONG_ARRAY, Arrays.asList(100L, 200L, null, 300L), null);
-      f2 = new ArrayContainsFilter("x", ColumnType.LONG_ARRAY, new Object[]{100L, null, 200L, 300L}, null);
-      f3 = new ArrayContainsFilter(
+      f1 = new ArrayContainsElementFilter("x", ColumnType.LONG_ARRAY, new Object[]{100L, 200L, null, 300L}, null);
+      f1_2 = new ArrayContainsElementFilter("x", ColumnType.LONG_ARRAY, Arrays.asList(100L, 200L, null, 300L), null);
+      f2 = new ArrayContainsElementFilter("x", ColumnType.LONG_ARRAY, new Object[]{100L, null, 200L, 300L}, null);
+      f3 = new ArrayContainsElementFilter(
           "x",
           ColumnType.LONG_ARRAY,
           new Object[]{100L, 200L, null, 300L},
@@ -770,10 +649,10 @@ public class ArrayContainsFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, null, 20.0002, 300.0003}, null);
-      f1_2 = new ArrayContainsFilter("x", ColumnType.DOUBLE_ARRAY, Arrays.asList(1.001, null, 20.0002, 300.0003), null);
-      f2 = new ArrayContainsFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, 20.0002, 300.0003, null}, null);
-      f3 = new ArrayContainsFilter(
+      f1 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, null, 20.0002, 300.0003}, null);
+      f1_2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, Arrays.asList(1.001, null, 20.0002, 300.0003), null);
+      f2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, 20.0002, 300.0003, null}, null);
+      f3 = new ArrayContainsElementFilter(
           "x",
           ColumnType.DOUBLE_ARRAY,
           new Object[]{1.001, null, 20.0002, 300.0003},
@@ -784,20 +663,20 @@ public class ArrayContainsFilterTests
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       NestedDataModule.registerHandlersAndSerde();
-      f1 = new ArrayContainsFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
-      f1_2 = new ArrayContainsFilter(
+      f1 = new ArrayContainsElementFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
+      f1_2 = new ArrayContainsElementFilter(
           "x",
           ColumnType.NESTED_DATA,
           ImmutableMap.of("x", ImmutableList.of(1, 2, 3)),
           null
       );
-      f2 = new ArrayContainsFilter(
+      f2 = new ArrayContainsElementFilter(
           "x",
           ColumnType.NESTED_DATA,
           ImmutableMap.of("x", ImmutableList.of(1, 2, 3, 4)),
           null
       );
-      f3 = new ArrayContainsFilter(
+      f3 = new ArrayContainsElementFilter(
           "x",
           ColumnType.NESTED_DATA,
           ImmutableMap.of("x", ImmutableList.of(1, 2, 3)),
@@ -813,12 +692,12 @@ public class ArrayContainsFilterTests
     {
       Throwable t = Assert.assertThrows(
           DruidException.class,
-          () -> new ArrayContainsFilter(null, ColumnType.STRING, null, null)
+          () -> new ArrayContainsElementFilter(null, ColumnType.STRING, null, null)
       );
       Assert.assertEquals("Invalid array_contains filter, column cannot be null", t.getMessage());
       t = Assert.assertThrows(
           DruidException.class,
-          () -> new ArrayContainsFilter("dim0", null, null, null)
+          () -> new ArrayContainsElementFilter("dim0", null, null, null)
       );
       Assert.assertEquals(
           "Invalid array_contains filter on column [dim0], elementMatchValueType cannot be null",
@@ -830,7 +709,7 @@ public class ArrayContainsFilterTests
     @Test
     public void test_equals()
     {
-      EqualsVerifier.forClass(ArrayContainsFilter.class).usingGetClass()
+      EqualsVerifier.forClass(ArrayContainsElementFilter.class).usingGetClass()
                     .withNonnullFields(
                         "column",
                         "elementMatchValueType",

@@ -21,7 +21,6 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.error.DruidException;
@@ -61,7 +60,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.List;
 
 public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
@@ -410,24 +408,20 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
     {
+      // this column doesn't store nested arrays, bail out if checking if we contain an array
+      if (elementValueType.isArray()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
+      }
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value);
 
-      final ExprEval<?> castForComparison;
-      if (eval.isArray()) {
-        castForComparison = ExprEval.castForEqualityComparison(
-            eval,
-            ExpressionType.fromColumnTypeStrict(logicalType)
-        );
-      } else {
-        castForComparison = ExprEval.castForEqualityComparison(
-            eval,
-            ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
-        );
-      }
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+          eval,
+          ExpressionType.fromColumnTypeStrict(logicalType.isArray() ? logicalType.getElementType() : logicalType)
+      );
       if (castForComparison == null) {
         return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
-      Indexed elements;
+      final Indexed elements;
       final int elementOffset;
       switch (logicalType.getElementType().getType()) {
         case STRING:
@@ -449,60 +443,6 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
           );
       }
 
-      if (eval.isArray()) {
-        final Object[] matchElements = castForComparison.asArray();
-        if (matchElements == null) {
-          return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
-        }
-        List<ImmutableBitmap> elementBitmaps = Lists.newArrayListWithCapacity(matchElements.length);
-        for (Object o : matchElements) {
-          int index;
-          if (o == null) {
-            index = 0;
-          } else if (castForComparison.type().getElementType().is(ExprType.STRING)) {
-            index = elements.indexOf(StringUtils.toUtf8ByteBuffer((String) o));
-          } else {
-            index = elements.indexOf(o) + elementOffset;
-          }
-          if (index >= 0) {
-            elementBitmaps.add(getElementBitmap(index));
-          } else {
-            return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
-          }
-        }
-        return new SimpleBitmapColumnIndex()
-        {
-          @Override
-          public double estimateSelectivity(int totalRows)
-          {
-            double estimation = 1.0;
-            if (elementBitmaps.isEmpty()) {
-              return 0.0;
-            }
-            for (ImmutableBitmap bitmap : elementBitmaps) {
-              estimation *= (double) bitmap.size() / totalRows;
-            }
-            return estimation;
-          }
-
-          @Override
-          public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
-          {
-            if (includeUnknown) {
-              if (elementBitmaps.isEmpty()) {
-                return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
-              }
-              return bitmapResultFactory.unionDimensionValueBitmaps(
-                  ImmutableList.of(
-                      nullValueBitmap,
-                      bitmapFactory.intersection(elementBitmaps)
-                  )
-              );
-            }
-            return bitmapResultFactory.wrapDimensionValue(bitmapFactory.intersection(elementBitmaps));
-          }
-        };
-      }
       return new SimpleBitmapColumnIndex()
       {
         @Override

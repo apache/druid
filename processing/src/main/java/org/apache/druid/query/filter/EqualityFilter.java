@@ -342,60 +342,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     return null;
   }
 
-  public static Supplier<Predicate<String>> makeStringPredicateSupplier(ExprEval<?> matchValue)
-  {
-    return Suppliers.memoize(() -> {
-      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
-      if (castForComparison == null) {
-        return Predicates.alwaysFalse();
-      }
-      return Predicates.equalTo(castForComparison.asString());
-    });
-  }
-
-  public static Supplier<DruidLongPredicate> makeLongPredicateSupplier(ExprEval<?> matchValue)
-  {
-    return Suppliers.memoize(() -> {
-      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
-      if (castForComparison == null) {
-        return DruidLongPredicate.ALWAYS_FALSE;
-      } else {
-        // store the primitive, so we don't unbox for every comparison
-        final long unboxedLong = castForComparison.asLong();
-        return input -> input == unboxedLong;
-      }
-    });
-  }
-
-  public static Supplier<DruidFloatPredicate> makeFloatPredicateSupplier(ExprEval<?> matchValue)
-  {
-    return Suppliers.memoize(() -> {
-      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
-      if (castForComparison == null) {
-        return DruidFloatPredicate.ALWAYS_FALSE;
-      } else {
-        // Compare with floatToIntBits instead of == to canonicalize NaNs.
-        final int floatBits = Float.floatToIntBits((float) castForComparison.asDouble());
-        return input -> Float.floatToIntBits(input) == floatBits;
-      }
-    });
-  }
-
-  public static Supplier<DruidDoublePredicate> makeDoublePredicateSupplier(ExprEval<?> matchValue)
-  {
-    return Suppliers.memoize(() -> {
-      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
-      if (castForComparison == null) {
-        return DruidDoublePredicate.ALWAYS_FALSE;
-      } else {
-        // Compare with doubleToLongBits instead of == to canonicalize NaNs.
-        final long bits = Double.doubleToLongBits(castForComparison.asDouble());
-        return input -> Double.doubleToLongBits(input) == bits;
-      }
-    });
-  }
-
-  private static class EqualityPredicateFactory implements DruidPredicateFactory
+  public static class EqualityPredicateFactory implements DruidPredicateFactory
   {
     private final ExprEval<?> matchValue;
     private final Supplier<Predicate<String>> stringPredicateSupplier;
@@ -409,10 +356,10 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     public EqualityPredicateFactory(ExprEval<?> matchValue)
     {
       this.matchValue = matchValue;
-      this.stringPredicateSupplier = makeStringPredicateSupplier(matchValue);
-      this.longPredicateSupplier = makeLongPredicateSupplier(matchValue);
-      this.floatPredicateSupplier = makeFloatPredicateSupplier(matchValue);
-      this.doublePredicateSupplier = makeDoublePredicateSupplier(matchValue);
+      this.stringPredicateSupplier = makeStringPredicateSupplier();
+      this.longPredicateSupplier = makeLongPredicateSupplier();
+      this.floatPredicateSupplier = makeFloatPredicateSupplier();
+      this.doublePredicateSupplier = makeDoublePredicateSupplier();
       this.objectPredicateSupplier = makeObjectPredicateSupplier();
       this.arrayPredicates = new ConcurrentHashMap<>();
       this.typeDetectingArrayPredicateSupplier = makeTypeDetectingArrayPredicate();
@@ -462,6 +409,59 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return objectPredicateSupplier.get();
     }
 
+    private Supplier<Predicate<String>> makeStringPredicateSupplier()
+    {
+      return Suppliers.memoize(() -> {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.STRING);
+        if (castForComparison == null) {
+          return Predicates.alwaysFalse();
+        }
+        return Predicates.equalTo(castForComparison.asString());
+      });
+    }
+
+    private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
+    {
+      return Suppliers.memoize(() -> {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.LONG);
+        if (castForComparison == null) {
+          return DruidLongPredicate.ALWAYS_FALSE;
+        } else {
+          // store the primitive, so we don't unbox for every comparison
+          final long unboxedLong = castForComparison.asLong();
+          return input -> input == unboxedLong;
+        }
+      });
+    }
+
+    private Supplier<DruidFloatPredicate> makeFloatPredicateSupplier()
+    {
+      return Suppliers.memoize(() -> {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
+        if (castForComparison == null) {
+          return DruidFloatPredicate.ALWAYS_FALSE;
+        } else {
+          // Compare with floatToIntBits instead of == to canonicalize NaNs.
+          final int floatBits = Float.floatToIntBits((float) castForComparison.asDouble());
+          return input -> Float.floatToIntBits(input) == floatBits;
+        }
+      });
+    }
+
+    private Supplier<DruidDoublePredicate> makeDoublePredicateSupplier()
+    {
+      return Suppliers.memoize(() -> {
+        final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(matchValue, ExpressionType.DOUBLE);
+        if (castForComparison == null) {
+          return DruidDoublePredicate.ALWAYS_FALSE;
+        } else {
+          // Compare with doubleToLongBits instead of == to canonicalize NaNs.
+          final long bits = Double.doubleToLongBits(castForComparison.asDouble());
+          return input -> Double.doubleToLongBits(input) == bits;
+        }
+      });
+    }
+
     private Supplier<Predicate<Object>> makeObjectPredicateSupplier()
     {
       return Suppliers.memoize(() -> {
@@ -485,6 +485,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         return arrayComparator.compare(input, matchArray) == 0;
       });
     }
+
     private Predicate<Object[]> makeArrayPredicateInternal(TypeSignature<ValueType> arrayType)
     {
       final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(arrayType);

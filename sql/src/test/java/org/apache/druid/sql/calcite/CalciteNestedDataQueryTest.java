@@ -49,7 +49,7 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.ArrayContainsFilter;
+import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -1507,7 +1507,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setDimFilter(
-                                new ArrayContainsFilter("arrayLongNulls", ColumnType.LONG, 1, null)
+                                new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 1, null)
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -1562,7 +1562,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setDimFilter(
                                 or(
-                                    new ArrayContainsFilter("arrayLongNulls", ColumnType.LONG, 1L, null),
+                                    new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 1L, null),
                                     expressionFilter("array_overlap(\"arrayLongNulls\",array(2,3))")
                                 )
                             )
@@ -1773,7 +1773,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setDimFilter(
-                                new ArrayContainsFilter("arrayStringNulls", ColumnType.STRING, "b", null)
+                                new ArrayContainsElementFilter("arrayStringNulls", ColumnType.STRING, "b", null)
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -1989,7 +1989,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setDimFilter(
-                                new ArrayContainsFilter("arrayDoubleNulls", ColumnType.DOUBLE, 2.2, null)
+                                new ArrayContainsElementFilter("arrayDoubleNulls", ColumnType.DOUBLE, 2.2, null)
                             )
                             .setAggregatorSpecs(
                                 aggregators(
