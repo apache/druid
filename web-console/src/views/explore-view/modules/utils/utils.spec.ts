@@ -39,7 +39,7 @@ describe('shiftTimeInWhere', () => {
         'PT1H',
       ).toString(),
     ).toEqual(
-      `(TIME_SHIFT(TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1), 'PT1H', -1) <= \\"__time\\" AND \\"__time\\" < TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1))`,
+      `(TIME_SHIFT(TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1), 'PT1H', -1) <= "__time" AND "__time" < TIME_SHIFT(MAX_DATA_TIME(), 'PT1H', -1))`,
     );
   });
 });
