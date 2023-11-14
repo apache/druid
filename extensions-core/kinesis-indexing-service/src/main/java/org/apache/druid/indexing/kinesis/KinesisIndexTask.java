@@ -187,10 +187,11 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
       fetchThreads = runtimeInfo.getAvailableProcessors() * 2;
     }
 
-    // assume that each fetchThread return 10MB (assummed size of aggregated record = 1MB, and
-    // records per fetch is 10000 max), and cap fetchThreads at this amount. Don't fail if specified
-    // to be greater than this as to not cause failure for older configurations, but log warning
-    // if fetchThreads lowered because of this.
+    // Each fetchThread can return upto 10MB at a time
+    // (https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html), cap fetchThreads so that
+    // we don't exceed the max buffer byte size worth of records at a time. Don't fail if fetchThreads specified
+    // is greater than this as to not cause failure for older configurations, but log warning in this case, and lower
+    // fetchThreads implicitly.
     int maxFetchThreads = Math.max(1, (int) (recordBufferSizeBytes / 10_000_000L));
     if (fetchThreads > maxFetchThreads) {
       log.warn("fetchThreads [%d] being lowered to [%d]", fetchThreads, maxFetchThreads);
