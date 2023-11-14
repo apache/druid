@@ -92,7 +92,7 @@ import java.util.stream.StreamSupport;
  * data nodes, tasks, metadata database and builds table schema.
  * <p>
  * At startup, the cache awaits the initialization of the timeline.
- * If the cahce uses a segment metadata query to fetch segment schema,
+ * If the cache uses a segment metadata query to fetch segment schema,
  * it attempts to refresh segments in batches of {@code MAX_SEGMENTS_PER_QUERY} for each datasource.
  * Once all datasources have undergone this process, the initial schema of each datasource is constructed,
  * and the cache is marked as initialized.
