@@ -1,14 +1,22 @@
 type: "operatorValidation"
 
 sql: |
-  SELECT *,MILLIS_TO_TIMESTAMP(subQry.w_min) > '1920-05-19'
-    FROM
-    ( SELECT l2,l1,min(l1) over(),MIN(l1) OVER W as w_min
-      FROM numfoo where l1 is null or dim1 = 'nonexistent'
-          WINDOW W AS ( PARTITION BY l1 ORDER BY l1 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW )
-    ) subQry
-  WHERE MILLIS_TO_TIMESTAMP(subQry.w_min) > '1920-05-14'
+  SELECT
+    m1,
+    SUM(m1) OVER () cc
+  FROM druid.foo
 
+expectedOperators:
+  - type: "naivePartition"
+    partitionColumns: []
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - type: "doubleSum"
+          name: "w0"
+          fieldName: "m1"
 expectedResults:
   - [1.0,21.0]
   - [2.0,21.0]
