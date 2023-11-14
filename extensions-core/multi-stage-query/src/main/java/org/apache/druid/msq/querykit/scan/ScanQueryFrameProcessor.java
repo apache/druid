@@ -194,6 +194,9 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<Unit> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
   {
+    // Try to run with the segment on the server
+    // if segment was not found for some reason
+    // call runWithSegment which would load from deep storage
     if (cursor == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
       final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> statusSequencePair =
@@ -244,7 +247,9 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
+    // why not remove order by and limit here ?
     if (cursor == null) {
+      // load from deep storage
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Yielder<Cursor> cursorYielder = Yielders.each(

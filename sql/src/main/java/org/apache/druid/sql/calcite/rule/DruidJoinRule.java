@@ -156,6 +156,7 @@ public class DruidJoinRule extends RelOptRule
       final Project rightProject = right.getPartialDruidQuery().getSelectProject();
 
       // Right-side projection expressions rewritten to be on top of the join.
+      
       for (final RexNode rexNode : RexUtil.shift(rightProject.getProjects(), newLeft.getRowType().getFieldCount())) {
         if (join.getJoinType().generatesNullsOnRight()) {
           newProjectExprs.add(makeNullableIfLiteral(rexNode, rexBuilder));

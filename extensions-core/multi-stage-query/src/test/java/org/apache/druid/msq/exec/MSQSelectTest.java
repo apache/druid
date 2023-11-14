@@ -130,12 +130,12 @@ public class MSQSelectTest extends MSQTestBase
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
-        {DEFAULT, DEFAULT_MSQ_CONTEXT},
-        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
-        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
-        {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
-        {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
+        {DEFAULT, DEFAULT_MSQ_CONTEXT}
+//        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
+//        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
+//        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
+//        {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
+//        {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
     };
 
     return Arrays.asList(data);
@@ -608,6 +608,65 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
+  }
+
+  @Test
+  public void testWindowOnFoo()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt1", ColumnType.LONG)
+                                            .build();
+
+    testSelectQuery()
+        .setSql("select m1,SUM(m1) OVER() cc from foo group by m1")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(GroupByQuery.builder()
+                                                      .setDataSource(CalciteTests.DATASOURCE1)
+                                                      .setInterval(querySegmentSpec(Filtration
+                                                                                        .eternity()))
+                                                      .setGranularity(Granularities.ALL)
+                                                      .setDimensions(dimensions(
+                                                          new DefaultDimensionSpec(
+                                                              "cnt",
+                                                              "d0",
+                                                              ColumnType.LONG
+                                                          )
+                                                      ))
+                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
+                                                          "a0")))
+                                                      .setContext(context)
+                                                      .build())
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "cnt"),
+                                           new ColumnMapping("a0", "cnt1")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
+        .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(1).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();

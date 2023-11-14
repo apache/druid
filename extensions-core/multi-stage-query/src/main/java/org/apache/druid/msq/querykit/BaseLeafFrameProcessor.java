@@ -40,7 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
+public abstract class  BaseLeafFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableInput baseInput;
   private final ResourceHolder<WritableFrameChannel> outputChannelHolder;
@@ -63,6 +63,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   @Override
   public List<ReadableFrameChannel> inputChannels()
   {
+    // somu: need to clarify if the data is in broker only
     if (baseInput.hasSegment()) {
       return Collections.emptyList();
     } else {
@@ -82,6 +83,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
     final ReturnOrAwait<Unit> retVal;
 
     if (baseInput.hasSegment()) {
+      // run with data in historicals
       SegmentWithDescriptor segment = baseInput.getSegment();
       if (segment.getDescriptor().isLoadedOnServer()) {
         retVal = runWithLoadedSegment(baseInput.getSegment());
@@ -89,6 +91,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
         retVal = runWithSegment(baseInput.getSegment());
       }
     } else {
+      // run with data in broker
       retVal = runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
     }
 
