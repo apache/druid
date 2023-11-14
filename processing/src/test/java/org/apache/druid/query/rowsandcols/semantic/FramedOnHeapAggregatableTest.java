@@ -477,13 +477,17 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   public void testRangeB1()
   {
     WindowFrame frame = new WindowFrame(
-        PeerType.RANGE, false, 1, false, 0,
+        PeerType.RANGE,
+        false,
+        1,
+        false,
+        0,
         Collections.singletonList(ColumnWithDirection.ascending("c1"))
     );
 
-    int[] c1Vals = new int[] {0, 1, 2, 3, 4, 5};
-    int[] c2Vals = new int[] {0, 1, 2, 3, 4, 5};
-    int[] resVals = new int[] {0, 1, 3, 5, 7, 9};
+    int[] c1Vals = new int[] {0, 1, 2, 2, 3, 4, 5};
+    int[] c2Vals = new int[] {0, 1, 1, 1, 3, 4, 5};
+    int[] resVals = new int[] {0, 1, 3, 3, 5, 7, 9};
 
     simpleWindowingTest(frame, c1Vals, c2Vals, resVals);
   }
@@ -492,13 +496,17 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   public void testRangeA1()
   {
     WindowFrame frame = new WindowFrame(
-        PeerType.RANGE, false, 0, false, 1,
+        PeerType.RANGE,
+        false,
+        0,
+        false,
+        1,
         Collections.singletonList(ColumnWithDirection.ascending("c1"))
     );
 
-    int[] c1Vals = new int[] {0, 1, 2, 3, 4, 5};
-    int[] c2Vals = new int[] {0, 1, 2, 3, 4, 5};
-    int[] resVals = new int[] {1, 3, 5, 7, 9, 5};
+    int[] c1Vals = new int[] {0, 1, 2, 2, 3, 4, 5};
+    int[] c2Vals = new int[] {0, 1, 1, 1, 3, 4, 5};
+    int[] resVals = new int[] {1, 3, 5, 5, 7, 9, 5};
 
     simpleWindowingTest(frame, c1Vals, c2Vals, resVals);
   }
@@ -507,7 +515,11 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   public void testRangeB1A1()
   {
     WindowFrame frame = new WindowFrame(
-        PeerType.RANGE, false, 1, false, 1,
+        PeerType.RANGE,
+        false,
+        1,
+        false,
+        1,
         Collections.singletonList(ColumnWithDirection.ascending("c1"))
     );
 
@@ -523,7 +535,11 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   public void testRangeB1A1_2()
   {
     WindowFrame frame = new WindowFrame(
-        PeerType.RANGE, false, 1, false, 1,
+        PeerType.RANGE,
+        false,
+        1,
+        false,
+        1,
         Collections.singletonList(ColumnWithDirection.ascending("c1"))
     );
 
@@ -535,10 +551,14 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   }
 
   @Test
-  public void testRangeB1A1_3()
+  public void testRangeB1A2()
   {
     WindowFrame frame = new WindowFrame(
-        PeerType.RANGE, false, 1, false, 2,
+        PeerType.RANGE,
+        false,
+        1,
+        false,
+        2,
         Collections.singletonList(ColumnWithDirection.ascending("c1"))
     );
 
