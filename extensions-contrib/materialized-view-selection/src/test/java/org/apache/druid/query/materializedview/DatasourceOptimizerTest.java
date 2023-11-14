@@ -31,6 +31,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
@@ -295,11 +296,16 @@ public class DatasourceOptimizerTest extends CuratorTestBase
       }
     };
 
-    brokerServerView = new BrokerServerView(
+    DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
+        new NoopServiceEmitter(),
         EasyMock.createMock(QueryToolChestWarehouse.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
-        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(HttpClient.class)
+    );
+
+    brokerServerView = new BrokerServerView(
+        druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),

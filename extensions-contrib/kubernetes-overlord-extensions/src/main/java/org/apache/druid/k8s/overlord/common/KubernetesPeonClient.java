@@ -101,13 +101,13 @@ public class KubernetesPeonClient
                       );
       if (job == null) {
         log.info("K8s job for the task [%s] was not found. It can happen if the task was canceled", taskId);
-        return new JobResponse(null);
+        return new JobResponse(null, PeonPhase.FAILED);
       }
       if (job.getStatus().getSucceeded() != null) {
-        return new JobResponse(job);
+        return new JobResponse(job, PeonPhase.SUCCEEDED);
       }
       log.warn("Task %s failed with status %s", taskId, job.getStatus());
-      return new JobResponse(job);
+      return new JobResponse(job, PeonPhase.FAILED);
     });
   }
 

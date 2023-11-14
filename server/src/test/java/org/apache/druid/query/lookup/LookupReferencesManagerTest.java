@@ -46,6 +46,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class LookupReferencesManagerTest
 {
@@ -149,7 +150,7 @@ public class LookupReferencesManagerTest
   @Test(expected = IllegalStateException.class)
   public void testRemoveExceptionWhenClosed()
   {
-    lookupReferencesManager.remove("test");
+    lookupReferencesManager.remove("test", null);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -164,6 +165,7 @@ public class LookupReferencesManagerTest
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
 
     Map<String, Object> lookupMap = new HashMap<>();
@@ -193,18 +195,132 @@ public class LookupReferencesManagerTest
 
     Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
 
-    lookupReferencesManager.remove("test");
+    lookupReferencesManager.remove("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
   }
 
   @Test
+  public void testLoadBadContaineAfterOldGoodContainer() throws Exception
+  {
+    // Test the scenario of not loading the new container until it get intialized
+    LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
+    EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
+    EasyMock.replay(lookupExtractorFactory);
+
+    Map<String, Object> lookupMap = new HashMap<>();
+    lookupMap.put("testMockForAddGetRemove", container);
+    String strResult = mapper.writeValueAsString(lookupMap);
+    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
+    EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
+    EasyMock.replay(config);
+    EasyMock.expect(druidLeaderClient.makeRequest(
+                HttpMethod.GET,
+                "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+            ))
+            .andReturn(request);
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        newEmptyResponse(HttpResponseStatus.OK),
+        StandardCharsets.UTF_8
+    ).addChunk(strResult);
+    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    EasyMock.replay(druidLeaderClient);
+    lookupReferencesManager.start();
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+
+    LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
+
+    lookupReferencesManager.add("test", testContainer);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+
+    LookupExtractorFactory badLookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
+    EasyMock.expect(badLookupExtractorFactory.start()).andReturn(false).anyTimes();
+    badLookupExtractorFactory.awaitInitialization();
+    EasyMock.expectLastCall().andThrow(new TimeoutException());
+    EasyMock.expect(badLookupExtractorFactory.destroy()).andReturn(true).once();
+    EasyMock.expect(badLookupExtractorFactory.isInitialized()).andReturn(false).anyTimes();
+    EasyMock.replay(badLookupExtractorFactory);
+    LookupExtractorFactoryContainer badContainer = new LookupExtractorFactoryContainer("0", badLookupExtractorFactory);
+    lookupReferencesManager.add("test", badContainer);
+
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+
+    lookupReferencesManager.remove("test", testContainer);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+  }
+
+  @Test
+  public void testDropOldContainerAfterNewLoadGoodContainer() throws Exception
+  {
+    // Test the scenario of dropping the current container only when new container gets initialized
+    LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
+    EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
+    EasyMock.replay(lookupExtractorFactory);
+
+    Map<String, Object> lookupMap = new HashMap<>();
+    lookupMap.put("testMockForAddGetRemove", container);
+    String strResult = mapper.writeValueAsString(lookupMap);
+    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
+    EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
+    EasyMock.replay(config);
+    EasyMock.expect(druidLeaderClient.makeRequest(
+                HttpMethod.GET,
+                "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+            ))
+            .andReturn(request);
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        newEmptyResponse(HttpResponseStatus.OK),
+        StandardCharsets.UTF_8
+    ).addChunk(strResult);
+    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    EasyMock.replay(druidLeaderClient);
+    lookupReferencesManager.start();
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+
+    LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
+
+    lookupReferencesManager.add("test", testContainer);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+
+    LookupExtractorFactory badLookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
+    EasyMock.expect(badLookupExtractorFactory.start()).andReturn(false).anyTimes();
+    badLookupExtractorFactory.awaitInitialization();
+    EasyMock.expectLastCall().andThrow(new TimeoutException());
+    EasyMock.expect(badLookupExtractorFactory.destroy()).andReturn(true).once();
+    EasyMock.expect(badLookupExtractorFactory.isInitialized()).andReturn(false).anyTimes();
+    EasyMock.replay(badLookupExtractorFactory);
+    LookupExtractorFactoryContainer badContainer = new LookupExtractorFactoryContainer("0", badLookupExtractorFactory);
+    lookupReferencesManager.remove("test", badContainer); // new container to load is badContainer here
+
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+
+    lookupReferencesManager.remove("test", testContainer);
+    lookupReferencesManager.handlePendingNotices();
+
+    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+  }
+  @Test
   public void testCloseIsCalledAfterStopping() throws Exception
   {
-    LookupExtractorFactory lookupExtractorFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
+    LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.close()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
     Map<String, Object> lookupMap = new HashMap<>();
     lookupMap.put("testMockForCloseIsCalledAfterStopping", container);
@@ -234,7 +350,8 @@ public class LookupReferencesManagerTest
   @Test
   public void testDestroyIsCalledAfterRemove() throws Exception
   {
-    LookupExtractorFactory lookupExtractorFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
+    LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
+    EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.replay(lookupExtractorFactory);
@@ -256,11 +373,12 @@ public class LookupReferencesManagerTest
     ).addChunk(strResult);
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
+    LookupExtractorFactoryContainer container = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
     lookupReferencesManager.start();
-    lookupReferencesManager.add("testMock", new LookupExtractorFactoryContainer("0", lookupExtractorFactory));
+    lookupReferencesManager.add("testMock", container);
     lookupReferencesManager.handlePendingNotices();
 
-    lookupReferencesManager.remove("testMock");
+    lookupReferencesManager.remove("testMock", container);
     lookupReferencesManager.handlePendingNotices();
 
     EasyMock.verify(lookupExtractorFactory);
@@ -385,7 +503,7 @@ public class LookupReferencesManagerTest
     EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     EasyMock.replay(druidLeaderClient);
     lookupReferencesManager.start();
-    lookupReferencesManager.remove("test");
+    lookupReferencesManager.remove("test", null);
     lookupReferencesManager.handlePendingNotices();
   }
 
@@ -480,7 +598,7 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.add("one", container1);
     lookupReferencesManager.add("two", container2);
     lookupReferencesManager.handlePendingNotices();
-    lookupReferencesManager.remove("one");
+    lookupReferencesManager.remove("one", container1);
     lookupReferencesManager.add("three", container3);
 
     LookupsState state = lookupReferencesManager.getAllLookupsState();
@@ -526,6 +644,7 @@ public class LookupReferencesManagerTest
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
     Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
@@ -541,7 +660,7 @@ public class LookupReferencesManagerTest
         lookupReferencesManager.getAllLookupNames()
     );
 
-    lookupReferencesManager.remove("test");
+    lookupReferencesManager.remove("test", null);
 
     while (lookupReferencesManager.get("test").isPresent()) {
       Thread.sleep(100);
