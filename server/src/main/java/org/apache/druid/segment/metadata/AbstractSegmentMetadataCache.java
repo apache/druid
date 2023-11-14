@@ -90,9 +90,18 @@ import java.util.stream.StreamSupport;
  * An abstract class that listens for segment change events and caches segment metadata. It periodically refreshes
  * the segments, by fetching their metadata which includes schema information from sources like
  * data nodes, tasks, metadata database and builds table schema.
- *
- * <p>This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
- * with the logic to build and cache table schema.</p>
+ * <p>
+ * At startup, the cache awaits the initialization of the timeline.
+ * If the cahce uses a segment metadata query to fetch segment schema,
+ * it attempts to refresh segments in batches of {@code MAX_SEGMENTS_PER_QUERY} for each datasource.
+ * Once all datasources have undergone this process, the initial schema of each datasource is constructed,
+ * and the cache is marked as initialized.
+ * Subsequently, the cache continues to periodically refresh segments and update the datasource schema.
+ * It is also important to note that a failure in segment refresh results in pausing the refresh work,
+ * and the process is resumed in the next refresh cycle.
+ * <p>
+ * This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
+ * with the logic to build and cache table schema.
  *
  * @param <T> The type of information associated with the data source, which must extend {@link DataSourceInformation}.
  */
