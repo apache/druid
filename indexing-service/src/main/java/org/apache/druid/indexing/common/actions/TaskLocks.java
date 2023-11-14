@@ -125,6 +125,8 @@ public class TaskLocks
                          && timeChunkLock.getDataSource().equals(segment.getDataSource())
                          && (timeChunkLock.getVersion().compareTo(segment.getVersion()) >= 0
                              || TaskLockType.APPEND.equals(timeChunkLock.getType()));
+                  // APPEND locks always have the version DateTimes.EPOCH (1970-01-01)
+                  // and cover the segments irrespective of the segment version
                 } else {
                   final SegmentLock segmentLock = (SegmentLock) lock;
                   return segmentLock.getInterval().contains(segment.getInterval())

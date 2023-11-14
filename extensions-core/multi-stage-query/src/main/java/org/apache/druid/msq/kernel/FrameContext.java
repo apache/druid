@@ -20,6 +20,7 @@
 package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -43,6 +44,7 @@ public interface FrameContext
   RowIngestionMeters rowIngestionMeters();
 
   DataSegmentProvider dataSegmentProvider();
+  LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory();
 
   File tempDir();
 

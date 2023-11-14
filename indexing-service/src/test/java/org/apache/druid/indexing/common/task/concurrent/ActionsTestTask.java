@@ -23,6 +23,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
@@ -60,6 +61,11 @@ public class ActionsTestTask extends CommandQueueTask
     return runAction(new TimeChunkLockTryAcquireAction(TaskLockType.REPLACE, interval));
   }
 
+  public Void releaseLock(Interval interval)
+  {
+    return runAction(new LockReleaseAction(interval));
+  }
+
   public TaskLock acquireAppendLockOn(Interval interval)
   {
     return runAction(new TimeChunkLockTryAcquireAction(TaskLockType.APPEND, interval));
@@ -75,7 +81,7 @@ public class ActionsTestTask extends CommandQueueTask
   public SegmentPublishResult commitAppendSegments(DataSegment... segments)
   {
     return runAction(
-        SegmentTransactionalAppendAction.create(Sets.newHashSet(segments))
+        SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments))
     );
   }
 
@@ -88,6 +94,28 @@ public class ActionsTestTask extends CommandQueueTask
             Granularities.SECOND,
             preferredSegmentGranularity,
             getId() + "__" + sequenceId.getAndIncrement(),
+            null,
+            false,
+            NumberedPartialShardSpec.instance(),
+            LockGranularity.TIME_CHUNK,
+            TaskLockType.APPEND
+        )
+    );
+  }
+
+  public SegmentIdWithShardSpec allocateSegmentForTimestamp(
+      DateTime timestamp,
+      Granularity preferredSegmentGranularity,
+      String sequenceName
+  )
+  {
+    return runAction(
+        new SegmentAllocateAction(
+            getDataSource(),
+            timestamp,
+            Granularities.SECOND,
+            preferredSegmentGranularity,
+            getId() + "__" + sequenceName,
             null,
             false,
             NumberedPartialShardSpec.instance(),

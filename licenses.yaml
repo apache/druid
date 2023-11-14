@@ -530,7 +530,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.13
+version: 1.16.0
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -854,27 +854,6 @@ license_name: Apache License version 2.0
 version: 6.5
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
-
----
-
-name: net.bytebuddy byte-buddy
-license_category: binary
-module: extensions/druid-pac4j
-license_name: Apache License version 2.0
-version: 1.12.7
-libraries:
-  - net.bytebuddy: byte-buddy
-  - net.bytebuddy: byte-buddy-agent
-
----
-
-name: org.mockito mockito-core
-license_category: binary
-module: extensions/druid-pac4j
-license_name: MIT License
-version: 4.3.1
-libraries:
-  - org.mockito: mockito-core
 
 ---
 
@@ -1310,7 +1289,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.94.Final
+version: 4.1.100.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2081,7 +2060,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.51.v20230217
+version: 9.4.53.v20231009
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -3498,7 +3477,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.0
+version: 4.2.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3548,7 +3527,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.5.1
+version: 3.6.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4485,7 +4464,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 3.5.1
+version: 3.6.0
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -5008,7 +4987,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.21.1
+version: 0.21.4
 
 ---
 

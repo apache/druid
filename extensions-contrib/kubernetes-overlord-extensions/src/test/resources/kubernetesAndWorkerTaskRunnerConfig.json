@@ -1,4 +1,4 @@
 {
-  "workerTaskRunnerType": "remote",
-  "sendAllTasksToWorkerTaskRunner": false
+  "runnerStrategy.type": "worker",
+  "runnerStrategy.workerType": "remote"
 }

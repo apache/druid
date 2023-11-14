@@ -86,14 +86,14 @@ public class QueryTestRunner
    */
   public abstract static class QueryRunStep
   {
-    private final QueryTestBuilder builder;
+    protected final QueryTestBuilder builder;
 
     public QueryRunStep(final QueryTestBuilder builder)
     {
       this.builder = builder;
     }
 
-    public QueryTestBuilder builder()
+    public final QueryTestBuilder builder()
     {
       return builder;
     }
@@ -207,12 +207,10 @@ public class QueryTestRunner
   public abstract static class BaseExecuteQuery extends QueryRunStep
   {
     protected final List<QueryResults> results = new ArrayList<>();
-    protected final boolean doCapture;
 
     public BaseExecuteQuery(QueryTestBuilder builder)
     {
       super(builder);
-      doCapture = builder.expectedLogicalPlan != null;
     }
 
     public List<QueryResults> results()
@@ -278,7 +276,7 @@ public class QueryTestRunner
     )
     {
       try {
-        final PlannerCaptureHook capture = doCapture ? new PlannerCaptureHook() : null;
+        final PlannerCaptureHook capture = getCaptureHook();
         final DirectStatement stmt = sqlStatementFactory.directStatement(query);
         stmt.setHook(capture);
         final Sequence<Object[]> results = stmt.execute().getResults();
@@ -298,6 +296,14 @@ public class QueryTestRunner
             e
         );
       }
+    }
+
+    private PlannerCaptureHook getCaptureHook()
+    {
+      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK) || builder.expectedLogicalPlan != null) {
+        return new PlannerCaptureHook();
+      }
+      return null;
     }
 
     public static Pair<RowSignature, List<Object[]>> getResults(
@@ -321,10 +327,15 @@ public class QueryTestRunner
   public static class VerifyResults implements QueryVerifyStep
   {
     protected final BaseExecuteQuery execStep;
+    protected final boolean verifyRowSignature;
 
-    public VerifyResults(BaseExecuteQuery execStep)
+    public VerifyResults(
+        BaseExecuteQuery execStep,
+        boolean verifyRowSignature
+    )
     {
       this.execStep = execStep;
+      this.verifyRowSignature = verifyRowSignature;
     }
 
     @Override
@@ -346,8 +357,10 @@ public class QueryTestRunner
       }
 
       QueryTestBuilder builder = execStep.builder();
-      builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
-      builder.expectedResultsVerifier.verify(builder.sql, results);
+      if (verifyRowSignature) {
+        builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
+      }
+      builder.expectedResultsVerifier.verify(builder.sql, queryResults);
     }
   }
 
@@ -624,6 +637,7 @@ public class QueryTestRunner
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,
+          builder.expectedResultMatchMode,
           builder.expectedResultSignature
       );
     }
@@ -667,7 +681,9 @@ public class QueryTestRunner
         verifySteps.add(new VerifyNativeQueries(finalExecStep));
       }
       if (builder.expectedResultsVerifier != null) {
-        verifySteps.add(new VerifyResults(finalExecStep));
+        // Don't verify the row signature when MSQ is running, since the broker receives the task id, and the signature
+        // would be {TASK:STRING} instead of the expected results signature
+        verifySteps.add(new VerifyResults(finalExecStep, !config.isRunningMSQ()));
       }
 
       if (!builder.customVerifications.isEmpty()) {

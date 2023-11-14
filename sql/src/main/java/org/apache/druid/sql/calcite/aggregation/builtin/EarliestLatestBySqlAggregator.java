@@ -20,15 +20,12 @@
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.util.Optionality;
@@ -38,19 +35,19 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class EarliestLatestBySqlAggregator implements SqlAggregator
 {
@@ -76,23 +73,17 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final Project project,
+      final InputAccessor inputAccessor,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
   {
-    final List<RexNode> rexNodes = aggregateCall
-        .getArgList()
-        .stream()
-        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
-        .collect(Collectors.toList());
+    final List<RexNode> rexNodes = inputAccessor.getFields(aggregateCall.getArgList());
 
-    final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
+    final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, inputAccessor.getInputRowSignature(), rexNodes);
 
     if (args == null) {
       return null;
@@ -185,19 +176,13 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE,
           InferTypes.RETURN_TYPE,
-          OperandTypes.or(
-              OperandTypes.sequence(
-                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn)'",
-                  OperandTypes.ANY,
-                  OperandTypes.family(SqlTypeFamily.TIMESTAMP)
-              ),
-              OperandTypes.sequence(
-                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn, maxBytesPerString)'",
-                  OperandTypes.ANY,
-                  OperandTypes.family(SqlTypeFamily.TIMESTAMP),
-                  OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
-              )
-          ),
+          DefaultOperandTypeChecker
+              .builder()
+              .operandNames("expr", "timeColumn", "maxBytesPerString")
+              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.TIMESTAMP, SqlTypeFamily.NUMERIC)
+              .requiredOperandCount(2)
+              .literalOperands(2)
+              .build(),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
           false,

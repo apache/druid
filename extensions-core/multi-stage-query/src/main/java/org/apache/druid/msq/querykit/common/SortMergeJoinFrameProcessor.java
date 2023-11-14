@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit.common;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -41,11 +40,13 @@ import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -101,7 +102,7 @@ import java.util.List;
  * 5) Once we process the final row on the *other* side, reset both marks with {@link Tracker#markCurrent()} and
  * continue the algorithm.
  */
-public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
+public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
 {
   private static final int LEFT = 0;
   private static final int RIGHT = 1;
@@ -166,7 +167,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
   {
     // Fetch enough frames such that each tracker has one readable row (or is done).
     for (int i = 0; i < inputChannels.size(); i++) {
@@ -218,7 +219,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
 
     if (allTrackersAreAtEnd()) {
       flushCurrentFrame();
-      return ReturnOrAwait.returnObject(0L);
+      return ReturnOrAwait.returnObject(Unit.instance());
     } else {
       // Keep reading.
       return nextAwait();
@@ -381,7 +382,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
    *
    * If all channels have hit their limit, throws {@link MSQException} with {@link TooManyRowsWithSameKeyFault}.
    */
-  private ReturnOrAwait<Long> nextAwait()
+  private ReturnOrAwait<Object> nextAwait()
   {
     final IntSet awaitSet = new IntOpenHashSet();
     int trackerAtLimit = -1;
@@ -1040,9 +1041,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
       }
 
       @Override

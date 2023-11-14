@@ -2746,7 +2746,7 @@ public class CachingClusteredClientTest
     );
   }
 
-  private static class ServerExpectation<T>
+  public static class ServerExpectation<T>
   {
     private final SegmentId segmentId;
     private final Interval interval;
@@ -2949,7 +2949,7 @@ public class CachingClusteredClientTest
     }
   }
 
-  private static class ServerExpectations implements Iterable<ServerExpectation>
+  public static class ServerExpectations implements Iterable<ServerExpectation>
   {
     private final DruidServer server;
     private final QueryRunner queryRunner;

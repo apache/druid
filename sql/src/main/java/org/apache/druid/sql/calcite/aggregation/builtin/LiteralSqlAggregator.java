@@ -21,18 +21,16 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -59,12 +57,10 @@ public class LiteralSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final Project project,
+      final InputAccessor inputAccessor,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
@@ -73,7 +69,7 @@ public class LiteralSqlAggregator implements SqlAggregator
       return null;
     }
     final RexNode literal = aggregateCall.rexList.get(0);
-    final DruidExpression expr = Expressions.toDruidExpression(plannerContext, rowSignature, literal);
+    final DruidExpression expr = Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), literal);
 
     if (expr == null) {
       return null;
@@ -81,7 +77,7 @@ public class LiteralSqlAggregator implements SqlAggregator
 
     return Aggregation.create(
         ImmutableList.of(),
-        new ExpressionPostAggregator(name, expr.getExpression(), null, plannerContext.getExprMacroTable())
+        new ExpressionPostAggregator(name, expr.getExpression(), null, expr.getDruidType(), plannerContext.getExprMacroTable())
     );
   }
 }

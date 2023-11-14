@@ -162,6 +162,22 @@ export function changeFinalizeAggregations(
     : deepDelete(context, 'finalizeAggregations');
 }
 
+// waitUntilSegmentsLoad
+
+export function getWaitUntilSegmentsLoad(context: QueryContext): boolean | undefined {
+  const { waitUntilSegmentsLoad } = context;
+  return typeof waitUntilSegmentsLoad === 'boolean' ? waitUntilSegmentsLoad : undefined;
+}
+
+export function changeWaitUntilSegmentsLoad(
+  context: QueryContext,
+  waitUntilSegmentsLoad: boolean | undefined,
+): QueryContext {
+  return typeof waitUntilSegmentsLoad === 'boolean'
+    ? deepSet(context, 'waitUntilSegmentsLoad', waitUntilSegmentsLoad)
+    : deepDelete(context, 'waitUntilSegmentsLoad');
+}
+
 // groupByEnableMultiValueUnnesting
 
 export function getGroupByEnableMultiValueUnnesting(context: QueryContext): boolean | undefined {

@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
@@ -36,6 +38,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -67,6 +70,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -459,6 +463,44 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           if (!succeeded) {
             throw new ISE("Failed to publish segments to DB");
           }
+          return true;
+        }
+    );
+  }
+
+  private Boolean insertPendingSegmentAndSequenceName(Pair<SegmentIdWithShardSpec, String> pendingSegmentSequenceName)
+  {
+    final SegmentIdWithShardSpec pendingSegment = pendingSegmentSequenceName.lhs;
+    final String sequenceName = pendingSegmentSequenceName.rhs;
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getPendingSegmentsTable();
+    return derbyConnector.retryWithHandle(
+        handle -> {
+          handle.createStatement(
+                    StringUtils.format(
+                        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, "
+                        + "sequence_name_prev_id_sha1, payload) "
+                        + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, "
+                        + ":sequence_name_prev_id_sha1, :payload)",
+                        table,
+                        derbyConnector.getQuoteString()
+                    )
+                )
+                .bind("id", pendingSegment.toString())
+                .bind("dataSource", pendingSegment.getDataSource())
+                .bind("created_date", DateTimes.nowUtc().toString())
+                .bind("start", pendingSegment.getInterval().getStart().toString())
+                .bind("end", pendingSegment.getInterval().getEnd().toString())
+                .bind("sequence_name", sequenceName)
+                .bind("sequence_prev_id", pendingSegment.toString())
+                .bind("sequence_name_prev_id_sha1", BaseEncoding.base16().encode(
+                    Hashing.sha1()
+                           .newHasher()
+                           .putLong((long) pendingSegment.hashCode() * sequenceName.hashCode())
+                           .hash()
+                           .asBytes()
+                ))
+                .bind("payload", mapper.writeValueAsBytes(pendingSegment))
+                .execute();
           return true;
         }
     );
@@ -1020,6 +1062,213 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             Segments.ONLY_VISIBLE
         )
     ).containsOnlyOnce(defaultSegment3);
+  }
+
+  @Test
+  public void testRetrieveUsedSegmentsUsingMultipleIntervals() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
+
+    final Collection<DataSegment> actualUsedSegments = coordinator.retrieveUsedSegmentsForIntervals(
+        DS.WIKI,
+        intervals,
+        Segments.ONLY_VISIBLE
+    );
+
+    Assert.assertEquals(segments.size(), actualUsedSegments.size());
+    Assert.assertTrue(actualUsedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveAllUsedSegmentsUsingIntervalsOutOfRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
+
+    final Interval outOfRangeInterval = Intervals.of("1700/1800");
+    Assert.assertTrue(segments.stream()
+                              .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
+
+    final Collection<DataSegment> actualUsedSegments = coordinator.retrieveUsedSegmentsForIntervals(
+        DS.WIKI,
+        ImmutableList.of(outOfRangeInterval),
+        Segments.ONLY_VISIBLE
+    );
+
+    Assert.assertEquals(0, actualUsedSegments.size());
+  }
+
+  @Test
+  public void testRetrieveAllUsedSegmentsUsingNoIntervals() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+
+    final Collection<DataSegment> actualUsedSegments = coordinator.retrieveAllUsedSegments(
+        DS.WIKI,
+        Segments.ONLY_VISIBLE
+    );
+
+    Assert.assertEquals(segments.size(), actualUsedSegments.size());
+    Assert.assertTrue(actualUsedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingSingleIntervalAndNoLimit() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        DS.WIKI,
+        Intervals.of("1900/3000"),
+        null
+    );
+
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingSingleIntervalAndLimitAtRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int requestedLimit = segments.size();
+    final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        DS.WIKI,
+        Intervals.of("1900/3000"),
+        requestedLimit
+    );
+
+    Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingSingleIntervalAndLimitInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int requestedLimit = segments.size() - 1;
+    final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        DS.WIKI,
+        Intervals.of("1900/3000"),
+        requestedLimit
+    );
+
+    Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingSingleIntervalAndLimitOutOfRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int limit = segments.size() + 1;
+    final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        DS.WIKI,
+        Intervals.of("1900/3000"),
+        limit
+    );
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingSingleIntervalOutOfRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final Interval outOfRangeInterval = Intervals.of("1700/1800");
+    Assert.assertTrue(segments.stream()
+                              .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
+    final int limit = segments.size() + 1;
+
+    final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
+        DS.WIKI,
+        outOfRangeInterval,
+        limit
+    );
+    Assert.assertEquals(0, actualUnusedSegments.size());
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndNoLimit() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+        null
+    );
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(segments.containsAll(actualUnusedSegments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitAtRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+        segments.size()
+    );
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(segments.containsAll(actualUnusedSegments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int requestedLimit = segments.size() - 1;
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+        segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
+        requestedLimit
+    );
+    Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitOutOfRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+        segments.size() + 1
+    );
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingIntervalOutOfRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final Interval outOfRangeInterval = Intervals.of("1700/1800");
+    Assert.assertTrue(segments.stream()
+                              .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
+
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+        ImmutableList.of(outOfRangeInterval),
+        null
+    );
+    Assert.assertEquals(0, actualUnusedSegments.size());
   }
 
   @Test
@@ -2554,6 +2803,110 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
+  @Test
+  public void testGetPendingSegmentsForIntervalWithSequencePrefixes()
+  {
+    Pair<SegmentIdWithShardSpec, String> validIntervalValidSequence = Pair.of(
+        SegmentIdWithShardSpec.fromDataSegment(defaultSegment),
+        "validLOL"
+    );
+    insertPendingSegmentAndSequenceName(validIntervalValidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> validIntervalInvalidSequence = Pair.of(
+        SegmentIdWithShardSpec.fromDataSegment(defaultSegment2),
+        "invalidRandom"
+    );
+    insertPendingSegmentAndSequenceName(validIntervalInvalidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> invalidIntervalvalidSequence = Pair.of(
+        SegmentIdWithShardSpec.fromDataSegment(existingSegment1),
+        "validStuff"
+    );
+    insertPendingSegmentAndSequenceName(invalidIntervalvalidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> twentyFifteenWithAnotherValidSequence = Pair.of(
+        new SegmentIdWithShardSpec(
+            existingSegment1.getDataSource(),
+            Intervals.of("2015/2016"),
+            "1970-01-01",
+            new NumberedShardSpec(1, 0)
+        ),
+        "alsoValidAgain"
+    );
+    insertPendingSegmentAndSequenceName(twentyFifteenWithAnotherValidSequence);
+
+    Pair<SegmentIdWithShardSpec, String> twentyFifteenWithInvalidSequence = Pair.of(
+        new SegmentIdWithShardSpec(
+            existingSegment1.getDataSource(),
+            Intervals.of("2015/2016"),
+            "1970-01-01",
+            new NumberedShardSpec(2, 0)
+        ),
+        "definitelyInvalid"
+    );
+    insertPendingSegmentAndSequenceName(twentyFifteenWithInvalidSequence);
+
+
+    final Map<SegmentIdWithShardSpec, String> expected = new HashMap<>();
+    expected.put(validIntervalValidSequence.lhs, validIntervalValidSequence.rhs);
+    expected.put(twentyFifteenWithAnotherValidSequence.lhs, twentyFifteenWithAnotherValidSequence.rhs);
+
+    final Map<SegmentIdWithShardSpec, String> actual =
+        derbyConnector.retryWithHandle(handle -> coordinator.getPendingSegmentsForIntervalWithHandle(
+            handle,
+            defaultSegment.getDataSource(),
+            defaultSegment.getInterval(),
+            ImmutableSet.of("valid", "alsoValid")
+        ));
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testRetrieveUsedSegmentsAndCreatedDates()
+  {
+    insertUsedSegments(ImmutableSet.of(defaultSegment));
+
+    List<Pair<DataSegment, String>> resultForIntervalOnTheLeft =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2001"));
+    Assert.assertTrue(resultForIntervalOnTheLeft.isEmpty());
+
+    List<Pair<DataSegment, String>> resultForIntervalOnTheRight =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("3000/3001"));
+    Assert.assertTrue(resultForIntervalOnTheRight.isEmpty());
+
+    List<Pair<DataSegment, String>> resultForExactInterval =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+    Assert.assertEquals(1, resultForExactInterval.size());
+    Assert.assertEquals(defaultSegment, resultForExactInterval.get(0).lhs);
+
+    List<Pair<DataSegment, String>> resultForIntervalWithLeftOverlap =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2015-01-02"));
+    Assert.assertEquals(resultForExactInterval, resultForIntervalWithLeftOverlap);
+
+    List<Pair<DataSegment, String>> resultForIntervalWithRightOverlap =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2015-01-01/3000"));
+    Assert.assertEquals(resultForExactInterval, resultForIntervalWithRightOverlap);
+
+    List<Pair<DataSegment, String>> resultForEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.ETERNITY);
+    Assert.assertEquals(resultForExactInterval, resultForEternity);
+  }
+
+  @Test
+  public void testRetrieveUsedSegmentsAndCreatedDatesFetchesEternityForAnyInterval()
+  {
+
+    insertUsedSegments(ImmutableSet.of(eternitySegment, firstHalfEternityRangeSegment, secondHalfEternityRangeSegment));
+
+    List<Pair<DataSegment, String>> resultForRandomInterval =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+    Assert.assertEquals(3, resultForRandomInterval.size());
+
+    List<Pair<DataSegment, String>> resultForEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), eternitySegment.getInterval());
+    Assert.assertEquals(3, resultForEternity.size());
+  }
+
   private static class DS
   {
     static final String WIKI = "wiki";
@@ -2568,5 +2921,44 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                       .shardSpec(shardSpec)
                       .size(100)
                       .build();
+  }
+
+  private List<DataSegment> createAndGetUsedYearSegments(final int startYear, final int endYear) throws IOException
+  {
+    final List<DataSegment> segments = new ArrayList<>();
+
+    for (int year = startYear; year < endYear; year++) {
+      segments.add(createSegment(
+          Intervals.of("%d/%d", year, year + 1),
+          "version",
+          new LinearShardSpec(0))
+      );
+    }
+    final Set<DataSegment> segmentsSet = new HashSet<>(segments);
+    final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
+    Assert.assertTrue(committedSegments.containsAll(new HashSet<>(segments)));
+
+    return segments;
+  }
+
+  private ImmutableList<DataSegment> retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+      final List<Interval> intervals,
+      final Integer limit
+  )
+  {
+    return derbyConnector.inReadOnlyTransaction(
+        (handle, status) -> {
+          try (final CloseableIterator<DataSegment> iterator =
+                   SqlSegmentsMetadataQuery.forHandle(
+                                               handle,
+                                               derbyConnector,
+                                               derbyConnectorRule.metadataTablesConfigSupplier().get(),
+                                               mapper
+                                           )
+                                           .retrieveUnusedSegments(DS.WIKI, intervals, limit)) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
   }
 }

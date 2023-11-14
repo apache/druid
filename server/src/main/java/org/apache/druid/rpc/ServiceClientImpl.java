@@ -220,7 +220,20 @@ public class ServiceClientImpl implements ServiceClient
                     if (shouldTry(nextAttemptNumber) && retryPolicy.retryThrowable(t)) {
                       final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
 
-                      log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      if (retryPolicy.retryLoggable()) {
+                        // log as INFO level if the retry is loggable
+                        log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      } else if (log.isDebugEnabled()) {
+                        // log as DEBUG level if the debug log is enabled
+                        log.noStackTrace().debug(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      } else {
+                        // If none of the above is valid, we log the error message every tenth time we retry. It seems like
+                        // a good balance between making the logs not too verbose when the retry is due to the same cause
+                        // and enriching logs with useful information, if we keep retrying due to the same reason
+                        if (nextAttemptNumber > 0 && nextAttemptNumber % 10 == 0) {
+                          log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                        }
+                      }
 
                       connectExec.schedule(
                           () -> tryRequest(requestBuilder, handler, retVal, nextAttemptNumber, ImmutableSet.of()),
@@ -272,7 +285,15 @@ public class ServiceClientImpl implements ServiceClient
                   // Retryable server response (or null errorHolder, which means null result, which can happen
                   // if the HttpClient encounters an exception in the midst of response processing).
                   final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
-                  log.info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  if (retryPolicy.retryLoggable()) {
+                    log.noStackTrace().info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  } else if (log.isDebugEnabled()) {
+                    log.noStackTrace().debug(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  } else {
+                    if (nextAttemptNumber > 0 && nextAttemptNumber % 10 == 0) {
+                      log.noStackTrace().info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                    }
+                  }
                   connectExec.schedule(
                       () -> tryRequest(requestBuilder, handler, retVal, nextAttemptNumber, ImmutableSet.of()),
                       backoffMs,

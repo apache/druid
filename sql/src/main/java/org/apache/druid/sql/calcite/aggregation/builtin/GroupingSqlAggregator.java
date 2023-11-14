@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -34,6 +33,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -53,24 +53,22 @@ public class GroupingSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
-      List<Aggregation> existingAggregations,
-      boolean finalizeAggregations
+      final InputAccessor inputAccessor,
+      final List<Aggregation> existingAggregations,
+      final boolean finalizeAggregations
   )
   {
     List<String> arguments = aggregateCall.getArgList()
                                           .stream()
                                           .map(i -> getColumnName(
                                               plannerContext,
-                                              rowSignature,
-                                              project,
+                                              inputAccessor.getInputRowSignature(),
+                                              inputAccessor.getProject(),
                                               virtualColumnRegistry,
-                                              rexBuilder.getTypeFactory(),
+                                              inputAccessor.getRexBuilder().getTypeFactory(),
                                               i
                                           ))
                                           .filter(Objects::nonNull)

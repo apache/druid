@@ -20,5 +20,8 @@ exports[`ExecutionProgressBarPane matches snapshot 1`] = `
     className="overall"
     intent="primary"
   />
+  <Unknown>
+    
+  </Unknown>
 </div>
 `;

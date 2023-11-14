@@ -1,0 +1,30 @@
+type: "operatorValidation"
+
+sql: |
+   SELECT
+     l2,
+     MIN(l2) OVER(partition by l2)
+   FROM druid.numfoo
+   WHERE l2 is null or l2 = -1111 or l2 = 0
+
+
+expectedOperators:
+  - type: "naiveSort"
+    columns:
+      - column: "l2"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ "l2" ]
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - { type: "longMin", name: "w0", fieldName: "l2" }
+
+expectedResults:
+  - [null,null]
+  - [null,null]
+  - [null,null]
+  - [null,null]
+  - [0,0]

@@ -25,6 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -232,16 +233,17 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
           return new ValueMatcher()
           {
             @Override
-            public boolean matches()
+            public boolean matches(boolean includeUnknown)
             {
               updateCurrentValues();
 
               if (dimensionValues.isEmpty()) {
-                return value == null;
+                return includeUnknown || value == null;
               }
 
               for (String dimensionValue : dimensionValues) {
-                if (Objects.equals(NullHandling.emptyToNullIfNeeded(dimensionValue), value)) {
+                final String coerced = NullHandling.emptyToNullIfNeeded(dimensionValue);
+                if ((includeUnknown && coerced == null) || Objects.equals(coerced, value)) {
                   return true;
                 }
               }
@@ -258,23 +260,26 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
         {
-          final boolean matchNull = predicate.apply(null);
+          final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+          final boolean predicateMatchNull = predicate.apply(null);
 
           return new ValueMatcher()
           {
             @Override
-            public boolean matches()
+            public boolean matches(boolean includeUnknown)
             {
+              final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
               updateCurrentValues();
 
               if (dimensionValues.isEmpty()) {
-                return matchNull;
+                return matchNull || predicateMatchNull;
               }
 
               for (String dimensionValue : dimensionValues) {
-                if (predicate.apply(NullHandling.emptyToNullIfNeeded(dimensionValue))) {
+                final String coerced = NullHandling.emptyToNullIfNeeded(dimensionValue);
+                if ((matchNull && coerced == null) || predicate.apply(coerced)) {
                   return true;
                 }
               }
@@ -285,7 +290,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
               inspector.visit("row", rowSupplier);
-              inspector.visit("predicate", predicate);
+              inspector.visit("predicate", predicateFactory);
               inspector.visit("extractionFn", extractionFn);
             }
           };

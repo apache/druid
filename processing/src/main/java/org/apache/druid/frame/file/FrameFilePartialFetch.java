@@ -75,6 +75,14 @@ public class FrameFilePartialFetch
   }
 
   /**
+   * Number of bytes read so far by this request.
+   */
+  public long getBytesRead()
+  {
+    return bytesRead;
+  }
+
+  /**
    * Future that resolves when it is a good time to request the next chunk of the frame file.
    *
    * Must only be called once, because the future is cleared once it is returned.
@@ -105,6 +113,9 @@ public class FrameFilePartialFetch
     }
   }
 
+  /**
+   * Increment the value returned by {@link #getBytesRead()}. Called whenever a chunk of data is read from the response.
+   */
   void addBytesRead(final long n)
   {
     bytesRead += n;

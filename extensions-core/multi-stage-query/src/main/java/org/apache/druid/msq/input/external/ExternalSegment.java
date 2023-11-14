@@ -45,6 +45,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
 {
 
   private final InputSource inputSource;
+  private final RowSignature signature;
   public static final String SEGMENT_ID = "__external";
 
   /**
@@ -145,6 +146,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
         signature
     );
     this.inputSource = inputSource;
+    this.signature = signature;
   }
 
   /**
@@ -153,5 +155,13 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
   public InputSource externalInputSource()
   {
     return inputSource;
+  }
+
+  /**
+   * Returns the signature of the external input source
+   */
+  public RowSignature signature()
+  {
+    return signature;
   }
 }

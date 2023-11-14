@@ -57,7 +57,7 @@ Druid SQL supports SELECT queries with the following structure:
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
-[, UNNEST(source_expression) as table_alias_name(column_alias_name) ]
+[ CROSS JOIN UNNEST(source_expression) as table_alias_name(column_alias_name) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
 [ HAVING expr ]
@@ -87,32 +87,26 @@ documentation.
 
 ## UNNEST
 
-:::info
- The UNNEST SQL function is [experimental](../development/experimental.md). Its API and behavior are subject
- to change in future releases. It is not recommended to use this feature in production at this time.
-:::
-
-The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
+The UNNEST clause unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like [`MV_TO_ARRAY`](./sql-multivalue-string-functions.md) or [`ARRAY`](./sql-array-functions.md).
 
 The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
 
 ```sql
-SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2) ...
 ```
 
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
   * A table, such as  `FROM a_table`.
   * A subset of a table based on a query, a filter, or a JOIN. For example, `FROM (SELECT columnA,columnB,columnC from a_table)`.
-* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
+* The `source_expression` for the UNNEST function must be an array and can come from any expression. UNNEST works directly on Druid ARRAY typed columns. If the column you are unnesting is a multi-value VARCHAR, you must specify `MV_TO_ARRAY(dimension)` to convert it to an ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
   * `ARRAY[dim1,dim2]` if you want to make an array out of two dimensions. 
   * `ARRAY_CONCAT(dim1,dim2)` if you want to concatenate two multi-value dimensions. 
 * The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
 
 Keep the following things in mind when writing your query:
 
-- You must include the context parameter `"enableUnnest": true`.
 - You can unnest multiple source expressions in a single query.
-- Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
+- Notice the CROSS JOIN between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
 - If you view the native explanation of a SQL UNNEST, you'll notice that Druid uses `j0.unnest` as a virtual column to perform the unnest. An underscore is added for each unnest, so you may notice virtual columns named `_j0.unnest` or `__j0.unnest`.
 - UNNEST preserves the ordering of the source array that is being unnested.
 
@@ -121,8 +115,9 @@ For examples, see the [Unnest arrays tutorial](../tutorials/tutorial-unnest-arra
 The UNNEST function has the following limitations:
 
 - The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created.
-- Arrays inside complex JSON types are not supported.
-- You cannot perform an UNNEST at ingestion time, including SQL-based ingestion using the MSQ task engine.
+- Arrays of complex objects inside complex JSON types are not supported.
+  
+UNNEST is the SQL equivalent of the [unnest datasource](./datasource.md#unnest).
 
 ## WHERE
 
@@ -224,9 +219,7 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-:::info
- With top-level queries, you can't apply GROUP BY, ORDER BY, or any other operator to the results of a UNION ALL.
-:::
+Certain limitations apply when you use a top-level UNION ALL. For all top-level UNION ALL queries, you can't apply a GROUP BY, ORDER BY, or any other operator to the results of the query. For any top-level UNION ALL that uses the MSQ task engine, the SQL planner attempts to plan the top-level UNION ALL as a table-level UNION ALL. Because of this, UNION ALL queries that use the MSQ task engine always behave the same as table-level UNION ALL queries. They have the same characteristics and limitations. If the planner can't plan the query as a table-level UNION ALL, the query fails.
 
 ### Table-level
 

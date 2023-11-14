@@ -97,6 +97,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
@@ -1090,6 +1091,47 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     log.info("Posting ResetOffsetsNotice with reset dataSource metadata[%s]", resetDataSourceMetadata);
     addNotice(new ResetOffsetsNotice(resetDataSourceMetadata));
+  }
+
+  /**
+   * The base sequence name of a seekable stream task group is used as a prefix of the sequence names
+   * of pending segments published by it.
+   * This method can be used to identify the active pending segments for a datasource
+   * by checking if the sequence name begins with any of the active realtime sequence prefix returned by this method
+   * @return the set of base sequence names of both active and pending completion task gruops.
+   */
+  @Override
+  public Set<String> getActiveRealtimeSequencePrefixes()
+  {
+    final Set<String> activeBaseSequences = new HashSet<>();
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      activeBaseSequences.add(taskGroup.baseSequenceName);
+    }
+    for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
+      for (TaskGroup taskGroup : taskGroupList) {
+        activeBaseSequences.add(taskGroup.baseSequenceName);
+      }
+    }
+    return activeBaseSequences;
+  }
+
+  public void registerNewVersionOfPendingSegment(
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
+  )
+  {
+    for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
+      for (String taskId : taskGroup.taskIds()) {
+        taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
+      }
+    }
+    for (List<TaskGroup> taskGroupList : pendingCompletionTaskGroups.values()) {
+      for (TaskGroup taskGroup : taskGroupList) {
+        for (String taskId : taskGroup.taskIds()) {
+          taskClient.registerNewVersionOfPendingSegmentAsync(taskId, basePendingSegment, newSegmentVersion);
+        }
+      }
+    }
   }
 
   public ReentrantLock getRecordSupplierLock()

@@ -29,7 +29,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.roaringbitmap.IntIterator;
 
@@ -63,7 +63,10 @@ public final class FilteredOffset extends Offset
       // offset and must use the value matcher here
       if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
         filterMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(
-            columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(bitmapIndexSelector.getBitmapFactory()))
+            columnIndex.computeBitmapResult(
+                new DefaultBitmapResultFactory(bitmapIndexSelector.getBitmapFactory()),
+                false
+            )
         );
       } else {
         filterMatcher = postFilter.makeMatcher(columnSelectorFactory);
@@ -77,7 +80,7 @@ public final class FilteredOffset extends Offset
   {
     while (!Thread.currentThread().isInterrupted()) {
       baseOffset.increment();
-      if (!baseOffset.withinBounds() || filterMatcher.matches()) {
+      if (!baseOffset.withinBounds() || filterMatcher.matches(false)) {
         return;
       }
     }
@@ -99,7 +102,7 @@ public final class FilteredOffset extends Offset
   private void incrementIfNeededOnCreationOrReset()
   {
     if (baseOffset.withinBounds()) {
-      if (!filterMatcher.matches()) {
+      if (!filterMatcher.matches(false)) {
         increment();
         // increment() returns early if it detects the current Thread is interrupted. It will leave this
         // FilteredOffset in an illegal state, because it may point to an offset that should be filtered. So must to
@@ -165,7 +168,7 @@ public final class FilteredOffset extends Offset
                                rowBitmap.iterator();
 
       if (!iter.hasNext()) {
-        return BooleanValueMatcher.of(false);
+        return ValueMatchers.allFalse();
       }
 
       if (descending) {
@@ -174,7 +177,7 @@ public final class FilteredOffset extends Offset
           int iterOffset = Integer.MAX_VALUE;
 
           @Override
-          public boolean matches()
+          public boolean matches(boolean includeUnknown)
           {
             int currentOffset = offset.getOffset();
             while (iterOffset > currentOffset && iter.hasNext()) {
@@ -197,7 +200,7 @@ public final class FilteredOffset extends Offset
           int iterOffset = -1;
 
           @Override
-          public boolean matches()
+          public boolean matches(boolean includeUnknown)
           {
             int currentOffset = offset.getOffset();
             while (iterOffset < currentOffset && iter.hasNext()) {

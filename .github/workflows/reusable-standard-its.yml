@@ -62,9 +62,11 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Setup java
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_${{ inputs.runtime_jdk }}_X64" >> $GITHUB_ENV
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.runtime_jdk }}
+          distribution: 'zulu'
 
       - name: Restore Maven repository
         id: maven-restore
@@ -111,7 +113,7 @@ jobs:
       - name: Collect service logs on failure
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         run: |
-          tar cvzf ./service-logs.tgz ./shared/logs
+          tar cvzf ./service-logs.tgz ~/shared/logs
 
       - name: Upload Druid service logs to GitHub
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}

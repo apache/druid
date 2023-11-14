@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
@@ -39,12 +40,14 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.BrokerClient;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.key.ClusterBy;
@@ -67,7 +70,10 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -140,9 +146,9 @@ import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
+import org.apache.druid.msq.input.table.DataSegmentWithLocation;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
-import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -164,6 +170,7 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
+import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -187,6 +194,7 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -463,14 +471,18 @@ public class ControllerImpl implements Controller
       }
     }
 
+    boolean shouldWaitForSegmentLoad = MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context());
 
     try {
       releaseTaskLocks();
       cleanUpDurableStorageIfNeeded();
 
       if (queryKernel != null && queryKernel.isSuccess()) {
-        if (segmentLoadWaiter != null) {
-          // If successful and there are segments created, segmentLoadWaiter should wait for them to become available.
+        if (shouldWaitForSegmentLoad && segmentLoadWaiter != null) {
+          // If successful, there are segments created and segment load is enabled, segmentLoadWaiter should wait
+          // for them to become available.
+          log.info("Controller will now wait for segments to be loaded. The query has already finished executing,"
+                   + " and results will be included once the segments are loaded, even if this query is cancelled now.");
           segmentLoadWaiter.waitForSegmentsToLoad();
         }
       }
@@ -874,7 +886,7 @@ public class ControllerImpl implements Controller
           try {
             convertedResultObject = context.jsonMapper().convertValue(
                 resultObject,
-                queryKernel.getStageDefinition(stageId).getProcessorFactory().getAccumulatedResultTypeReference()
+                queryKernel.getStageDefinition(stageId).getProcessorFactory().getResultTypeReference()
             );
           }
           catch (IllegalArgumentException e) {
@@ -954,7 +966,11 @@ public class ControllerImpl implements Controller
       );
     } else {
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
-      return generateSegmentIdsWithShardSpecsForAppend(destination, partitionBoundaries, keyReader);
+      return generateSegmentIdsWithShardSpecsForAppend(
+          destination,
+          partitionBoundaries,
+          keyReader,
+          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(task.getQuerySpec().getQuery().getContext()), false));
     }
   }
 
@@ -964,7 +980,8 @@ public class ControllerImpl implements Controller
   private List<SegmentIdWithShardSpec> generateSegmentIdsWithShardSpecsForAppend(
       final DataSourceMSQDestination destination,
       final ClusterByPartitions partitionBoundaries,
-      final RowKeyReader keyReader
+      final RowKeyReader keyReader,
+      final TaskLockType taskLockType
   ) throws IOException
   {
     final Granularity segmentGranularity = destination.getSegmentGranularity();
@@ -990,7 +1007,7 @@ public class ControllerImpl implements Controller
                 false,
                 NumberedPartialShardSpec.instance(),
                 LockGranularity.TIME_CHUNK,
-                TaskLockType.SHARED
+                taskLockType
             )
         );
       }
@@ -1159,14 +1176,73 @@ public class ControllerImpl implements Controller
 
   private DataSegmentTimelineView makeDataSegmentTimelineView()
   {
+    final SegmentSource includeSegmentSource = MultiStageQueryContext.getSegmentSources(
+        task.getQuerySpec()
+            .getQuery()
+            .context()
+    );
+
+    final boolean includeRealtime = SegmentSource.shouldQueryRealtimeServers(includeSegmentSource);
+
     return (dataSource, intervals) -> {
-      final Collection<DataSegment> dataSegments =
+      final Iterable<ImmutableSegmentLoadInfo> realtimeAndHistoricalSegments;
+
+      // Fetch the realtime segments and segments loaded on the historical. Do this first so that we don't miss any
+      // segment if they get handed off between the two calls. Segments loaded on historicals are deduplicated below,
+      // since we are only interested in realtime segments for now.
+      if (includeRealtime) {
+        realtimeAndHistoricalSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
+      } else {
+        realtimeAndHistoricalSegments = ImmutableList.of();
+      }
+
+      // Fetch all published, used segments (all non-realtime segments) from the metadata store.
+      final Collection<DataSegment> publishedUsedSegments =
           FutureUtils.getUnchecked(context.coordinatorClient().fetchUsedSegments(dataSource, intervals), true);
 
-      if (dataSegments.isEmpty()) {
+      int realtimeCount = 0;
+
+      // Deduplicate segments, giving preference to published used segments.
+      // We do this so that if any segments have been handed off in between the two metadata calls above,
+      // we directly fetch it from deep storage.
+      Set<DataSegment> unifiedSegmentView = new HashSet<>(publishedUsedSegments);
+
+      // Iterate over the realtime segments and segments loaded on the historical
+      for (ImmutableSegmentLoadInfo segmentLoadInfo : realtimeAndHistoricalSegments) {
+        ImmutableSet<DruidServerMetadata> servers = segmentLoadInfo.getServers();
+        // Filter out only realtime servers. We don't want to query historicals for now, but we can in the future.
+        // This check can be modified then.
+        Set<DruidServerMetadata> realtimeServerMetadata
+            = servers.stream()
+                     .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
+                                                                        .contains(druidServerMetadata.getType())
+                     )
+                     .collect(Collectors.toSet());
+        if (!realtimeServerMetadata.isEmpty()) {
+          realtimeCount += 1;
+          DataSegmentWithLocation dataSegmentWithLocation = new DataSegmentWithLocation(
+              segmentLoadInfo.getSegment(),
+              realtimeServerMetadata
+          );
+          unifiedSegmentView.add(dataSegmentWithLocation);
+        } else {
+          // We don't have any segments of the required segment source, ignore the segment
+        }
+      }
+
+      if (includeRealtime) {
+        log.info(
+            "Fetched total [%d] segments from coordinator: [%d] from metadata stoure, [%d] from server view",
+            unifiedSegmentView.size(),
+            publishedUsedSegments.size(),
+            realtimeCount
+        );
+      }
+
+      if (unifiedSegmentView.isEmpty()) {
         return Optional.empty();
       } else {
-        return Optional.of(SegmentTimeline.forSegments(dataSegments));
+        return Optional.of(SegmentTimeline.forSegments(unifiedSegmentView));
       }
     };
   }
@@ -1332,6 +1408,10 @@ public class ControllerImpl implements Controller
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
     final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
     int numTombstones = 0;
+    final TaskLockType taskLockType = MultiStageQueryContext.validateAndGetTaskLockType(
+        QueryContext.of(task.getQuerySpec().getQuery().getContext()),
+        destination.isReplaceTimeChunks()
+    );
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
@@ -1362,42 +1442,70 @@ public class ControllerImpl implements Controller
                  .submit(new MarkSegmentsAsUnusedAction(task.getDataSource(), interval));
         }
       } else {
-        Set<String> versionsToAwait = segmentsWithTombstones.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
+        if (MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context())) {
+          segmentLoadWaiter = new SegmentLoadStatusFetcher(
+              context.injector().getInstance(BrokerClient.class),
+              context.jsonMapper(),
+              task.getId(),
+              task.getDataSource(),
+              segmentsWithTombstones,
+              true
+          );
+        }
+        performSegmentPublish(
+            context.taskActionClient(),
+            createOverwriteAction(taskLockType, segmentsWithTombstones)
+        );
+      }
+    } else if (!segments.isEmpty()) {
+      if (MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context())) {
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
             task.getId(),
             task.getDataSource(),
-            versionsToAwait,
-            segmentsWithTombstones.size(),
+            segments,
             true
         );
-        performSegmentPublish(
-            context.taskActionClient(),
-            SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones)
-        );
       }
-    } else if (!segments.isEmpty()) {
-      Set<String> versionsToAwait = segments.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
-      segmentLoadWaiter = new SegmentLoadStatusFetcher(
-          context.injector().getInstance(BrokerClient.class),
-          context.jsonMapper(),
-          task.getId(),
-          task.getDataSource(),
-          versionsToAwait,
-          segments.size(),
-          true
-      );
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
-          SegmentTransactionalInsertAction.appendAction(segments, null, null)
+          createAppendAction(segments, taskLockType)
       );
     }
 
     task.emitMetric(context.emitter(), "ingest/tombstones/count", numTombstones);
     // Include tombstones in the reported segments count
     task.emitMetric(context.emitter(), "ingest/segments/count", segmentsWithTombstones.size());
+  }
+
+  private static TaskAction<SegmentPublishResult> createAppendAction(
+      Set<DataSegment> segments,
+      TaskLockType taskLockType
+  )
+  {
+    if (taskLockType.equals(TaskLockType.APPEND)) {
+      return SegmentTransactionalAppendAction.forSegments(segments);
+    } else if (taskLockType.equals(TaskLockType.SHARED)) {
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null);
+    } else {
+      throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
+    }
+  }
+
+  private TaskAction<SegmentPublishResult> createOverwriteAction(
+      TaskLockType taskLockType,
+      Set<DataSegment> segmentsWithTombstones
+  )
+  {
+    if (taskLockType.equals(TaskLockType.REPLACE)) {
+      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones);
+    } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
+      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones);
+    } else {
+      throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
+    }
   }
 
   /**
@@ -1591,12 +1699,7 @@ public class ControllerImpl implements Controller
     final ShuffleSpecFactory shuffleSpecFactory;
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      shuffleSpecFactory = (clusterBy, aggregate) ->
-          new GlobalSortTargetSizeShuffleSpec(
-              clusterBy,
-              tuningConfig.getRowsPerSegment(),
-              aggregate
-          );
+      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(tuningConfig.getRowsPerSegment());
 
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
@@ -1621,8 +1724,9 @@ public class ControllerImpl implements Controller
       shuffleSpecFactory = ShuffleSpecFactories.singlePartition();
       queryToPlan = querySpec.getQuery();
     } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
-      // we add a final stage which generates one partition per worker.
-      shuffleSpecFactory = ShuffleSpecFactories.globalSortWithMaxPartitionCount(tuningConfig.getMaxNumWorkers());
+      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(
+          MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
+      );
       queryToPlan = querySpec.getQuery();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
@@ -1700,26 +1804,28 @@ public class ControllerImpl implements Controller
       return queryDef;
     } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
 
-      // attaching new query results stage always.
+      // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
-      final QueryDefinitionBuilder builder = QueryDefinition.builder();
-      for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
-        builder.add(StageDefinition.builder(stageDef));
+      if (finalShuffleStageDef.doesSortDuringShuffle()) {
+        final QueryDefinitionBuilder builder = QueryDefinition.builder();
+        builder.addAll(queryDef);
+        builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
+                                   .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
+                                   .maxWorkerCount(tuningConfig.getMaxNumWorkers())
+                                   .signature(finalShuffleStageDef.getSignature())
+                                   .shuffleSpec(null)
+                                   .processorFactory(new QueryResultFrameProcessorFactory())
+        );
+        return builder.build();
+      } else {
+        return queryDef;
       }
-
-      builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
-                                 .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
-                                 .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                                 .signature(finalShuffleStageDef.getSignature())
-                                 .shuffleSpec(null)
-                                 .processorFactory(new QueryResultFrameProcessorFactory())
-      );
-
-      return builder.build();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
   }
+
+
 
   private static DataSchema generateDataSchema(
       MSQSpec querySpec,
@@ -1928,6 +2034,17 @@ public class ControllerImpl implements Controller
       final Query<?> query
   )
   {
+    // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
+    // deprecation and removal in future
+    if (MultiStageQueryContext.getArrayIngestMode(query.context()) == ArrayIngestMode.MVD) {
+      log.warn(
+          "'%s' is set to 'mvd' in the query's context. This ingests the string arrays as multi-value "
+          + "strings instead of arrays, and is preserved for legacy reasons when MVDs were the only way to ingest string "
+          + "arrays in Druid. It is incorrect behaviour and will likely be removed in the future releases of Druid",
+          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
+      );
+    }
+
     final List<DimensionSchema> dimensions = new ArrayList<>();
     final List<AggregatorFactory> aggregators = new ArrayList<>();
 
@@ -2005,7 +2122,8 @@ public class ControllerImpl implements Controller
                 DimensionSchemaUtils.createDimensionSchema(
                     outputColumnName,
                     type,
-                    MultiStageQueryContext.useAutoColumnSchemas(query.context())
+                    MultiStageQueryContext.useAutoColumnSchemas(query.context()),
+                    MultiStageQueryContext.getArrayIngestMode(query.context())
                 )
             );
           } else if (!isRollupQuery) {
@@ -2054,7 +2172,8 @@ public class ControllerImpl implements Controller
           DimensionSchemaUtils.createDimensionSchema(
               outputColumn,
               type,
-              MultiStageQueryContext.useAutoColumnSchemas(context)
+              MultiStageQueryContext.useAutoColumnSchemas(context),
+              MultiStageQueryContext.getArrayIngestMode(context)
           )
       );
     }
@@ -2143,11 +2262,13 @@ public class ControllerImpl implements Controller
   {
     int pendingTasks = -1;
     int runningTasks = 1;
+    Map<Integer, List<MSQWorkerTaskLauncher.WorkerStats>> workerStatsMap = new HashMap<>();
 
     if (taskLauncher != null) {
       WorkerCount workerTaskCount = taskLauncher.getWorkerTaskCount();
       pendingTasks = workerTaskCount.getPendingWorkerCount();
       runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
+      workerStatsMap = taskLauncher.getWorkerStats();
     }
 
     SegmentLoadStatusFetcher.SegmentLoadWaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
@@ -2158,6 +2279,7 @@ public class ControllerImpl implements Controller
         errorReports,
         queryStartTime,
         queryDuration,
+        workerStatsMap,
         pendingTasks,
         runningTasks,
         status
@@ -2204,7 +2326,7 @@ public class ControllerImpl implements Controller
    */
   static void performSegmentPublish(
       final TaskActionClient client,
-      final SegmentTransactionalInsertAction action
+      final TaskAction<SegmentPublishResult> action
   ) throws IOException
   {
     try {
