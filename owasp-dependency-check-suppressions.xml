@@ -446,14 +446,6 @@
   </suppress>
 
   <suppress>
-    <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->
-    <notes><![CDATA[
-     file name: velocity-engine-core-2.2.jar:
-     ]]></notes>
-    <cve>CVE-2020-13936</cve>
-  </suppress>
-
-  <suppress>
      <!-- (ranger, ambari, and aliyun-oss) these vulnerabilities are legit, but their latest releases still use the vulnerable jackson version -->
      <notes><![CDATA[
      file name: jackson-xc-1.9.x.jar or jackson-jaxrs-1.9.x.jar

@@ -124,7 +124,11 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   @Override
   public Object getRootField(final GenericRecord record, final String key)
   {
-    return transformValue(record.get(key));
+    if (record.getSchema().getField(key) != null) {
+      return transformValue(record.get(key));
+    } else {
+      return null;
+    }
   }
 
   @Override

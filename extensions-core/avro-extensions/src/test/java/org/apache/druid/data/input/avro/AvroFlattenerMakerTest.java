@@ -251,6 +251,10 @@ public class AvroFlattenerMakerTest
         list,
         flattener.getRootField(record, "someRecordArray")
     );
+    Assert.assertEquals(
+        null,
+        flattener.getRootField(record, "invalidField")
+    );
   }
 
   private void makeJsonPathExtractor_common(final SomeAvroDatum record, final AvroFlattenerMaker flattener)
