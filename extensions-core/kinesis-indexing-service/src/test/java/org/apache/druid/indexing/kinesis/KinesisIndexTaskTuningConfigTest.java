@@ -78,7 +78,9 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertNull(config.getRecordBufferSizeConfigured());
-    Assert.assertEquals(10000, config.getRecordBufferSizeOrDefault(1_000_000_000, false));
+    Assert.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(2_000_000_000));
+    Assert.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
+    Assert.assertEquals(10_000_000, config.getRecordBufferSizeBytesOrDefault(100_000_000));
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(5000, config.getRecordBufferFullWait());
     Assert.assertNull(config.getFetchThreads());
@@ -126,7 +128,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertTrue(config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(1000, (int) config.getRecordBufferSizeConfigured());
-    Assert.assertEquals(1000, config.getRecordBufferSizeOrDefault(1_000_000_000, false));
+    Assert.assertEquals(1000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
     Assert.assertEquals(500, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(500, config.getRecordBufferFullWait());
     Assert.assertEquals(2, (int) config.getFetchThreads());

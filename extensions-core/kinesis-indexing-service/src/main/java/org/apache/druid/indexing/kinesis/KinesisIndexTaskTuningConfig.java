@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -59,7 +58,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   private static final int DEFAULT_MAX_RECORDS_PER_POLL = 100;
   private static final int DEFAULT_MAX_RECORDS_PER_POLL_AGGREGATE = 1;
 
-  private final Integer recordBufferSize;
+  private final Integer recordBufferSizeBytes;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
   private final Integer fetchThreads;
@@ -81,7 +80,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       Long handoffConditionTimeout,
       Boolean resetOffsetAutomatically,
       Boolean skipSequenceNumberAvailabilityCheck,
-      Integer recordBufferSize,
+      @Nullable Integer recordBufferSizeBytes,
       Integer recordBufferOfferTimeout,
       Integer recordBufferFullWait,
       Integer fetchThreads,
@@ -115,7 +114,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxParseExceptions,
         maxSavedParseExceptions
     );
-    this.recordBufferSize = recordBufferSize;
+    this.recordBufferSizeBytes = recordBufferSizeBytes;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout == null
                                     ? DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT
                                     : recordBufferOfferTimeout;
@@ -145,7 +144,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
-      @JsonProperty("recordBufferSize") Integer recordBufferSize,
+      @JsonProperty("recordBufferSize") Integer recordBufferSizeBytes,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
       @JsonProperty("fetchThreads") Integer fetchThreads,
@@ -173,7 +172,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         handoffConditionTimeout,
         resetOffsetAutomatically,
         skipSequenceNumberAvailabilityCheck,
-        recordBufferSize,
+        recordBufferSizeBytes,
         recordBufferOfferTimeout,
         recordBufferFullWait,
         fetchThreads,
@@ -191,21 +190,18 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getRecordBufferSizeConfigured()
   {
-    return recordBufferSize;
+    return recordBufferSizeBytes;
   }
 
-  public int getRecordBufferSizeOrDefault(final long maxHeapSize, final boolean deaggregate)
+  public int getRecordBufferSizeBytesOrDefault(final long maxHeapSize)
   {
-    if (recordBufferSize != null) {
-      return recordBufferSize;
+    if (recordBufferSizeBytes != null) {
+      return recordBufferSizeBytes;
     } else {
-      final long memoryToUse = Math.min(
+      return (int) Math.min(
           MAX_RECORD_BUFFER_MEMORY,
           (long) (maxHeapSize * RECORD_BUFFER_MEMORY_MAX_HEAP_FRACTION)
       );
-
-      final int assumedRecordSize = deaggregate ? ASSUMED_RECORD_SIZE_AGGREGATE : ASSUMED_RECORD_SIZE;
-      return Ints.checkedCast(Math.max(1, memoryToUse / assumedRecordSize));
     }
   }
 
@@ -237,9 +233,9 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     return maxRecordsPerPoll;
   }
 
-  public int getMaxRecordsPerPollOrDefault(final boolean deaggregate)
+  public int getMaxRecordsPerPollOrDefault()
   {
-    return deaggregate ? DEFAULT_MAX_RECORDS_PER_POLL_AGGREGATE : DEFAULT_MAX_RECORDS_PER_POLL;
+    return DEFAULT_MAX_RECORDS_PER_POLL_AGGREGATE;
   }
 
   @Override
@@ -287,7 +283,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       return false;
     }
     KinesisIndexTaskTuningConfig that = (KinesisIndexTaskTuningConfig) o;
-    return Objects.equals(recordBufferSize, that.recordBufferSize) &&
+    return Objects.equals(recordBufferSizeBytes, that.recordBufferSizeBytes) &&
            recordBufferOfferTimeout == that.recordBufferOfferTimeout &&
            recordBufferFullWait == that.recordBufferFullWait &&
            Objects.equals(maxRecordsPerPoll, that.maxRecordsPerPoll) &&
@@ -299,7 +295,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   {
     return Objects.hash(
         super.hashCode(),
-        recordBufferSize,
+        recordBufferSizeBytes,
         recordBufferOfferTimeout,
         recordBufferFullWait,
         fetchThreads,
@@ -323,7 +319,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
            ", skipSequenceNumberAvailabilityCheck=" + isSkipSequenceNumberAvailabilityCheck() +
-           ", recordBufferSize=" + recordBufferSize +
+           ", recordBufferSize=" + recordBufferSizeBytes +
            ", recordBufferOfferTimeout=" + recordBufferOfferTimeout +
            ", recordBufferFullWait=" + recordBufferFullWait +
            ", fetchThreads=" + fetchThreads +

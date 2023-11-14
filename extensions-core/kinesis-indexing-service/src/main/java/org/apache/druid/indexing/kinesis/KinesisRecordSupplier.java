@@ -239,8 +239,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             return;
           }
 
-          recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(
-              shardIterator).withLimit(recordsPerFetch));
+          recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator));
 
           currentLagMillis = recordsResult.getMillisBehindLatest();
 
@@ -403,15 +402,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private final MethodHandle getDataHandle;
 
   private final AmazonKinesis kinesis;
-
-  private final int recordsPerFetch;
   private final int fetchDelayMillis;
-  private final boolean deaggregate;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
   private final int maxRecordsPerPoll;
   private final int fetchThreads;
-  private final int recordBufferSize;
+  private final int recordBufferSizeBytes;
   private final boolean useEarliestSequenceNumber;
   private final boolean useListShards;
 
@@ -427,29 +423,24 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
-      int recordsPerFetch,
       int fetchDelayMillis,
       int fetchThreads,
-      boolean deaggregate,
-      int recordBufferSize,
+      int recordBufferSizeBytes,
       int recordBufferOfferTimeout,
       int recordBufferFullWait,
       int maxRecordsPerPoll,
       boolean useEarliestSequenceNumber,
-      boolean useListShards,
-      long queueMaxByteSize
+      boolean useListShards
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
     this.kinesis = amazonKinesis;
-    this.recordsPerFetch = recordsPerFetch;
     this.fetchDelayMillis = fetchDelayMillis;
-    this.deaggregate = deaggregate;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait;
     this.maxRecordsPerPoll = maxRecordsPerPoll;
     this.fetchThreads = fetchThreads;
-    this.recordBufferSize = recordBufferSize;
+    this.recordBufferSizeBytes = recordBufferSizeBytes;
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
     this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
@@ -457,27 +448,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
     // The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
     // docs page for more information on how to use deaggregation
-    if (deaggregate) {
-      try {
-        Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
-        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+    try {
+      Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
+      MethodHandles.Lookup lookup = MethodHandles.publicLookup();
 
-        Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
-        Method getDataMethod = kclUserRecordclass.getMethod("getData");
+      Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
+      Method getDataMethod = kclUserRecordclass.getMethod("getData");
 
-        deaggregateHandle = lookup.unreflect(deaggregateMethod);
-        getDataHandle = lookup.unreflect(getDataMethod);
-      }
-      catch (ClassNotFoundException e) {
-        throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
-                         + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      deaggregateHandle = null;
-      getDataHandle = null;
+      deaggregateHandle = lookup.unreflect(deaggregateMethod);
+      getDataHandle = lookup.unreflect(getDataMethod);
+    }
+    catch (ClassNotFoundException e) {
+      throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
+                       + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
 
     if (backgroundFetchEnabled) {
@@ -493,7 +479,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       );
     }
 
-    records = new MemoryBoundLinkedBlockingQueue<>(queueMaxByteSize);
+    records = new MemoryBoundLinkedBlockingQueue<>(recordBufferSizeBytes);
   }
 
   public static AmazonKinesis getAmazonKinesisClient(
@@ -1065,7 +1051,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     }
 
     // filter records in buffer and only retain ones whose partition was not seeked
-    MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ = new MemoryBoundLinkedBlockingQueue<>(recordBufferSize);
+    MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ =
+        new MemoryBoundLinkedBlockingQueue<>(recordBufferSizeBytes);
 
     records.stream()
            .filter(x -> !partitions.contains(x.getData().getStreamPartition()))

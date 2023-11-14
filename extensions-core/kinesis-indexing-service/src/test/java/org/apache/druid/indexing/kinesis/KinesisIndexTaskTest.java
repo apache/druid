@@ -779,9 +779,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         )
     );
 
@@ -843,9 +841,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         )
     );
 
@@ -1935,9 +1931,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         context
     );
@@ -2099,9 +2093,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         context
     );
@@ -2252,15 +2244,18 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
         new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 2000);
 
-    Assert.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, null));
-    Assert.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 2));
+    Assert.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, null));
+    Assert.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, 2));
+
+    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo, 50_000_000, null));
+    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo, 50_000_000, 6));
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 0)
+        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, 0)
     );
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, -1)
+        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, -1)
     );
   }
 
@@ -2297,9 +2292,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         null
     );

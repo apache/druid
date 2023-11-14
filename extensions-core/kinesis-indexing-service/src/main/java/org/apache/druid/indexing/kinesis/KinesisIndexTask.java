@@ -105,21 +105,18 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   {
     KinesisIndexTaskIOConfig ioConfig = ((KinesisIndexTaskIOConfig) super.ioConfig);
     KinesisIndexTaskTuningConfig tuningConfig = ((KinesisIndexTaskTuningConfig) super.tuningConfig);
-    final int fetchThreads = computeFetchThreads(runtimeInfo, tuningConfig.getFetchThreads());
-    final int recordsPerFetch = ioConfig.getRecordsPerFetchOrDefault(runtimeInfo.getMaxHeapSizeBytes(), fetchThreads);
-    final int recordBufferSize =
-        tuningConfig.getRecordBufferSizeOrDefault(runtimeInfo.getMaxHeapSizeBytes(), ioConfig.isDeaggregate());
-    final int maxRecordsPerPoll = tuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate());
+    final int recordBufferSizeBytes =
+        tuningConfig.getRecordBufferSizeBytesOrDefault(runtimeInfo.getMaxHeapSizeBytes());
+    final int fetchThreads = computeFetchThreads(runtimeInfo, recordBufferSizeBytes, tuningConfig.getFetchThreads());
+    final int maxRecordsPerPoll = tuningConfig.getMaxRecordsPerPollOrDefault();
 
     log.info(
-        "Starting record supplier with fetchThreads [%d], fetchDelayMillis [%d], recordsPerFetch [%d], "
-        + "recordBufferSize [%d], maxRecordsPerPoll [%d], deaggregate [%s].",
+        "Starting record supplier with fetchThreads [%d], fetchDelayMillis [%d], "
+        + "recordBufferSizeBytes [%d], maxRecordsPerPoll [%d]",
         fetchThreads,
         ioConfig.getFetchDelayMillis(),
-        recordsPerFetch,
-        recordBufferSize,
-        maxRecordsPerPoll,
-        ioConfig.isDeaggregate()
+        recordBufferSizeBytes,
+        maxRecordsPerPoll
     );
 
     return new KinesisRecordSupplier(
@@ -129,11 +126,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
-        recordsPerFetch,
         ioConfig.getFetchDelayMillis(),
         fetchThreads,
-        ioConfig.isDeaggregate(),
-        recordBufferSize,
+        recordBufferSizeBytes,
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
         maxRecordsPerPoll,
@@ -179,13 +174,27 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   }
 
   @VisibleForTesting
-  static int computeFetchThreads(final RuntimeInfo runtimeInfo, final Integer configuredFetchThreads)
+  static int computeFetchThreads(
+      final RuntimeInfo runtimeInfo,
+      final long recordBufferSizeBytes,
+      final Integer configuredFetchThreads
+  )
   {
-    final int fetchThreads;
+    int fetchThreads;
     if (configuredFetchThreads != null) {
       fetchThreads = configuredFetchThreads;
     } else {
       fetchThreads = runtimeInfo.getAvailableProcessors() * 2;
+    }
+
+    // assume that each fetchThread return 10MB (assummed size of aggregated record = 1MB, and
+    // records per fetch is 10000 max), and cap fetchThreads at this amount. Don't fail if specified
+    // to be greater than this as to not cause failure for older configurations, but log warning
+    // if fetchThreads lowered because of this.
+    int maxFetchThreads = Math.max(1, (int) (recordBufferSizeBytes / 10_000_000L));
+    if (fetchThreads > maxFetchThreads) {
+      log.warn("fetchThreads [%d] being lowered to [%d]", fetchThreads, maxFetchThreads);
+      fetchThreads = maxFetchThreads;
     }
 
     Preconditions.checkArgument(

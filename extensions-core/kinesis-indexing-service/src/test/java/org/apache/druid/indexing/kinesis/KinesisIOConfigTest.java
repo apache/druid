@@ -93,13 +93,10 @@ public class KinesisIOConfigTest
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
-    Assert.assertNull(config.getRecordsPerFetchConfigured());
-    Assert.assertEquals(config.getRecordsPerFetchOrDefault(1_000_000_000, 4), 1250);
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
     Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
-    Assert.assertFalse(config.isDeaggregate());
   }
 
   @Test
@@ -150,11 +147,9 @@ public class KinesisIOConfigTest
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
     Assert.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
-    Assert.assertEquals(1000, (int) config.getRecordsPerFetchConfigured());
     Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
-    Assert.assertTrue(config.isDeaggregate());
   }
 
   @Test
@@ -272,11 +267,9 @@ public class KinesisIOConfigTest
         DateTimes.nowUtc(),
         null,
         "endpoint",
-        1000,
         2000,
         "awsAssumedRoleArn",
-        "awsExternalId",
-        true
+        "awsExternalId"
     );
 
     final byte[] json = mapper.writeValueAsBytes(currentConfig);
@@ -302,11 +295,9 @@ public class KinesisIOConfigTest
     Assert.assertEquals(currentConfig.getMinimumMessageTime(), oldConfig.getMinimumMessageTime());
     Assert.assertEquals(currentConfig.getMaximumMessageTime(), oldConfig.getMaximumMessageTime());
     Assert.assertEquals(currentConfig.getEndpoint(), oldConfig.getEndpoint());
-    Assert.assertEquals((int) currentConfig.getRecordsPerFetchConfigured(), oldConfig.getRecordsPerFetch());
     Assert.assertEquals(currentConfig.getFetchDelayMillis(), oldConfig.getFetchDelayMillis());
     Assert.assertEquals(currentConfig.getAwsAssumedRoleArn(), oldConfig.getAwsAssumedRoleArn());
     Assert.assertEquals(currentConfig.getAwsExternalId(), oldConfig.getAwsExternalId());
-    Assert.assertEquals(currentConfig.isDeaggregate(), oldConfig.isDeaggregate());
   }
 
   @Test
@@ -349,11 +340,9 @@ public class KinesisIOConfigTest
     Assert.assertEquals(oldConfig.getMinimumMessageTime(), currentConfig.getMinimumMessageTime());
     Assert.assertEquals(oldConfig.getMaximumMessageTime(), currentConfig.getMaximumMessageTime());
     Assert.assertEquals(oldConfig.getEndpoint(), currentConfig.getEndpoint());
-    Assert.assertEquals(oldConfig.getRecordsPerFetch(), (int) currentConfig.getRecordsPerFetchConfigured());
     Assert.assertEquals(oldConfig.getFetchDelayMillis(), currentConfig.getFetchDelayMillis());
     Assert.assertEquals(oldConfig.getAwsAssumedRoleArn(), currentConfig.getAwsAssumedRoleArn());
     Assert.assertEquals(oldConfig.getAwsExternalId(), currentConfig.getAwsExternalId());
-    Assert.assertEquals(oldConfig.isDeaggregate(), currentConfig.isDeaggregate());
   }
 
   private static class OldKinesisIndexTaskIoConfig implements IOConfig

@@ -462,12 +462,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        100,
         1000,
         null,
         null,
-        null,
-        false
+        null
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
@@ -526,12 +524,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            100,
             1000,
             null,
             null,
-            null,
-            false
+            null
     );
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
@@ -553,12 +549,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            100,
             1000,
             null,
             null,
-             OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
-            false
+             OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class)
     );
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
@@ -4104,9 +4098,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         null,
         null,
@@ -5029,9 +5021,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
-        null,
-        false
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5167,12 +5157,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
-        recordsPerFetch,
         fetchDelayMillis,
         null,
         null,
-         autoScalerConfig,
-        false
+         autoScalerConfig
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5257,12 +5245,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
-        recordsPerFetch,
         fetchDelayMillis,
         null,
         null,
-        null,
-        false
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5346,12 +5332,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
-        recordsPerFetch,
         fetchDelayMillis,
         null,
         null,
-        null,
-        false
+        null
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5495,9 +5479,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         Collections.emptyMap(),
         false,
