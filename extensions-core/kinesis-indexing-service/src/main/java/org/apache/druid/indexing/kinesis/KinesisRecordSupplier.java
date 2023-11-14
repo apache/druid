@@ -275,7 +275,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
             if (log.isTraceEnabled()) {
               log.trace(
-                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferByteCapacity[%d] / bufferRemainingByteCapacity[%d]: %s",
+                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferByteSize[%d] / bufferRemainingByteCapacity[%d]: %s",
                   currRecord.getStream(),
                   currRecord.getPartitionId(),
                   currRecord.getSequenceNumber(),
