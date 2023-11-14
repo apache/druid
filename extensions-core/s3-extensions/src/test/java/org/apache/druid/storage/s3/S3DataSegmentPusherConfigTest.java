@@ -29,6 +29,7 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
 public class S3DataSegmentPusherConfigTest
@@ -51,9 +52,10 @@ public class S3DataSegmentPusherConfigTest
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\"}";
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
                                 + "\"disableAcl\":false,\"maxListingLength\":1024,\"useS3aSchema\":false}";
-
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
-    Assert.assertEquals(expectedJsonConfig, JSON_MAPPER.writeValueAsString(config));
+    Map<String, String> expected = JSON_MAPPER.readValue(expectedJsonConfig, Map.class);
+    Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
+    Assert.assertEquals(expected, actual);
   }
 
   @Test
