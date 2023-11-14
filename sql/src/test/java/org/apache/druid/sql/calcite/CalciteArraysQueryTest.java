@@ -50,7 +50,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -81,9 +80,9 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -2599,7 +2598,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .postAggregators(
-                      expressionPostAgg("p0", "array_quantile(\"a0\",0.9)")
+                      expressionPostAgg("p0", "array_quantile(\"a0\",0.9)", ColumnType.DOUBLE)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -2710,6 +2709,106 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayAggArraysWithMaxSizeBytes()
+  {
+    // Produces nested array - ARRAY<ARRAY<LONG>>, which frame writers don't support. A way to get this query
+    // to run would be to use nested columns.
+    msqIncompatible();
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_AGG(ARRAY[l1, l2], 10000), ARRAY_AGG(DISTINCT ARRAY[l1, l2], CAST(10000 AS INTEGER)) FROM numfoo",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_append(\"__acc\", \"v0\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              "ARRAY<ARRAY<LONG>>[]",
+                              true,
+                              true,
+                              false,
+                              "array_set_add(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                  .build()
+        ),
+        (sql, queryResults) -> {
+          // ordering is not stable in array_agg and array_concat_agg
+          List<Object[]> expected = ImmutableList.of(
+              useDefault ?
+              new Object[]{
+                  Arrays.asList(
+                      Arrays.asList(7L, 0L),
+                      Arrays.asList(325323L, 325323L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(0L, 0L)
+                  ),
+                  Arrays.asList(
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(7L, 0L),
+                      Arrays.asList(325323L, 325323L)
+                  )
+              }
+                         :
+              new Object[]{
+                  Arrays.asList(
+                      Arrays.asList(7L, null),
+                      Arrays.asList(325323L, 325323L),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(null, null),
+                      Arrays.asList(null, null),
+                      Arrays.asList(null, null)
+                  ),
+                  Arrays.asList(
+                      Arrays.asList(null, null),
+                      Arrays.asList(0L, 0L),
+                      Arrays.asList(7L, null),
+                      Arrays.asList(325323L, 325323L)
+                  )
+              }
+          );
+          assertResultsDeepEquals(sql, expected, queryResults.results);
+        }
+    );
+  }
+
+
+  @Test
   public void testArrayConcatAggArrays()
   {
     cannotVectorize();
@@ -2769,6 +2868,69 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testArrayConcatAggArraysWithMaxSizeBytes()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT ARRAY_CONCAT_AGG(ARRAY[l1, l2], 10000), ARRAY_CONCAT_AGG(DISTINCT ARRAY[l1, l2], CAST(10000 AS INTEGER)) "
+        + "FROM numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "array(\"l1\",\"l2\")", ColumnType.LONG_ARRAY)
+                  )
+                  .aggregators(
+                      aggregators(
+                          new ExpressionLambdaAggregatorFactory(
+                              "a0",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              true,
+                              false,
+                              false,
+                              "array_concat(\"__acc\", \"v0\")",
+                              "array_concat(\"__acc\", \"a0\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          ),
+                          new ExpressionLambdaAggregatorFactory(
+                              "a1",
+                              ImmutableSet.of("v0"),
+                              "__acc",
+                              "ARRAY<LONG>[]",
+                              "ARRAY<LONG>[]",
+                              true,
+                              false,
+                              false,
+                              "array_set_add_all(\"__acc\", \"v0\")",
+                              "array_set_add_all(\"__acc\", \"a1\")",
+                              null,
+                              null,
+                              new HumanReadableBytes(10000),
+                              TestExprMacroTable.INSTANCE
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            useDefault
+            ? new Object[]{"[7,0,325323,325323,0,0,0,0,0,0,0,0]", "[0,7,325323]"}
+            : new Object[]{"[7,null,325323,325323,0,0,null,null,null,null,null,null]", "[null,0,7,325323]"}
+        )
+    );
+  }
+
 
 
   @Test
@@ -2973,7 +3135,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3017,7 +3179,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           )
                       )
                   )
-                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "array_to_string(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -3032,7 +3194,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "SELECT ARRAY_AGG(l1, 128), ARRAY_AGG(DISTINCT l1, 128) FROM numfoo",
+        "SELECT ARRAY_AGG(l1, 128), ARRAY_AGG(DISTINCT l1, CAST(128 AS INTEGER)) FROM numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE3)
@@ -3209,7 +3371,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
                 .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                .postAggregators(new ExpressionPostAggregator("s0", "1", null, ExprMacroTable.nil()))
+                .postAggregators(expressionPostAgg("s0", "1", ColumnType.LONG))
                 .build()
         ),
         useDefault ?

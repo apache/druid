@@ -83,7 +83,11 @@ public class HllSketchToStringPostAggregator implements PostAggregator
   @Override
   public String compute(final Map<String, Object> combinedAggregators)
   {
-    final HllSketch sketch = HllSketchHolder.fromObj(field.compute(combinedAggregators)).getSketch();
+    Object hllSketchHolderObject = field.compute(combinedAggregators);
+    if (hllSketchHolderObject == null) {
+      return "Null Sketch";
+    }
+    final HllSketch sketch = HllSketchHolder.fromObj(hllSketchHolderObject).getSketch();
     return sketch.toString();
   }
 

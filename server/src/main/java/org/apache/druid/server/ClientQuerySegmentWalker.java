@@ -58,7 +58,6 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -120,7 +119,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ServerConfig serverConfig,
       Cache cache,
       CacheConfig cacheConfig,
-      LookupExtractorFactoryContainerProvider lookupManager,
+      SubqueryGuardrailHelper subqueryGuardrailHelper,
       SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
@@ -134,11 +133,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.serverConfig = serverConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
-    this.subqueryGuardrailHelper = new SubqueryGuardrailHelper(
-        lookupManager,
-        Runtime.getRuntime().maxMemory(),
-        serverConfig.getNumThreads()
-    );
+    this.subqueryGuardrailHelper = subqueryGuardrailHelper;
     this.subqueryStatsProvider = subqueryStatsProvider;
   }
 
@@ -154,7 +149,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ServerConfig serverConfig,
       Cache cache,
       CacheConfig cacheConfig,
-      LookupExtractorFactoryContainerProvider lookupManager,
+      SubqueryGuardrailHelper subqueryGuardrailHelper,
       SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
@@ -169,7 +164,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         serverConfig,
         cache,
         cacheConfig,
-        lookupManager,
+        subqueryGuardrailHelper,
         subqueryStatsProvider
     );
   }

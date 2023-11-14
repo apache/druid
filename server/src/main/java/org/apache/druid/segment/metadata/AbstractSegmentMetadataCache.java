@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.schema;
+package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
@@ -25,18 +25,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import com.google.inject.Inject;
-import org.apache.druid.client.BrokerInternalQueryConfig;
-import org.apache.druid.client.ServerView;
-import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -50,7 +46,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
@@ -61,15 +56,11 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.Types;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -96,13 +87,16 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * Broker-side cache of segment metadata which combines segments to identify
- * datasources which become "tables" in Calcite. This cache provides the "physical"
- * metadata about a datasource which is blended with catalog "logical" metadata
- * to provide the final user-view of each datasource.
+ * An abstract class that listens for segment change events and caches segment metadata. It periodically refreshes
+ * the segments, by fetching their metadata which includes schema information from sources like
+ * data nodes, tasks, metadata database and builds table schema.
+ *
+ * <p>This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
+ * with the logic to build and cache table schema.</p>
+ *
+ * @param <T> The type of information associated with the data source, which must extend {@link DataSourceInformation}.
  */
-@ManageLifecycle
-public class SegmentMetadataCache
+public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformation>
 {
   // Newest segments first, so they override older ones.
   private static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
@@ -110,7 +104,7 @@ public class SegmentMetadataCache
       .reversed()
       .thenComparing(Function.identity());
 
-  private static final EmittingLogger log = new EmittingLogger(SegmentMetadataCache.class);
+  private static final EmittingLogger log = new EmittingLogger(AbstractSegmentMetadataCache.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
   private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
@@ -118,18 +112,10 @@ public class SegmentMetadataCache
   private final SegmentMetadataCacheConfig config;
   // Escalator, so we can attach an authentication result to queries we generate.
   private final Escalator escalator;
-  private final SegmentManager segmentManager;
-  private final JoinableFactory joinableFactory;
-  private final ExecutorService cacheExec;
-  private final ExecutorService callbackExec;
-  private final ServiceEmitter emitter;
-  private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
-  /**
-   * Map of DataSource -> DruidTable.
-   * This map can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
-   */
-  private final ConcurrentMap<String, DatasourceTable.PhysicalDatasourceMetadata> tables = new ConcurrentHashMap<>();
+  private final ExecutorService cacheExec;
+
+  private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
@@ -144,7 +130,7 @@ public class SegmentMetadataCache
    * While it is being updated, this map is read by these two types of thread.
    *
    * - {@link #cacheExec} can iterate all {@link AvailableSegmentMetadata}s per datasource.
-   *   See {@link #buildDruidTable}.
+   *   See {@link #buildDataSourceRowSignature}.
    * - Query threads can create a snapshot of the entire map for processing queries on the system table.
    *   See {@link #getSegmentMetadataSnapshot()}.
    *
@@ -181,36 +167,15 @@ public class SegmentMetadataCache
   // For awaitInitialization.
   private final CountDownLatch initialized = new CountDownLatch(1);
 
-  /**
-   * This lock coordinates the access from multiple threads to those variables guarded by this lock.
-   * Currently, there are 2 threads that can access these variables.
-   *
-   * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
-   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DatasourceTable} if necessary
-   *   based on the information collected via timeline callbacks.
-   */
-  private final Object lock = new Object();
-
   // All mutable segments.
   @GuardedBy("lock")
   private final TreeSet<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
 
-  // All dataSources that need tables regenerated.
-  @GuardedBy("lock")
-  private final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
-
-  // All segments that need to be refreshed.
-  @GuardedBy("lock")
-  private final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
-
   // Configured context to attach to internally generated queries.
-  private final BrokerInternalQueryConfig brokerInternalQueryConfig;
+  private final InternalQueryConfig internalQueryConfig;
 
   @GuardedBy("lock")
   private boolean refreshImmediately = false;
-
-  @GuardedBy("lock")
-  private boolean isServerViewInitialized = false;
 
   /**
    * Counts the total number of known segments. This variable is used only for the segments table in the system schema
@@ -219,81 +184,60 @@ public class SegmentMetadataCache
    */
   private int totalSegments = 0;
 
-  @Inject
-  public SegmentMetadataCache(
+  protected final ExecutorService callbackExec;
+
+  @GuardedBy("lock")
+  protected boolean isServerViewInitialized = false;
+
+  protected final ServiceEmitter emitter;
+
+  /**
+   * Map of datasource and generic object extending DataSourceInformation.
+   * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
+   */
+  protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
+
+  /**
+   * This lock coordinates the access from multiple threads to those variables guarded by this lock.
+   * Currently, there are 2 threads that can access these variables.
+   *
+   * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
+   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
+   *   based on the information collected via timeline callbacks.
+   */
+  protected final Object lock = new Object();
+
+  // All datasources that need tables regenerated.
+  @GuardedBy("lock")
+  protected final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
+
+  // All segments that need to be refreshed.
+  @GuardedBy("lock")
+  protected final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
+
+  public AbstractSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final TimelineServerView serverView,
-      final SegmentManager segmentManager,
-      final JoinableFactory joinableFactory,
       final SegmentMetadataCacheConfig config,
       final Escalator escalator,
-      final BrokerInternalQueryConfig brokerInternalQueryConfig,
+      final InternalQueryConfig internalQueryConfig,
       final ServiceEmitter emitter
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
-    Preconditions.checkNotNull(serverView, "serverView");
-    this.segmentManager = segmentManager;
-    this.joinableFactory = joinableFactory;
     this.config = Preconditions.checkNotNull(config, "config");
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
-    this.brokerInternalQueryConfig = brokerInternalQueryConfig;
+    this.internalQueryConfig = internalQueryConfig;
     this.emitter = emitter;
-
-    initServerViewTimelineCallback(serverView);
-  }
-
-  private void initServerViewTimelineCallback(final TimelineServerView serverView)
-  {
-    serverView.registerTimelineCallback(
-        callbackExec,
-        new TimelineServerView.TimelineCallback()
-        {
-          @Override
-          public ServerView.CallbackAction timelineInitialized()
-          {
-            synchronized (lock) {
-              isServerViewInitialized = true;
-              lock.notifyAll();
-            }
-
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
-          {
-            addSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(final DataSegment segment)
-          {
-            removeSegment(segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction serverSegmentRemoved(
-              final DruidServerMetadata server,
-              final DataSegment segment
-          )
-          {
-            removeServerSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-        }
-    );
   }
 
   private void startCacheExec()
   {
     cacheExec.submit(
         () -> {
+          final Stopwatch stopwatch = Stopwatch.createStarted();
           long lastRefresh = 0L;
           long lastFailure = 0L;
 
@@ -331,7 +275,7 @@ public class SegmentMetadataCache
                     if (isServerViewInitialized && lastFailure == 0L) {
                       // Server view is initialized, but we don't need to do a refresh. Could happen if there are
                       // no segments in the system yet. Just mark us as initialized, then.
-                      initialized.countDown();
+                      setInitializedAndReportInitTime(stopwatch);
                     }
 
                     // Wait some more, we'll wake up when it might be time to do another refresh.
@@ -351,7 +295,7 @@ public class SegmentMetadataCache
 
                 refresh(segmentsToRefresh, dataSourcesToRebuild);
 
-                initialized.countDown();
+                setInitializedAndReportInitTime(stopwatch);
               }
               catch (InterruptedException e) {
                 // Fall through.
@@ -361,7 +305,7 @@ public class SegmentMetadataCache
                 log.warn(e, "Metadata refresh failed, trying again soon.");
 
                 synchronized (lock) {
-                  // Add our segments and dataSources back to their refresh and rebuild lists.
+                  // Add our segments and datasources back to their refresh and rebuild lists.
                   segmentsNeedingRefresh.addAll(segmentsToRefresh);
                   dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
                   lastFailure = System.currentTimeMillis();
@@ -385,55 +329,26 @@ public class SegmentMetadataCache
     );
   }
 
+  private void setInitializedAndReportInitTime(Stopwatch stopwatch)
+  {
+    // report the cache init time
+    if (initialized.getCount() == 1) {
+      long elapsedTime = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+      emitter.emit(ServiceMetricEvent.builder().setMetric("metadatacache/init/time", elapsedTime));
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), elapsedTime);
+      stopwatch.stop();
+    }
+    initialized.countDown();
+  }
+
   @LifecycleStart
   public void start() throws InterruptedException
   {
+    log.info("%s starting cache initialization.", getClass().getSimpleName());
     startCacheExec();
 
     if (config.isAwaitInitializationOnStart()) {
-      final long startMillis = System.currentTimeMillis();
-      log.info("%s waiting for initialization.", getClass().getSimpleName());
       awaitInitialization();
-      final long endMillis = System.currentTimeMillis();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
-      emitter.emit(ServiceMetricEvent.builder().setMetric(
-          "metadatacache/init/time",
-          endMillis - startMillis
-      ));
-    }
-  }
-
-  @VisibleForTesting
-  void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
-  {
-    // Refresh the segments.
-    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
-
-    synchronized (lock) {
-      // Add missing segments back to the refresh list.
-      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
-
-      // Compute the list of dataSources to rebuild tables for.
-      dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
-      refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
-      dataSourcesNeedingRebuild.clear();
-    }
-
-    // Rebuild the dataSources.
-    for (String dataSource : dataSourcesToRebuild) {
-      final DatasourceTable.PhysicalDatasourceMetadata druidTable = buildDruidTable(dataSource);
-      if (druidTable == null) {
-        log.info("dataSource [%s] no longer exists, all metadata removed.", dataSource);
-        tables.remove(dataSource);
-        continue;
-      }
-      final DatasourceTable.PhysicalDatasourceMetadata oldTable = tables.put(dataSource, druidTable);
-      final String description = druidTable.dataSource().isGlobal() ? "global dataSource" : "dataSource";
-      if (oldTable == null || !oldTable.rowSignature().equals(druidTable.rowSignature())) {
-        log.info("%s [%s] has new signature: %s.", description, dataSource, druidTable.rowSignature());
-      } else {
-        log.debug("%s [%s] signature is unchanged.", description, dataSource);
-      }
     }
   }
 
@@ -449,18 +364,85 @@ public class SegmentMetadataCache
     initialized.await();
   }
 
-  protected DatasourceTable.PhysicalDatasourceMetadata getDatasource(String name)
+  /**
+   * Fetch schema for the given datasource.
+   *
+   * @param name datasource
+   *
+   * @return schema information for the given datasource
+   */
+  public T getDatasource(String name)
   {
     return tables.get(name);
   }
 
-  protected Set<String> getDatasourceNames()
+  /**
+   * @return Map of datasource and corresponding schema information.
+   */
+  public Map<String, T> getDataSourceInformationMap()
+  {
+    return ImmutableMap.copyOf(tables);
+  }
+
+  /**
+   * @return Set of datasources for which schema information is cached.
+   */
+  public Set<String> getDatasourceNames()
   {
     return tables.keySet();
   }
 
+  /**
+   * Get metadata for all the cached segments, which includes information like RowSignature, realtime & numRows etc.
+   *
+   * @return Map of segmentId and corresponding metadata.
+   */
+  public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
+  {
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
+    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
+      segmentMetadata.putAll(val);
+    }
+    return segmentMetadata;
+  }
+
+  /**
+   * Get metadata for the specified segment, which includes information like RowSignature, realtime & numRows.
+   *
+   * @param datasource segment datasource
+   * @param segmentId  segment Id
+   *
+   * @return Metadata information for the given segment
+   */
+  @Nullable
+  public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
+  {
+    if (!segmentMetadataInfo.containsKey(datasource)) {
+      return null;
+    }
+    return segmentMetadataInfo.get(datasource).get(segmentId);
+  }
+
+  /**
+   * Returns total number of segments. This method doesn't use the lock intentionally to avoid expensive contention.
+   * As a result, the returned value might be inexact.
+   */
+  public int getTotalSegments()
+  {
+    return totalSegments;
+  }
+
+  /**
+   * The child classes must override this method with the logic to build and cache table schema.
+   *
+   * @param segmentsToRefresh    segments for which the schema might have changed
+   * @param dataSourcesToRebuild datasources for which the schema might have changed
+   * @throws IOException         when querying segment schema from data nodes and tasks
+   */
+  public abstract void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild) throws IOException;
+
   @VisibleForTesting
-  protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+  public void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -532,7 +514,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  void removeSegment(final DataSegment segment)
+  public void removeSegment(final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -570,7 +552,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
+  public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
@@ -654,7 +636,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  void markDataSourceAsNeedRebuild(String datasource)
+  public void markDataSourceAsNeedRebuild(String datasource)
   {
     synchronized (lock) {
       dataSourcesNeedingRebuild.add(datasource);
@@ -666,11 +648,11 @@ public class SegmentMetadataCache
    * which may be a subset of the asked-for set.
    */
   @VisibleForTesting
-  protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
+  public Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
   {
     final Set<SegmentId> retVal = new HashSet<>();
 
-    // Organize segments by dataSource.
+    // Organize segments by datasource.
     final Map<String, TreeSet<SegmentId>> segmentMap = new TreeMap<>();
 
     for (SegmentId segmentId : segments) {
@@ -717,7 +699,7 @@ public class SegmentMetadataCache
       throw new ISE("'segments' must all match 'dataSource'!");
     }
 
-    log.debug("Refreshing metadata for dataSource[%s].", dataSource);
+    log.debug("Refreshing metadata for datasource[%s].", dataSource);
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
@@ -796,7 +778,7 @@ public class SegmentMetadataCache
     emitter.emit(builder.setMetric("metadatacache/refresh/time", refreshDurationMillis));
 
     log.debug(
-        "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
+        "Refreshed metadata for datasource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
         refreshDurationMillis,
         retVal.size(),
@@ -808,7 +790,7 @@ public class SegmentMetadataCache
 
   @VisibleForTesting
   @Nullable
-  DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(final String dataSource)
+  public RowSignature buildDataSourceRowSignature(final String dataSource)
   {
     ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> segmentsMap = segmentMetadataInfo.get(dataSource);
 
@@ -836,45 +818,11 @@ public class SegmentMetadataCache
     final RowSignature.Builder builder = RowSignature.builder();
     columnTypes.forEach(builder::add);
 
-    final TableDataSource tableDataSource;
-
-    // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing
-    // in the segment cache, which in this case belongs to the broker meaning only broadcast segments live here)
-    // to be joinable, it must be possibly joinable according to the factory. we only consider broadcast datasources
-    // at this time, and isGlobal is currently strongly coupled with joinable, so only make a global table datasource
-    // if also joinable
-    final GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(dataSource);
-    final boolean isJoinable = joinableFactory.isDirectlyJoinable(maybeGlobal);
-    final boolean isBroadcast = segmentManager.getDataSourceNames().contains(dataSource);
-    if (isBroadcast && isJoinable) {
-      tableDataSource = maybeGlobal;
-    } else {
-      tableDataSource = new TableDataSource(dataSource);
-    }
-    return new DatasourceTable.PhysicalDatasourceMetadata(tableDataSource, builder.build(), isJoinable, isBroadcast);
+    return builder.build();
   }
 
   @VisibleForTesting
-  Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
-  {
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
-    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
-      segmentMetadata.putAll(val);
-    }
-    return segmentMetadata;
-  }
-
-  /**
-   * Returns total number of segments. This method doesn't use the lock intentionally to avoid expensive contention.
-   * As a result, the returned value might be inexact.
-   */
-  int getTotalSegments()
-  {
-    return totalSegments;
-  }
-
-  @VisibleForTesting
-  TreeSet<SegmentId> getSegmentsNeedingRefresh()
+  public TreeSet<SegmentId> getSegmentsNeedingRefresh()
   {
     synchronized (lock) {
       return segmentsNeedingRefresh;
@@ -882,7 +830,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  TreeSet<SegmentId> getMutableSegments()
+  public TreeSet<SegmentId> getMutableSegments()
   {
     synchronized (lock) {
       return mutableSegments;
@@ -890,7 +838,7 @@ public class SegmentMetadataCache
   }
 
   @VisibleForTesting
-  Set<String> getDataSourcesNeedingRebuild()
+  public Set<String> getDataSourcesNeedingRebuild()
   {
     synchronized (lock) {
       return dataSourcesNeedingRebuild;
@@ -904,11 +852,11 @@ public class SegmentMetadataCache
    * @return {@link Sequence} of {@link SegmentAnalysis} objects
    */
   @VisibleForTesting
-  protected Sequence<SegmentAnalysis> runSegmentMetadataQuery(
+  public Sequence<SegmentAnalysis> runSegmentMetadataQuery(
       final Iterable<SegmentId> segments
   )
   {
-    // Sanity check: getOnlyElement of a set, to ensure all segments have the same dataSource.
+    // Sanity check: getOnlyElement of a set, to ensure all segments have the same datasource.
     final String dataSource = Iterables.getOnlyElement(
         StreamSupport.stream(segments.spliterator(), false)
                      .map(SegmentId::getDataSource).collect(Collectors.toSet())
@@ -926,7 +874,7 @@ public class SegmentMetadataCache
         false,
         // disable the parallel merge because we don't care about the merge and don't want to consume its resources
         QueryContexts.override(
-            brokerInternalQueryConfig.getContext(),
+            internalQueryConfig.getContext(),
             QueryContexts.BROKER_PARALLEL_MERGE_KEY,
             false
         ),
@@ -979,7 +927,7 @@ public class SegmentMetadataCache
    * This method is not thread-safe and must be used only in unit tests.
    */
   @VisibleForTesting
-  void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
+  public void setAvailableSegmentMetadata(final SegmentId segmentId, final AvailableSegmentMetadata availableSegmentMetadata)
   {
     final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceSegments = segmentMetadataInfo
         .computeIfAbsent(
@@ -996,13 +944,12 @@ public class SegmentMetadataCache
    * It must be used only in unit tests.
    */
   @VisibleForTesting
-  void doInLock(Runnable runnable)
+  protected void doInLock(Runnable runnable)
   {
     synchronized (lock) {
       runnable.run();
     }
   }
-
 
   /**
    * ColumnTypeMergePolicy defines the rules of which type to use when faced with the possibility of different types

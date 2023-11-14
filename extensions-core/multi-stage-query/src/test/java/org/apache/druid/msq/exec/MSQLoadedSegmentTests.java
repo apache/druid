@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -50,6 +51,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,6 +59,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 
@@ -144,6 +147,69 @@ public class MSQLoadedSegmentTests extends MSQTestBase
             new Object[]{1L, "1"},
             new Object[]{1L, "def"},
             new Object[]{1L, "abc"}
+        ))
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectWithLoadedSegmentsOnFooWithOrderBy() throws IOException
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    doAnswer(
+        invocationOnMock -> {
+          ScanQuery query = invocationOnMock.getArgument(0);
+          ScanQuery.verifyOrderByForNativeExecution(query);
+          Assert.assertEquals(Long.MAX_VALUE, query.getScanRowsLimit());
+          return Pair.of(
+              LoadedSegmentDataProvider.DataServerQueryStatus.SUCCESS,
+              Yielders.each(
+                  Sequences.simple(
+                      ImmutableList.of(
+                          new Object[]{1L, "qwe"},
+                          new Object[]{1L, "tyu"}
+                      )
+                  )
+              )
+          );
+        }
+
+    )
+        .when(loadedSegmentDataProvider)
+        .fetchRowsFromDataServer(any(), any(), any(), any());
+
+    testSelectQuery()
+        .setSql("select cnt, dim1 from foo order by dim1")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("cnt", "dim1")
+                           .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
+                           .context(defaultScanQueryContext(REALTIME_QUERY_CTX, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(REALTIME_QUERY_CTX)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1L, ""},
+            new Object[]{1L, "1"},
+            new Object[]{1L, "10.1"},
+            new Object[]{1L, "2"},
+            new Object[]{1L, "abc"},
+            new Object[]{1L, "def"},
+            new Object[]{1L, "qwe"},
+            new Object[]{1L, "tyu"}
         ))
         .verifyResults();
   }

@@ -42,10 +42,6 @@ an [UnknownError](./reference.md#error_UnknownError) with a message including "N
 - `GROUPING SETS` are not implemented. Queries using these features return a
   [QueryNotSupported](reference.md#error_QueryNotSupported) error.
 
-- For some `COUNT DISTINCT` queries, you'll encounter a [QueryNotSupported](reference.md#error_QueryNotSupported) error
-  that includes `Must not have 'subtotalsSpec'` as one of its causes. This is caused by the planner attempting to use
-  `GROUPING SET`s, which are not implemented.
-
 - The numeric varieties of the `EARLIEST` and `LATEST` aggregators do not work properly. Attempting to use the numeric
   varieties of these aggregators lead to an error like
   `java.lang.ClassCastException: class java.lang.Double cannot be cast to class org.apache.druid.collections.SerializablePair`.

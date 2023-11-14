@@ -20,8 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fiftyonred.mock_jedis.MockJedis;
-import com.fiftyonred.mock_jedis.MockJedisPool;
+import com.github.fppt.jedismock.RedisServer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -34,11 +33,13 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.JedisPool;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
@@ -47,6 +48,7 @@ public class RedisStandaloneCacheTest
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
+  private RedisServer server;
   private RedisStandaloneCache cache;
   private final RedisCacheConfig cacheConfig = new RedisCacheConfig()
   {
@@ -64,26 +66,17 @@ public class RedisStandaloneCacheTest
   };
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
-    JedisPoolConfig poolConfig = new JedisPoolConfig();
-    poolConfig.setMaxTotal(cacheConfig.getMaxTotalConnections());
-    poolConfig.setMaxIdle(cacheConfig.getMaxIdleConnections());
-    poolConfig.setMinIdle(cacheConfig.getMinIdleConnections());
-
-    MockJedisPool pool = new MockJedisPool(poolConfig, "localhost");
-    // orginal MockJedis do not support 'milliseconds' in long type,
-    // for test we override to support it
-    pool.setClient(new MockJedis("localhost")
-    {
-      @Override
-      public String psetex(byte[] key, long milliseconds, byte[] value)
-      {
-        return this.psetex(key, (int) milliseconds, value);
-      }
-    });
-
+    server = RedisServer.newRedisServer().start();
+    JedisPool pool = new JedisPool(server.getHost(), server.getBindPort());
     cache = new RedisStandaloneCache(pool, cacheConfig);
+  }
+
+  @After
+  public void tearDown() throws IOException
+  {
+    server.stop();
   }
 
   @Test

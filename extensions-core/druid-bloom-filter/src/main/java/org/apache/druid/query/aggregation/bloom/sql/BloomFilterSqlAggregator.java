@@ -25,10 +25,10 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
@@ -38,6 +38,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -168,8 +169,6 @@ public class BloomFilterSqlAggregator implements SqlAggregator
 
   private static class BloomFilterSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column, maxNumEntries)'";
-
     BloomFilterSqlAggFunction()
     {
       super(
@@ -178,13 +177,18 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.OTHER),
           null,
-          OperandTypes.and(
-              OperandTypes.sequence(SIGNATURE1, OperandTypes.ANY, OperandTypes.LITERAL),
-              OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-          ),
+          // Allow signatures like 'BLOOM_FILTER(column, maxNumEntries)'
+          DefaultOperandTypeChecker
+              .builder()
+              .operandNames("column", "maxNumEntries")
+              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              .literalOperands(1)
+              .requiredOperandCount(2)
+              .build(),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
-          false
+          false,
+          Optionality.FORBIDDEN
       );
     }
   }

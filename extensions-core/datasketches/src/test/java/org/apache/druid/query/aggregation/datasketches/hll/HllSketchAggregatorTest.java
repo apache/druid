@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -36,6 +38,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
+import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -415,6 +419,22 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(expectedSummary, row.get(3));
     // union with self = self
     Assert.assertEquals(expectedSummary, ((HllSketchHolder) row.get(4)).getSketch().toString());
+  }
+
+  @Test
+  public void testRelocation()
+  {
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    HllSketchHolder sketchHolder = new HllSketchHolder(null, new HllSketch());
+    sketchHolder.getSketch().update(1);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
+    HllSketchHolder[] holders = groupByHelper.runRelocateVerificationTest(
+        new HllSketchMergeAggregatorFactory("sketch", "sketch", null, null, null, true, true),
+        columnSelectorFactory,
+        HllSketchHolder.class
+    );
+    Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
   private static String buildParserJson(List<String> dimensions, List<String> columns)
