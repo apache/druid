@@ -390,12 +390,10 @@ Generally, the `sql` and `sql/statements` endpoints support the same response bo
 
 Keep the following in mind when submitting queries to the `sql/statements` endpoint:
 
-- There are additional context parameters  for `sql/statements`:
+- Apart from the context parameters mentioned [here](../multi-stage-query/reference.md#context-parameters) there are additional context parameters for `sql/statements` specifically:
 
    - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. You must manually retrieve your results after the query completes.
-   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
-
-- The only supported value for `resultFormat` is JSON LINES.
+   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. For result sets with more than 3000 rows, it is highly recommended to use `durableStorage`. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
 #### Responses
 
@@ -812,12 +810,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves results for completed queries. Results are separated into pages, so you can use the optional `page` parameter to refine the results you get. Druid returns information about the composition of each page and its page number (`id`). For information about pages, see [Get query status](#get-query-status).
 
+
 If a page number isn't passed, all results are returned sequentially in the same response. If you have large result sets, you may encounter timeouts based on the value configured for `druid.router.http.readTimeout`.
 
-When getting query results, keep the following in mind:
-
-- JSON Lines is the only supported result format.
-- Getting the query results for an ingestion query returns an empty response.
+When getting query results, getting the query results for an ingestion query returns an empty response.
 
 #### URL
 
@@ -827,6 +823,9 @@ When getting query results, keep the following in mind:
 * `page` (optional)
     * Type: Int
     * Refine paginated results
+* `resultFormat` (optional)
+    * Type: String
+    * Get results in different formats like `object`,`objectLines`,`array`,`arrayLines`,`csv`. Default is `object`.
 
 #### Responses
 
