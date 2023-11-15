@@ -647,7 +647,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
    ```
    
 
-5. Add the newly built files to the PR to the src repo (https://github.com/apache/druid-website-src) for the release branch. In the changed files, you should see the following:
+5. Add the files to a PR to the src repo (https://github.com/apache/druid-website-src) for the release branch you just created. In the changed files, you should see the following:
   - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files. 
   - In the `docs` directory at the root of the repo, the new Markdown files.
     
