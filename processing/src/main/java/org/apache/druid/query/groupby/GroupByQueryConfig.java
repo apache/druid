@@ -48,6 +48,8 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
+  private static final String CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE = "maxSelectorDictionarySize";
+  private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
@@ -83,11 +85,11 @@ public class GroupByQueryConfig
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-processing-thread; when exceeded, partial results will be
   // emitted to the merge buffer early.
-  protected HumanReadableBytes maxSelectorDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
+  private HumanReadableBytes maxSelectorDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
-  protected HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
+  private HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
@@ -164,7 +166,7 @@ public class GroupByQueryConfig
    */
   long getActualMaxSelectorDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
   {
-    if (maxSelectorDictionarySize.getBytes() == AUTOMATIC) {
+    if (getConfiguredMaxSelectorDictionarySize() == AUTOMATIC) {
       final long heapForDictionaries = (long) (maxHeapSize * SELECTOR_DICTIONARY_HEAP_FRACTION);
 
       return Math.max(
@@ -175,7 +177,7 @@ public class GroupByQueryConfig
           )
       );
     } else {
-      return maxSelectorDictionarySize.getBytes();
+      return getConfiguredMaxSelectorDictionarySize();
     }
   }
 
@@ -202,7 +204,7 @@ public class GroupByQueryConfig
    */
   public long getActualMaxMergingDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
   {
-    if (getConfiguredMaxMergingDictionarySize() == AUTOMATIC) {
+    if (maxMergingDictionarySize.getBytes() == AUTOMATIC) {
       final long heapForDictionaries = (long) (maxHeapSize * MERGING_DICTIONARY_HEAP_FRACTION);
 
       return Math.max(
@@ -213,7 +215,7 @@ public class GroupByQueryConfig
           )
       );
     } else {
-      return getConfiguredMaxMergingDictionarySize();
+      return maxMergingDictionarySize.getBytes();
     }
   }
 
@@ -321,8 +323,21 @@ public class GroupByQueryConfig
             getMaxOnDiskStorage().getBytes()
         )
     );
-    newConfig.maxSelectorDictionarySize = maxSelectorDictionarySize; // No overrides
-    newConfig.maxMergingDictionarySize = maxMergingDictionarySize; // No overrides
+
+    newConfig.maxSelectorDictionarySize = HumanReadableBytes.valueOf(
+        Math.max(
+            queryContext.getHumanReadableBytes(CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE, HumanReadableBytes.ZERO).getBytes(),
+            getConfiguredMaxSelectorDictionarySize()
+        )
+    );
+
+    newConfig.maxMergingDictionarySize = HumanReadableBytes.valueOf(
+        Math.max(
+            queryContext.getHumanReadableBytes(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, HumanReadableBytes.ZERO).getBytes(),
+            getConfiguredMaxMergingDictionarySize()
+        )
+    );
+
     newConfig.forcePushDownLimit = queryContext.getBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = queryContext.getBoolean(
         CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
