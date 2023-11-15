@@ -70,7 +70,11 @@ public class AzureStorageTest extends EasyMockSupport
         ArgumentMatchers.any()
 
     );
+    EasyMock.expect(azureClientFactory.getBlobContainerClient("test", null)).andReturn(blobContainerClient).times(1);
+
+    replayAll();
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir("test", ""));
+    verifyAll();
   }
 
   @Test
@@ -89,6 +93,7 @@ public class AzureStorageTest extends EasyMockSupport
     );
     EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName, maxAttempts)).andReturn(blobContainerClient).times(1);
     EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName2, maxAttempts)).andReturn(blobContainerClient).times(1);
+    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName, maxAttempts + 1)).andReturn(blobContainerClient).times(1);
 
     replayAll();
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
@@ -96,6 +101,8 @@ public class AzureStorageTest extends EasyMockSupport
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
     // Requesting a different container should create another client.
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName2, "", maxAttempts));
+    // Requesting the first container with different maxAttempts should create another client.
+    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts + 1));
     verifyAll();
   }
 }

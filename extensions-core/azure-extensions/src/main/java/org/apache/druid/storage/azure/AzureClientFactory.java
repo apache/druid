@@ -73,7 +73,10 @@ public class AzureClientFactory
         .endpoint("https://" + config.getAccount() + ".blob.core.windows.net")
         .containerName(containerName)
         .retryOptions(new RetryOptions(
-            new ExponentialBackoffOptions().setMaxRetries(maxRetries).setBaseDelay(Duration.ofMillis(1000)).setMaxDelay(Duration.ofMillis(60000))
+            new ExponentialBackoffOptions()
+                .setMaxRetries(maxRetries != null ? maxRetries : config.getMaxTries())
+                .setBaseDelay(Duration.ofMillis(1000))
+                .setMaxDelay(Duration.ofMillis(60000))
         ));
     if (config.getKey() != null) {
       clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));

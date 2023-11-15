@@ -38,6 +38,7 @@ import com.azure.storage.common.Utility;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -74,7 +75,7 @@ public class AzureStorage
    */
   private final Supplier<BlobServiceClient> blobServiceClient;
   private final AzureClientFactory azureClientFactory;
-  private final ConcurrentHashMap<String, BlobContainerClient> blobContainerClients = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Pair<String, Integer>, BlobContainerClient> blobContainerClients = new ConcurrentHashMap<>();
 
   public AzureStorage(
       Supplier<BlobServiceClient> blobServiceClient,
@@ -248,17 +249,14 @@ public class AzureStorage
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
-    return blobServiceClient.get().createBlobContainerIfNotExists(containerName);
+    return getOrCreateBlobContainerClient(containerName, null);
   }
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
   {
-    if (maxRetries == null) {
-      return getOrCreateBlobContainerClient(containerName);
-    }
     BlobContainerClient blobContainerClient = blobContainerClients.computeIfAbsent(
-        containerName,
-        (key) -> azureClientFactory.getBlobContainerClient(key, maxRetries)
+        Pair.of(containerName, maxRetries),
+        (key) -> azureClientFactory.getBlobContainerClient(key.lhs, key.rhs)
     );
     blobContainerClient.createIfNotExists();
     return blobContainerClient;
