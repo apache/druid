@@ -3345,7 +3345,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.11.1
+version: 1.11.3
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
