@@ -104,7 +104,14 @@ public class TaskStorageQueryAdapter
 
   public Optional<Task> getTask(final String taskid)
   {
-    return storage.getTask(taskid);
+    // Try to fetch active task from memory
+    final Task activeTask = taskLockbox.getActiveTask(taskid);
+    if (activeTask != null) {
+      return Optional.of(activeTask);
+    } else {
+      // fallback to db
+      return storage.getTask(taskid);
+    }
   }
 
   public Optional<TaskStatus> getStatus(final String taskid)

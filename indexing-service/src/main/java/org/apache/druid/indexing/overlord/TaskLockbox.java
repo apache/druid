@@ -99,9 +99,9 @@ public class TaskLockbox
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
-  // Stores List of Active Tasks. TaskLockbox will only grant locks to active activeTasks.
-  // this set should be accessed under the giant lock.
-  private final Set<String> activeTasks = new HashSet<>();
+  // Stores Active Tasks. TaskLockbox will only grant locks to active activeTasks.
+  // This should be accessed under the giant lock.
+  private final Map<String, Task> activeTasks = new HashMap();
 
   @Inject
   public TaskLockbox(
@@ -147,10 +147,7 @@ public class TaskLockbox
       };
       running.clear();
       activeTasks.clear();
-      activeTasks.addAll(storedActiveTasks.stream()
-                                          .map(Task::getId)
-                                          .collect(Collectors.toSet())
-      );
+      storedActiveTasks.forEach(storedActiveTask -> activeTasks.put(storedActiveTask.getId(), storedActiveTask));
       // Set of task groups in which at least one task failed to re-acquire a lock
       final Set<String> failedToReacquireLockTaskGroups = new HashSet<>();
       // Bookkeeping for a log message at the end
@@ -379,7 +376,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      if (!activeTasks.contains(task.getId())) {
+      if (!activeTasks.containsKey(task.getId())) {
         throw new ISE("Unable to grant lock to inactive Task [%s]", task.getId());
       }
       Preconditions.checkArgument(request.getInterval().toDurationMillis() > 0, "interval empty");
@@ -518,7 +515,7 @@ public class TaskLockbox
   private void verifyTaskIsActive(SegmentAllocationHolder holder)
   {
     final String taskId = holder.task.getId();
-    if (!activeTasks.contains(taskId)) {
+    if (!activeTasks.containsKey(taskId)) {
       holder.markFailed("Unable to grant lock to inactive Task [%s]", taskId);
     }
   }
@@ -840,7 +837,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      if (!activeTasks.contains(taskId)) {
+      if (!activeTasks.containsKey(taskId)) {
         throw new ISE("Cannot revoke lock for inactive task[%s]", taskId);
       }
 
@@ -1202,7 +1199,7 @@ public class TaskLockbox
     giant.lock();
     try {
       log.info("Adding task[%s] to activeTasks", task.getId());
-      activeTasks.add(task.getId());
+      activeTasks.put(task.getId(), task);
     }
     finally {
       giant.unlock();
@@ -1363,7 +1360,13 @@ public class TaskLockbox
   @VisibleForTesting
   Set<String> getActiveTasks()
   {
-    return activeTasks;
+    return activeTasks.keySet();
+  }
+
+  @Nullable
+  Task getActiveTask(String taskId)
+  {
+    return activeTasks.get(taskId);
   }
 
   @VisibleForTesting
