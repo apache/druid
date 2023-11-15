@@ -303,7 +303,7 @@ public class ControllerImpl implements Controller
   private Map<Integer, ClusterStatisticsMergeMode> stageToStatsMergingMode;
   private WorkerMemoryParameters workerMemoryParameters;
   private boolean isDurableStorageEnabled;
-  private boolean isFaultToleranceEnabled;
+  private final boolean isFaultToleranceEnabled;
   private volatile SegmentLoadStatusFetcher segmentLoadWaiter;
 
   public ControllerImpl(
@@ -316,6 +316,9 @@ public class ControllerImpl implements Controller
     this.isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         task.getQuerySpec().getQuery().context()
     );
+    this.isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(task.getQuerySpec()
+                                                                                      .getQuery()
+                                                                                      .context());
   }
 
   @Override
@@ -372,7 +375,7 @@ public class ControllerImpl implements Controller
     );
 
     if (workerTaskLauncher != null) {
-      workerTaskLauncher.waitForWorkerShutdown();
+      workerTaskLauncher.stop(true);
     }
   }
 
@@ -605,8 +608,6 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState(final Closer closer)
   {
     final QueryContext queryContext = task.getQuerySpec().getQuery().context();
-    isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(queryContext);
-
     if (isFaultToleranceEnabled) {
       if (!queryContext.containsKey(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE)) {
         // if context key not set, enable durableStorage automatically.
@@ -686,13 +687,13 @@ public class ControllerImpl implements Controller
         task.getDataSource(),
         context,
         (failedTask, fault) -> {
-          addToKernelManipulationQueue((kernel) -> {
-            if (isFaultToleranceEnabled) {
+          if (isFaultToleranceEnabled && ControllerQueryKernel.isRetriableFault(fault)) {
+            addToKernelManipulationQueue((kernel) -> {
               addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
-            } else {
-              throw new MSQException(fault);
-            }
-          });
+            });
+          } else {
+            throw new MSQException(fault);
+          }
         },
         taskContextOverridesBuilder.build(),
         // 10 minutes +- 2 minutes jitter
