@@ -28,12 +28,14 @@ import org.apache.druid.error.DruidException;
  */
 public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
+  private static final String COLUMN_IS_NULL_ERROR_MESSAGE = "Invalid usage pattern: method returning primitive called - but the column is null";
+
   @Override
   public final float getFloat()
   {
     T value = getObject();
     if (value == null) {
-      throw DruidException.defensive("Invalid call; column is null");
+      throw DruidException.defensive(COLUMN_IS_NULL_ERROR_MESSAGE);
     }
     return ((Number) value).floatValue();
   }
@@ -43,7 +45,7 @@ public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
   {
     T value = getObject();
     if (value == null) {
-      throw DruidException.defensive("Invalid call; column is null");
+      throw DruidException.defensive(COLUMN_IS_NULL_ERROR_MESSAGE);
     }
     return ((Number) value).doubleValue();
   }
@@ -53,7 +55,7 @@ public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
   {
     T value = getObject();
     if (value == null) {
-      throw DruidException.defensive("Invalid call; column is null");
+      throw DruidException.defensive(COLUMN_IS_NULL_ERROR_MESSAGE);
     }
     return ((Number) value).longValue();
   }
