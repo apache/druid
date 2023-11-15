@@ -947,6 +947,25 @@ public class TaskQueue
     return stats;
   }
 
+  public Optional<Task> getTask(String id)
+  {
+    Task activeTask;
+
+    giant.lock();
+    try {
+      activeTask = tasks.get(id);
+    }
+    finally {
+      giant.unlock();
+    }
+
+    if (activeTask == null) {
+      return taskStorage.getTask(id);
+    } else {
+      return Optional.of(activeTask);
+    }
+  }
+
   @VisibleForTesting
   List<Task> getTasks()
   {
