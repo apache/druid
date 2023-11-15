@@ -2691,34 +2691,6 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  @Test
-  public void testDontCleanupIndexTask() throws Exception
-  {
-    new IndexTask(
-        null,
-        null,
-        null,
-        "dataSource",
-        null,
-        createDefaultIngestionSpec(
-            jsonMapper,
-            temporaryFolder.newFolder(),
-            new UniformGranularitySpec(
-                Granularities.MINUTE,
-                Granularities.MINUTE,
-                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
-            ),
-            null,
-            createTuningConfigWithMaxRowsPerSegment(10, true),
-            false,
-            false
-        ),
-        null,
-        0,
-        false
-    ).cleanUp(null, null);
-  }
-
   // If shouldCleanup is false, cleanup should be a no-op
   @Test
   public void testCleanupIndexTask() throws Exception
