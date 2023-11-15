@@ -213,6 +213,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final String stream;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
+  private final Set<String> publishedSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
 
@@ -800,17 +801,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PUBLISHING;
       }
 
-      // The callback for a successful segment publish may remove a sequence from the publishingSequences,
-      // which is racy and can allow the same sequence to be added to the set again.
-      // Create a copy of publishing sequences to which we can only add elements, and not remove them.
-      final Set<String> publishingSequencesSnapshot = new HashSet<>(publishingSequences);
       // We need to copy sequences here, because the success callback in publishAndRegisterHandoff removes items from
       // the sequence list. If a publish finishes before we finish iterating through the sequence list, we can
       // end up skipping some sequences.
       List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
       for (int i = 0; i < sequencesSnapshot.size(); i++) {
         final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
-        if (!publishingSequencesSnapshot.contains(sequenceMetadata.getSequenceName())) {
+        if (!publishingSequences.contains(sequenceMetadata.getSequenceName())
+            && !publishedSequences.contains(sequenceMetadata.getSequenceName())) {
           final boolean isLast = i == (sequencesSnapshot.size() - 1);
           if (isLast) {
             // Shorten endOffsets of the last sequence to match currOffsets.
@@ -821,7 +819,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           // Committer is built.)
           sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadAfterReadingRecord);
           publishingSequences.add(sequenceMetadata.getSequenceName());
-          publishingSequencesSnapshot.add(sequenceMetadata.getSequenceName());
           // persist already done in finally, so directly add to publishQueue
           publishAndRegisterHandoff(sequenceMetadata);
         }
@@ -1014,6 +1011,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
+            publishedSequences.add(sequenceMetadata.getSequenceName());
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
 
@@ -1160,15 +1158,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
       throws InterruptedException
   {
-    // The callback for a successful segment publish may remove a sequence from the publishingSequences,
-    // which is racy and can allow the same sequence to be added to the set again.
-    // Create a copy of publishing sequences to which we can only add elements, and not remove them.
-    final Set<String> publishingSequencesSnapshot = new HashSet<>(publishingSequences);
     for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
       sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
-      if (!sequenceMetadata.isOpen() && !publishingSequencesSnapshot.contains(sequenceMetadata.getSequenceName())) {
+      if (!sequenceMetadata.isOpen() &&
+          !publishingSequences.contains(sequenceMetadata.getSequenceName())
+          && !publishedSequences.contains(sequenceMetadata.getSequenceName())) {
         publishingSequences.add(sequenceMetadata.getSequenceName());
-        publishingSequencesSnapshot.add(sequenceMetadata.getSequenceName());
         try {
           final Object result = driver.persist(committerSupplier.get());
           log.debug(
