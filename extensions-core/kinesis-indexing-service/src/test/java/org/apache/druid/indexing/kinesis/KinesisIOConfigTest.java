@@ -112,11 +112,9 @@ public class KinesisIOConfigTest
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-2.amazonaws.com\",\n"
-                     + "  \"recordsPerFetch\": 1000,\n"
                      + "  \"fetchDelayMillis\": 1000,\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
-                     + "  \"awsExternalId\": \"awsexternalid\",\n"
-                     + "  \"deaggregate\": true\n"
+                     + "  \"awsExternalId\": \"awsexternalid\"\n"
                      + "}";
 
     KinesisIndexTaskIOConfig config = (KinesisIndexTaskIOConfig) mapper.readValue(
@@ -315,11 +313,9 @@ public class KinesisIOConfigTest
         DateTimes.nowUtc(),
         DateTimes.nowUtc(),
         "endpoint",
-        1000,
         2000,
         "awsAssumedRoleArn",
-        "awsExternalId",
-        true
+        "awsExternalId"
     );
 
     final byte[] json = oldMapper.writeValueAsBytes(oldConfig);
@@ -355,12 +351,9 @@ public class KinesisIOConfigTest
     private final Optional<DateTime> minimumMessageTime;
     private final Optional<DateTime> maximumMessageTime;
     private final String endpoint;
-    private final Integer recordsPerFetch;
     private final Integer fetchDelayMillis;
-
     private final String awsAssumedRoleArn;
     private final String awsExternalId;
-    private final boolean deaggregate;
 
     @JsonCreator
     private OldKinesisIndexTaskIoConfig(
@@ -372,11 +365,9 @@ public class KinesisIOConfigTest
         @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
         @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
         @JsonProperty("endpoint") String endpoint,
-        @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
         @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
         @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
-        @JsonProperty("awsExternalId") String awsExternalId,
-        @JsonProperty("deaggregate") boolean deaggregate
+        @JsonProperty("awsExternalId") String awsExternalId
     )
     {
       this.baseSequenceName = baseSequenceName;
@@ -387,11 +378,9 @@ public class KinesisIOConfigTest
       this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
       this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
       this.endpoint = endpoint;
-      this.recordsPerFetch = recordsPerFetch;
       this.fetchDelayMillis = fetchDelayMillis;
       this.awsAssumedRoleArn = awsAssumedRoleArn;
       this.awsExternalId = awsExternalId;
-      this.deaggregate = deaggregate;
     }
 
     @JsonProperty
@@ -443,12 +432,6 @@ public class KinesisIOConfigTest
     }
 
     @JsonProperty
-    public int getRecordsPerFetch()
-    {
-      return recordsPerFetch;
-    }
-
-    @JsonProperty
     public int getFetchDelayMillis()
     {
       return fetchDelayMillis;
@@ -464,12 +447,6 @@ public class KinesisIOConfigTest
     public String getAwsExternalId()
     {
       return awsExternalId;
-    }
-
-    @JsonProperty
-    public boolean isDeaggregate()
-    {
-      return deaggregate;
     }
   }
 }

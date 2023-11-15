@@ -92,11 +92,9 @@ public class KinesisSupervisorIOConfigTest
                      + "  \"completionTimeout\": \"PT45M\",\n"
                      + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
                      + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
-                     + "  \"recordsPerFetch\": 4000,\n"
                      + "  \"fetchDelayMillis\": 1000,\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
-                     + "  \"awsExternalId\": \"awsexternalid\",\n"
-                     + "  \"deaggregate\": true\n"
+                     + "  \"awsExternalId\": \"awsexternalid\"\n"
                      + "}";
 
     KinesisSupervisorIOConfig config = mapper.readValue(

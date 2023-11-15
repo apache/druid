@@ -107,7 +107,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
     KinesisIndexTaskTuningConfig tuningConfig = ((KinesisIndexTaskTuningConfig) super.tuningConfig);
     final int recordBufferSizeBytes =
         tuningConfig.getRecordBufferSizeBytesOrDefault(runtimeInfo.getMaxHeapSizeBytes());
-    final int fetchThreads = computeFetchThreads(runtimeInfo, recordBufferSizeBytes, tuningConfig.getFetchThreads());
+    final int fetchThreads = computeFetchThreads(runtimeInfo, tuningConfig.getFetchThreads());
     final int maxRecordsPerPoll = tuningConfig.getMaxRecordsPerPollOrDefault();
 
     log.info(
@@ -176,7 +176,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   @VisibleForTesting
   static int computeFetchThreads(
       final RuntimeInfo runtimeInfo,
-      final long recordBufferSizeBytes,
       final Integer configuredFetchThreads
   )
   {
@@ -189,10 +188,17 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
 
     // Each fetchThread can return upto 10MB at a time
     // (https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html), cap fetchThreads so that
-    // we don't exceed the max buffer byte size worth of records at a time. Don't fail if fetchThreads specified
+    // we don't exceed more than the least of 100MB or 5% of heap at a time. Don't fail if fetchThreads specified
     // is greater than this as to not cause failure for older configurations, but log warning in this case, and lower
     // fetchThreads implicitly.
-    int maxFetchThreads = Math.max(1, (int) (recordBufferSizeBytes / 10_000_000L));
+    final long memoryToUse = Math.min(
+        KinesisIndexTaskIOConfig.MAX_RECORD_FETCH_MEMORY,
+        (long) (runtimeInfo.getMaxHeapSizeBytes() * KinesisIndexTaskIOConfig.RECORD_FETCH_MEMORY_MAX_HEAP_FRACTION)
+    );
+    int maxFetchThreads = Math.max(
+        1,
+        (int) (memoryToUse / 10_000_000L)
+    );
     if (fetchThreads > maxFetchThreads) {
       log.warn("fetchThreads [%d] being lowered to [%d]", fetchThreads, maxFetchThreads);
       fetchThreads = maxFetchThreads;

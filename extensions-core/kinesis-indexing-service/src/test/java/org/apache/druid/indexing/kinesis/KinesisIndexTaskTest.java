@@ -2242,20 +2242,22 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   public void testComputeFetchThreads()
   {
     final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
-        new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 2000);
+        new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 10_000_000_000L);
 
-    Assert.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, null));
-    Assert.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, 2));
+    Assert.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, null));
+    Assert.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 2));
 
-    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo, 50_000_000, null));
-    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo, 50_000_000, 6));
+    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo2 =
+        new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 1_000_000_000);
+    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, null));
+    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, 6));
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, 0)
+        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 0)
     );
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 100_000_000, -1)
+        () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, -1)
     );
   }
 

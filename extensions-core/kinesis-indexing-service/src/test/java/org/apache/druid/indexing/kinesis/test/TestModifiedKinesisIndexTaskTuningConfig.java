@@ -112,7 +112,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getHandoffConditionTimeout(),
         base.isResetOffsetAutomatically(),
         base.isSkipSequenceNumberAvailabilityCheck(),
-        base.getRecordBufferSizeConfigured(),
+        base.getRecordBufferSizeBytesConfigured(),
         base.getRecordBufferOfferTimeout(),
         base.getRecordBufferFullWait(),
         base.getFetchThreads(),

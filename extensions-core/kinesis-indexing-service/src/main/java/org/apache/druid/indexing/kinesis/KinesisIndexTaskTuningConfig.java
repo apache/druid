@@ -188,7 +188,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   @Nullable
   @JsonProperty("recordBufferSizeBytes")
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Integer getRecordBufferSizeConfigured()
+  public Integer getRecordBufferSizeBytesConfigured()
   {
     return recordBufferSizeBytes;
   }
@@ -257,7 +257,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),
         isSkipSequenceNumberAvailabilityCheck(),
-        getRecordBufferSizeConfigured(),
+        getRecordBufferSizeBytesConfigured(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
         getFetchThreads(),
