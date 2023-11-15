@@ -46,9 +46,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,7 +121,7 @@ public class AzureStorage
 
     try (FileInputStream stream = new FileInputStream(file)) {
       // By default this creates a Block blob, no need to use a specific Block blob client.
-      blobContainerClient.getBlobClient(URLEncoder.encode(blobPath, StandardCharsets.UTF_8.name())).upload(stream, file.length());
+      blobContainerClient.getBlobClient(blobPath).upload(stream, file.length());
     }
   }
 
@@ -133,10 +130,10 @@ public class AzureStorage
       final String blobPath,
       @Nullable final Integer streamWriteSizeBytes,
       Integer maxAttempts
-  ) throws BlobStorageException, UnsupportedEncodingException
+  ) throws BlobStorageException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
-    BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(URLEncoder.encode(blobPath, StandardCharsets.UTF_8.name())).getBlockBlobClient();
+    BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(blobPath).getBlockBlobClient();
 
     if (blockBlobClient.exists()) {
       throw new RE("Reference already exists");
@@ -150,40 +147,40 @@ public class AzureStorage
 
   // There's no need to download attributes with the new azure clients, they will get fetched as needed.
   public BlockBlobClient getBlockBlobReferenceWithAttributes(final String containerName, final String blobPath)
-      throws BlobStorageException, UnsupportedEncodingException
+      throws BlobStorageException
   {
-    return getOrCreateBlobContainerClient(containerName).getBlobClient(URLEncoder.encode(blobPath, StandardCharsets.UTF_8.name())).getBlockBlobClient();
+    return getOrCreateBlobContainerClient(containerName).getBlobClient(blobPath).getBlockBlobClient();
   }
 
   public long getBlockBlobLength(final String containerName, final String blobPath)
-      throws BlobStorageException, UnsupportedEncodingException
+      throws BlobStorageException
   {
     return getBlockBlobReferenceWithAttributes(containerName, blobPath).getProperties().getBlobSize();
   }
 
   public InputStream getBlockBlobInputStream(final String containerName, final String blobPath)
-      throws BlobStorageException, UnsupportedEncodingException
+      throws BlobStorageException
   {
     return getBlockBlobInputStream(0L, containerName, blobPath);
   }
 
   public InputStream getBlockBlobInputStream(long offset, final String containerName, final String blobPath)
-      throws BlobStorageException, UnsupportedEncodingException
+      throws BlobStorageException
   {
     return getBlockBlobInputStream(offset, null, containerName, blobPath);
   }
 
   public InputStream getBlockBlobInputStream(long offset, Long length, final String containerName, final String blobPath)
-      throws BlobStorageException, UnsupportedEncodingException
+      throws BlobStorageException
   {
     return getBlockBlobInputStream(offset, length, containerName, blobPath, null);
   }
 
   public InputStream getBlockBlobInputStream(long offset, Long length, final String containerName, final String blobPath, Integer maxAttempts)
-      throws BlobStorageException, UnsupportedEncodingException
+      throws BlobStorageException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
-    return blobContainerClient.getBlobClient(URLEncoder.encode(blobPath, StandardCharsets.UTF_8.name())).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
+    return blobContainerClient.getBlobClient(blobPath).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
   }
 
   public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
@@ -216,16 +213,16 @@ public class AzureStorage
     return files;
   }
 
-  public boolean getBlockBlobExists(String container, String blobPath) throws BlobStorageException, UnsupportedEncodingException
+  public boolean getBlockBlobExists(String container, String blobPath) throws BlobStorageException
   {
     return getBlockBlobExists(container, blobPath, null);
   }
 
 
   public boolean getBlockBlobExists(String container, String blobPath, Integer maxAttempts)
-      throws BlobStorageException, UnsupportedEncodingException
+      throws BlobStorageException
   {
-    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(URLEncoder.encode(blobPath, StandardCharsets.UTF_8.name())).exists();
+    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(blobPath).exists();
   }
 
   @VisibleForTesting
