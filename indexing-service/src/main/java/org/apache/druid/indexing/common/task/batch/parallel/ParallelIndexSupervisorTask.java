@@ -1192,7 +1192,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
   {
-    // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
     IndexTask sequentialIndexTask = new IndexTask(
         getId(),
         getGroupId(),
@@ -1206,6 +1205,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ),
         getContext(),
         getIngestionSchema().getTuningConfig().getMaxAllowedLockCount(),
+        // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
         false
     );
 
