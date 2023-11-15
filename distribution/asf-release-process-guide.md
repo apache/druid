@@ -627,9 +627,9 @@ This repo (`druid`) is the source of truth for the Markdown files. The Markdown 
 
 For more thorough instructions and a description of what the `do_all_things` script does, see the [`druid-website-src` README](https://github.com/apache/druid-website-src)
 
-1. Make sure you have the latest commits from the `druid` release tag. There have likely been backported documentation PRs between the initial staging date and the release date.
+1. Make sure you pull the latest commits from the `druid` release branch. There have likely been backported documentation PRs between the initial staging date and the release date.
 
-2. Pull `https://github.com/apache/druid-website` and `https://github.com/apache/druid-website-src`. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
+2. Pull the latest from `https://github.com/apache/druid-website` and `https://github.com/apache/druid-website-src`. These repositories should be in the same directory as your Druid repository that should have the release tag checked out.
 
 3. From `druid-website`, create a release branch based on the latest `asf-site` branch.
 
