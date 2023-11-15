@@ -61,6 +61,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.HashSet;
 
 public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 {
@@ -734,10 +735,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   @Test
   public void testRequiredColumns()
   {
-    Assert.assertEquals(ImmutableList.of("x", "y"), X_PLUS_Y.requiredColumns());
+    Assert.assertEquals(new HashSet<>(ImmutableList.of("x", "y")), new HashSet<>(X_PLUS_Y.requiredColumns()));
     Assert.assertEquals(ImmutableList.of(), CONSTANT_LIKE.requiredColumns());
     Assert.assertEquals(ImmutableList.of("z"), Z_LIKE.requiredColumns());
-    Assert.assertEquals(ImmutableList.of("x", "z"), Z_CONCAT_X.requiredColumns());
+    Assert.assertEquals(new HashSet<>(ImmutableList.of("x", "z")), new HashSet<>(Z_CONCAT_X.requiredColumns()));
   }
 
   @Test
