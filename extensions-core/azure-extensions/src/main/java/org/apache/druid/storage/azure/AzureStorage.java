@@ -34,6 +34,7 @@ import com.azure.storage.blob.models.ParallelTransferOptions;
 import com.azure.storage.blob.options.BlobInputStreamOptions;
 import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
+import com.azure.storage.common.Utility;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -121,7 +122,7 @@ public class AzureStorage
 
     try (FileInputStream stream = new FileInputStream(file)) {
       // By default this creates a Block blob, no need to use a specific Block blob client.
-      blobContainerClient.getBlobClient(blobPath).upload(stream, file.length());
+      blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).upload(stream, file.length());
     }
   }
 
@@ -133,7 +134,7 @@ public class AzureStorage
   ) throws BlobStorageException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
-    BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(blobPath).getBlockBlobClient();
+    BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).getBlockBlobClient();
 
     if (blockBlobClient.exists()) {
       throw new RE("Reference already exists");
@@ -149,7 +150,7 @@ public class AzureStorage
   public BlockBlobClient getBlockBlobReferenceWithAttributes(final String containerName, final String blobPath)
       throws BlobStorageException
   {
-    return getOrCreateBlobContainerClient(containerName).getBlobClient(blobPath).getBlockBlobClient();
+    return getOrCreateBlobContainerClient(containerName).getBlobClient(Utility.urlEncode(blobPath)).getBlockBlobClient();
   }
 
   public long getBlockBlobLength(final String containerName, final String blobPath)
@@ -180,7 +181,7 @@ public class AzureStorage
       throws BlobStorageException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
-    return blobContainerClient.getBlobClient(blobPath).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
+    return blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
   }
 
   public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
@@ -222,7 +223,7 @@ public class AzureStorage
   public boolean getBlockBlobExists(String container, String blobPath, Integer maxAttempts)
       throws BlobStorageException
   {
-    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(blobPath).exists();
+    return getOrCreateBlobContainerClient(container, maxAttempts).getBlobClient(Utility.urlEncode(blobPath)).exists();
   }
 
   @VisibleForTesting
