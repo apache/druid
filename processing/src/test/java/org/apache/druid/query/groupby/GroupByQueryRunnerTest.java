@@ -249,17 +249,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     };
     final GroupByQueryConfig v2SmallDictionaryConfig = new GroupByQueryConfig()
     {
-
-      @Override
-      public long getConfiguredMaxSelectorDictionarySize()
       {
-        return 20;
-      }
-
-      @Override
-      public long getConfiguredMaxMergingDictionarySize()
-      {
-        return 400;
+        maxMergingDictionarySize=HumanReadableBytes.valueOf(400);
+        maxSelectorDictionarySize=HumanReadableBytes.valueOf(20);
       }
 
       @Override

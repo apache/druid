@@ -83,11 +83,11 @@ public class GroupByQueryConfig
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-processing-thread; when exceeded, partial results will be
   // emitted to the merge buffer early.
-  private HumanReadableBytes maxSelectorDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
+  protected HumanReadableBytes maxSelectorDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
-  private HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
+  protected HumanReadableBytes maxMergingDictionarySize = HumanReadableBytes.valueOf(AUTOMATIC);
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
@@ -202,7 +202,7 @@ public class GroupByQueryConfig
    */
   public long getActualMaxMergingDictionarySize(final long maxHeapSize, final int numConcurrentQueries)
   {
-    if (maxMergingDictionarySize.getBytes() == AUTOMATIC) {
+    if (getConfiguredMaxMergingDictionarySize() == AUTOMATIC) {
       final long heapForDictionaries = (long) (maxHeapSize * MERGING_DICTIONARY_HEAP_FRACTION);
 
       return Math.max(
@@ -213,7 +213,7 @@ public class GroupByQueryConfig
           )
       );
     } else {
-      return maxMergingDictionarySize.getBytes();
+      return getConfiguredMaxMergingDictionarySize();
     }
   }
 
