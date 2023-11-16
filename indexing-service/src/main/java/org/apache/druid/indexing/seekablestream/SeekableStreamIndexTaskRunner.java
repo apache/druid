@@ -213,6 +213,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final String stream;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
+  private final Set<String> publishedSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
 
@@ -806,7 +807,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       List<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequencesSnapshot = new ArrayList<>(sequences);
       for (int i = 0; i < sequencesSnapshot.size(); i++) {
         final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequencesSnapshot.get(i);
-        if (!publishingSequences.contains(sequenceMetadata.getSequenceName())) {
+        if (!publishingSequences.contains(sequenceMetadata.getSequenceName())
+            && !publishedSequences.contains(sequenceMetadata.getSequenceName())) {
           final boolean isLast = i == (sequencesSnapshot.size() - 1);
           if (isLast) {
             // Shorten endOffsets of the last sequence to match currOffsets.
@@ -1009,6 +1011,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             );
             log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
+            publishedSequences.add(sequenceMetadata.getSequenceName());
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
 
@@ -1157,7 +1160,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
       sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
-      if (!sequenceMetadata.isOpen() && !publishingSequences.contains(sequenceMetadata.getSequenceName())) {
+      if (!sequenceMetadata.isOpen()
+          && !publishingSequences.contains(sequenceMetadata.getSequenceName())
+          && !publishedSequences.contains(sequenceMetadata.getSequenceName())) {
         publishingSequences.add(sequenceMetadata.getSequenceName());
         try {
           final Object result = driver.persist(committerSupplier.get());
