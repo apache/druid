@@ -655,7 +655,7 @@ For more detail, see [Segment size optimization](../../operations/segment-optimi
 
 Kinesis indexing tasks fetch records using `fetchThreads` threads.
 If `fetchThreads` is higher than the number of Kinesis shards, the excess threads are unused.
-Each fetch thread fetches up to 10MB of records at once from a Kinesis shard, with a delay between fetches
+Each fetch thread fetches up to 10 MB of records at once from a Kinesis shard, with a delay between fetches
 of `fetchDelayMillis`.
 The records fetched by each thread are pushed into a shared queue of size `recordBufferSizeBytes`.
 The main runner thread for each task polls up to `maxRecordsPerPoll` records from the queue at once.
@@ -665,7 +665,7 @@ The default values for these parameters are:
 - `fetchThreads`: Twice the number of processors available to the task. The number of processors available to the task
 is the total number of processors on the server, divided by `druid.worker.capacity` (the number of task slots on that
 particular server). This value is further limited so that the total data record data fetched at a given time does not
-exceed 5% of the max heap configured, assuming that each thread fetches 10MB of recrods at once. If the value specified
+exceed 5% of the max heap configured, assuming that each thread fetches 10 MB of records at once. If the value specified
 for this configuration is higher than this limit, no failure occurs, but a warning is logged, and the value is
 implicitly lowered to the max allowed by this constraint.
 - `fetchDelayMillis`: 0 (no delay between fetches).
