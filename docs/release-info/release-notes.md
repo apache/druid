@@ -167,7 +167,7 @@ Segment locking will be deprecated and removed in favor of concurrent append and
 
 ### Task locks for append and replace batch ingestion jobs
 
-Append batch ingestion jobs can now share locks. This allows you to run multiple append batch ingestion jobs against the same time internal. Replace batch ingestion jobs still require an exclusive lock. This means you can run multiple append batch ingestion jobs and one replace batch ingestion job for a given interval.
+Append batch ingestion jobs can now share locks. This allows you to run multiple append batch ingestion jobs against the same time interval. Replace batch ingestion jobs still require an exclusive lock. This means you can run multiple append batch ingestion jobs and one replace batch ingestion job for a given interval.
 
 [#14407](https://github.com/apache/druid/pull/14407)
 
