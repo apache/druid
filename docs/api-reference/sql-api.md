@@ -822,7 +822,7 @@ Getting the query results for an ingestion query returns an empty response.
 #### Query parameters
 * `page` (optional)
     * Type: Int
-    * Refine paginated results
+    * Fetch results based on page numbers. If not specified, all results are returned sequentially starting from page 0 to N in the same response.
 * `resultFormat` (optional)
     * Type: String
     * Defines the format in which the results are presented. The following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. The default is `object`.
