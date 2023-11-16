@@ -813,7 +813,7 @@ Retrieves results for completed queries. Results are separated into pages, so yo
 
 If a page number isn't passed, all results are returned sequentially in the same response. If you have large result sets, you may encounter timeouts based on the value configured for `druid.router.http.readTimeout`.
 
-When getting query results, getting the query results for an ingestion query returns an empty response.
+Getting the query results for an ingestion query returns an empty response.
 
 #### URL
 
