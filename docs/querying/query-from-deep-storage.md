@@ -189,7 +189,7 @@ Results are returned in JSON format.
 
 You can use the optional `page` parameter to refine your results, and `resultFormat` parameter to define the format in which the results will be presented. 
 * You can retrieve the `page` information for your results by fetching the status of the completed query.
-* For `resultFormat` the following options are supported `arrayLines`,`objectLines`,`array`,`object`,`csv`. Default value is `object`. More documentation present [here](../api-reference/sql-api.md#request-body). 
+* For `resultFormat` the following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. Default value is `object`. More documentation present [here](../api-reference/sql-api.md#request-body). 
 
 When you try to get results for a query from deep storage, you may receive an error that states the query is still running. Wait until the query completes before you try again.
 
