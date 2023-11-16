@@ -1160,8 +1160,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
       sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
-      if (!sequenceMetadata.isOpen() &&
-          !publishingSequences.contains(sequenceMetadata.getSequenceName())
+      if (!sequenceMetadata.isOpen()
+          && !publishingSequences.contains(sequenceMetadata.getSequenceName())
           && !publishedSequences.contains(sequenceMetadata.getSequenceName())) {
         publishingSequences.add(sequenceMetadata.getSequenceName());
         try {
