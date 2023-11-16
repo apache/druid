@@ -187,7 +187,7 @@ GET https://ROUTER:8888/druid/v2/sql/statements/QUERYID/results?page=PAGENUMBER&
 
 Results are returned in JSON format.
 
-You can use the optional `page`, `resultFormat` parameters to refine your results. 
+You can use the optional `page` parameter to refine your results, and `resultFormat` parameter to define the format in which the results will be presented. 
 * You can retrieve the `page` information for your results by fetching the status of the completed query.
 * For `resultFormat` the following options are supported `arrayLines`,`objectLines`,`array`,`object`,`csv`. Default value is `object`. More documentation present [here](../api-reference/sql-api.md#request-body). 
 
