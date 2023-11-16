@@ -379,8 +379,9 @@ For more thorough instructions and a description of what the `do_all_things` scr
 2. From `druid-website`, checkout a staging branch based off of the `asf-staging` branch.
 
 3. From `druid-website-src`, create a release branch from `master`, such as `27.0.0-staging`.
-   1. Update the version list in `static/js/version.js` with the version you're releasing and the release date. The highest release version goes in position 0. 
-   1. In `scripts`, run: 
+   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0.
+   2. In this file, also update the release date.
+   3. In `scripts`, run: 
    
    ```python
    # Include `--skip-install` if you already have Docusaurus 2 installed in druid-website-src. 
@@ -634,9 +635,9 @@ For more thorough instructions and a description of what the `do_all_things` scr
 3. From `druid-website`, create a release branch based on the latest `asf-site` branch.
 
 4. From `druid-website-src`, check out a new branch for the release:
-   
-   1. Update the version list in `static/js/version.js` with the version you're releasing and the release date. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file.
-   1. In `scripts`, run: 
+   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file.
+   2. In this file, also update the release date. **Set this as the actual date of the release.**
+   3. In `scripts`, run: 
    
    ```python
    # This copies the Markdown files from `druid` and builds the website using them
