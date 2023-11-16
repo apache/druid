@@ -89,7 +89,7 @@ Submitting a query from deep storage uses the same syntax as any other Druid SQL
 
 Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints.
 
-Apart from the context parameters mentioned [here](../multi-stage-query/reference.md#context-parameters) there are additional context parameters for `sql/statements` specifically: 
+Apart from the context parameters mentioned [here](../multi-stage-query/reference.md#context-parameters) there are additional context parameters for `sql/statements`: 
 
    - `executionMode`  (required) determines how query results are fetched. Set this to `ASYNC`. 
    - `selectDestination` (optional) set to `durableStorage` instructs Druid to write the results of SELECT queries to durable storage. For result sets with more than 3000 rows, it is highly recommended to use `durableStorage`. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
