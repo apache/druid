@@ -107,10 +107,12 @@ public class TaskStorageQueryAdapter
   public Optional<Task> getTask(final String taskid)
   {
     if (taskQueue.isPresent()) {
-      return taskQueue.get().getTask(taskid);
-    } else {
-      return storage.getTask(taskid);
+      Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
+      if (activeTask.isPresent()) {
+        return activeTask;
+      }
     }
+    return storage.getTask(taskid);
   }
 
   public Optional<TaskStatus> getStatus(final String taskid)
