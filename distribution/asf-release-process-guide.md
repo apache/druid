@@ -379,7 +379,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
 2. From `druid-website`, checkout a staging branch based off of the `asf-staging` branch.
 
 3. From `druid-website-src`, create a release branch from `master`, such as `27.0.0-staging`.
-   1. Update the version list in `static/js/version`.js with the version you're releasing and the release date. The highest release version goes in position 0. 
+   1. Update the version list in `static/js/version.js` with the version you're releasing and the release date. The highest release version goes in position 0. 
    1. In `scripts`, run: 
    
    ```python
