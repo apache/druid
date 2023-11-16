@@ -825,7 +825,7 @@ Getting the query results for an ingestion query returns an empty response.
     * Refine paginated results
 * `resultFormat` (optional)
     * Type: String
-    * Get results in different formats like `object`,`objectLines`,`array`,`arrayLines`,`csv`. Default is `object`.
+    * Defines the format in which the results are presented. The following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. The default is `object`.
 
 #### Responses
 
