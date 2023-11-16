@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -55,6 +56,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -2907,6 +2909,79 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(3, resultForEternity.size());
   }
 
+  @Test
+  public void testTimelineWithTombstoneCorePartitionsAs0() throws IOException
+  {
+    final Interval interval = Intervals.of("2020/2021");
+    // Create and commit a tombstone segment
+    final DataSegment tombstoneSegment = createSegment(
+        interval,
+        "version",
+        new TombstoneShardSpec()
+    );
+
+    final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
+    Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
+
+    // Create and commit a data segment
+    final DataSegment dataSegment = createSegment(
+        interval,
+        "version",
+        new NumberedShardSpec(1, 0) // core partitions is 0
+    );
+    final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
+
+    // Mark the tombstone as unused
+    markAllSegmentsUnused(tombstones);
+
+    final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
+        DS.WIKI,
+        Segments.ONLY_VISIBLE
+    );
+
+    // The data segment should still be visible in the timeline since the tombstone's core partitions is 0
+    SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(allUsedSegments);
+    Assert.assertEquals(1, segmentTimeline.lookup(interval).size());
+    Assert.assertEquals(dataSegment, segmentTimeline.lookup(interval).get(0).getObject().getChunk(1).getObject());
+  }
+
+  @Test
+  public void testTimelineWithTombstoneCorePartitionsAs1() throws IOException
+  {
+    final Interval interval = Intervals.of("2020/2021");
+    // Create and commit a tombstone segment
+    final DataSegment tombstoneSegment = createSegment(
+        interval,
+        "version",
+        new TombstoneShardSpec()
+    );
+
+    final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
+    Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
+
+    // Create and commit a data segment
+    final DataSegment dataSegment = createSegment(
+        interval,
+        "version",
+        new NumberedShardSpec(1, 1) // core partitions is 1
+    );
+    final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
+
+    // Mark the tombstone as unused
+    markAllSegmentsUnused(tombstones);
+
+    final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
+        DS.WIKI,
+        Segments.ONLY_VISIBLE
+    );
+
+    // The data segment will not be visible in the timeline since the core partitions is 1 (for older tombstones)
+    SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(allUsedSegments);
+    Assert.assertEquals(0, segmentTimeline.lookup(interval).size());
+  }
+
   private static class DS
   {
     static final String WIKI = "wiki";
@@ -2936,7 +3011,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
     final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
-    Assert.assertTrue(committedSegments.containsAll(new HashSet<>(segments)));
+    Assert.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
   }
