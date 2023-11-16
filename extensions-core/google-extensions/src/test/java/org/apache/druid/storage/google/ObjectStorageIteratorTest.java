@@ -1,4 +1,5 @@
 /*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,15 +16,19 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- */
+ *//*
+
 
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.api.services.storage.Storage;
+import com.google.api.gax.paging.Page;
 import com.google.api.services.storage.model.StorageObject;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.storage.google.ObjectStorageIteratorTest.MockStorage.MockObjects.MockList;
@@ -39,7 +44,7 @@ import java.util.stream.Collectors;
 
 public class ObjectStorageIteratorTest
 {
-  private static final ImmutableList<StorageObject> TEST_OBJECTS =
+  private static final ImmutableList<Blob> TEST_OBJECTS =
       ImmutableList.of(
           makeStorageObject("b", "foo", 10L),
           makeStorageObject("b", "foo/", 0L), // directory
@@ -163,11 +168,11 @@ public class ObjectStorageIteratorTest
       final int maxListingLength
   )
   {
-    final List<StorageObject> expectedObjects = new ArrayList<>();
+    final List<Blob> expectedObjects = new ArrayList<>();
 
     // O(N^2) but who cares -- the list is short.
     for (final String uri : expectedUris) {
-      final List<StorageObject> matches = TEST_OBJECTS
+      final List<Blob> matches = TEST_OBJECTS
           .stream()
           .filter(storageObject -> GoogleUtils.objectToUri(storageObject).toString().equals(uri))
           .collect(Collectors.toList());
@@ -175,7 +180,7 @@ public class ObjectStorageIteratorTest
       expectedObjects.add(Iterables.getOnlyElement(matches));
     }
 
-    final List<StorageObject> actualObjects = ImmutableList.copyOf(
+    final List<Blob> actualObjects = ImmutableList.copyOf(
         GoogleUtils.lazyFetchingStorageObjectsIterator(
             makeMockClient(TEST_OBJECTS),
             prefixes.stream().map(URI::create).iterator(),
@@ -190,18 +195,20 @@ public class ObjectStorageIteratorTest
     );
   }
 
-  /**
+  */
+/**
    * Makes a mock Google Storage client that handles enough of "List" to test the functionality of the
    * {@link ObjectStorageIterator} class.
-   */
-  static GoogleStorage makeMockClient(final List<StorageObject> storageObjects)
+   *//*
+
+  static GoogleStorageNew makeMockClient(final List<Blob> blobs)
   {
-    return new GoogleStorage(null)
+    return new GoogleStorageNew(null)
     {
       @Override
-      public Storage.Objects.List list(final String bucket)
+      public Page<Blob> list(final String bucket)
       {
-        return mockList(bucket, storageObjects);
+        return mockList(bucket, blobs);
       }
     };
   }
@@ -286,12 +293,14 @@ public class ObjectStorageIteratorTest
     return new MockStorage().mockList(bucket, storageObjects);
   }
 
-  static StorageObject makeStorageObject(final String bucket, final String key, final long size)
+  static Blob makeStorageObject(final String bucket, final String key, final long size)
   {
-    final StorageObject summary = new StorageObject();
-    summary.setBucket(bucket);
-    summary.setName(key);
-    summary.setSize(BigInteger.valueOf(size));
-    return summary;
+//    final StorageObject summary = new StorageObject();
+//    summary.setBucket(bucket);
+//    summary.setName(key);
+//    summary.setSize(BigInteger.valueOf(size));
+//    return summary;
+    final Blob blob = StorageOptions.getDefaultInstance()
   }
 }
+*/

@@ -23,7 +23,7 @@ import com.google.api.client.googleapis.testing.auth.oauth2.MockGoogleCredential
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.api.services.storage.Storage;
+import com.google.cloud.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.common.gcp.GcpMockModule;
@@ -32,7 +32,7 @@ import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class GoogleStorageDruidModuleTest
+public class GoogleStorageOldDruidModuleTest
 {
   @Test
   public void testSegmentKillerBoundedSingleton()

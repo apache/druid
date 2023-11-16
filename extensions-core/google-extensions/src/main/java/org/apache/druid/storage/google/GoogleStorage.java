@@ -20,13 +20,24 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.AbstractInputStreamContent;
-import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.Storage.Objects.Get;
-import com.google.api.services.storage.model.StorageObject;
+import com.google.api.gax.paging.Page;
+import com.google.cloud.ReadChannel;
+import com.google.cloud.WriteChannel;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
 import com.google.common.base.Supplier;
+import org.apache.commons.io.input.BoundedInputStream;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.channels.Channels;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class GoogleStorage
 {
@@ -41,6 +52,65 @@ public class GoogleStorage
    */
   private final Supplier<Storage> storage;
 
+  public static class GoogleStorageObjectMetadata
+  {
+    final String bucket;
+    final String name;
+    final Long size;
+    final Long lastUpdateTime;
+
+    public GoogleStorageObjectMetadata(String bucket, String name, Long size, Long lastUpdateTime)
+    {
+      this.bucket = bucket;
+      this.name = name;
+      this.size = size;
+      this.lastUpdateTime = lastUpdateTime;
+    }
+
+    public String getBucket()
+    {
+      return bucket;
+    }
+
+    public String getName()
+    {
+      return name;
+    }
+
+    public Long getSize()
+    {
+      return size;
+    }
+
+    public Long getLastUpdateTime()
+    {
+      return lastUpdateTime;
+    }
+  }
+
+  public static class GoogleStorageObjectPage {
+    final List<org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectMetadata> objectList;
+
+    @Nullable final String nextPageToken;
+
+    public GoogleStorageObjectPage(List<org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectMetadata> objectList, String nextPageToken)
+    {
+      this.objectList = objectList;
+      this.nextPageToken = nextPageToken;
+    }
+
+    public List<org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectMetadata> getObjectList()
+    {
+      return objectList;
+    }
+
+    @Nullable
+    public String getNextPageToken()
+    {
+      return nextPageToken;
+    }
+  }
+
   public GoogleStorage(Supplier<Storage> storage)
   {
     this.storage = storage;
@@ -48,11 +118,15 @@ public class GoogleStorage
 
   public void insert(final String bucket, final String path, AbstractInputStreamContent mediaContent) throws IOException
   {
-    Storage.Objects.Insert insertObject = storage.get().objects().insert(bucket, null, mediaContent);
-    insertObject.setName(path);
-    insertObject.getMediaHttpUploader().setDirectUploadEnabled(false);
-    insertObject.execute();
+    storage.get().createFrom(getBlobInfo(bucket, path), mediaContent.getInputStream());
   }
+
+  public InputStream getUsingRangeHeaders(final String bucket, final String path, long start, long end)
+      throws IOException
+  {
+    return new BoundedInputStream(get(bucket, path, start), end-start);
+  }
+
 
   public InputStream get(final String bucket, final String path) throws IOException
   {
@@ -61,44 +135,93 @@ public class GoogleStorage
 
   public InputStream get(final String bucket, final String path, long start) throws IOException
   {
-    final Get get = storage.get().objects().get(bucket, path);
-    InputStream inputStream = get.executeMediaAsInputStream();
-    inputStream.skip(start);
-    return inputStream;
+    try (ReadChannel reader = storage.get().reader(BlobId.of(bucket, path))) {
+      reader.seek(start);
+      return Channels.newInputStream(reader);
+
+    }
   }
 
-  public StorageObject getMetadata(final String bucket, final String path) throws IOException
+  public OutputStream getObjectOutputStream(
+      final String bucket,
+      final String path
+  )
   {
-    return storage.get().objects().get(bucket, path).execute();
+    WriteChannel writer = storage.get().writer(getBlobInfo(bucket, path));
+    return Channels.newOutputStream(writer);
+  }
+
+  public org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectMetadata getMetadata(final String bucket, final String path) throws IOException
+  {
+    Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
+    return new org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectMetadata(blob.getBucket(), blob.getName(), blob.getSize(), blob.getUpdateTimeOffsetDateTime().toEpochSecond());
   }
 
   public void delete(final String bucket, final String path) throws IOException
   {
-    storage.get().objects().delete(bucket, path).execute();
+    storage.get().delete(bucket, path);
   }
 
   public boolean exists(final String bucket, final String path)
   {
-    try {
-      return storage.get().objects().get(bucket, path).executeUsingHead().isSuccessStatusCode();
-    }
-    catch (Exception e) {
-      return false;
-    }
+
+    Blob blob = storage.get().get(bucket, path);
+    return blob != null;
   }
-   
+
   public long size(final String bucket, final String path) throws IOException
   {
-    return storage.get().objects().get(bucket, path).execute().getSize().longValue();
+    Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.SIZE));
+    return blob.getSize();
   }
 
   public String version(final String bucket, final String path) throws IOException
   {
-    return storage.get().objects().get(bucket, path).execute().getEtag();
+    Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
+    return blob.getGeneratedId();
   }
 
-  public Storage.Objects.List list(final String bucket) throws IOException
+  public org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectPage list(
+      final String bucket,
+      @Nullable String prefix,
+      @Nullable Long pageSize,
+      @Nullable String pageToken
+  ) throws IOException
   {
-    return storage.get().objects().list(bucket);
+    List<Storage.BlobListOption> options = new ArrayList<>();
+
+    if (prefix != null) {
+      options.add(Storage.BlobListOption.prefix(prefix));
+    }
+
+    if (pageSize != null) {
+      options.add(Storage.BlobListOption.pageSize(pageSize));
+    }
+
+    if (pageSize != null) {
+      options.add(Storage.BlobListOption.pageToken(pageToken));
+    }
+
+    Page<Blob> blobPage = storage.get().list(bucket, options.toArray(new Storage.BlobListOption[0]));
+
+    List<org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectMetadata> googleStorageObjectMetadataList = blobPage.streamValues()
+                                                                                                                              .map(blob -> new org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectMetadata(
+                                                                                                                                  blob.getBucket(),
+                                                                                                                                  blob.getName(),
+                                                                                                                                  blob.getSize(),
+                                                                                                                                  blob.getUpdateTimeOffsetDateTime()
+                                                                                                                                      .toEpochSecond()
+                                                                                                                              ))
+                                                                                                                              .collect(
+                                                                                                                                  Collectors.toList());
+
+    return new org.apache.druid.storage.google.GoogleStorage.GoogleStorageObjectPage(googleStorageObjectMetadataList, blobPage.getNextPageToken());
+
+  }
+
+  private BlobInfo getBlobInfo(final String bucket, final String path){
+    BlobId blobId = BlobId.of(bucket, path);
+    return BlobInfo.newBuilder(blobId).build();
+
   }
 }

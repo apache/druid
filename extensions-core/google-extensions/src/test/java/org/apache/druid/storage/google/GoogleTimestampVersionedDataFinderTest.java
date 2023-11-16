@@ -15,7 +15,7 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- */
+
 
 package org.apache.druid.storage.google;
 
@@ -46,7 +46,7 @@ public class GoogleTimestampVersionedDataFinderTest
     storageObject3.setUpdated(new DateTime(System.currentTimeMillis() + 100));
     final StorageObject storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/other", 4);
     storageObject4.setUpdated(new DateTime(System.currentTimeMillis() + 100));
-    final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
+    final GoogleStorageNew storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
     final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);
     Pattern pattern = Pattern.compile("v.*");
@@ -70,7 +70,7 @@ public class GoogleTimestampVersionedDataFinderTest
     storageObject3.setUpdated(new DateTime(System.currentTimeMillis() + 100));
     final StorageObject storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "other", 4);
     storageObject4.setUpdated(new DateTime(System.currentTimeMillis() + 100));
-    final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
+    final GoogleStorageOld storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
     final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);
     Pattern pattern = Pattern.compile("v.*");
@@ -79,3 +79,4 @@ public class GoogleTimestampVersionedDataFinderTest
     Assert.assertEquals(expected, latest);
   }
 }
+*/

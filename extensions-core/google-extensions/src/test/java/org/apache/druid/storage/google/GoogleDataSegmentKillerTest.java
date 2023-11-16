@@ -24,7 +24,6 @@ import com.google.api.client.googleapis.testing.json.GoogleJsonResponseException
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -169,17 +168,19 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test
   public void test_killAll_noException_deletesAllTaskLogs() throws IOException
   {
-    StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
-    StorageObject object2 = GoogleTestUtils.newStorageObject(BUCKET, KEY_2, TIME_1);
+    GoogleStorage.GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    GoogleStorage.GoogleStorageObjectMetadata object2 = GoogleTestUtils.newStorageObject(BUCKET, KEY_2, TIME_1);
 
-    Storage.Objects.List listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
+    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1, object2));
 
+/*
     GoogleTestUtils.expectListObjects(
-        listRequest,
+        blobPage,
         PREFIX_URI,
         MAX_KEYS,
         ImmutableList.of(object1, object2)
     );
+*/
 
     GoogleTestUtils.expectDeleteObjects(
         storage,
@@ -190,29 +191,29 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
     EasyMock.expect(accountConfig.getPrefix()).andReturn(PREFIX).anyTimes();
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-    EasyMock.replay(listRequest, accountConfig, inputDataConfig, storage);
+    EasyMock.replay(accountConfig, inputDataConfig, storage);
 
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
 
     killer.killAll();
 
-    EasyMock.verify(listRequest, accountConfig, inputDataConfig, storage);
+    EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
 
 
   @Test
   public void test_killAll_recoverableExceptionWhenDeletingObjects_deletesAllTaskLogs() throws IOException
   {
-    StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+    GoogleStorage.GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
-    Storage.Objects.List listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
+    GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
-    GoogleTestUtils.expectListObjects(
-        listRequest,
-        PREFIX_URI,
-        MAX_KEYS,
-        ImmutableList.of(object1)
-    );
+//    GoogleTestUtils.expectListObjects(
+//        objectPage,
+//        PREFIX_URI,
+//        MAX_KEYS,
+//        ImmutableList.of(object1)
+//    );
 
     GoogleTestUtils.expectDeleteObjects(
         storage,
@@ -224,30 +225,30 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
     EasyMock.expect(accountConfig.getPrefix()).andReturn(PREFIX).anyTimes();
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-    EasyMock.replay(listRequest, accountConfig, inputDataConfig, storage);
+    EasyMock.replay(accountConfig, inputDataConfig, storage);
 
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
     killer.killAll();
 
-    EasyMock.verify(listRequest, accountConfig, inputDataConfig, storage);
+    EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
 
   @Test
   public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    Storage.Objects.List listRequest = null;
+    GoogleStorage.GoogleStorageObjectPage objectPage = null;
     try {
-      StorageObject object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
+      GoogleStorage.GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
-      listRequest = GoogleTestUtils.expectListRequest(storage, PREFIX_URI);
+      GoogleTestUtils.expectListObjectsPageRequest(storage, PREFIX_URI, MAX_KEYS, ImmutableList.of(object1));
 
-      GoogleTestUtils.expectListObjects(
-          listRequest,
-          PREFIX_URI,
-          MAX_KEYS,
-          ImmutableList.of(object1)
-      );
+//      GoogleTestUtils.expectListObjects(
+//          objectPage,
+//          PREFIX_URI,
+//          MAX_KEYS,
+//          ImmutableList.of(object1)
+//      );
 
       GoogleTestUtils.expectDeleteObjects(
           storage,
@@ -259,7 +260,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
       EasyMock.expect(accountConfig.getPrefix()).andReturn(PREFIX).anyTimes();
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
 
-      EasyMock.replay(listRequest, accountConfig, inputDataConfig, storage);
+      EasyMock.replay(accountConfig, inputDataConfig, storage);
 
       GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
       killer.killAll();
@@ -270,6 +271,6 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 
     Assert.assertTrue(ioExceptionThrown);
 
-    EasyMock.verify(listRequest, accountConfig, inputDataConfig, storage);
+    EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
 }

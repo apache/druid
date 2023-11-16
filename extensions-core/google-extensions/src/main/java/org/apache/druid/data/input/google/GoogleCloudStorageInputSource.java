@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
@@ -35,14 +34,13 @@ import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
-import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
+import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Iterator;
@@ -139,7 +137,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @Override
       public long getObjectSize(CloudObjectLocation location) throws IOException
       {
-        final StorageObject storageObject = storage.getMetadata(location.getBucket(), location.getPath());
+        final GoogleStorage.GoogleStorageObjectMetadata storageObject = storage.getMetadata(location.getBucket(), location.getPath());
         return getSize(storageObject);
       }
     }
@@ -147,15 +145,15 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
     return new SplitWidget();
   }
 
-  private static long getSize(final StorageObject object)
+  private static long getSize(final GoogleStorage.GoogleStorageObjectMetadata object)
   {
-    final BigInteger sizeInBigInteger = object.getSize();
+    final Long sizeInLong = object.getSize();
 
-    if (sizeInBigInteger == null) {
+    if (sizeInLong == null) {
       return Long.MAX_VALUE;
     } else {
       try {
-        return sizeInBigInteger.longValueExact();
+        return sizeInLong;
       }
       catch (ArithmeticException e) {
         LOG.warn(
@@ -164,7 +162,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
             + "The max long value will be used for its size instead.",
             object.getBucket(),
             object.getName(),
-            sizeInBigInteger
+            sizeInLong
         );
         return Long.MAX_VALUE;
       }
