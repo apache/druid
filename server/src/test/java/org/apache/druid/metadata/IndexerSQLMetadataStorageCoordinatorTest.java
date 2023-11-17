@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -1967,7 +1968,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
    * - Later, after the above was dropped, another segment on same interval was created by the stream but this
    * time there was an integrity violation in the pending segments table because the
    * {@link IndexerSQLMetadataStorageCoordinator#createNewSegment(Handle, String, Interval, PartialShardSpec, String)}
-   * method returned an segment id that already existed in the pending segments table
+   * method returned a segment id that already existed in the pending segments table
    */
   @Test
   public void testAllocatePendingSegmentAfterDroppingExistingSegment()
@@ -2910,7 +2911,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testTimelineWithTombstoneCorePartitionsAs0() throws IOException
+  public void testTimelineVisibilityWith0CorePartitionTombstone() throws IOException
   {
     final Interval interval = Intervals.of("2020/2021");
     // Create and commit a tombstone segment
@@ -2923,11 +2924,24 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
     Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
 
-    // Create and commit a data segment
+    // Allocate and commit a data segment by appending to the same interval
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+        DS.WIKI,
+        "seq",
+        tombstoneSegment.getVersion(),
+        interval,
+        NumberedPartialShardSpec.instance(),
+        "version",
+        false
+    );
+
+    Assert.assertEquals("wiki_2020-01-01T00:00:00.000Z_2021-01-01T00:00:00.000Z_version_1", identifier.toString());
+    Assert.assertEquals(0, identifier.getShardSpec().getNumCorePartitions());
+
     final DataSegment dataSegment = createSegment(
         interval,
         "version",
-        new NumberedShardSpec(1, 0) // core partitions is 0
+        identifier.getShardSpec()
     );
     final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
     Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
@@ -2940,31 +2954,55 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         Segments.ONLY_VISIBLE
     );
 
-    // The data segment should still be visible in the timeline since the tombstone's core partitions is 0
+    // The appended data segment will still be visible in the timeline since the
+    // tombstone contains 0 core partitions
     SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(allUsedSegments);
     Assert.assertEquals(1, segmentTimeline.lookup(interval).size());
     Assert.assertEquals(dataSegment, segmentTimeline.lookup(interval).get(0).getObject().getChunk(1).getObject());
   }
 
+  /**
+   * This tests the behavior of "old generation" tombstones with 1 core partition.
+   */
   @Test
-  public void testTimelineWithTombstoneCorePartitionsAs1() throws IOException
+  public void testTimelineWith1CorePartitionTombstone() throws IOException
   {
     final Interval interval = Intervals.of("2020/2021");
-    // Create and commit a tombstone segment
+    // Create and commit an old generation tombstone with 1 core partition
     final DataSegment tombstoneSegment = createSegment(
         interval,
         "version",
-        new TombstoneShardSpec()
+        new TombstoneShardSpec() {
+          @Override
+          @JsonProperty("partitions")
+          public int getNumCorePartitions()
+          {
+            return 1;
+          }
+        }
     );
 
     final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
     Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
 
-    // Create and commit a data segment
+    // Allocate and commit a data segment by appending to the same interval
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+        DS.WIKI,
+        "seq",
+        tombstoneSegment.getVersion(),
+        interval,
+        NumberedPartialShardSpec.instance(),
+        "version",
+        false
+    );
+
+    Assert.assertEquals("wiki_2020-01-01T00:00:00.000Z_2021-01-01T00:00:00.000Z_version_1", identifier.toString());
+    Assert.assertEquals(1, identifier.getShardSpec().getNumCorePartitions());
+
     final DataSegment dataSegment = createSegment(
         interval,
         "version",
-        new NumberedShardSpec(1, 1) // core partitions is 1
+        identifier.getShardSpec()
     );
     final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
     Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
@@ -2977,7 +3015,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         Segments.ONLY_VISIBLE
     );
 
-    // The data segment will not be visible in the timeline since the core partitions is 1 (for older tombstones)
+    // The appended data segment will not be visible in the timeline since the old generation
+    // tombstone contains 1 core partition
     SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(allUsedSegments);
     Assert.assertEquals(0, segmentTimeline.lookup(interval).size());
   }
