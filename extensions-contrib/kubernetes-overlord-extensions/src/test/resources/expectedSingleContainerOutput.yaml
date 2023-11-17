@@ -57,4 +57,4 @@ spec:
               cpu: "1000m"
               memory: "2400000000"
       restartPolicy: "Never"
-  ttlSecondsAfterFinished: 3600
+  ttlSecondsAfterFinished: 172800

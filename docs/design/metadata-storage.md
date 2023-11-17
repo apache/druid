@@ -44,7 +44,19 @@ See [Metadata storage configuration](../configuration/index.md#metadata-storage)
 
 ## Available metadata stores
 
-Druid supports Derby, MySQL, and PostgreSQL for storing metadata. 
+Druid supports Derby, MySQL, and PostgreSQL for storing metadata.
+
+To avoid issues with upgrades that require schema changes to a large metadata table, consider a metadata store version that supports instant ADD COLUMN semantics.
+See the database-specific docs for guidance on versions.
+
+### MySQL
+
+See [mysql-metadata-storage extension documentation](../development/extensions-core/mysql.md).
+
+### PostgreSQL
+
+See [postgresql-metadata-storage](../development/extensions-core/postgresql.md).
+
 
 ### Derby
 
@@ -58,14 +70,6 @@ Configure metadata storage with Derby by setting the following properties in you
 druid.metadata.storage.type=derby
 druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//opt/var/druid_state/derby;create=true
 ```
-
-### MySQL
-
-See [mysql-metadata-storage extension documentation](../development/extensions-core/mysql.md).
-
-### PostgreSQL
-
-See [postgresql-metadata-storage](../development/extensions-core/postgresql.md).
 
 ## Adding custom DBCP properties
 

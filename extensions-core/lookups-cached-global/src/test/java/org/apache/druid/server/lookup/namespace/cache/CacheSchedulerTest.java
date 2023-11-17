@@ -192,6 +192,24 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 60_000L)
+  public void testInitialization() throws InterruptedException, TimeoutException
+  {
+    UriExtractionNamespace namespace = new UriExtractionNamespace(
+        tmpFile.toURI(),
+        null, null,
+        new UriExtractionNamespace.ObjectMapperFlatDataParser(
+            UriExtractionNamespaceTest.registerTypes(new ObjectMapper())
+        ),
+        new Period(0),
+        null,
+        null
+    );
+    CacheScheduler.Entry entry = scheduler.schedule(namespace);
+    entry.awaitTotalUpdatesWithTimeout(1, 2000);
+    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
+  }
+
+  @Test(timeout = 60_000L)
   public void testPeriodicUpdatesScheduled() throws InterruptedException
   {
     final int repeatCount = 5;
@@ -459,6 +477,7 @@ public class CacheSchedulerTest
         new Period(10_000),
         null,
         0,
+        null,
         new JdbcAccessSecurityConfig()
         {
           @Override

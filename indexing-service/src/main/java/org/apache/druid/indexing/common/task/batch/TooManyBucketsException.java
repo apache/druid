@@ -17,11 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord;
+package org.apache.druid.indexing.common.task.batch;
 
-import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.StringUtils;
 
-public interface PeonLifecycleFactory
+public class TooManyBucketsException extends RuntimeException
 {
-  KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener);
+  private final int maxBuckets;
+
+  public TooManyBucketsException(final int maxBuckets)
+  {
+    super(StringUtils.format("Too many buckets; maximum is [%s]", maxBuckets));
+    this.maxBuckets = maxBuckets;
+  }
+
+  public int getMaxBuckets()
+  {
+    return maxBuckets;
+  }
 }
