@@ -35,7 +35,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <iceberg.core.version>1.4.0</iceberg.core.version>
+    <iceberg.core.version>1.4.1</iceberg.core.version>
     <hive.version>3.1.3</hive.version>
   </properties>
   <dependencies>
