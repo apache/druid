@@ -14,3 +14,4 @@
 # limitations under the License.
 
 org.apache.druid.storage.google.GoogleStorageDruidModule
+org.apache.druid.storage.google.output.GoogleStorageConnectorModule

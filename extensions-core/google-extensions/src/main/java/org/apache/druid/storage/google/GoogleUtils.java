@@ -23,6 +23,7 @@ import com.google.api.client.http.HttpResponseException;
 import com.google.cloud.storage.Blob;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -50,12 +51,12 @@ public class GoogleUtils
     return RetryUtils.retry(f, GOOGLE_RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
-  public static URI objectToUri(Blob object)
+  public static URI objectToUri(GoogleStorage.GoogleStorageObjectMetadata object)
   {
     return objectToCloudObjectLocation(object).toUri(GoogleStorageDruidModule.SCHEME_GS);
   }
 
-  public static CloudObjectLocation objectToCloudObjectLocation(Blob object)
+  public static CloudObjectLocation objectToCloudObjectLocation(GoogleStorage.GoogleStorageObjectMetadata object)
   {
     return new CloudObjectLocation(object.getBucket(), object.getName());
   }

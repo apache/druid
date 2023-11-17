@@ -40,9 +40,6 @@ public class GoogleOutputConfig
   private final File tempDir;
 
   @JsonProperty
-  private boolean chunkedDownloads = false;
-
-  @JsonProperty
   private HumanReadableBytes chunkSize = new HumanReadableBytes("100MiB");
 
   @JsonProperty
@@ -52,7 +49,6 @@ public class GoogleOutputConfig
       final String bucket,
       final String prefix,
       final File tempDir,
-      @Nullable final Boolean chunkedDownloads,
       @Nullable final HumanReadableBytes chunkSize,
       @Nullable final Integer maxRetry
   )
@@ -60,9 +56,7 @@ public class GoogleOutputConfig
     this.bucket = bucket;
     this.prefix = prefix;
     this.tempDir = tempDir;
-    if (chunkedDownloads != null) {
-      this.chunkedDownloads = chunkedDownloads;
-    }
+
     if (chunkSize != null) {
       this.chunkSize = chunkSize;
     }
@@ -84,11 +78,6 @@ public class GoogleOutputConfig
   public File getTempDir()
   {
     return tempDir;
-  }
-
-  public Boolean isChunkedDownloads()
-  {
-    return chunkedDownloads;
   }
 
   public HumanReadableBytes getChunkSize()
@@ -114,7 +103,6 @@ public class GoogleOutputConfig
     return Objects.equals(bucket, that.bucket)
            && Objects.equals(prefix, that.prefix)
            && Objects.equals(tempDir, that.tempDir)
-           && Objects.equals(chunkedDownloads, that.chunkedDownloads)
            && Objects.equals(chunkSize, that.chunkSize)
            && Objects.equals(maxRetry, that.maxRetry);
   }
@@ -122,8 +110,18 @@ public class GoogleOutputConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, prefix, tempDir, chunkedDownloads, chunkSize, maxRetry);
+    return Objects.hash(bucket, prefix, tempDir, chunkSize, maxRetry);
   }
 
-
+  @Override
+  public String toString()
+  {
+    return "GoogleOutputConfig{" +
+           "container='" + bucket + '\'' +
+           ", prefix='" + prefix + '\'' +
+           ", tempDir=" + tempDir +
+           ", chunkSize=" + chunkSize +
+           ", maxRetry=" + maxRetry +
+           '}';
+  }
 }

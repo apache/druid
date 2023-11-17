@@ -66,7 +66,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -537,7 +536,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     CloudObjectLocation location = new CloudObjectLocation(uri);
 
     EasyMock.expect(
-        STORAGE.get(EasyMock.eq(location.getBucket()), EasyMock.eq(location.getPath()), EasyMock.eq(0L))
+        STORAGE.getInputStream(EasyMock.eq(location.getBucket()), EasyMock.eq(location.getPath()), EasyMock.eq(0L))
     ).andReturn(new ByteArrayInputStream(CONTENT)).once();
   }
 
@@ -549,7 +548,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     CompressionUtils.gzip(new ByteArrayInputStream(CONTENT), gzipped);
 
     EasyMock.expect(
-        STORAGE.get(EasyMock.eq(location.getBucket()), EasyMock.eq(location.getPath()), EasyMock.eq(0L))
+        STORAGE.getInputStream(EasyMock.eq(location.getBucket()), EasyMock.eq(location.getPath()), EasyMock.eq(0L))
     ).andReturn(new ByteArrayInputStream(gzipped.toByteArray())).once();
   }
 

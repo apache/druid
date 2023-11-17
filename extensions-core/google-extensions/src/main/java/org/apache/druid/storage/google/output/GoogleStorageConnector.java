@@ -20,10 +20,14 @@
 package org.apache.druid.storage.google.output;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleStorageDruidModule;
 import org.apache.druid.storage.google.GoogleUtils;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
@@ -45,12 +49,12 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   private final GoogleInputDataConfig inputDataConfig;
 
   public GoogleStorageConnector(
-      GoogleStorage storage,
       GoogleOutputConfig config,
+      GoogleStorage googleStorage,
       GoogleInputDataConfig inputDataConfig
   )
   {
-    this.storage = storage;
+    this.storage = googleStorage;
     this.config = config;
     this.inputDataConfig = inputDataConfig;
   }
@@ -91,33 +95,21 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   @Override
   public void deleteFiles(Iterable<String> paths) throws IOException
   {
-    for (String path : paths) {
-      deleteFile(objectPath(path));
-    }
+    storage.batchDelete(config.getBucket(), paths);
   }
 
   @Override
-  public void deleteRecursively(String path) throws IOException
+  public void deleteRecursively(String path)
   {
-    try {
-      /*GoogleUtils.deleteObjectsInPath(
-          storage,
-          inputDataConfig,
-          config.getBucket(),
-          objectPath(config.getPrefix()),
-          p -> true
-      );*/
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    Iterator<String> storageObjectNames = listDir(path);
+    storage.batchDelete(config.getBucket(), () -> storageObjectNames);
   }
 
   @Override
   public Iterator<String> listDir(String dirName)
   {
-    /*final String fullPath = objectPath(dirName);
-    Iterator<StorageObject> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
+    final String fullPath = objectPath(dirName);
+    Iterator<GoogleStorage.GoogleStorageObjectMetadata> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
         storage,
         ImmutableList.of(new CloudObjectLocation(config.getBucket(), fullPath)
                              .toUri(GoogleStorageDruidModule.SCHEME_GS)).iterator(),
@@ -134,47 +126,8 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
             return "";
           }
         }
-    );*/
-    return new Iterator<String>()
-    {
-      @Override
-      public boolean hasNext()
-      {
-        return false;
-      }
-
-      @Override
-      public String next()
-      {
-        return null;
-      }
-    };
+    );
   }
-
-  /*@Override
-  public InputStream read(String path) throws IOException
-  {
-    if (config.isChunkedDownloads()) {
-      return super.read(path);
-    }
-
-    return storage.get(config.getBucket(), objectPath(path));
-  }
-
-  @Override
-  public InputStream readRange(String path, long from, long size)
-  {
-    if (config.isChunkedDownloads()) {
-      return super.readRange(path, from, size);
-    }
-
-    try {
-      return ByteStreams.limit(storage.get(config.getBucket(), objectPath(path), from), size);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }*/
 
   @Override
   public ChunkingStorageConnectorParameters<GoogleInputRange> buildInputParams(String path) throws IOException
@@ -199,12 +152,11 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
       @Override
       public InputStream open(GoogleInputRange googleInputRange) throws IOException
       {
-        long rangeEnd = googleInputRange.getStart() + googleInputRange.getSize() - 1;
-        return storage.getUsingRangeHeaders(
+        return storage.getInputStream(
             googleInputRange.getBucket(),
             googleInputRange.getPath(),
             googleInputRange.getStart(),
-            rangeEnd
+            googleInputRange.getSize()
         );
       }
 
@@ -212,12 +164,11 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
       public InputStream open(GoogleInputRange googleInputRange, long offset) throws IOException
       {
         long rangeStart = googleInputRange.getStart() + offset;
-        long rangeEnd = googleInputRange.getStart() + googleInputRange.getSize() - 1;
-        return storage.getUsingRangeHeaders(
+        return storage.getInputStream(
             googleInputRange.getBucket(),
             googleInputRange.getPath(),
             rangeStart,
-            rangeEnd
+            googleInputRange.getSize()
         );
       }
     });

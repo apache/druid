@@ -22,7 +22,6 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.InputStreamContent;
-import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -145,7 +144,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(testLog)));
 
     replayAll();
 
@@ -167,7 +166,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, offset))
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, offset))
             .andReturn(new ByteArrayInputStream(StringUtils.toUtf8(expectedLog)));
 
     replayAll();
@@ -191,7 +190,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     final String logPath = PREFIX + "/" + TASKID;
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) testLog.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, internalOffset))
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, internalOffset))
             .andReturn(new ByteArrayInputStream(StringUtils.toUtf8(expectedLog)));
 
     replayAll();
@@ -213,7 +212,7 @@ public class GoogleTaskLogsTest extends EasyMockSupport
     final String logPath = PREFIX + "/" + TASKID + ".status.json";
     EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
     EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) taskStatus.length());
-    EasyMock.expect(storage.get(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(taskStatus)));
+    EasyMock.expect(storage.getInputStream(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(taskStatus)));
 
     replayAll();
 
