@@ -111,14 +111,22 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                                         .size(0)
                                                                         .build();
 
+  private final DataSegment ds2TombstoneSegment4000To4001V1 = DataSegment.builder().dataSource(ds2)
+                                                                        .shardSpec(new TombstoneShardSpec())
+                                                                        .interval(new Interval(DateTimes.of("4000"), DateTimes.of("4001")))
+                                                                        .version("1")
+                                                                        .size(0)
+                                                                        .build();
+
   private final DataSegment ds2NumberedSegment1999To2500V2 = DataSegment.builder().dataSource(ds2)
                                                                         .interval(Intervals.of("1999/2500"))
                                                                         .version("2")
                                                                         .size(0)
                                                                         .build();
 
+
   // An old generation tombstone with 1 core partition instead of the default 0.
-  final DataSegment ds2TombstoneSegment4000ToMaxV1OldGeneration = ds2TombstoneSegment4000ToMaxV1.withShardSpec(
+  final DataSegment ds2TombstoneSegment4000ToMaxV1With1CorePartition = ds2TombstoneSegment4000ToMaxV1.withShardSpec(
       new TombstoneShardSpec() {
         @Override
         @JsonProperty("partitions")
@@ -136,8 +144,11 @@ public class MarkDanglingSegmentsAsUnusedTest
     segmentsMetadataManager = new TestSegmentsMetadataManager();
   }
 
+  /**
+   * Half inifinity tombstones overlapping used overshadowed segments shouldn't be marked as unused.
+   */
   @Test
-  public void testDanglingTombstonesWithOvershadowedSegment()
+  public void testTombstonesWithUsedOvershadowedSegment()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1NumberedSegmentMinToMaxV0,
@@ -161,8 +172,11 @@ public class MarkDanglingSegmentsAsUnusedTest
     runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
+  /**
+   * Half inifinity tombstones that don't overlap with any other used segment should be marked as unused.
+   */
   @Test
-  public void testDanglingTombstonesWithNoOvershadowedSegments()
+  public void testTombstonesWithNoUsedOvershadowedSegments()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1TombstoneSegmentMinTo2000V1,
@@ -185,8 +199,11 @@ public class MarkDanglingSegmentsAsUnusedTest
     runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
+  /**
+   * Half inifinity tombstones that don't overlap with any other used segment should be marked as unused.
+   */
   @Test
-  public void testOvershadowedDanglingTombstones()
+  public void testOvershadowedTombstones()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1TombstoneSegmentMinTo2000V1,
@@ -214,8 +231,24 @@ public class MarkDanglingSegmentsAsUnusedTest
     runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
+  /**
+   * <p>
+   * Datasource 1 has the following half-infinity tombstones:
+   * <li> {@link #ds1TombstoneSegmentMinTo2000V1} overlaps with {@link #ds1TombstoneSegmentMinTo2000V2}, so cannot be marked as unused. </li>
+   * <li> {@link #ds1TombstoneSegmentMinTo2000V2} overlaps with {@link #ds1TombstoneSegmentMinTo2000V1}, so cannot be marked as unused. </li>
+   * <li> {@link #ds1TombstoneSegment2001ToMaxV1} doesn't overlap with any other segment and can be marked as unused. </li>
+   *
+   * Note that {@link #ds1TombstoneSegmentMinTo2000V2} will be marked as unused by {@link MarkOvershadowedSegmentsAsUnused} duty
+   * and then subsequently {@link #ds1TombstoneSegmentMinTo2000V1} will be marked as unused by the {@link MarkDanglingTombstonesAsUnused} duty
+   * if there's no overlap.
+   * </p>
+   *
+   * <p>
+   * Datasource 2 has half eternity tombstones that don't overlap with any other segment, so both can be removed.
+   * </p>
+   */
   @Test
-  public void testDanglingTombstonesInMultipleDatasources()
+  public void testTombstonesInMultipleDatasources()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1TombstoneSegmentMinTo2000V1,
@@ -227,9 +260,6 @@ public class MarkDanglingSegmentsAsUnusedTest
         ds2TombstoneSegment4000ToMaxV1
     );
 
-    // Datasource 1 has one overshadowed dangling tombstone, ds1TombstoneSegmentMinTo2000V1, and one non-overshadowed dangling
-    // tombstone, ds1TombstoneSegment2001ToMaxV1. The latter can be removed, while the former cannot be removed.
-    // Datasource 2 has 2 non-overshadowed dangling tombstones that should be removed.
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of(
         ds1TombstoneSegmentMinTo2000V1,
         ds1NumberedSegment2000To2001V1,
@@ -258,7 +288,7 @@ public class MarkDanglingSegmentsAsUnusedTest
   }
 
   @Test
-  public void testDanglingTombstonesWithPartiallyOverlappingUnderlyingSegment()
+  public void testTombstonesWithPartiallyOverlappingUnderlyingSegment()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds2TombstoneSegment1995To2005V0,
@@ -289,7 +319,7 @@ public class MarkDanglingSegmentsAsUnusedTest
   }
 
   @Test
-  public void testDanglingTombstonesWithPartiallyOverlappingHigherVersionSegment()
+  public void testTombstonesWithPartiallyOverlappingHigherVersionSegment()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds2TombstoneSegmentMinTo2000V1,
@@ -320,17 +350,16 @@ public class MarkDanglingSegmentsAsUnusedTest
   }
 
   /**
-   * A test to verify that "old generation" tombstone shard specs
-   * i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 1 aren't cleaned up.
+   * Finite-interval tombstones shouldn't be marked as unused.
    */
   @Test
-  public void testDanglingTombstoneWith1CorePartition()
+  public void testFiniteIntervalTombstone()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
-        ds2TombstoneSegment4000ToMaxV1OldGeneration
+        ds2TombstoneSegment4000To4001V1
     );
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of(
-        ds2TombstoneSegment4000ToMaxV1OldGeneration
+        ds2TombstoneSegment4000To4001V1
     );
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
@@ -338,7 +367,31 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                                .getUsedSegmentsTimelinesPerDataSource()
                                                                .get(ds2);
 
-    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1OldGeneration));
+    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000To4001V1));
+
+    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+  }
+
+  /**
+   * Tombstones with 1 core partition i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 1  shouldn't be
+   * marked as unused.
+   */
+  @Test
+  public void testDanglingTombstoneWith1CorePartition()
+  {
+    final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
+        ds2TombstoneSegment4000ToMaxV1With1CorePartition
+    );
+    final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of(
+        ds2TombstoneSegment4000ToMaxV1With1CorePartition
+    );
+    final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
+
+    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+                                                               .getUsedSegmentsTimelinesPerDataSource()
+                                                               .get(ds2);
+
+    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1With1CorePartition));
 
     runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }

@@ -57,8 +57,8 @@ import java.util.Set;
  * segment.
  * </p>
  * <p>
- * Only tombstones with 0 core partitions is considered as candidate segments. Tombstones with 1 core partition
- * i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 1 are ignored by this duty because it can potentially
+ * Only tombstones with 0 core partitions is considered as candidate segments. Earlier generation tombstones with 1 core
+ * partition ({@link TombstoneShardSpec#getNumCorePartitions()} == 1) are ignored by this duty because it can potentially
  * cause data loss in a concurrent append and replace scenario and needs to be manually cleaned up. See this
  * <a href="https://github.com/apache/druid/pull/15379">for details</a>.
  * </p>
