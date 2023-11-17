@@ -34,6 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,8 +42,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Marks dangling tombstones not overshadowed by currently served segments as unused. A dangling segment must fit both of the criteria:
- * <li> It is a tombstone that starts at {@link DateTimes#MIN} or ends at {@link DateTimes#MAX} and </li>
+ * Marks dangling tombstones not overshadowed by currently served segments as unused. A dangling segment must fit all the criteria:
+ * <li> It is a tombstone that starts at {@link DateTimes#MIN} or ends at {@link DateTimes#MAX} </li>
+ * <li> It has has 0 core partitions
+ * i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 0</li>
  * <li> It does not overlap with any segment in the datasource's used segments timeline </li>
  *
  * <p>
@@ -50,7 +53,14 @@ import java.util.Set;
  * don't honor the preferred segment granularity specified at ingest time to cover an underlying segment with
  * {@link Granularities#ALL} as it can generate too many segments per time chunk and cause an OOM. The infinite-interval
  * tombstones make it hard to append data on the end of a data set that started out with an {@link Granularities#ALL} eternity and then
- * moved to actual time grains, so the compromise is that the coordinator will remove these segments as long as it doesn't overlap anything.
+ * moved to actual time grains, so the compromise is that the coordinator will remove these segments as long as it doesn't overlap any other
+ * segment.
+ * </p>
+ * <p>
+ * Only tombstones with 0 core partitions is considered as candidate segments. Tombstones with 1 core partition
+ * i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 1 are ignored by this duty because it can potentially
+ * cause data loss in a concurrent append and replace scenario and needs to be manually cleaned up. See this
+ * <a href="https://github.com/apache/druid/pull/15379">for details</a>.
  * </p>
  * <p>
  * The overlapping condition is necessary as an underlying segment that partially or fully overlaps with an infinite-interval
@@ -154,7 +164,7 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
 
   private boolean isTombstoneWithInfiniteStartOrEnd(final DataSegment segment)
   {
-    return segment.isTombstone() && (
+    return segment.isTombstone() && segment.getShardSpec().getNumCorePartitions() == 0 && (
         DateTimes.MIN.equals(segment.getInterval().getStart()) ||
         DateTimes.MAX.equals(segment.getInterval().getEnd()));
   }

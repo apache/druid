@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.DruidServer;
@@ -83,7 +84,6 @@ public class MarkDanglingSegmentsAsUnusedTest
   final DataSegment ds1TombstoneSegmentMinTo2000V2 = ds1TombstoneSegmentMinTo2000V1.withVersion("2");
   final DataSegment ds1TombstoneSegment2001ToMaxV2 = ds1TombstoneSegment2001ToMaxV1.withVersion("2");
 
-
   private final DataSegment ds2TombstoneSegment1995To2005V0 = DataSegment.builder().dataSource(ds2)
                                                                          .shardSpec(new TombstoneShardSpec())
                                                                          .interval(Intervals.of("1995/2005"))
@@ -116,6 +116,17 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                                         .version("2")
                                                                         .size(0)
                                                                         .build();
+
+  // An old generation tombstone with 1 core partition instead of the default 0.
+  final DataSegment ds2TombstoneSegment4000ToMaxV1OldGeneration = ds2TombstoneSegment4000ToMaxV1.withShardSpec(
+      new TombstoneShardSpec() {
+        @Override
+        @JsonProperty("partitions")
+        public int getNumCorePartitions() {
+          return 1;
+        }
+      });
+
 
   private TestSegmentsMetadataManager segmentsMetadataManager;
 
@@ -297,13 +308,37 @@ public class MarkDanglingSegmentsAsUnusedTest
 
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
 
-    SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
-                                                         .getUsedSegmentsTimelinesPerDataSource()
-                                                         .get(ds2);
+    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+                                                               .getUsedSegmentsTimelinesPerDataSource()
+                                                               .get(ds2);
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegmentMinTo2000V1));
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment1999To2500V2));
+
+    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+  }
+
+  /**
+   * A test to verify that "old generation" tombstone shard specs
+   * i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 1 aren't cleaned up.
+   */
+  @Test
+  public void testDanglingTombstoneWith1CorePartition()
+  {
+    final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
+        ds2TombstoneSegment4000ToMaxV1OldGeneration
+    );
+    final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of(
+        ds2TombstoneSegment4000ToMaxV1OldGeneration
+    );
+    final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
+
+    final SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+                                                               .getUsedSegmentsTimelinesPerDataSource()
+                                                               .get(ds2);
+
+    Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1OldGeneration));
 
     runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }

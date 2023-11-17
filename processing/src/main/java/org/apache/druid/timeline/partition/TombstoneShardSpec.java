@@ -69,7 +69,7 @@ public class TombstoneShardSpec implements ShardSpec
   @JsonProperty("partitions")
   public int getNumCorePartitions()
   {
-    return 1;
+    return 0;
   }
 
   @Override
