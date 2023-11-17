@@ -93,7 +93,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   }
 
   @Override
-  public void deleteFiles(Iterable<String> paths) throws IOException
+  public void deleteFiles(Iterable<String> paths)
   {
     storage.batchDelete(config.getBucket(), paths);
   }
