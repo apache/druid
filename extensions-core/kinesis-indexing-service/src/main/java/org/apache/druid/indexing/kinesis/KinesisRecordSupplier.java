@@ -210,6 +210,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         // used for retrying on InterruptedException
         GetRecordsResult recordsResult = null;
         OrderedPartitionableRecord<String, String, ByteEntity> currRecord;
+        long recordBufferOfferWaitMillis;
         try {
 
           if (shardIterator == null) {
@@ -225,15 +226,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
             recordsResult = null;
 
-            if (!records.offer(
+            recordBufferOfferWaitMillis = recordBufferOfferTimeout;
+            while (!records.offer(
                 new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(currRecord, 0),
-                recordBufferOfferTimeout,
+                recordBufferOfferWaitMillis,
                 TimeUnit.MILLISECONDS
             )) {
               log.warn("Kinesis records are being processed slower than they are fetched. "
                        + "OrderedPartitionableRecord buffer full, retrying in [%,dms].",
                        recordBufferFullWait);
-              scheduleBackgroundFetch(recordBufferFullWait);
+              recordBufferOfferWaitMillis = recordBufferFullWait;
             }
 
             return;
@@ -293,9 +295,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
             // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
             // from this message and back off for a bit to let the buffer drain before retrying.
-            if (!records.offer(
+            recordBufferOfferWaitMillis = recordBufferOfferTimeout;
+            while (!records.offer(
                 new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(currRecord, recordSize),
-                recordBufferOfferTimeout,
+                recordBufferOfferWaitMillis,
                 TimeUnit.MILLISECONDS
             )) {
               log.warn(
@@ -303,16 +306,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
                   + "OrderedPartitionableRecord buffer full, storing iterator and retrying in [%,dms].",
                   recordBufferFullWait
               );
-
-              shardIterator = kinesis.getShardIterator(
-                  currRecord.getStream(),
-                  currRecord.getPartitionId(),
-                  ShardIteratorType.AT_SEQUENCE_NUMBER.toString(),
-                  currRecord.getSequenceNumber()
-              ).getShardIterator();
-
-              scheduleBackgroundFetch(recordBufferFullWait);
-              return;
+              recordBufferOfferWaitMillis = recordBufferFullWait;
             }
           }
 
@@ -1055,8 +1049,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         new MemoryBoundLinkedBlockingQueue<>(recordBufferSizeBytes);
 
     records.stream()
-           .filter(x -> !partitions.contains(x.getData().getStreamPartition()))
-           .forEachOrdered(newQ::offer);
+        .filter(x -> !partitions.contains(x.getData().getStreamPartition()))
+        .forEachOrdered(x -> {
+          if (!newQ.offer(x)) {
+            throw new StreamException(new ISE(StringUtils.format(
+                "Failed to insert item to new queue when resetting background fetch. "
+                + "[stream: '%s', partitionId: '%s', sequenceNumber: '%s']",
+                x.getData().getStream(),
+                x.getData().getPartitionId(),
+                x.getData().getSequenceNumber()
+            )));
+          }
+        });
 
     records = newQ;
 
