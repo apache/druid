@@ -83,7 +83,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("icebergFilter") @Nullable IcebergFilter icebergFilter,
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
       @JsonProperty("warehouseSource") InputSourceFactory warehouseSource,
-      @JsonProperty("snapshotTime") DateTime snapshotTime
+      @JsonProperty("snapshotTime") @Nullable DateTime snapshotTime
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -170,6 +170,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return icebergFilter;
   }
 
+  @Nullable
   @JsonProperty
   public DateTime getSnapshotTime()
   {
