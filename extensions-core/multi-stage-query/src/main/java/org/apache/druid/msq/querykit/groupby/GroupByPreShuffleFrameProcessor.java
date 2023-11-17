@@ -43,6 +43,7 @@ import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -74,6 +75,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private Yielder<ResultRow> resultYielder;
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
+  private SegmentsInputSlice handedOffSegments = null;
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
@@ -100,18 +102,20 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException
+  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
     if (resultYielder == null) {
       final DataServerQueryResult<ResultRow> dataServerQueryResult =
           dataServerQueryHandler.fetchRowsFromDataServer(groupingEngine.prepareGroupByQuery(query), Function.identity(), closer);
+      handedOffSegments = dataServerQueryResult.getHandedOffSegments();
+      log.info("Query to dataserver for segments found [%d] handed off segments", handedOffSegments.getDescriptors().size());
       resultYielder = dataServerQueryResult.getResultsYielder();
     }
 
     populateFrameWriterAndFlushIfNeeded();
 
     if (resultYielder == null || resultYielder.isDone()) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(handedOffSegments);
     } else {
       return ReturnOrAwait.runAgain();
     }

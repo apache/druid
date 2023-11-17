@@ -79,9 +79,9 @@ public class TableInputSpecSlicer implements InputSpecSlicer
       }
     }
 
-    List<WeightedInputInstance> groupedServedSegments = createWeightedSegmentSet(prunedServedSegments);
+    final List<WeightedInputInstance> groupedServedSegments = createWeightedSegmentSet(prunedServedSegments);
 
-    List<List<WeightedInputInstance>> assignments =
+    final List<List<WeightedInputInstance>> assignments =
         SlicerUtils.makeSlicesStatic(
             Iterators.concat(groupedServedSegments.iterator(), prunedPublishedSegments.iterator()),
             WeightedInputInstance::getWeight,
@@ -256,28 +256,28 @@ public class TableInputSpecSlicer implements InputSpecSlicer
 
   private static class DataServerRequest implements WeightedInputInstance
   {
+    private static final long DATA_SERVER_FACTOR = 5000L;
     private final List<DataSegmentWithInterval> segments;
     private final DruidServerMetadata serverMetadata;
-    private final Long weight;
 
     public DataServerRequest(DruidServerMetadata serverMetadata, List<DataSegmentWithInterval> segments)
     {
       this.segments = Preconditions.checkNotNull(segments, "segments");
       this.serverMetadata = Preconditions.checkNotNull(serverMetadata, "server");
-      this.weight = (long) segments.size();
     }
 
     @Override
     public long getWeight()
     {
-      return weight;
+      return segments.size() * DATA_SERVER_FACTOR;
     }
 
     public DataServerRequestDescriptor toDataServerRequestDescriptor()
     {
       return new DataServerRequestDescriptor(
           serverMetadata,
-          segments.stream().map(segment -> segment.segment.toDescriptor()).collect(Collectors.toList())
+          segments.stream().map(
+              DataSegmentWithInterval::toRichSegmentDescriptor).collect(Collectors.toList())
       );
     }
   }

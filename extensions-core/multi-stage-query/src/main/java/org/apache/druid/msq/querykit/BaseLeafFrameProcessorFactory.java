@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
@@ -42,6 +43,7 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
 import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
@@ -145,17 +147,42 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
             warningPublisher
         );
 
+    BaseLeafFrameProcessorFactory baseLeafFrameProcessorFactory = this;
     // Function to generate a processor manger for the regular processors, which run after the segmentMapFnProcessor.
-    final Function<Function<SegmentReference, SegmentReference>, ProcessorManager<Object, Long>> processorManagerFn =
-        segmentMapFn ->
-            new BaseLeafFrameProcessorManager(
-                processorBaseInputs,
-                segmentMapFn,
+    final Function<List<Function<SegmentReference, SegmentReference>>, ProcessorManager<Object, Long>> processorManagerFn
+        = segmentMapFnList -> {
+      final Function<SegmentReference, SegmentReference> segmentMapFunction = Iterables.getOnlyElement(segmentMapFnList);
+      return new ChainedProcessorManager<>(
+          new BaseLeafFrameProcessorManager(
+              processorBaseInputs,
+              segmentMapFunction,
+              frameWriterFactoryQueue,
+              channelQueue,
+              frameContext,
+              baseLeafFrameProcessorFactory
+          ),
+          objects -> {
+            if (objects.isEmpty()) {
+              return ProcessorManagers.none();
+            }
+            List<InputSlice> handedOffSegments = new ArrayList<>();
+            for (Object o : objects) {
+              if (o instanceof SegmentsInputSlice) {
+                SegmentsInputSlice slice = (SegmentsInputSlice) o;
+                handedOffSegments.add(slice);
+              }
+            }
+            return new BaseLeafFrameProcessorManager(
+                readBaseInputs(stageDefinition, handedOffSegments, inputSliceReader, counters, warningPublisher),
+                segmentMapFunction,
                 frameWriterFactoryQueue,
                 channelQueue,
                 frameContext,
-                this
+                baseLeafFrameProcessorFactory
             );
+          }
+      );
+    };
 
     //noinspection rawtypes
     final ProcessorManager processorManager;
@@ -163,9 +190,9 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     if (segmentMapFnProcessor == null) {
       final Function<SegmentReference, SegmentReference> segmentMapFn =
           query.getDataSource().createSegmentMapFunction(query, new AtomicLong());
-      processorManager = processorManagerFn.apply(segmentMapFn);
+      processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
-      processorManager = new ChainedProcessorManager<>(segmentMapFnProcessor, processorManagerFn);
+      processorManager = new ChainedProcessorManager<>(ProcessorManagers.of(ImmutableList.of(segmentMapFnProcessor)), processorManagerFn);
     }
 
     //noinspection unchecked,rawtypes

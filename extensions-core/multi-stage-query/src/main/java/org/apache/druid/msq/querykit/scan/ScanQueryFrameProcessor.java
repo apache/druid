@@ -56,6 +56,7 @@ import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.Druids;
@@ -107,6 +108,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
+  private SegmentsInputSlice handedOffSegments = null;
 
   public ScanQueryFrameProcessor(
       final ScanQuery query,
@@ -193,7 +195,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler) throws IOException
+  protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(final DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
     if (cursor == null) {
       ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
@@ -203,7 +205,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
               ScanQueryFrameProcessor::mappingFunction,
               closer
           );
-
+      handedOffSegments = dataServerQueryResult.getHandedOffSegments();
+      log.info("Query to dataserver for segments found [%d] handed off segments", handedOffSegments.getDescriptors().size());
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(preparedQuery, jsonMapper);
       Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
           dataServerQueryResult.getResultsYielder(),
@@ -216,7 +219,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       if (cursorYielder.isDone()) {
         // No cursors!
         cursorYielder.close();
-        return ReturnOrAwait.returnObject(Unit.instance());
+        return ReturnOrAwait.returnObject(handedOffSegments);
       } else {
         final long rowsFlushed = setNextCursor(cursorYielder.get(), null);
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
@@ -231,7 +234,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
 
     if (cursor.isDone() && (frameWriter == null || frameWriter.getNumRows() == 0)) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(handedOffSegments);
     } else {
       return ReturnOrAwait.runAgain();
     }

@@ -29,13 +29,13 @@ import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
@@ -56,6 +56,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Class responsible for querying dataservers and retriving results for a given query. Also queries the coordinator
@@ -150,18 +151,16 @@ public class DataServerQueryHandler
     final ServiceLocation serviceLocation = ServiceLocation.fromDruidServerMetadata(druidServerMetadata);
     final DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
 
-    Sequence<QueryType> returnSequence = Sequences.empty();
+    Yielder<RowType> yielder;
     // lOOp start
-    Sequence<QueryType> sequence;
     List<SegmentDescriptor> pendingSegments = segmentDescriptors;
     try {
-      sequence =
+      yielder =
           RetryUtils.retry(
-              () -> dataServerClient.run(
-                  Queries.withSpecificSegments(
-                      preparedQuery,
-                      pendingSegments
-                  ), responseContext, queryResultType, closer).map(preComputeManipulatorFn),
+              () -> closer.register(createYielder(
+                  dataServerClient.run(
+                      Queries.withSpecificSegments(preparedQuery, pendingSegments),
+                      responseContext, queryResultType, closer).map(preComputeManipulatorFn), mappingFunction)),
               throwable -> !(throwable instanceof QueryInterruptedException
                              && throwable.getCause() instanceof InterruptedException),
               numRetriesOnMissingSegments
@@ -170,14 +169,15 @@ public class DataServerQueryHandler
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-    List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
+    List<RichSegmentDescriptor> missingSegments = getMissingSegments(responseContext);
 
-    List<SegmentDescriptor> nonHandedOffSegments = findNonHandedOffSegments(missingSegments);
+    List<RichSegmentDescriptor> nonHandedOffSegments = findNonHandedOffSegments(missingSegments);
 
     if (nonHandedOffSegments.isEmpty()) {
       return new DataServerQueryResult<>(
-          closer.register(createYielder(sequence, mappingFunction)),
-          missingSegments
+          yielder,
+          missingSegments,
+          dataSource
       );
     } else {
       throw new RE("Segments [%s] not found", nonHandedOffSegments);
@@ -201,13 +201,13 @@ public class DataServerQueryHandler
   /**
    * Retreives the list of missing segments from the response context.
    */
-  private static List<SegmentDescriptor> getMissingSegments(final ResponseContext responseContext)
+  private static List<RichSegmentDescriptor> getMissingSegments(final ResponseContext responseContext)
   {
     List<SegmentDescriptor> missingSegments = responseContext.getMissingSegments();
     if (missingSegments == null) {
       return ImmutableList.of();
     }
-    return missingSegments;
+    return missingSegments.stream().map(segment -> new RichSegmentDescriptor(segment, null)).collect(Collectors.toList());
   }
 
   /**
@@ -215,14 +215,14 @@ public class DataServerQueryHandler
    * <br>
    * See {@link  org.apache.druid.server.http.DataSourcesResource#isHandOffComplete(String, String, int, String)}
    */
-  private List<SegmentDescriptor> findNonHandedOffSegments( // TODO: change name
-      List<SegmentDescriptor> segmentDescriptors
+  private List<RichSegmentDescriptor> findNonHandedOffSegments( // TODO: change name
+      List<RichSegmentDescriptor> segmentDescriptors
   )
   {
     try {
-      List<SegmentDescriptor> missingSegments = new ArrayList<>();
+      List<RichSegmentDescriptor> missingSegments = new ArrayList<>();
 
-      for (SegmentDescriptor segmentDescriptor : segmentDescriptors) {
+      for (RichSegmentDescriptor segmentDescriptor : segmentDescriptors) {
         Boolean wasHandedOff = FutureUtils.get(
             coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor),
             true

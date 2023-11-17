@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -80,7 +81,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   @Override
   public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
-    final ReturnOrAwait<Unit> retVal;
+    //noinspection rawtypes
+    final ReturnOrAwait retVal;
 
     if (baseInput.hasSegment()) {
       retVal = runWithSegment(baseInput.getSegment());
@@ -90,8 +92,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
       retVal = runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
     }
 
-    //noinspection rawtypes,unchecked
-    return (ReturnOrAwait) retVal;
+    //noinspection rawtype,unchecked
+    return retVal;
   }
 
   @Override
@@ -109,7 +111,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
 
   protected abstract ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException;
 
-  protected abstract ReturnOrAwait<Unit> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException;
+  protected abstract ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException;
 
   protected abstract ReturnOrAwait<Unit> runWithInputChannel(
       ReadableFrameChannel inputChannel,

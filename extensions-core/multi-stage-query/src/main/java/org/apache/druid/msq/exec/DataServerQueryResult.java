@@ -1,28 +1,31 @@
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
 
 import java.util.List;
 
 /**
  * Contains the results for a query to a dataserver. {@link #resultsYielder} contains the results.
- * {@link #handedOffSegments} contains the list of segments which were not found on the dataserver.
+ * {@link #segmentsInputSlice} contains the list of segments which were not found on the dataserver.
  */
 public class DataServerQueryResult<RowType>
 {
 
   private final Yielder<RowType> resultsYielder;
 
-  private final List<SegmentDescriptor> handedOffSegments;
+  private final SegmentsInputSlice segmentsInputSlice;
 
   public DataServerQueryResult(
       Yielder<RowType> resultsYielder,
-      List<SegmentDescriptor> handedOffSegments
+      List<RichSegmentDescriptor> handedOffSegments,
+      String dataSource
   )
   {
     this.resultsYielder = resultsYielder;
-    this.handedOffSegments = handedOffSegments;
+    this.segmentsInputSlice = new SegmentsInputSlice(dataSource, handedOffSegments, ImmutableList.of());
   }
 
   public Yielder<RowType> getResultsYielder()
@@ -30,8 +33,8 @@ public class DataServerQueryResult<RowType>
     return resultsYielder;
   }
 
-  public List<SegmentDescriptor> getHandedOffSegments()
+  public SegmentsInputSlice getHandedOffSegments()
   {
-    return handedOffSegments;
+    return segmentsInputSlice;
   }
 }
