@@ -2961,25 +2961,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(dataSegment, segmentTimeline.lookup(interval).get(0).getObject().getChunk(1).getObject());
   }
 
-  /**
-   * This tests the behavior of "old generation" tombstones with 1 core partition.
-   */
   @Test
   public void testTimelineWith1CorePartitionTombstone() throws IOException
   {
+    // Register the old generation tombstone spec for this test.
+    mapper.registerSubtypes(TombstoneShardSpecWith1CorePartition.class);
+
     final Interval interval = Intervals.of("2020/2021");
     // Create and commit an old generation tombstone with 1 core partition
     final DataSegment tombstoneSegment = createSegment(
         interval,
         "version",
-        new TombstoneShardSpec() {
-          @Override
-          @JsonProperty("partitions")
-          public int getNumCorePartitions()
-          {
-            return 1;
-          }
-        }
+        new TombstoneShardSpecWith1CorePartition()
     );
 
     final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
@@ -3074,5 +3067,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           }
         }
     );
+  }
+
+  /**
+   * This test-only shard type is to test the behavior of "old generation" tombstones with 1 core partition.
+   */
+  private static class TombstoneShardSpecWith1CorePartition extends TombstoneShardSpec
+  {
+    @Override
+    @JsonProperty("partitions")
+    public int getNumCorePartitions()
+    {
+      return 1;
+    }
   }
 }
