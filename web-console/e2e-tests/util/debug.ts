@@ -26,7 +26,9 @@ export async function saveScreenshotIfError(
   try {
     await test();
   } catch (e) {
-    await page.screenshot({ path: filenamePrefix + 'error-screenshot.png' });
+    const path = filenamePrefix + 'error-screenshot.png';
+    console.log(`Writing error screenshot to: ${path}`);
+    await page.screenshot({ path });
     throw e;
   }
 }
