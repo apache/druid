@@ -23,18 +23,21 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
+import org.apache.druid.msq.input.table.DataServerSelector;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Queries;
@@ -48,12 +51,19 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -65,7 +75,7 @@ import java.util.stream.Collectors;
 public class DataServerQueryHandler
 {
   private static final Logger log = new Logger(DataServerQueryHandler.class);
-  private static final int DEFAULT_NUM_TRIES = 5;
+  private static final int DEFAULT_NUM_TRIES = 3;
   private final String dataSource;
   private final ChannelCounters channelCounters;
   private final ServiceClientFactory serviceClientFactory;
@@ -136,52 +146,82 @@ public class DataServerQueryHandler
 
     final SegmentSource includeSegmentSource = MultiStageQueryContext.getSegmentSources(query.context());
 
+    final Queue<DataServerRequestDescriptor> dataServerRequestDescriptorQueue = new ArrayDeque<>();
+    // Add the initial request to the queue.
+    dataServerRequestDescriptorQueue.add(dataServerRequestDescriptor);
 
-    DruidServerMetadata druidServerMetadata = dataServerRequestDescriptor.getServerMetadata();
-    List<SegmentDescriptor> segmentDescriptors = dataServerRequestDescriptor.getSegments();
-    log.debug(
-        "Querying server[%s] for segments[%s], retries:[%d]",
-        druidServerMetadata,
-        segmentDescriptors,
-        numRetriesOnMissingSegments
-    );
+    Sequence<QueryType> returnSequence = Sequences.empty();
+    final List<RichSegmentDescriptor> handedOffSegments = new ArrayList<>();
 
-    final ResponseContext responseContext = new DefaultResponseContext();
+    int retryCount = 0;
+    while (retryCount < numRetriesOnMissingSegments) {
+      while (!dataServerRequestDescriptorQueue.isEmpty()) {
+        DataServerRequestDescriptor requestDescriptor = dataServerRequestDescriptorQueue.remove();
 
-    final ServiceLocation serviceLocation = ServiceLocation.fromDruidServerMetadata(druidServerMetadata);
-    final DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
+        log.debug(
+            "Querying server[%s] for segments[%s], retry:[%d]/[%d]",
+            requestDescriptor.getServerMetadata(),
+            requestDescriptor.getSegments(),
+            retryCount,
+            numRetriesOnMissingSegments
+        );
 
-    Yielder<RowType> yielder;
-    // lOOp start
-    List<SegmentDescriptor> pendingSegments = segmentDescriptors;
-    try {
-      yielder =
-          RetryUtils.retry(
-              () -> closer.register(createYielder(
-                  dataServerClient.run(
-                      Queries.withSpecificSegments(preparedQuery, pendingSegments),
-                      responseContext, queryResultType, closer).map(preComputeManipulatorFn), mappingFunction)),
-              throwable -> !(throwable instanceof QueryInterruptedException
-                             && throwable.getCause() instanceof InterruptedException),
-              numRetriesOnMissingSegments
-          );
+        final ServiceLocation serviceLocation = ServiceLocation.fromDruidServerMetadata(requestDescriptor.getServerMetadata());
+        final DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
+
+        Sequence<QueryType> sequence = null;
+        List<RichSegmentDescriptor> missingSegments;
+
+        try {
+          final ResponseContext responseContext = new DefaultResponseContext();
+          sequence =
+              RetryUtils.retry(
+                  () -> dataServerClient.run(
+                      Queries.withSpecificSegments(
+                          preparedQuery,
+                          requestDescriptor.getSegments().stream().map(RichSegmentDescriptor::toSegmentDescritor).collect(Collectors.toList())
+                      ), responseContext, queryResultType, closer).map(preComputeManipulatorFn),
+                  throwable -> !(throwable instanceof QueryInterruptedException
+                                 && throwable.getCause() instanceof InterruptedException),
+                  5
+              );
+          missingSegments = getMissingSegments(responseContext);
+        }
+        catch (QueryInterruptedException e) {
+          if (e.getCause() instanceof RpcException) {
+            // In the case that all the realtime servers for a segment are gone (for example, if they were scaled down),
+            // we would also be unable to fetch the segment.
+            missingSegments = requestDescriptor.getSegments();
+          } else {
+            throw new RuntimeException(e); // TODO: better exception
+          }
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+
+        // Add results
+        if (sequence != null) {
+          returnSequence = Sequences.concat(returnSequence, sequence);
+        }
+
+        if (missingSegments.isEmpty()) {
+          continue;
+        }
+
+        List<RichSegmentDescriptor> notHandedOffSegments = findNonHandedOffSegments(missingSegments);
+        for (RichSegmentDescriptor descriptor : missingSegments) {
+          if (!notHandedOffSegments.contains(descriptor)) {
+            handedOffSegments.add(descriptor);
+          }
+        }
+
+        dataServerRequestDescriptorQueue.addAll(createWeightedSegmentSet(notHandedOffSegments, includeSegmentSource));
+      }
+      retryCount++;
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-    List<RichSegmentDescriptor> missingSegments = getMissingSegments(responseContext);
 
-    List<RichSegmentDescriptor> nonHandedOffSegments = findNonHandedOffSegments(missingSegments);
-
-    if (nonHandedOffSegments.isEmpty()) {
-      return new DataServerQueryResult<>(
-          yielder,
-          missingSegments,
-          dataSource
-      );
-    } else {
-      throw new RE("Segments [%s] not found", nonHandedOffSegments);
-    }
+    return new DataServerQueryResult<>(closer.register(createYielder(returnSequence, mappingFunction)), handedOffSegments, dataSource);
   }
 
   private <RowType, QueryType> Yielder<RowType> createYielder(
@@ -196,6 +236,43 @@ public class DataServerQueryHandler
                          return row;
                        })
     );
+  }
+
+  private List<DataServerRequestDescriptor> createWeightedSegmentSet(List<RichSegmentDescriptor> segmentDescriptors, SegmentSource includeSegmentSource)
+  {
+    List<DataServerRequestDescriptor> requestDescriptors = new ArrayList<>();
+    final Map<DruidServerMetadata, Set<RichSegmentDescriptor>> serverVsSegmentsMap = new HashMap<>();
+    Iterable<ImmutableSegmentLoadInfo> immutableSegmentLoadInfos
+        = coordinatorClient.fetchServerViewSegments(dataSource,
+                                                    segmentDescriptors.stream()
+                                                                      .map(SegmentDescriptor::getInterval)
+                                                                      .collect(Collectors.toList()));
+
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : immutableSegmentLoadInfos) {
+      Set<DruidServerMetadata> collect = segmentLoadInfo.getServers()
+                                                        .stream()
+                                                        .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
+                                                                                                           .contains(
+                                                                                                               druidServerMetadata.getType()))
+                                                        .collect(Collectors.toSet());
+      if (collect.isEmpty()) {
+        throw new RE("Segment not found");
+      }
+
+      DruidServerMetadata druidServerMetadata = DataServerSelector.RANDOM.getSelectServerFunction().apply(collect);
+      serverVsSegmentsMap.computeIfAbsent(druidServerMetadata, ignored -> new HashSet<>());
+      serverVsSegmentsMap.get(druidServerMetadata).add(new RichSegmentDescriptor(segmentLoadInfo.getSegment().toDescriptor(), null));
+    }
+
+    for (Map.Entry<DruidServerMetadata, Set<RichSegmentDescriptor>> druidServerMetadataSetEntry : serverVsSegmentsMap.entrySet()) {
+      DataServerRequestDescriptor dataServerRequest = new DataServerRequestDescriptor(
+          druidServerMetadataSetEntry.getKey(),
+          ImmutableList.copyOf(druidServerMetadataSetEntry.getValue())
+      );
+      requestDescriptors.add(dataServerRequest);
+    }
+
+    return requestDescriptors;
   }
 
   /**

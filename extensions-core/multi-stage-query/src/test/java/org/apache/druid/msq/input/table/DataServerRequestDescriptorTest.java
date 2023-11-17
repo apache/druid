@@ -45,7 +45,7 @@ public class DataServerRequestDescriptorTest
             ServerType.INDEXER_EXECUTOR,
             "tier1", 2
         ),
-        ImmutableList.of(new SegmentDescriptor(Intervals.ETERNITY, "v1", 2))
+        ImmutableList.of(new RichSegmentDescriptor(null, Intervals.ETERNITY, "v1", 2))
     );
 
     final ObjectMapper mapper = TestHelper.makeJsonMapper()

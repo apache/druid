@@ -34,12 +34,12 @@ import java.util.Objects;
 public class DataServerRequestDescriptor
 {
   private final DruidServerMetadata serverMetadata;
-  private final List<SegmentDescriptor> segments;
+  private final List<RichSegmentDescriptor> segments;
 
   @JsonCreator
   public DataServerRequestDescriptor(
       @JsonProperty("serverMetadata") DruidServerMetadata serverMetadata,
-      @JsonProperty("segments") List<SegmentDescriptor> segments
+      @JsonProperty("segments") List<RichSegmentDescriptor> segments
   ) {
     this.segments = segments;
     this.serverMetadata = serverMetadata;
@@ -52,7 +52,7 @@ public class DataServerRequestDescriptor
   }
 
   @JsonProperty("segments")
-  public List<SegmentDescriptor> getSegments()
+  public List<RichSegmentDescriptor> getSegments()
   {
     return segments;
   }

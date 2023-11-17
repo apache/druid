@@ -62,7 +62,8 @@ public class SegmentsInputSliceTest
                     0
                 ),
                 ImmutableList.of(
-                    new SegmentDescriptor(
+                    new RichSegmentDescriptor(
+                        null,
                         Intervals.of("2002/P1M"),
                         "1",
                         0
