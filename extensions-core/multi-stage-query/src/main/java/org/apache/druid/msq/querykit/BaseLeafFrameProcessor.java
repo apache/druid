@@ -29,6 +29,7 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -63,7 +64,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   @Override
   public List<ReadableFrameChannel> inputChannels()
   {
-    if (baseInput.hasSegment()) {
+    if (baseInput.hasSegment() || baseInput.hasDataServerQuery()) {
       return Collections.emptyList();
     } else {
       return Collections.singletonList(baseInput.getChannel());
@@ -82,12 +83,9 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
     final ReturnOrAwait<Unit> retVal;
 
     if (baseInput.hasSegment()) {
-      SegmentWithDescriptor segment = baseInput.getSegment();
-      if (segment.getDescriptor().isLoadedOnServer()) {
-        retVal = runWithLoadedSegment(baseInput.getSegment());
-      } else {
-        retVal = runWithSegment(baseInput.getSegment());
-      }
+      retVal = runWithSegment(baseInput.getSegment());
+    } else if (baseInput.hasDataServerQuery()) {
+      retVal = runWithDataServerQuery(baseInput.getDataServerQuery());
     } else {
       retVal = runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
     }
@@ -110,7 +108,8 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   }
 
   protected abstract ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException;
-  protected abstract ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException;
+
+  protected abstract ReturnOrAwait<Unit> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException;
 
   protected abstract ReturnOrAwait<Unit> runWithInputChannel(
       ReadableFrameChannel inputChannel,

@@ -84,8 +84,8 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
-import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
+import org.apache.druid.msq.exec.DataServerQueryHandler;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -301,7 +301,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   // Contains the metadata of loaded segments
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
-  protected LoadedSegmentDataProvider loadedSegmentDataProvider = mock(LoadedSegmentDataProvider.class);
+  protected DataServerQueryHandler dataServerQueryHandler = mock(DataServerQueryHandler.class);
 
   private MSQTestSegmentManager segmentManager;
   private SegmentCacheManager segmentCacheManager;
@@ -427,7 +427,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
                 .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
-          binder.bind(LoadedSegmentDataProviderFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
+          binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
@@ -582,13 +582,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return array;
   }
 
-  private LoadedSegmentDataProviderFactory getTestLoadedSegmentDataProviderFactory()
+  private DataServerQueryHandlerFactory getTestLoadedSegmentDataProviderFactory()
   {
-    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
-    doReturn(loadedSegmentDataProvider)
-        .when(mockFactory)
-        .createLoadedSegmentDataProvider(anyString(), any());
-    return mockFactory;
+//    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
+//    doReturn(loadedSegmentDataProvider)
+//        .when(mockFactory)
+//        .createLoadedSegmentDataProvider(anyString(), any());
+//    return mockFactory;
+    return null;
   }
 
   @Nonnull

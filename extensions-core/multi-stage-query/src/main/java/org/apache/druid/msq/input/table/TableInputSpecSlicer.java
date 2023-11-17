@@ -20,6 +20,8 @@
 package org.apache.druid.msq.input.table;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
@@ -27,6 +29,7 @@ import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.SlicerUtils;
 import org.apache.druid.msq.querykit.DataSegmentTimelineView;
 import org.apache.druid.query.filter.DimFilterUtils;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.joda.time.Interval;
@@ -34,9 +37,12 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
@@ -61,10 +67,24 @@ public class TableInputSpecSlicer implements InputSpecSlicer
   public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
-    final List<List<DataSegmentWithInterval>> assignments =
+
+    final List<WeightedInputInstance> prunedPublishedSegments = new ArrayList<>();
+    final List<DataSegmentWithInterval> prunedServedSegments = new ArrayList<>();
+
+    for (DataSegmentWithInterval dataSegmentWithInterval : getPrunedSegmentSet(tableInputSpec)) {
+      if (dataSegmentWithInterval.segment instanceof DataSegmentWithLocation) {
+        prunedServedSegments.add(dataSegmentWithInterval);
+      } else {
+        prunedPublishedSegments.add(dataSegmentWithInterval);
+      }
+    }
+
+    List<WeightedInputInstance> groupedServedSegments = createWeightedSegmentSet(prunedServedSegments);
+
+    List<List<WeightedInputInstance>> assignments =
         SlicerUtils.makeSlicesStatic(
-            getPrunedSegmentSet(tableInputSpec).iterator(),
-            segment -> segment.getSegment().getSize(),
+            Iterators.concat(groupedServedSegments.iterator(), prunedPublishedSegments.iterator()),
+            WeightedInputInstance::getWeight,
             maxNumSlices
         );
     return makeSlices(tableInputSpec, assignments);
@@ -79,10 +99,25 @@ public class TableInputSpecSlicer implements InputSpecSlicer
   )
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
-    final List<List<DataSegmentWithInterval>> assignments =
+
+    final List<WeightedInputInstance> prunedSegments = new ArrayList<>();
+    final List<DataSegmentWithInterval> prunedServedSegments = new ArrayList<>();
+
+    for (DataSegmentWithInterval dataSegmentWithInterval : getPrunedSegmentSet(tableInputSpec)) {
+      if (dataSegmentWithInterval.segment instanceof DataSegmentWithLocation) {
+        prunedServedSegments.add(dataSegmentWithInterval);
+      } else {
+        prunedSegments.add(dataSegmentWithInterval);
+      }
+    }
+    List<WeightedInputInstance> groupedServedSegments = createWeightedSegmentSet(prunedServedSegments);
+
+    prunedSegments.addAll(groupedServedSegments);
+
+    final List<List<WeightedInputInstance>> assignments =
         SlicerUtils.makeSlicesDynamic(
-            getPrunedSegmentSet(tableInputSpec).iterator(),
-            segment -> segment.getSegment().getSize(),
+            prunedSegments.iterator(),
+            WeightedInputInstance::getWeight,
             maxNumSlices,
             maxFilesPerSlice,
             maxBytesPerSlice
@@ -126,28 +161,67 @@ public class TableInputSpecSlicer implements InputSpecSlicer
 
   private static List<InputSlice> makeSlices(
       final TableInputSpec tableInputSpec,
-      final List<List<DataSegmentWithInterval>> assignments
+      final List<List<WeightedInputInstance>> assignments
   )
   {
     final List<InputSlice> retVal = new ArrayList<>(assignments.size());
 
-    for (final List<DataSegmentWithInterval> assignment : assignments) {
+    for (final List<WeightedInputInstance> assignment : assignments) {
+
       final List<RichSegmentDescriptor> descriptors = new ArrayList<>();
-      for (final DataSegmentWithInterval dataSegmentWithInterval : assignment) {
-        descriptors.add(dataSegmentWithInterval.toRichSegmentDescriptor());
+      final List<DataServerRequestDescriptor> dataServerRequests = new ArrayList<>();
+
+      for (final WeightedInputInstance weightedSegment : assignment) {
+        if (weightedSegment instanceof DataSegmentWithInterval) {
+          DataSegmentWithInterval dataSegmentWithInterval = (DataSegmentWithInterval) weightedSegment;
+          descriptors.add(dataSegmentWithInterval.toRichSegmentDescriptor());
+        } else {
+          DataServerRequest serverRequest = (DataServerRequest) weightedSegment;
+          dataServerRequests.add(serverRequest.toDataServerRequestDescriptor());
+        }
       }
 
-      if (descriptors.isEmpty()) {
+      if (descriptors.isEmpty() && dataServerRequests.isEmpty()) {
         retVal.add(NilInputSlice.INSTANCE);
       } else {
-        retVal.add(new SegmentsInputSlice(tableInputSpec.getDataSource(), descriptors));
+        retVal.add(new SegmentsInputSlice(tableInputSpec.getDataSource(), descriptors, dataServerRequests));
       }
     }
 
     return retVal;
   }
 
-  private static class DataSegmentWithInterval
+  private static List<WeightedInputInstance> createWeightedSegmentSet(List<DataSegmentWithInterval> prunedServedSegments)
+  {
+    // Create a map of server to segment for loaded segments.
+    final Map<DruidServerMetadata, Set<DataSegmentWithInterval>> serverVsSegmentsMap = new HashMap<>();
+    for (DataSegmentWithInterval dataSegmentWithInterval : prunedServedSegments) {
+      DataSegmentWithLocation segmentWithLocation = (DataSegmentWithLocation) dataSegmentWithInterval.segment;
+      // Choose a server out of the ones available.
+      DruidServerMetadata druidServerMetadata = DataServerSelector.RANDOM.getSelectServerFunction().apply(segmentWithLocation.getServers());
+
+      serverVsSegmentsMap.computeIfAbsent(druidServerMetadata, ignored -> new HashSet<>());
+      serverVsSegmentsMap.get(druidServerMetadata).add(dataSegmentWithInterval);
+    }
+
+    List<WeightedInputInstance> retVal = new ArrayList<>();
+    for (Map.Entry<DruidServerMetadata, Set<DataSegmentWithInterval>> druidServerMetadataSetEntry : serverVsSegmentsMap.entrySet()) {
+      DataServerRequest dataServerRequest = new DataServerRequest(
+          druidServerMetadataSetEntry.getKey(),
+          ImmutableList.copyOf(druidServerMetadataSetEntry.getValue())
+      );
+      retVal.add(dataServerRequest);
+    }
+
+    return retVal;
+  }
+
+  private interface WeightedInputInstance
+  {
+    long getWeight();
+  }
+
+  private static class DataSegmentWithInterval implements WeightedInputInstance
   {
     private final DataSegment segment;
     private final Interval interval;
@@ -169,8 +243,41 @@ public class TableInputSpecSlicer implements InputSpecSlicer
           segment.getInterval(),
           interval,
           segment.getVersion(),
-          segment.getShardSpec().getPartitionNum(),
-          segment instanceof DataSegmentWithLocation ? ((DataSegmentWithLocation) segment).getServers() : null
+          segment.getShardSpec().getPartitionNum()
+      );
+    }
+
+    @Override
+    public long getWeight()
+    {
+      return segment.getSize();
+    }
+  }
+
+  private static class DataServerRequest implements WeightedInputInstance
+  {
+    private final List<DataSegmentWithInterval> segments;
+    private final DruidServerMetadata serverMetadata;
+    private final Long weight;
+
+    public DataServerRequest(DruidServerMetadata serverMetadata, List<DataSegmentWithInterval> segments)
+    {
+      this.segments = Preconditions.checkNotNull(segments, "segments");
+      this.serverMetadata = Preconditions.checkNotNull(serverMetadata, "server");
+      this.weight = (long) segments.size();
+    }
+
+    @Override
+    public long getWeight()
+    {
+      return weight;
+    }
+
+    public DataServerRequestDescriptor toDataServerRequestDescriptor()
+    {
+      return new DataServerRequestDescriptor(
+          serverMetadata,
+          segments.stream().map(segment -> segment.segment.toDescriptor()).collect(Collectors.toList())
       );
     }
   }

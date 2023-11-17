@@ -21,11 +21,11 @@ package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -47,9 +47,12 @@ public class SegmentsInputSliceTest
                 Intervals.of("2000/P1M"),
                 Intervals.of("2000/P1M"),
                 "1",
-                0,
-                ImmutableSet.of(
-                    new DruidServerMetadata(
+                0
+            )
+        ),
+        ImmutableList.of(
+            new DataServerRequestDescriptor(
+                new DruidServerMetadata(
                     "name1",
                     "host1",
                     null,
@@ -57,6 +60,12 @@ public class SegmentsInputSliceTest
                     ServerType.REALTIME,
                     "tier1",
                     0
+                ),
+                ImmutableList.of(
+                    new SegmentDescriptor(
+                        Intervals.of("2002/P1M"),
+                        "1",
+                        0
                     )
                 )
             )

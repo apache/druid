@@ -1,0 +1,240 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.msq.exec;
+
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.discovery.DataServerClient;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Queries;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.aggregation.MetricManipulatorFns;
+import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
+
+/**
+ * Class responsible for querying dataservers and retriving results for a given query. Also queries the coordinator
+ * to check if a segment has been handed off.
+ */
+public class DataServerQueryHandler
+{
+  private static final Logger log = new Logger(DataServerQueryHandler.class);
+  private static final int DEFAULT_NUM_TRIES = 5;
+  private final String dataSource;
+  private final ChannelCounters channelCounters;
+  private final ServiceClientFactory serviceClientFactory;
+  private final CoordinatorClient coordinatorClient;
+  private final ObjectMapper objectMapper;
+  private final QueryToolChestWarehouse warehouse;
+  private final ScheduledExecutorService queryCancellationExecutor;
+  private final DataServerRequestDescriptor dataServerRequestDescriptor;
+
+  public DataServerQueryHandler(
+      String dataSource,
+      ChannelCounters channelCounters,
+      ServiceClientFactory serviceClientFactory,
+      CoordinatorClient coordinatorClient,
+      ObjectMapper objectMapper,
+      QueryToolChestWarehouse warehouse,
+      ScheduledExecutorService queryCancellationExecutor,
+      DataServerRequestDescriptor dataServerRequestDescriptor
+  )
+  {
+    this.dataSource = dataSource;
+    this.channelCounters = channelCounters;
+    this.serviceClientFactory = serviceClientFactory;
+    this.coordinatorClient = coordinatorClient;
+    this.objectMapper = objectMapper;
+    this.warehouse = warehouse;
+    this.queryCancellationExecutor = queryCancellationExecutor;
+    this.dataServerRequestDescriptor = dataServerRequestDescriptor;
+  }
+
+  @VisibleForTesting
+  DataServerClient makeDataServerClient(ServiceLocation serviceLocation)
+  {
+    return new DataServerClient(serviceClientFactory, serviceLocation, objectMapper, queryCancellationExecutor);
+  }
+
+  /**
+   * Performs some necessary transforms to the query, so that the dataserver is able to understand it first.
+   * - Changing the datasource to a {@link TableDataSource}
+   * - Limiting the query to a single required segment with {@link Queries#withSpecificSegments(Query, List)}
+   * <br>
+   * Then queries a data server and returns a {@link Yielder} for the results, retrying if needed. If a dataserver
+   * indicates that the segment was not found, checks with the coordinator to see if the segment was handed off.
+   * - If the segment was handed off, returns with a  DataServerQueryStatus#HANDOFF status.
+   * - If the segment was not handed off, retries with the known list of servers and throws an exception if the retry
+   * count is exceeded.
+   * - If the servers could not be found, checks if the segment was handed-off. If it was, returns with a
+   * DataServerQueryStatus#HANDOFF status. Otherwise, throws an exception.
+   * <br>
+   * Also applies {@link QueryToolChest#makePreComputeManipulatorFn(Query, MetricManipulationFn)} and reports channel
+   * metrics on the returned results.
+   *
+   * @param <QueryType> result return type for the query from the data server
+   * @param <RowType> type of the result rows after parsing from QueryType object
+   */
+  public <RowType, QueryType> DataServerQueryResult<RowType> fetchRowsFromDataServer(
+      Query<QueryType> query,
+      Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
+      Closer closer
+  )
+  {
+    final Query<QueryType> preparedQuery = query.withDataSource(new TableDataSource(dataSource));
+    final QueryToolChest<QueryType, Query<QueryType>> toolChest = warehouse.getToolChest(preparedQuery);
+    final Function<QueryType, QueryType> preComputeManipulatorFn =
+        toolChest.makePreComputeManipulatorFn(query, MetricManipulatorFns.deserializing());
+    final JavaType queryResultType = toolChest.getBaseResultType();
+    final int numRetriesOnMissingSegments = preparedQuery.context().getNumRetriesOnMissingSegments(DEFAULT_NUM_TRIES);
+
+    final SegmentSource includeSegmentSource = MultiStageQueryContext.getSegmentSources(query.context());
+
+
+    DruidServerMetadata druidServerMetadata = dataServerRequestDescriptor.getServerMetadata();
+    List<SegmentDescriptor> segmentDescriptors = dataServerRequestDescriptor.getSegments();
+    log.debug(
+        "Querying server[%s] for segments[%s], retries:[%d]",
+        druidServerMetadata,
+        segmentDescriptors,
+        numRetriesOnMissingSegments
+    );
+
+    final ResponseContext responseContext = new DefaultResponseContext();
+
+    final ServiceLocation serviceLocation = ServiceLocation.fromDruidServerMetadata(druidServerMetadata);
+    final DataServerClient dataServerClient = makeDataServerClient(serviceLocation);
+
+    Sequence<QueryType> returnSequence = Sequences.empty();
+    // lOOp start
+    Sequence<QueryType> sequence;
+    List<SegmentDescriptor> pendingSegments = segmentDescriptors;
+    try {
+      sequence =
+          RetryUtils.retry(
+              () -> dataServerClient.run(
+                  Queries.withSpecificSegments(
+                      preparedQuery,
+                      pendingSegments
+                  ), responseContext, queryResultType, closer).map(preComputeManipulatorFn),
+              throwable -> !(throwable instanceof QueryInterruptedException
+                             && throwable.getCause() instanceof InterruptedException),
+              numRetriesOnMissingSegments
+          );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    List<SegmentDescriptor> missingSegments = getMissingSegments(responseContext);
+
+    List<SegmentDescriptor> nonHandedOffSegments = findNonHandedOffSegments(missingSegments);
+
+    if (nonHandedOffSegments.isEmpty()) {
+      return new DataServerQueryResult<>(
+          closer.register(createYielder(sequence, mappingFunction)),
+          missingSegments
+      );
+    } else {
+      throw new RE("Segments [%s] not found", nonHandedOffSegments);
+    }
+  }
+
+  private <RowType, QueryType> Yielder<RowType> createYielder(
+      Sequence<QueryType> sequence, Function<Sequence<QueryType>,
+      Sequence<RowType>> mappingFunction
+  )
+  {
+    return Yielders.each(
+        mappingFunction.apply(sequence)
+                       .map(row -> {
+                         channelCounters.incrementRowCount();
+                         return row;
+                       })
+    );
+  }
+
+  /**
+   * Retreives the list of missing segments from the response context.
+   */
+  private static List<SegmentDescriptor> getMissingSegments(final ResponseContext responseContext)
+  {
+    List<SegmentDescriptor> missingSegments = responseContext.getMissingSegments();
+    if (missingSegments == null) {
+      return ImmutableList.of();
+    }
+    return missingSegments;
+  }
+
+  /**
+   * Queries the coordinator to check if a segment has been handed off.
+   * <br>
+   * See {@link  org.apache.druid.server.http.DataSourcesResource#isHandOffComplete(String, String, int, String)}
+   */
+  private List<SegmentDescriptor> findNonHandedOffSegments( // TODO: change name
+      List<SegmentDescriptor> segmentDescriptors
+  )
+  {
+    try {
+      List<SegmentDescriptor> missingSegments = new ArrayList<>();
+
+      for (SegmentDescriptor segmentDescriptor : segmentDescriptors) {
+        Boolean wasHandedOff = FutureUtils.get(
+            coordinatorClient.isHandoffComplete(dataSource, segmentDescriptor),
+            true
+        );
+        if (!Boolean.TRUE.equals(wasHandedOff)) {
+          missingSegments.add(segmentDescriptor);
+        }
+      }
+      return missingSegments;
+    }
+    catch (Exception e) {
+      throw new RE(e, "Could not contact coordinator");
+    }
+  }
+}
