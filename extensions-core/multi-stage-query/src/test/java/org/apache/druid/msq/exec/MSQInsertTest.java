@@ -778,6 +778,76 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsArray()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING_ARRAY).build();
+
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) as dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(adjustedContext)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(
+                         NullHandling.replaceWithDefault() ?
+                         ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, new Object[]{"a", "b"}},
+                             new Object[]{0L, new Object[]{"b", "c"}},
+                             new Object[]{0L, new Object[]{"d"}}
+                         ) : ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, new Object[]{"a", "b"}},
+                             new Object[]{0L, new Object[]{""}},
+                             new Object[]{0L, new Object[]{"b", "c"}},
+                             new Object[]{0L, new Object[]{"d"}}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsMvd()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING).build();
+
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 SELECT ARRAY_TO_MV(MV_TO_ARRAY(dim3)) as dim3 FROM foo GROUP BY MV_TO_ARRAY(dim3) PARTITIONED BY ALL TIME"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(adjustedContext)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(
+                         NullHandling.replaceWithDefault() ?
+                         ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, Arrays.asList("a", "b")},
+                             new Object[]{0L, Arrays.asList("b", "c")},
+                             new Object[]{0L, "d"}
+                         ) : ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, ""},
+                             new Object[]{0L, Arrays.asList("a", "b")},
+                             new Object[]{0L, Arrays.asList("b", "c")},
+                             new Object[]{0L, "d"}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
   public void testInsertOnFoo1WithMultiValueDimGroupByWithoutGroupByEnable()
   {
     Map<String, Object> localContext = ImmutableMap.<String, Object>builder()

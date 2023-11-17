@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
@@ -53,8 +52,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class polls the Coordinator in background to keep the latest published segments.
- * Provides {@link #getPublishedSegments()} for others to get segments in metadata store.
+ * This class polls the Coordinator in background to keep the latest segments.
+ * Provides {@link #getSegments()} for others to get the segments.
  *
  * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
  * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In
@@ -95,10 +94,10 @@ public class MetadataSegmentView
       final @Coordinator DruidLeaderClient druidLeaderClient,
       final ObjectMapper jsonMapper,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
-      final SegmentMetadataCacheConfig config
+      final BrokerSegmentMetadataCacheConfig config
   )
   {
-    Preconditions.checkNotNull(config, "SegmentMetadataCacheConfig");
+    Preconditions.checkNotNull(config, "BrokerSegmentMetadataCacheConfig");
     this.coordinatorDruidLeaderClient = druidLeaderClient;
     this.jsonMapper = jsonMapper;
     this.segmentWatcherConfig = segmentWatcherConfig;
@@ -121,7 +120,7 @@ public class MetadataSegmentView
         scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
       }
       lifecycleLock.started();
-      log.info("MetadataSegmentView Started.");
+      log.info("MetadataSegmentView is started.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -138,12 +137,12 @@ public class MetadataSegmentView
     if (isCacheEnabled) {
       scheduledExec.shutdown();
     }
-    log.info("MetadataSegmentView Stopped.");
+    log.info("MetadataSegmentView is stopped.");
   }
 
   private void poll()
   {
-    log.info("polling published segments from coordinator");
+    log.info("Polling segments from coordinator");
     final JsonParserIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
@@ -163,7 +162,9 @@ public class MetadataSegmentView
       final SegmentStatusInCluster segmentStatusInCluster = new SegmentStatusInCluster(
           interned,
           segment.isOvershadowed(),
-          replicationFactor
+          replicationFactor,
+          segment.getNumRows(),
+          segment.isRealtime()
       );
       builder.add(segmentStatusInCluster);
     }
@@ -171,7 +172,7 @@ public class MetadataSegmentView
     cachePopulated.countDown();
   }
 
-  Iterator<SegmentStatusInCluster> getPublishedSegments()
+  Iterator<SegmentStatusInCluster> getSegments()
   {
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
@@ -192,20 +193,23 @@ public class MetadataSegmentView
       Set<String> watchedDataSources
   )
   {
-    String query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus";
+    // includeRealtimeSegments flag would additionally request realtime segments
+    // note that realtime segments are returned only when druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator
+    StringBuilder queryBuilder = new StringBuilder("/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments");
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
       log.debug(
-          "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
+          "Filtering datasources in segments based on broker's watchedDataSources[%s]", watchedDataSources);
       final StringBuilder sb = new StringBuilder();
       for (String ds : watchedDataSources) {
         sb.append("datasources=").append(ds).append("&");
       }
       sb.setLength(sb.length() - 1);
-      query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
+      queryBuilder.append("&");
+      queryBuilder.append(sb);
     }
 
     return SystemSchema.getThingsFromLeaderNode(
-        query,
+        queryBuilder.toString(),
         new TypeReference<SegmentStatusInCluster>()
         {
         },

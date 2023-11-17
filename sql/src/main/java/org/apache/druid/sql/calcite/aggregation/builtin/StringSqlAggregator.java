@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.CastedLiteralOperandTypeCheckers;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
@@ -251,7 +252,7 @@ public class StringSqlAggregator implements SqlAggregator
                       StringUtils.format("'%s(expr, separator, maxSizeBytes)'", name),
                       OperandTypes.ANY,
                       OperandTypes.STRING,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC)
               )

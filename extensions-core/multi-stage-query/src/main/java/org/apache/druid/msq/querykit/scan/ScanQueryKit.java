@@ -95,6 +95,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
+        null,
         maxWorkerCount,
         minStageNumber,
         false
