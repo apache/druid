@@ -64,7 +64,7 @@ org.apache.druid.cli.Main server coordinator
 
 Segments can be automatically loaded and dropped from the cluster based on a set of rules. For more information on rules, see [Rule Configuration](../operations/rule-configuration.md).
 
-### Cleaning up overshadowed segments
+### Clean up overshadowed segments
 
 On each run, the Druid Coordinator compares the set of used segments in the database with the segments served by some
 Historical nodes in the cluster. Coordinator sends requests to Historical nodes to unload unused segments or segments

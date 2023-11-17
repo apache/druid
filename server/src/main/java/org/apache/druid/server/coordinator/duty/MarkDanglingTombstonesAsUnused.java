@@ -41,7 +41,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Marks dangling tombstones not overshadowed by currently served segments as unused. A dangling segment must satisfy both criteria:
+ * Marks dangling tombstones not overshadowed by currently served segments as unused. A dangling segment must fit both of the criteria:
  * <li> It is a tombstone that starts at {@link DateTimes#MIN} or ends at {@link DateTimes#MAX} and </li>
  * <li> It does not overlap with any segment in the datasource's used segments timeline </li>
  *
