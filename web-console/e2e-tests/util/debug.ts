@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { resolve } from 'path';
 import type * as playwright from 'playwright-chromium';
 
 export async function saveScreenshotIfError(
@@ -26,9 +27,10 @@ export async function saveScreenshotIfError(
   try {
     await test();
   } catch (e) {
-    const path = filenamePrefix + 'error-screenshot.png';
-    console.log(`Writing error screenshot to: ${path}`);
-    await page.screenshot({ path });
+    console.log(`Grabbing error screenshot for: ${filenamePrefix}`);
+    const resolvedPath = resolve(filenamePrefix + '-error-screenshot.png');
+    await page.screenshot({ path: resolvedPath });
+    console.log(`Written error screenshot to: ${resolvedPath}`);
     throw e;
   }
 }
