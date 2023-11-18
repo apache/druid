@@ -29,9 +29,13 @@ export async function saveScreenshotIfError(
   } catch (e) {
     console.log(`Grabbing error screenshot for: ${filenamePrefix}`);
     const resolvedPath = resolve(filenamePrefix + '-error-screenshot.jpeg');
-    const imageBuffer = await page.screenshot({ path: resolvedPath, type: 'jpeg', quality: 80 });
-    console.log(`Image: data:image/jpeg;base64,${imageBuffer.toString('base64')}`);
-    console.log(`Written error screenshot to: ${resolvedPath}`);
+    try {
+      const imageBuffer = await page.screenshot({ path: resolvedPath, type: 'jpeg', quality: 80 });
+      console.log(`Image: data:image/jpeg;base64,${imageBuffer.toString('base64')}`);
+      console.log(`Written error screenshot to: ${resolvedPath}`);
+    } catch (screenshotError) {
+      console.log(`Failed to capture screenshot due to: ${screenshotError.message}`);
+    }
     throw e;
   }
 }
