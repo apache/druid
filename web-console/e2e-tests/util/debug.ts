@@ -28,8 +28,9 @@ export async function saveScreenshotIfError(
     await test();
   } catch (e) {
     console.log(`Grabbing error screenshot for: ${filenamePrefix}`);
-    const resolvedPath = resolve(filenamePrefix + '-error-screenshot.png');
-    await page.screenshot({ path: resolvedPath });
+    const resolvedPath = resolve(filenamePrefix + '-error-screenshot.jpeg');
+    const imageBuffer = await page.screenshot({ path: resolvedPath, type: 'jpeg', quality: 80 });
+    console.log(`Image: data:image/jpeg;base64,${imageBuffer.toString('base64')}`);
     console.log(`Written error screenshot to: ${resolvedPath}`);
     throw e;
   }
