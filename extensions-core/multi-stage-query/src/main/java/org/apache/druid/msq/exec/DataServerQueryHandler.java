@@ -115,15 +115,16 @@ public class DataServerQueryHandler
   /**
    * Performs some necessary transforms to the query, so that the dataserver is able to understand it first.
    * - Changing the datasource to a {@link TableDataSource}
-   * - Limiting the query to a single required segment with {@link Queries#withSpecificSegments(Query, List)}
+   * - Limiting the query to the required segments with {@link Queries#withSpecificSegments(Query, List)}
    * <br>
    * Then queries a data server and returns a {@link Yielder} for the results, retrying if needed. If a dataserver
-   * indicates that the segment was not found, checks with the coordinator to see if the segment was handed off.
-   * - If the segment was handed off, returns with a  DataServerQueryStatus#HANDOFF status.
-   * - If the segment was not handed off, retries with the known list of servers and throws an exception if the retry
-   * count is exceeded.
-   * - If the servers could not be found, checks if the segment was handed-off. If it was, returns with a
-   * DataServerQueryStatus#HANDOFF status. Otherwise, throws an exception.
+   * indicates that some segments were not found, checks with the coordinator to see if the segment was handed off.
+   * - If all the segments were handed off, returns a {@link DataServerQueryResult} with the yielder and list of handed
+   * off segments.
+   * - If some segments were not handed off, checks with the coordinator fetch an updated list of servers. This step is
+   * repeated up to {@link #DEFAULT_NUM_TRIES} times.
+   * - If the servers could not be found, checks if the segment was handed-off. If it was, returns a
+   * {@link DataServerQueryResult} with the yielder and list of handed off segments. Otherwise, throws an exception.
    * <br>
    * Also applies {@link QueryToolChest#makePreComputeManipulatorFn(Query, MetricManipulationFn)} and reports channel
    * metrics on the returned results.
@@ -225,7 +226,8 @@ public class DataServerQueryHandler
   }
 
   private <RowType, QueryType> Yielder<RowType> createYielder(
-      Sequence<QueryType> sequence, Function<Sequence<QueryType>,
+      Sequence<QueryType> sequence,
+      Function<Sequence<QueryType>,
       Sequence<RowType>> mappingFunction
   )
   {
@@ -292,9 +294,7 @@ public class DataServerQueryHandler
    * <br>
    * See {@link  org.apache.druid.server.http.DataSourcesResource#isHandOffComplete(String, String, int, String)}
    */
-  private List<RichSegmentDescriptor> findNonHandedOffSegments( // TODO: change name
-      List<RichSegmentDescriptor> segmentDescriptors
-  )
+  private List<RichSegmentDescriptor> findNonHandedOffSegments(List<RichSegmentDescriptor> segmentDescriptors)
   {
     try {
       List<RichSegmentDescriptor> missingSegments = new ArrayList<>();

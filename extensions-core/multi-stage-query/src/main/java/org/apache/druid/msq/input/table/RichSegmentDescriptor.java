@@ -85,7 +85,8 @@ public class RichSegmentDescriptor extends SegmentDescriptor
     return fullInterval == null ? getInterval() : fullInterval;
   }
 
-  public SegmentDescriptor toSegmentDescritor() {
+  public SegmentDescriptor toSegmentDescritor()
+  {
     return new SegmentDescriptor(
         getInterval(),
         getVersion(),

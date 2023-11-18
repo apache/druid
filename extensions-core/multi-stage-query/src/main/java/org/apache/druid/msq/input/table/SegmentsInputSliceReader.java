@@ -76,8 +76,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
                 segmentsInputSlice.getDataSource(),
                 segmentsInputSlice.getDescriptors(),
                 counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
-    ),ReadableInput::segment
-        );
+            ), ReadableInput::segment);
 
     Iterator<ReadableInput> dataServerIterator =
         Iterators.transform(
@@ -85,8 +84,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
                 segmentsInputSlice.getDataSource(),
                 segmentsInputSlice.getServedSegments(),
                 counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount())
-            ),ReadableInput::dataServerQuery
-        );
+            ), ReadableInput::dataServerQuery);
 
     return ReadableInputs.segments(() -> Iterators.concat(dataServerIterator, segmentIterator));
   }

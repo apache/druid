@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.guice.MSQIndexingModule;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -45,7 +44,7 @@ public class DataServerRequestDescriptorTest
             ServerType.INDEXER_EXECUTOR,
             "tier1", 2
         ),
-        ImmutableList.of(new RichSegmentDescriptor(null, Intervals.ETERNITY, "v1", 2))
+        ImmutableList.of(new RichSegmentDescriptor(Intervals.ETERNITY, Intervals.ETERNITY, "v1", 2))
     );
 
     final ObjectMapper mapper = TestHelper.makeJsonMapper()

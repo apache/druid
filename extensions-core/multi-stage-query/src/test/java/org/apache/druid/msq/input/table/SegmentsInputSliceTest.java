@@ -25,7 +25,6 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.input.InputSlice;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -63,7 +62,7 @@ public class SegmentsInputSliceTest
                 ),
                 ImmutableList.of(
                     new RichSegmentDescriptor(
-                        null,
+                        Intervals.of("2002/P1M"),
                         Intervals.of("2002/P1M"),
                         "1",
                         0

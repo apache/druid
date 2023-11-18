@@ -21,7 +21,6 @@ package org.apache.druid.msq.input.table;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
 import java.util.List;
@@ -40,7 +39,8 @@ public class DataServerRequestDescriptor
   public DataServerRequestDescriptor(
       @JsonProperty("serverMetadata") DruidServerMetadata serverMetadata,
       @JsonProperty("segments") List<RichSegmentDescriptor> segments
-  ) {
+  )
+  {
     this.segments = segments;
     this.serverMetadata = serverMetadata;
   }

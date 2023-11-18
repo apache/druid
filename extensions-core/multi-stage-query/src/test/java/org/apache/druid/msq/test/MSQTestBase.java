@@ -589,7 +589,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 //        .when(mockFactory)
 //        .createLoadedSegmentDataProvider(anyString(), any());
 //    return mockFactory;
-    return null;
+    return mock(DataServerQueryHandlerFactory.class);
   }
 
   @Nonnull

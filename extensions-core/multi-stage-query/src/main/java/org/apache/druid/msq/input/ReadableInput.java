@@ -66,8 +66,8 @@ public class ReadableInput
     this.frameReader = frameReader;
     this.stagePartition = stagePartition;
 
-    if ((segment == null) == (channel == null) == (dataServerQuery == null)) {
-      throw new ISE("Provide either 'segment', 'dataServerQuery' or 'channel'");
+    if ((segment == null) && (channel == null) && (dataServerQuery == null)) {
+      throw new ISE("Provide 'segment', 'dataServerQuery' or 'channel'");
     }
   }
 
@@ -123,7 +123,7 @@ public class ReadableInput
   }
 
   /**
-   * Whether this input is a dataserver query (from {@link #dataServerQuery(DataServerQueryHandler)}}.
+   * Whether this input is a dataserver query (from {@link #dataServerQuery(DataServerQueryHandler)}).
    */
   public boolean hasDataServerQuery()
   {

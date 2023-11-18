@@ -256,7 +256,7 @@ public class TableInputSpecSlicer implements InputSpecSlicer
 
   private static class DataServerRequest implements WeightedInputInstance
   {
-    private static final long DATA_SERVER_FACTOR = 5000L;
+    private static final long DATA_SERVER_WEIGHT_ESTIMATION = 5000L;
     private final List<DataSegmentWithInterval> segments;
     private final DruidServerMetadata serverMetadata;
 
@@ -269,16 +269,14 @@ public class TableInputSpecSlicer implements InputSpecSlicer
     @Override
     public long getWeight()
     {
-      return segments.size() * DATA_SERVER_FACTOR;
+      return segments.size() * DATA_SERVER_WEIGHT_ESTIMATION;
     }
 
     public DataServerRequestDescriptor toDataServerRequestDescriptor()
     {
       return new DataServerRequestDescriptor(
           serverMetadata,
-          segments.stream().map(
-              DataSegmentWithInterval::toRichSegmentDescriptor).collect(Collectors.toList())
-      );
+          segments.stream().map(DataSegmentWithInterval::toRichSegmentDescriptor).collect(Collectors.toList()));
     }
   }
 }

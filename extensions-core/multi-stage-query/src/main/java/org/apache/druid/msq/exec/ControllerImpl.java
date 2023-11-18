@@ -195,7 +195,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -1192,10 +1191,7 @@ public class ControllerImpl implements Controller
       // segment if they get handed off between the two calls. Segments loaded on historicals are deduplicated below,
       // since we are only interested in realtime segments for now.
       if (includeRealtime) {
-        realtimeAndHistoricalSegments = ImmutableList.of(
-            new ImmutableSegmentLoadInfo(new DataSegment("events3", Interval.parse("2020/2021"), "v1", null, null, null, null, null, 1, 100), ImmutableSet.of(new DruidServerMetadata("localhost:8091", "localhost:8091", null, 100, ServerType.INDEXER_EXECUTOR, "tier1", 2))),
-            new ImmutableSegmentLoadInfo(new DataSegment("events3", Interval.parse("2022/2023"), "v1", null, null, null, null, null, 1, 100), ImmutableSet.of(new DruidServerMetadata("localhost:8091", "localhost:8091", null, 100, ServerType.INDEXER_EXECUTOR, "tier1", 2)))
-        );
+        realtimeAndHistoricalSegments = context.coordinatorClient().fetchServerViewSegments(dataSource, intervals);
       } else {
         realtimeAndHistoricalSegments = ImmutableList.of();
       }

@@ -100,9 +100,7 @@ import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS_LOTS_OF_COLUMNS;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
@@ -206,7 +204,7 @@ public class CalciteMSQTestsHelper
 //      throw new RuntimeException(e);
 //    }
 //    return mockFactory;
-    return null;
+    return mock(DataServerQueryHandlerFactory.class);
   }
 
   private static Supplier<ResourceHolder<Segment>> getSupplierForSegment(SegmentId segmentId)

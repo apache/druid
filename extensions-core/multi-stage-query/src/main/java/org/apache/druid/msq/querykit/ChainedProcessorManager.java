@@ -130,7 +130,7 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
     if (!closed) {
       closed = true;
       CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(
-          first != null ? first: null,
+          first != null ? first : null,
           restFuture.isDone() ? FutureUtils.getUnchecked(restFuture, false) : null
       ));
     }
