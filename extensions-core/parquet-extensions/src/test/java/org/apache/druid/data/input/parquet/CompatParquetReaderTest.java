@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.parquet;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
@@ -90,20 +92,24 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
     List<InputRowListPlusRawValues> sampledAsBinary = sampleAllRows(readerNotAsString);
+    ObjectMapper objectMapper = new ObjectMapper();
     final String expectedJson = "{\n"
                                 + "  \"field\" : \"hey this is &é(-è_çà)=^$ù*! Ω^^\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
-
+    final String serializedJson = DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues());
+    JsonNode expected = objectMapper.readTree(expectedJson);
+    JsonNode serialized = objectMapper.readTree(serializedJson);
+    Assert.assertTrue(expected.equals(serialized));
     final String expectedJsonBinary = "{\n"
                                 + "  \"field\" : \"aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertEquals(
-        expectedJsonBinary,
-        DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues())
-    );
+    
+    final String serializedJsonBinary = DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues());
+    JsonNode expectedBinary = objectMapper.readTree(expectedJsonBinary);
+    JsonNode serializedBinary = objectMapper.readTree(serializedJsonBinary);
+    Assert.assertTrue(expectedBinary.equals(serializedBinary));
   }
 
 
@@ -140,10 +146,14 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    ObjectMapper objectMapper = new ObjectMapper();
     final String expectedJson = "{\n"
                                 + "  \"col\" : -1\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    final String serializedJson = DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues());
+    JsonNode expected = objectMapper.readTree(expectedJson);
+    JsonNode serialized = objectMapper.readTree(serializedJson);
+    Assert.assertTrue(expected.equals(serialized));
   }
 
   @Test
@@ -246,6 +256,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    ObjectMapper objectMapper = new ObjectMapper();
     final String expectedJson = "{\n"
                                 + "  \"enumColumn\" : \"SPADES\",\n"
                                 + "  \"maybeStringColumn\" : null,\n"
@@ -305,7 +316,10 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    } ]\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    final String serializedJson = DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues());
+    JsonNode expected = objectMapper.readTree(expectedJson);
+    JsonNode serialized = objectMapper.readTree(serializedJson);
+    Assert.assertTrue(expected.equals(serialized));
   }
 
   @Test
@@ -339,10 +353,14 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    ObjectMapper objectMapper = new ObjectMapper();
     final String expectedJson = "{\n"
                                 + "  \"repeatedInt\" : [ 1, 2, 3 ]\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    final String serializedJson = DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues());
+    JsonNode expected = objectMapper.readTree(expectedJson);
+    JsonNode serialized = objectMapper.readTree(serializedJson);
+    Assert.assertTrue(expected.equals(serialized));
   }
 
 
@@ -378,6 +396,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    ObjectMapper objectMapper = new ObjectMapper();
     final String expectedJson = "{\n"
                                 + "  \"primitive\" : 2,\n"
                                 + "  \"myComplex\" : [ {\n"
@@ -385,7 +404,10 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"repeatedMessage\" : [ 3 ]\n"
                                 + "  } ]\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    final String serializedJson = DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues());
+    JsonNode expected = objectMapper.readTree(expectedJson);
+    JsonNode serialized = objectMapper.readTree(serializedJson);
+    Assert.assertTrue(expected.equals(serialized));
   }
 
   @Test
@@ -425,6 +447,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
+    ObjectMapper objectMapper = new ObjectMapper();
     final String expectedJson = "{\n"
                                 + "  \"optionalMessage\" : null,\n"
                                 + "  \"requiredPrimitive\" : 9,\n"
@@ -435,6 +458,9 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"someId\" : 9\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    final String serializedJson = DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues());
+    JsonNode expected = objectMapper.readTree(expectedJson);
+    JsonNode serialized = objectMapper.readTree(serializedJson);
+    Assert.assertTrue(expected.equals(serialized));
   }
 }
