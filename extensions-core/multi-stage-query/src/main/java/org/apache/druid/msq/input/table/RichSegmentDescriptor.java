@@ -85,15 +85,6 @@ public class RichSegmentDescriptor extends SegmentDescriptor
     return fullInterval == null ? getInterval() : fullInterval;
   }
 
-  public SegmentDescriptor toSegmentDescritor()
-  {
-    return new SegmentDescriptor(
-        getInterval(),
-        getVersion(),
-        getPartitionNumber()
-    );
-  }
-
   @JsonProperty("fi")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable

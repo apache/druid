@@ -27,30 +27,30 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import java.util.List;
 
 /**
- * Contains the results for a query to a dataserver. {@link #resultsYielder} contains the results fetched and
+ * Contains the results for a query to a dataserver. {@link #resultsYielders} contains the results fetched and
  * {@link #segmentsInputSlice} is an {@link SegmentsInputSlice} containing the segments which have already been handed
  * off, so that it can be fetched from deep storage.
  */
 public class DataServerQueryResult<RowType>
 {
 
-  private final Yielder<RowType> resultsYielder;
+  private final List<Yielder<RowType>> resultsYielders;
 
   private final SegmentsInputSlice segmentsInputSlice;
 
   public DataServerQueryResult(
-      Yielder<RowType> resultsYielder,
+      List<Yielder<RowType>> resultsYielders,
       List<RichSegmentDescriptor> handedOffSegments,
       String dataSource
   )
   {
-    this.resultsYielder = resultsYielder;
+    this.resultsYielders = resultsYielders;
     this.segmentsInputSlice = new SegmentsInputSlice(dataSource, handedOffSegments, ImmutableList.of());
   }
 
-  public Yielder<RowType> getResultsYielder()
+  public List<Yielder<RowType>> getResultsYielders()
   {
-    return resultsYielder;
+    return resultsYielders;
   }
 
   public SegmentsInputSlice getHandedOffSegments()

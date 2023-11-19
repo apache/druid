@@ -88,6 +88,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A {@link FrameProcessor} that reads one {@link Frame} at a time from a particular segment, writes them
@@ -208,13 +209,16 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       handedOffSegments = dataServerQueryResult.getHandedOffSegments();
       log.info("Query to dataserver for segments found [%d] handed off segments", handedOffSegments.getDescriptors().size());
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(preparedQuery, jsonMapper);
-      Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
-          dataServerQueryResult.getResultsYielder(),
-          rowSignature
-      );
+      List<Cursor> cursors = dataServerQueryResult.getResultsYielders().stream().map(yielder -> {
+        Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
+            yielder,
+            rowSignature
+        );
+        closer.register(cursorFromIterable.rhs);
+        return cursorFromIterable.lhs;
+      }).collect(Collectors.toList());
 
-      closer.register(cursorFromIterable.rhs);
-      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(ImmutableList.of(cursorFromIterable.lhs)));
+      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(cursors));
 
       if (cursorYielder.isDone()) {
         // No cursors!

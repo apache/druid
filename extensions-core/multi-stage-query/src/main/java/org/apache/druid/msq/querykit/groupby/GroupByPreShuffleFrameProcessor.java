@@ -35,6 +35,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
@@ -58,6 +59,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -76,6 +78,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private SegmentsInputSlice handedOffSegments = null;
+  private Yielder<Yielder<ResultRow>> yielderYielder;
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
@@ -104,17 +107,33 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
-    if (resultYielder == null) {
-      final DataServerQueryResult<ResultRow> dataServerQueryResult =
-          dataServerQueryHandler.fetchRowsFromDataServer(groupingEngine.prepareGroupByQuery(query), Function.identity(), closer);
-      handedOffSegments = dataServerQueryResult.getHandedOffSegments();
-      log.info("Query to dataserver for segments found [%d] handed off segments", handedOffSegments.getDescriptors().size());
-      resultYielder = dataServerQueryResult.getResultsYielder();
+    if (resultYielder == null || resultYielder.isDone()) {
+      if (yielderYielder == null) {
+        final DataServerQueryResult<ResultRow> dataServerQueryResult =
+            dataServerQueryHandler.fetchRowsFromDataServer(
+                groupingEngine.prepareGroupByQuery(query),
+                Function.identity(),
+                closer
+            );
+        handedOffSegments = dataServerQueryResult.getHandedOffSegments();
+        log.info(
+            "Query to dataserver for segments found [%d] handed off segments",
+            handedOffSegments.getDescriptors().size()
+        );
+        List<Yielder<ResultRow>> yielders = dataServerQueryResult.getResultsYielders();
+        yielderYielder = Yielders.each(Sequences.simple(yielders));
+      }
+      if (yielderYielder.isDone()) {
+        return ReturnOrAwait.returnObject(handedOffSegments);
+      } else {
+        resultYielder = yielderYielder.get();
+        yielderYielder = yielderYielder.next(null);
+      }
     }
 
     populateFrameWriterAndFlushIfNeeded();
 
-    if (resultYielder == null || resultYielder.isDone()) {
+    if ((resultYielder == null || resultYielder.isDone()) && yielderYielder.isDone()) {
       return ReturnOrAwait.returnObject(handedOffSegments);
     } else {
       return ReturnOrAwait.runAgain();
