@@ -651,6 +651,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
             if (isResultLevelCache) {
               for (int postPos = 0; postPos < query.getPostAggregatorSpecs().size(); postPos++) {
+                if (!results.hasNext()) {
+                  throw new ISE("Ran out of objects while reading postaggs from cache!");
+                }
                 resultRow.set(postAggregatorStart + postPos, results.next());
               }
             }
