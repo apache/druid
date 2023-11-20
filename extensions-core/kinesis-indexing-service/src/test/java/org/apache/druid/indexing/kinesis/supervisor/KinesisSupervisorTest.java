@@ -4088,16 +4088,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     // Create task1 with some start and end offsets
     final KinesisIndexTask task1 = createKinesisIndexTask(
-        "id1",
+        "id0",
         0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
-            SHARD_ID1,
-            "3"
-        ), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
-            SHARD_ID1,
-            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
-        )),
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(SHARD_ID1, "3"), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)
+        ),
         minMessageTime,
         maxMessageTime,
         dataSchema
