@@ -35,7 +35,7 @@
   </parent>
 
   <properties>
-    <kubernetes.client.version>11.0.4</kubernetes.client.version>
+    <kubernetes.client.version>19.0.0</kubernetes.client.version>
   </properties>
 
   <dependencies>
@@ -83,12 +83,12 @@
     <!-- Version override to address CVE-2020-28052 -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-ext-jdk15on</artifactId>
+      <artifactId>bcprov-ext-jdk18on</artifactId>
       <scope>runtime</scope>
     </dependency>
 

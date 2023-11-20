@@ -289,7 +289,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.7
+version: 2.12.7.20221012
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -364,7 +364,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 31.1-jre
+version: 32.1.3-jre
 libraries:
   - com.google.guava: guava
 
@@ -791,7 +791,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.19
+version: 4.2.22
 libraries:
   - io.dropwizard.metrics: metrics-core
 
@@ -881,7 +881,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.4
+version: 19.0.0
 libraries:
   - io.kubernetes: client-java
 
@@ -891,7 +891,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.4
+version: 19.0.0
 libraries:
   - io.kubernetes: client-java-api
 
@@ -901,7 +901,7 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.4
+version: 19.0.0
 libraries:
   - io.kubernetes: client-java-extended
 
@@ -1001,7 +1001,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.7.3
+version: 0.9.3
 libraries:
   - org.bitbucket.b_c: jose4j
 
@@ -1087,43 +1087,43 @@ libraries:
 
 ---
 
-name: org.bouncycastle bcprov-jdk15on
+name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.70"
+version: "1.77"
 libraries:
-  - org.bouncycastle: bcprov-jdk15on
+  - org.bouncycastle: bcprov-jdk18on
 
 ---
 
-name: org.bouncycastle bcprov-ext-jdk15on
+name: org.bouncycastle bcprov-ext-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.70"
+version: "1.77"
 libraries:
-  - org.bouncycastle: bcprov-ext-jdk15on
+  - org.bouncycastle: bcprov-ext-jdk18on
 
 ---
 
-name: org.bouncycastle bcpkix-jdk15on
+name: org.bouncycastle bcpkix-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.70"
+version: "1.77"
 libraries:
-  - org.bouncycastle: bcpkix-jdk15on
+  - org.bouncycastle: bcpkix-jdk18on
 
 ---
 
-name: org.bouncycastle bcutil-jdk15on
+name: org.bouncycastle bcutil-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.70"
+version: "1.77"
 libraries:
-  - org.bouncycastle: bcutil-jdk15on
+  - org.bouncycastle: bcutil-jdk18on
 
 ---
 
@@ -3345,7 +3345,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.11.1
+version: 1.11.3
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
