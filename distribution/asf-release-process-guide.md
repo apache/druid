@@ -395,8 +395,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
   - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files 
   - In the `docs` directory at the root of the repo, the new Markdown files.
     
-    All these files should be part of your PR to `druid-website-src`.
-   <br />
+    All these files should be part of your PR to `druid-website-src`.  
     Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `published_versions`.
   - The PR to `druid-website-src` should not be merged. Leave it in draft for reference. It can be closed when you're ready to push to production. 
    
@@ -652,8 +651,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
   - In `published_versions` directory: HTML files for `docs/VERSION` , `docs/latest`, and assorted HTML and non-HTML files. 
   - In the `docs` directory at the root of the repo, the new Markdown files.
     
-    All these files should be part of your PR to `druid-website-src`.
-   <br />
+    All these files should be part of your PR to `druid-website-src`.  
     Verify the site looks fine and that the versions on the homepage and Downloads page look correct. You can run `http-server` or something similar in `published_versions`.
 
 6. Make a PR to the website repo (https://github.com/apache/druid-website) for the `asf-site` branch using the contents of `published_versions` in `druid-website-src`. Once the website PR is pushed to `asf-site`, https://druid.apache.org/ will be updated near immediately with the new docs.
