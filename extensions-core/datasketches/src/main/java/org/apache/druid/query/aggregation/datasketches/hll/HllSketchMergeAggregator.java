@@ -55,7 +55,7 @@ public class HllSketchMergeAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    final HllSketchHolder sketch = selector.getObject();
+    final HllSketchHolder sketch = HllSketchHolder.fromObj(selector.getObject());
     if (sketch == null) {
       return;
     }

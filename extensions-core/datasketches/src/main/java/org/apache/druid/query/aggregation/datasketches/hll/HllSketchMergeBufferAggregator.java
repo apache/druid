@@ -57,7 +57,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
-    final HllSketchHolder sketch = selector.getObject();
+    final HllSketchHolder sketch = HllSketchHolder.fromObj(selector.getObject());
     if (sketch == null) {
       return;
     }
