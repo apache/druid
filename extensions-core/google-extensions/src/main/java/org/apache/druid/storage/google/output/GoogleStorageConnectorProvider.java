@@ -1,16 +1,20 @@
 package org.apache.druid.storage.google.output;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleStorageDruidModule;
 
 import javax.annotation.Nullable;
 import java.io.File;
 
+@JsonTypeName(GoogleStorageDruidModule.SCHEME)
 public class GoogleStorageConnectorProvider extends GoogleOutputConfig implements StorageConnectorProvider
 {
 
@@ -18,6 +22,7 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   final GoogleStorage googleStorage;
   final GoogleInputDataConfig googleInputDataConfig;
 
+  @JsonCreator
   public GoogleStorageConnectorProvider(
       @JacksonInject GoogleStorage storage,
       @JacksonInject GoogleInputDataConfig inputDataConfig,

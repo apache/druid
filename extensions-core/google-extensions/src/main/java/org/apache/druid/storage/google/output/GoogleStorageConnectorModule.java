@@ -14,9 +14,7 @@ public class GoogleStorageConnectorModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return Collections.singletonList(
-        new SimpleModule(GoogleStorageConnectorModule.class.getSimpleName())
-            .registerSubtypes(GoogleStorageConnectorProvider.class)
-    );
+        new SimpleModule(this.getClass().getSimpleName()).registerSubtypes(GoogleStorageConnectorProvider.class));
   }
 
   @Override
