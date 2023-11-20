@@ -23,6 +23,9 @@ sidebar_label: Data management
   ~ under the License.
   -->
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 This topic describes the data management API endpoints for Apache Druid.
 This includes information on how to mark segments as used or unused and delete them from Druid.
 
