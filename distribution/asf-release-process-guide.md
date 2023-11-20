@@ -379,7 +379,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
 2. From `druid-website`, checkout a staging branch based off of the `asf-staging` branch.
 
 3. From `druid-website-src`, create a release branch from `master`, such as `27.0.0-staging`.
-   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0.
+   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file. If this is a patch release, replace the prior release of that version. For example, replace `27.0.0` with `27.0.1`. Don't add a new entry. 
    2. In this file, also update the release date. This is a placeholder date since the final date isn't decided until voting completes. You'll need to update it again before doing the production steps.
    3. In `scripts`, run: 
    
@@ -634,7 +634,7 @@ For more thorough instructions and a description of what the `do_all_things` scr
 3. From `druid-website`, create a release branch based on the latest `asf-site` branch.
 
 4. From `druid-website-src`, check out a new branch for the release:
-   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file. 
+   1. Update the version list in `static/js/version.js` with the version you're releasing. The highest release version goes in position 0. Make sure to remove older releases. We only keep the 3 most recent listed in the file. If this is a patch release, replace the prior release of that version. For example, replace `27.0.0` with `27.0.1`. Don't add a new entry. 
    2. In this file, also update the release date. **Set this as the actual date of the release.** When you updated this file for staging, you likely put in a placeholder date.
    3. In `scripts`, run: 
    
