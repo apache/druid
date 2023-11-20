@@ -370,6 +370,8 @@ $ svn commit -m 'add 0.17.0-rc3 artifacts'
 
 ### Update druid.staged.apache.org
 
+> Before you start, you need the following: Python 3.11 (or later) and Node 16.14 (or later).
+
 This repo (`druid`) is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
 
 For more thorough instructions and a description of what the `do_all_things` script does, see the [`druid-website-src` README](https://github.com/apache/druid-website-src)
@@ -622,6 +624,8 @@ http://www.apache.org/legal/release-policy.html#release-announcements
 
 
 ### Update druid.apache.org
+
+> Before you start, you need the following: Python 3.11 (or later) and Node 16.14 (or later).
 
 This repo (`druid`) is the source of truth for the Markdown files. The Markdown files get copied to `druid-website-src` and built there as part of the release process. It's all handled by a script in that repo  called `do_all_things`.
 
