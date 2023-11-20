@@ -62,7 +62,6 @@ import org.apache.druid.query.SubqueryQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
-import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -651,9 +650,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             );
 
             if (isResultLevelCache) {
-              Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
-              int postPos = 0;
-              while (postItr.hasNext() && results.hasNext()) {
+              for (int postPos = 0; postPos < query.getPostAggregatorSpecs().size(); postPos++) {
                 resultRow.set(postAggregatorStart + postPos, results.next());
               }
             }
