@@ -64,6 +64,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -182,8 +183,33 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals("Shutdown Task test", statusOptional.get().getErrorMsg());
   }
 
+  @Test(expected = TooManyTasksException.class)
+  public void testTaskErrorWhenExceptionIsThrownDueToQueueSize()
+  {
+    final TaskActionClientFactory actionClientFactory = createActionClientFactory();
+    final TaskQueue taskQueue = new TaskQueue(
+            new TaskLockConfig(),
+            new TaskQueueConfig(1, null, null, null, null),
+            new DefaultTaskConfig(),
+            getTaskStorage(),
+            new SimpleTaskRunner(actionClientFactory),
+            actionClientFactory,
+            getLockbox(),
+            new NoopServiceEmitter()
+    );
+    taskQueue.setActive(true);
+
+    // Create a Task and add it to the TaskQueue
+    final TestTask task1 = new TestTask("t1", Intervals.of("2021-01/P1M"));
+    final TestTask task2 = new TestTask("t2", Intervals.of("2021-01/P1M"));
+    taskQueue.add(task1);
+
+    // we will get exception here as taskQueue size is 1 druid.indexer.queue.maxSize is already 1
+    taskQueue.add(task2);
+  }
+
   @Test
-  public void testSetUseLineageBasedSegmentAllocationByDefault() throws EntryExistsException
+  public void testSetUseLineageBasedSegmentAllocationByDefault() throws EntryExistsException, TooManyTasksException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -208,7 +234,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
+  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException, TooManyTasksException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -243,7 +269,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
+  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException, TooManyTasksException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -275,7 +301,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testLockConfigTakePrecedenceThanDefaultTaskContext() throws EntryExistsException
+  public void testLockConfigTakePrecedenceThanDefaultTaskContext() throws EntryExistsException, TooManyTasksException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -308,7 +334,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedContextOverrideLockConfig() throws EntryExistsException
+  public void testUserProvidedContextOverrideLockConfig() throws EntryExistsException, TooManyTasksException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -338,7 +364,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException
+  public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException, TooManyTasksException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -374,7 +400,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws EntryExistsException, InterruptedException
+  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws EntryExistsException, InterruptedException, TooManyTasksException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));

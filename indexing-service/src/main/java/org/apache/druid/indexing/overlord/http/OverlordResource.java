@@ -68,6 +68,7 @@ import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
+import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -225,6 +226,11 @@ public class OverlordResource
           try {
             taskQueue.add(task);
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
+          }
+          catch (TooManyTasksException e) {
+            return Response.status(e.getResponseCode())
+                    .entity(ImmutableMap.of("error", e.getMessage()))
+                    .build();
           }
           catch (DruidException e) {
             return Response.status(e.getResponseCode())

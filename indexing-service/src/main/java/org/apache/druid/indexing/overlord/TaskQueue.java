@@ -54,6 +54,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -496,7 +497,7 @@ public class TaskQueue
    *
    * @throws EntryExistsException if the task already exists
    */
-  public boolean add(final Task task) throws EntryExistsException
+  public boolean add(final Task task) throws EntryExistsException, TooManyTasksException
   {
     // Before adding the task, validate the ID, so it can be safely used in file paths, znodes, etc.
     IdUtils.validateId("Task ID", task.getId());
@@ -520,7 +521,9 @@ public class TaskQueue
     try {
       Preconditions.checkState(active, "Queue is not active!");
       Preconditions.checkNotNull(task, "task");
-      Preconditions.checkState(tasks.size() < config.getMaxSize(), "Too many tasks (max = %s)", config.getMaxSize());
+      if (tasks.size() >= config.getMaxSize()) {
+        throw new TooManyTasksException(StringUtils.format("Too many tasks (max = %d)", config.getMaxSize()));
+      }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue. So don't catch it.

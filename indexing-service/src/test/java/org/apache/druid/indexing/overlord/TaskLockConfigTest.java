@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -51,7 +52,7 @@ public class TaskLockConfigTest
   }
 
   @Test
-  public void testDefault() throws EntryExistsException
+  public void testDefault() throws EntryExistsException, TooManyTasksException
   {
     final TaskQueue taskQueue = createTaskQueue(null);
     taskQueue.start();
@@ -65,7 +66,7 @@ public class TaskLockConfigTest
   }
 
   @Test
-  public void testNotForceTimeChunkLock() throws EntryExistsException
+  public void testNotForceTimeChunkLock() throws EntryExistsException, TooManyTasksException
   {
     final TaskQueue taskQueue = createTaskQueue(false);
     taskQueue.start();
@@ -79,7 +80,7 @@ public class TaskLockConfigTest
   }
 
   @Test
-  public void testOverwriteDefault() throws EntryExistsException
+  public void testOverwriteDefault() throws EntryExistsException, TooManyTasksException
   {
     final TaskQueue taskQueue = createTaskQueue(null);
     taskQueue.start();
