@@ -130,7 +130,8 @@ public class MarkDanglingSegmentsAsUnusedTest
       new TombstoneShardSpec() {
         @Override
         @JsonProperty("partitions")
-        public int getNumCorePartitions() {
+        public int getNumCorePartitions()
+        {
           return 1;
         }
       });
