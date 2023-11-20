@@ -577,6 +577,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
             if (resultRowHasTimestamp) {
               retVal.add(resultRow.getLong(inPos++));
+            } else {
+              retVal.add(query.getUniversalTimestamp().getMillis());
             }
 
             for (int i = 0; i < dims.size(); i++) {
@@ -610,37 +612,32 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           @Override
           public ResultRow apply(Object input)
           {
-            List<Object> inputList = (List<Object>) input;
-            Iterator<Object> results = inputList.iterator();
+            Iterator<Object> results = ((List<Object>) input).iterator();
 
+            DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
 
             final int size = isResultLevelCache
                              ? query.getResultRowSizeWithPostAggregators()
                              : query.getResultRowSizeWithoutPostAggregators();
 
-            if (size != inputList.size()) {
-              throw new ISE(
-                  "Stored field count[%d] / output field field count[%d] mismatch",
-                  inputList.size(),
-                  size
-              );
-            }
-
             final ResultRow resultRow = ResultRow.create(size);
 
             if (resultRowHasTimestamp) {
-              DateTime timestamp = granularity.toDateTime(((Number) results.next()).longValue());
               resultRow.set(0, timestamp.getMillis());
             }
 
-            for (int dimPos = 0; dimPos < dims.size(); dimPos++) {
-              final DimensionSpec dimensionSpec = dims.get(dimPos);
+            final Iterator<DimensionSpec> dimsIter = dims.iterator();
+            int dimPos = 0;
+            while (dimsIter.hasNext() && results.hasNext()) {
+              final DimensionSpec dimensionSpec = dimsIter.next();
 
               // Must convert generic Jackson-deserialized type into the proper type.
               resultRow.set(
                   dimensionStart + dimPos,
                   DimensionHandlerUtils.convertObjectToType(results.next(), dimensionSpec.getOutputType())
               );
+
+              dimPos++;
             }
 
             CacheStrategy.fetchAggregatorsFromCache(
@@ -656,6 +653,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
               for (int postPos = 0; postPos < query.getPostAggregatorSpecs().size(); postPos++) {
                 resultRow.set(postAggregatorStart + postPos, results.next());
               }
+            }
+            if (dimsIter.hasNext() || results.hasNext()) {
+              throw new ISE(
+                  "Found left over objects while reading from cache!! dimsIter[%s] results[%s]",
+                  dimsIter.hasNext(),
+                  results.hasNext()
+              );
             }
 
             return resultRow;
