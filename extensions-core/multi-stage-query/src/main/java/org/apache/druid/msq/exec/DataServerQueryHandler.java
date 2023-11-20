@@ -176,13 +176,15 @@ public class DataServerQueryHandler
         }
       }
 
-      pendingRequests.addAll(createNextPendingRequests(missingRichSegmentDescriptor, MultiStageQueryContext.getSegmentSources(query.context())));
+      pendingRequests = createNextPendingRequests(missingRichSegmentDescriptor, MultiStageQueryContext.getSegmentSources(query.context()));
 
-      retryCount++;
-      if (retryCount >= maxRetries) {
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("Unable to fetch results from dataservers in [%d] retries.", retryCount);
+      if (!pendingRequests.isEmpty()) {
+        retryCount++;
+        if (retryCount > maxRetries) {
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build("Unable to fetch results from dataservers in [%d] retries.", retryCount);
+        }
       }
     }
 
@@ -209,40 +211,38 @@ public class DataServerQueryHandler
                                                                         .collect(Collectors.toList());
 
     try {
-      return
-          RetryUtils.retry(
-            () -> closer.register(createYielder(
-                dataServerClient.run(
-                    Queries.withSpecificSegments(
-                        query,
-                        requestDescriptor.getSegments()
-                                         .stream()
-                                         .map(DataServerQueryHandler::toSegmentDescriptorWithFullInterval)
-                                         .collect(Collectors.toList())
-                    ), responseContext, queryResultType, closer).map(preComputeManipulatorFn), mappingFunction)),
-            throwable -> !(throwable instanceof QueryInterruptedException
-                           && throwable.getCause() instanceof InterruptedException),
-            PER_SERVER_QUERY_NUM_TRIES
-        );
-  }
-  catch (QueryInterruptedException e) {
-    if (e.getCause() instanceof RpcException) {
-      // In the case that all the realtime servers for a segment are gone (for example, if they were scaled down),
-      // we would also be unable to fetch the segment.
-      responseContext.addMissingSegments(segmentDescriptors);
-      return Yielders.each(Sequences.empty());
-    } else {
+      return RetryUtils.retry(
+          () -> closer.register(createYielder(
+              dataServerClient.run(
+                  Queries.withSpecificSegments(
+                      query,
+                      requestDescriptor.getSegments()
+                                       .stream()
+                                       .map(DataServerQueryHandler::toSegmentDescriptorWithFullInterval)
+                                       .collect(Collectors.toList())
+                  ), responseContext, queryResultType, closer).map(preComputeManipulatorFn), mappingFunction)),
+          throwable -> !(throwable instanceof QueryInterruptedException
+                         && throwable.getCause() instanceof InterruptedException),
+          PER_SERVER_QUERY_NUM_TRIES
+      );
+    }
+    catch (QueryInterruptedException e) {
+      if (e.getCause() instanceof RpcException) {
+        // In the case that all the realtime servers for a segment are gone (for example, if they were scaled down),
+        // we would also be unable to fetch the segment.
+        responseContext.addMissingSegments(segmentDescriptors);
+        return Yielders.each(Sequences.empty());
+      } else {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "Exception while fetching rows for query from dataservers[%s]", serviceLocation);
+      }
+    }
+    catch (Exception e) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                           .build(e, "Exception while fetching rows for query from dataservers[%s]", serviceLocation);
     }
-  }
-  catch (Exception e) {
-    throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                        .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                        .build(e, "Exception while fetching rows for query from dataservers[%s]", serviceLocation);
-  }
-
   }
 
   private <RowType, QueryType> Yielder<RowType> createYielder(
@@ -264,36 +264,44 @@ public class DataServerQueryHandler
       SegmentSource includeSegmentSource
   )
   {
-
     final Map<DruidServerMetadata, Set<RichSegmentDescriptor>> serverVsSegmentsMap = new HashMap<>();
 
-    Iterable<ImmutableSegmentLoadInfo> immutableSegmentLoadInfos = coordinatorClient.fetchServerViewSegments(dataSource,
-                                                                                                             richSegmentDescriptors.stream()
-                                                                                                                                   .map(RichSegmentDescriptor::getFullInterval)
-                                                                                                                                   .collect(Collectors.toList())
-    );
+    Iterable<ImmutableSegmentLoadInfo> immutableSegmentLoadInfos =
+        coordinatorClient.fetchServerViewSegments(
+            dataSource,
+            richSegmentDescriptors.stream().map(RichSegmentDescriptor::getFullInterval).collect(Collectors.toList())
+        );
 
-    for (ImmutableSegmentLoadInfo segmentLoadInfo : immutableSegmentLoadInfos) {
-      for (RichSegmentDescriptor richSegmentDescriptor : richSegmentDescriptors) {
-        if (segmentLoadInfo.getSegment().toDescriptor().equals(richSegmentDescriptor)) {
-          Set<DruidServerMetadata> servers = segmentLoadInfo.getServers()
-                                                            .stream()
-                                                            .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
-                                                                                                               .contains(druidServerMetadata.getType()))
-                                                            .collect(Collectors.toSet());
-          if (servers.isEmpty()) {
-            throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                .build("Could not find a server.");
-          }
+    Map<SegmentDescriptor, ImmutableSegmentLoadInfo> segmentVsServerMap = new HashMap<>();
+    immutableSegmentLoadInfos.forEach(immutableSegmentLoadInfo -> {
+      segmentVsServerMap.put(immutableSegmentLoadInfo.getSegment().toDescriptor(), immutableSegmentLoadInfo);
+    });
 
-          DruidServerMetadata druidServerMetadata = DataServerSelector.RANDOM.getSelectServerFunction().apply(servers);
-          serverVsSegmentsMap.computeIfAbsent(druidServerMetadata, ignored -> new HashSet<>());
-          SegmentDescriptor descriptor = segmentLoadInfo.getSegment().toDescriptor();
-          serverVsSegmentsMap.get(druidServerMetadata)
-                             .add(new RichSegmentDescriptor(richSegmentDescriptor.getFullInterval(), richSegmentDescriptor.getInterval(), descriptor.getVersion(), descriptor.getPartitionNumber()));
+    for (RichSegmentDescriptor richSegmentDescriptor : richSegmentDescriptors) {
+      if (!segmentVsServerMap.containsKey(toSegmentDescriptorWithFullInterval(richSegmentDescriptor))) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build("Could not find a server.");
+      }
 
+      ImmutableSegmentLoadInfo segmentLoadInfo = segmentVsServerMap.get(toSegmentDescriptorWithFullInterval(richSegmentDescriptor));
+      if (segmentLoadInfo.getSegment().toDescriptor().equals(richSegmentDescriptor)) {
+        Set<DruidServerMetadata> servers = segmentLoadInfo.getServers()
+                                                          .stream()
+                                                          .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
+                                                                                                             .contains(druidServerMetadata.getType()))
+                                                          .collect(Collectors.toSet());
+        if (servers.isEmpty()) {
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build("Could not find a server.");
         }
+
+        DruidServerMetadata druidServerMetadata = DataServerSelector.RANDOM.getSelectServerFunction().apply(servers);
+        serverVsSegmentsMap.computeIfAbsent(druidServerMetadata, ignored -> new HashSet<>());
+        SegmentDescriptor descriptor = segmentLoadInfo.getSegment().toDescriptor();
+        serverVsSegmentsMap.get(druidServerMetadata)
+                           .add(new RichSegmentDescriptor(richSegmentDescriptor.getFullInterval(), richSegmentDescriptor.getInterval(), descriptor.getVersion(), descriptor.getPartitionNumber()));
       }
     }
 
@@ -350,7 +358,7 @@ public class DataServerQueryHandler
     }
   }
 
-  private static SegmentDescriptor toSegmentDescriptorWithFullInterval(RichSegmentDescriptor richSegmentDescriptor)
+  static SegmentDescriptor toSegmentDescriptorWithFullInterval(RichSegmentDescriptor richSegmentDescriptor)
   {
     return new SegmentDescriptor(
         richSegmentDescriptor.getFullInterval(),

@@ -144,10 +144,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     // Function to generate a processor manger for the regular processors, which run after the segmentMapFnProcessor.
     final Function<List<Function<SegmentReference, SegmentReference>>, ProcessorManager<Object, Long>> processorManagerFn = segmentMapFnList -> {
       final Function<SegmentReference, SegmentReference> segmentMapFunction =
-          CollectionUtils.getOnlyElement(
-              segmentMapFnList, throwable ->
-                  DruidException.defensive("Only one segment map function expected")
-          );
+          CollectionUtils.getOnlyElement(segmentMapFnList, throwable -> DruidException.defensive("Only one segment map function expected"));
       return createBaseLeafProcessorManagerWithHandoff(
           stageDefinition,
           inputSlices,
@@ -186,7 +183,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final Queue<FrameWriterFactory> frameWriterFactoryQueue,
       final Queue<WritableFrameChannel> channelQueue,
       final FrameContext frameContext
-      )
+  )
   {
     final BaseLeafFrameProcessorFactory factory = this;
     // Read all base inputs in separate processors, one per processor.

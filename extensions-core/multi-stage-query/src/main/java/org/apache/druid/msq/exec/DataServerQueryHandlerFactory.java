@@ -60,7 +60,7 @@ public class DataServerQueryHandlerFactory implements Closeable
     this.queryCancellationExecutor = ScheduledExecutors.fixed(DEFAULT_THREAD_COUNT, "query-cancellation-executor");
   }
 
-  public DataServerQueryHandler createLoadedSegmentDataProvider(
+  public DataServerQueryHandler createDataServerQueryHandler(
       String dataSource,
       ChannelCounters channelCounters,
       DataServerRequestDescriptor dataServerRequestDescriptor

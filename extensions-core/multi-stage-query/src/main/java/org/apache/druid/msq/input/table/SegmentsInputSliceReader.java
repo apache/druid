@@ -119,7 +119,7 @@ public class SegmentsInputSliceReader implements InputSliceReader
   )
   {
     return servedSegments.stream().map(
-        dataServerRequestDescriptor -> dataServerQueryHandlerFactory.createLoadedSegmentDataProvider(
+        dataServerRequestDescriptor -> dataServerQueryHandlerFactory.createDataServerQueryHandler(
             dataSource,
             channelCounters,
             dataServerRequestDescriptor

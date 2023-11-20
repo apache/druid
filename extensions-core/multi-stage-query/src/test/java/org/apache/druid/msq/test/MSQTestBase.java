@@ -427,7 +427,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
                 .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
-          binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestLoadedSegmentDataProviderFactory());
+          binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
 
@@ -582,14 +582,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return array;
   }
 
-  private DataServerQueryHandlerFactory getTestLoadedSegmentDataProviderFactory()
+  private DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
-//    LoadedSegmentDataProviderFactory mockFactory = Mockito.mock(LoadedSegmentDataProviderFactory.class);
-//    doReturn(loadedSegmentDataProvider)
-//        .when(mockFactory)
-//        .createLoadedSegmentDataProvider(anyString(), any());
-//    return mockFactory;
-    return mock(DataServerQueryHandlerFactory.class);
+    DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
+    doReturn(dataServerQueryHandler)
+        .when(mockFactory)
+        .createDataServerQueryHandler(anyString(), any(), any());
+    return mockFactory;
   }
 
   @Nonnull
