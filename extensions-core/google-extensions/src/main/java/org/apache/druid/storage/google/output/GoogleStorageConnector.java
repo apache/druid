@@ -21,6 +21,7 @@ package org.apache.druid.storage.google.output;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
@@ -69,7 +70,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   @Override
   public OutputStream write(String path) throws IOException
   {
-    return storage.getObjectOutputStream(config.getBucket(), path);
+    return storage.getObjectOutputStream(config.getBucket(), objectPath(path));
   }
 
   @Override
@@ -95,13 +96,13 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   @Override
   public void deleteFiles(Iterable<String> paths)
   {
-    storage.batchDelete(config.getBucket(), paths);
+    storage.batchDelete(config.getBucket(), Iterables.transform(paths, this::objectPath));
   }
 
   @Override
   public void deleteRecursively(String path)
   {
-    Iterator<String> storageObjectNames = listDir(path);
+    Iterator<String> storageObjectNames = listDir(objectPath(path));
     storage.batchDelete(config.getBucket(), () -> storageObjectNames);
   }
 
