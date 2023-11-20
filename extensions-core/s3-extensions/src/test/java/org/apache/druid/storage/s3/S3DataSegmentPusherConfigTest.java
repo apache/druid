@@ -43,7 +43,9 @@ public class S3DataSegmentPusherConfigTest
                         + "\"disableAcl\":false,\"maxListingLength\":2000,\"useS3aSchema\":false}";
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
-    Assert.assertEquals(jsonConfig, JSON_MAPPER.writeValueAsString(config));
+    Map<String, String> expected = JSON_MAPPER.readValue(jsonConfig, Map.class);
+    Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
+    Assert.assertEquals(expected, actual);
   }
 
   @Test

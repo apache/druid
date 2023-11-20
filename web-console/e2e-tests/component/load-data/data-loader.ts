@@ -42,6 +42,7 @@ export class DataLoader {
    */
   async load() {
     await this.page.goto(this.baseUrl);
+    await this.startNewSpecIfNeeded();
     await this.start();
     await this.connect(this.connector, this.connectValidator);
     if (this.connector.needParse) {
@@ -55,6 +56,13 @@ export class DataLoader {
     await this.tune();
     await this.publish(this.publishConfig);
     await this.editSpec();
+  }
+
+  private async startNewSpecIfNeeded() {
+    const startNewSpecLocator = this.page.locator(`//*[contains(text(),"Start a new")]`);
+    if (await startNewSpecLocator.count()) {
+      await startNewSpecLocator.click();
+    }
   }
 
   private async start() {
