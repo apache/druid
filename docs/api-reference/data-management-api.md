@@ -218,7 +218,7 @@ The group of segments is sent as a JSON request payload that accepts one of the 
 
 |Property|Description|Example|
 |----------|-------------|---------|
-|`interval`|ISO-8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`interval`|ISO 8601 segments interval.|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
 |`segmentIds`|Array of segment IDs.|`["segmentId1", "segmentId2"]`|
 
 #### Responses
