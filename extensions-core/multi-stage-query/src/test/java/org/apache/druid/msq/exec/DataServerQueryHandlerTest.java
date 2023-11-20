@@ -215,7 +215,7 @@ public class DataServerQueryHandlerTest
     );
 
     Assert.assertEquals(ImmutableList.of(SEGMENT_1), dataServerQueryResult.getHandedOffSegments().getDescriptors());
-    Assert.assertTrue(dataServerQueryResult.getResultsYielders().get(0).isDone());
+    Assert.assertTrue(dataServerQueryResult.getResultsYielders().isEmpty());
   }
 
   @Test

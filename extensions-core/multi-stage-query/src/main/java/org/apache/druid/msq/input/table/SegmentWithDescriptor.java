@@ -19,7 +19,7 @@
 
 package org.apache.druid.msq.input.table;
 
-import com.google.api.client.util.Preconditions;
+import com.google.common.base.Preconditions;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.segment.Segment;
 
