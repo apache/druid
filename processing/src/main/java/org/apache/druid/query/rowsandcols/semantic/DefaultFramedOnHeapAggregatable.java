@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -103,7 +104,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     AggIntervalCursor cell = new AggIntervalCursor(rac, aggFactories);
 
-    for (Range xRange : iter) {
+    for (AggRange xRange : iter) {
 
       cell.moveTo(xRange.inputRows);
       // TODO: if(xRange.outputRows.a ==0 && xRange.outputRows.b == numRows) { return Const };
@@ -114,7 +115,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     return makeReturnRAC(aggFactories, results);
   }
 
-  static class RangeIteratorForWindow implements Iterable<Range>
+  static class RangeIteratorForWindow implements Iterable<AggRange>
   {
     private final int[] rangeToRowId;
     private final int numRows;
@@ -133,9 +134,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     @Override
-    public Iterator<Range> iterator()
+    public Iterator<AggRange> iterator()
     {
-      return new Iterator<Range>()
+      return new Iterator<AggRange>()
       {
         int currentRowIndex = 0;
         int currentRangeIndex = 0;
@@ -147,13 +148,13 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
 
         @Override
-        public Range next()
+        public AggRange next()
         {
           if (!hasNext()) {
             throw new IllegalStateException();
           }
           // TODO: invert listing order at the end to get benefits of incremenental aggregations
-          Range r = new Range(
+          AggRange r = new AggRange(
               Interval.of(
                   rangeToRowIndex(relativeRangeId(0)),
                   rangeToRowIndex(relativeRangeId(1))
@@ -195,18 +196,18 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
    */
   static class Interval implements Iterable<Integer>
   {
-    int a;
-    int b;
+    final int a;
+    final int b;
 
-    public static Interval of(int u, int v)
+    public static Interval of(int a, int b)
     {
-      return new Interval(u, v);
+      return new Interval(a, b);
     }
 
-    public Interval(int u, int v)
+    public Interval(int a, int b)
     {
-      this.a = u;
-      this.b = v;
+      this.a = a;
+      this.b = b;
     }
 
     @Override
@@ -231,19 +232,27 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
           return current < b;
         }
       };
+    }
 
+    @Override
+    public String toString()
+    {
+      return StringUtils.format("Interval [%d ... %d[", a, b);
     }
   }
 
   /**
-   * Represents a range between U (inclusive) and V (exclusive).
+   * Represents an aggregation range.
+   *
+   * Describes that the aggregation of {@link #inputRows} should be outputted to
+   * all {@link #outputRows} specified.
    */
-  static class Range
+  static class AggRange
   {
-    Interval outputRows;
-    Interval inputRows;
+    final Interval outputRows;
+    final Interval inputRows;
 
-    public Range(Interval outputRows, Interval inputRows)
+    public AggRange(Interval outputRows, Interval inputRows)
     {
       this.outputRows = outputRows;
       this.inputRows = inputRows;
