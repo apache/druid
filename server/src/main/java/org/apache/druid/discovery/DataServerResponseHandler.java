@@ -260,7 +260,7 @@ public class DataServerResponseHandler<T> implements HttpResponseHandler<InputSt
   {
     fail.set(msg);
     queue.clear();
-    boolean ignored = queue.offer(
+    queue.offer(
         InputStreamHolder.fromStream(
             new InputStream()
             {
