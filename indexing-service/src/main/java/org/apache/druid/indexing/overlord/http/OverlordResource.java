@@ -34,7 +34,8 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.common.exception.DruidException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -68,7 +69,6 @@ import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
-import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -227,15 +227,11 @@ public class OverlordResource
             taskQueue.add(task);
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
-          catch (TooManyTasksException e) {
-            return Response.status(e.getResponseCode())
-                    .entity(ImmutableMap.of("error", e.getMessage()))
+          catch (DruidException  e) {
+            return Response
+                    .status(e.getStatusCode())
+                    .entity(new ErrorResponse(e))
                     .build();
-          }
-          catch (DruidException e) {
-            return Response.status(e.getResponseCode())
-                           .entity(ImmutableMap.of("error", e.getMessage()))
-                           .build();
           }
         }
     );

@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
@@ -78,7 +79,6 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.metadata.EntryExistsException;
-import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -3736,7 +3736,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test
   public void testDoNotKillCompatibleTasks()
-      throws InterruptedException, EntryExistsException, TooManyTasksException
+      throws InterruptedException, EntryExistsException, DruidException
   {
     // This supervisor always returns true for isTaskCurrent -> it should not kill its tasks
     int numReplicas = 2;
@@ -3834,7 +3834,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test
   public void testKillIncompatibleTasks()
-      throws InterruptedException, EntryExistsException, TooManyTasksException
+      throws InterruptedException, EntryExistsException, DruidException
   {
     // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
     int numReplicas = 2;

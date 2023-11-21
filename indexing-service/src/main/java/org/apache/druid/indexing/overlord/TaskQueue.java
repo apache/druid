@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -54,7 +55,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
-import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -497,7 +497,7 @@ public class TaskQueue
    *
    * @throws EntryExistsException if the task already exists
    */
-  public boolean add(final Task task) throws EntryExistsException, TooManyTasksException
+  public boolean add(final Task task) throws EntryExistsException
   {
     // Before adding the task, validate the ID, so it can be safely used in file paths, znodes, etc.
     IdUtils.validateId("Task ID", task.getId());
@@ -522,8 +522,16 @@ public class TaskQueue
       Preconditions.checkState(active, "Queue is not active!");
       Preconditions.checkNotNull(task, "task");
       if (tasks.size() >= config.getMaxSize()) {
-        throw new TooManyTasksException(StringUtils.format("Too many tasks (maxQueueSize = %d), " +
-                "(currentActiveTasks = %d). Dropping extra Tasks.", config.getMaxSize(), tasks.size()));
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                .build(
+                        StringUtils.format(
+                                "Too many tasks are in the queue (Limit = %d), " +
+                                        "(Current active tasks = %d). Retry later or increase the druid.indexer.queue.maxSize",
+                                config.getMaxSize(),
+                                tasks.size()
+                        )
+                );
       }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to

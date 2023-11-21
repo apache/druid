@@ -92,7 +92,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -3955,9 +3954,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           stateManager.recordThrowableEvent(e);
           log.error("Tried to add task [%s] but it already exists", indexTask.getId());
         }
-        catch (TooManyTasksException e) {
+        catch (DruidException e) {
           stateManager.recordThrowableEvent(e);
-          log.error("Tried to add task [%s] but %s", indexTask.getId(), e.getMessage());
+          log.error("Tried to add task [%s] but %s", indexTask.getId(), e.getErrorCode());
         }
       } else {
         log.error("Failed to get task queue because I'm not the leader!");

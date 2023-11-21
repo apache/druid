@@ -66,7 +66,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
-import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -82,7 +81,6 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.metadata.EntryExistsException;
-import org.apache.druid.metadata.TooManyTasksException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -1848,7 +1846,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     return result;
   }
 
-  private void expectEmitterSupervisor(boolean suspended) throws EntryExistsException, TooManyTasksException
+  private void expectEmitterSupervisor(boolean suspended) throws EntryExistsException, DruidException
   {
     spec = createMock(SeekableStreamSupervisorSpec.class);
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
