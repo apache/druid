@@ -53,6 +53,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleStorageObjectMetadata;
+import org.apache.druid.storage.google.GoogleStorageObjectPage;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
@@ -112,7 +114,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
 
   private static final String BUCKET = "TEST_BUCKET";
   private static final String OBJECT_NAME = "TEST_NAME";
-  private static final Long updateTime = 111L;
+  private static final Long UPDATE_TIME = 111L;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -211,11 +213,11 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
     EasyMock.reset(STORAGE);
 
-    GoogleStorage.GoogleStorageObjectMetadata objectMetadata = new GoogleStorage.GoogleStorageObjectMetadata(
+    GoogleStorageObjectMetadata objectMetadata = new GoogleStorageObjectMetadata(
         BUCKET,
         OBJECT_NAME,
         (long) CONTENT.length,
-        updateTime
+        UPDATE_TIME
     );
 
     EasyMock.expect(
@@ -255,11 +257,11 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   @Test
   public void testWithUrisGlob() throws Exception
   {
-    GoogleStorage.GoogleStorageObjectMetadata objectMetadata = new GoogleStorage.GoogleStorageObjectMetadata(
+    GoogleStorageObjectMetadata objectMetadata = new GoogleStorageObjectMetadata(
         BUCKET,
         OBJECT_NAME,
         (long) CONTENT.length,
-        updateTime
+        UPDATE_TIME
     );
 
     EasyMock.reset(STORAGE);
@@ -505,15 +507,15 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
     final String bucket = prefix.getAuthority();
 
-    GoogleStorage.GoogleStorageObjectPage response = EasyMock.createMock(GoogleStorage.GoogleStorageObjectPage.class);
+    GoogleStorageObjectPage response = EasyMock.createMock(GoogleStorageObjectPage.class);
 
-    List<GoogleStorage.GoogleStorageObjectMetadata> mockObjects = new ArrayList<>();
+    List<GoogleStorageObjectMetadata> mockObjects = new ArrayList<>();
     for (URI uri : uris) {
-      GoogleStorage.GoogleStorageObjectMetadata s = new GoogleStorage.GoogleStorageObjectMetadata(
+      GoogleStorageObjectMetadata s = new GoogleStorageObjectMetadata(
           bucket,
           uri.getPath(),
           (long) CONTENT.length,
-          updateTime
+          UPDATE_TIME
       );
       mockObjects.add(s);
     }

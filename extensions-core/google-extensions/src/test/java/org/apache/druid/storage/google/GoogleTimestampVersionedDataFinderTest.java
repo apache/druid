@@ -19,8 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.client.util.DateTime;
-import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
@@ -38,13 +36,13 @@ public class GoogleTimestampVersionedDataFinderTest
     String keyPrefix = "prefix/dir/0";
 
     // object for directory prefix/dir/0/
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject1 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "//", 0);
+    final GoogleStorageObjectMetadata storageObject1 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "//", 0);
     storageObject1.setLastUpdateTime(System.currentTimeMillis());
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v1", 1);
+    final GoogleStorageObjectMetadata storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v1", 1);
     storageObject2.setLastUpdateTime(System.currentTimeMillis());
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v2", 1);
+    final GoogleStorageObjectMetadata storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/v2", 1);
     storageObject3.setLastUpdateTime(System.currentTimeMillis() + 100);
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/other", 4);
+    final GoogleStorageObjectMetadata storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/other", 4);
     storageObject4.setLastUpdateTime(System.currentTimeMillis() + 100);
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
@@ -62,13 +60,13 @@ public class GoogleTimestampVersionedDataFinderTest
     String keyPrefix = "prefix/dir/0/";
 
     // object for directory prefix/dir/0/
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject1 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/", 0);
+    final GoogleStorageObjectMetadata storageObject1 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "/", 0);
     storageObject1.setLastUpdateTime(System.currentTimeMillis());
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v1", 1);
+    final GoogleStorageObjectMetadata storageObject2 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v1", 1);
     storageObject2.setLastUpdateTime(System.currentTimeMillis());
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v2", 1);
+    final GoogleStorageObjectMetadata storageObject3 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "v2", 1);
     storageObject3.setLastUpdateTime(System.currentTimeMillis() + 100);
-    final GoogleStorage.GoogleStorageObjectMetadata storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "other", 4);
+    final GoogleStorageObjectMetadata storageObject4 = ObjectStorageIteratorTest.makeStorageObject(bucket, keyPrefix + "other", 4);
     storageObject4.setLastUpdateTime(System.currentTimeMillis() + 100);
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 

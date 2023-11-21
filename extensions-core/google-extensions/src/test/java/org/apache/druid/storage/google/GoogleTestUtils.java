@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.services.storage.model.StorageObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -41,14 +40,15 @@ public class GoogleTestUtils extends EasyMockSupport
   private static final byte[] CONTENT =
       StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
 
-  public static GoogleStorage.GoogleStorageObjectMetadata newStorageObject(
+  public static GoogleStorageObjectMetadata newStorageObject(
       String bucket,
       String key,
       long lastModifiedTimestamp
   )
   {
-    GoogleStorage.GoogleStorageObjectMetadata object = new GoogleStorage.GoogleStorageObjectMetadata(bucket, key, (long) CONTENT.length,
-                                                                                                     lastModifiedTimestamp);
+    GoogleStorageObjectMetadata object = new GoogleStorageObjectMetadata(bucket, key, (long) CONTENT.length,
+                                                                         lastModifiedTimestamp
+    );
     return object;
   }
 
@@ -56,54 +56,40 @@ public class GoogleTestUtils extends EasyMockSupport
       GoogleStorage storage,
       URI prefix,
       long maxListingLength,
-      List<GoogleStorage.GoogleStorageObjectMetadata> objectMetadataList
+      List<GoogleStorageObjectMetadata> objectMetadataList
   ) throws IOException
   {
-    GoogleStorage.GoogleStorageObjectPage objectMetadataPage = new GoogleStorage.GoogleStorageObjectPage(objectMetadataList, null);
+    GoogleStorageObjectPage objectMetadataPage = new GoogleStorageObjectPage(objectMetadataList, null);
     String bucket = prefix.getAuthority();
-    EasyMock.expect(storage.list(bucket, StringUtils.maybeRemoveLeadingSlash(prefix.getPath()), maxListingLength, null)).andReturn(objectMetadataPage).once();
-//    return objectMetadataPage;
+    EasyMock.expect(storage.list(bucket, StringUtils.maybeRemoveLeadingSlash(prefix.getPath()), maxListingLength, null))
+            .andReturn(objectMetadataPage)
+            .once();
   }
-
-  /*public static void expectListObjects(
-      GoogleStorage.GoogleStorageObjectPage objectPage,
-      List<GoogleStorage.GoogleStorageObjectMetadata> objects
-  ) throws IOException
-  {
-//    EasyMock.expect(objectPage.get(StringUtils.maybeRemoveLeadingSlash(prefix.getPath()))).andReturn(blobPage);
-//    EasyMock.expect(objectPage.setMaxResults(maxListingLength)).andReturn(blobPage);
-//    EasyMock.expect(objectPage.setPageToken(EasyMock.anyString())).andReturn(blobPage).anyTimes();
-
-    Objects resultObjects = new Objects();
-    resultObjects.setItems(objects);
-
-    EasyMock.expect(
-        blobPage.execute()
-    ).andReturn(resultObjects).once();
-  }*/
 
   public static void expectDeleteObjects(
       GoogleStorage storage,
-      List<GoogleStorage.GoogleStorageObjectMetadata> deleteObjectExpected,
-      Map<GoogleStorage.GoogleStorageObjectMetadata, Exception> deleteObjectToException
+      List<GoogleStorageObjectMetadata> deleteObjectExpected,
+      Map<GoogleStorageObjectMetadata, Exception> deleteObjectToException
   ) throws IOException
   {
-    Map<GoogleStorage.GoogleStorageObjectMetadata, IExpectationSetters<GoogleStorage.GoogleStorageObjectMetadata>> requestToResultExpectationSetter = new HashMap<>();
-    for (Map.Entry<GoogleStorage.GoogleStorageObjectMetadata, Exception> deleteObjectAndException : deleteObjectToException.entrySet()) {
-      GoogleStorage.GoogleStorageObjectMetadata deleteObject = deleteObjectAndException.getKey();
+    Map<GoogleStorageObjectMetadata, IExpectationSetters<GoogleStorageObjectMetadata>> requestToResultExpectationSetter = new HashMap<>();
+    for (Map.Entry<GoogleStorageObjectMetadata, Exception> deleteObjectAndException : deleteObjectToException.entrySet()) {
+      GoogleStorageObjectMetadata deleteObject = deleteObjectAndException.getKey();
       Exception exception = deleteObjectAndException.getValue();
-      IExpectationSetters<GoogleStorage.GoogleStorageObjectMetadata> resultExpectationSetter = requestToResultExpectationSetter.get(deleteObject);
+      IExpectationSetters<GoogleStorageObjectMetadata> resultExpectationSetter = requestToResultExpectationSetter.get(
+          deleteObject);
       if (resultExpectationSetter == null) {
         storage.delete(deleteObject.getBucket(), deleteObject.getName());
-        resultExpectationSetter = EasyMock.<GoogleStorage.GoogleStorageObjectMetadata>expectLastCall().andThrow(exception);
+        resultExpectationSetter = EasyMock.<GoogleStorageObjectMetadata>expectLastCall().andThrow(exception);
         requestToResultExpectationSetter.put(deleteObject, resultExpectationSetter);
       } else {
         resultExpectationSetter.andThrow(exception);
       }
     }
 
-    for (GoogleStorage.GoogleStorageObjectMetadata deleteObject : deleteObjectExpected) {
-      IExpectationSetters<GoogleStorage.GoogleStorageObjectMetadata> resultExpectationSetter = requestToResultExpectationSetter.get(deleteObject);
+    for (GoogleStorageObjectMetadata deleteObject : deleteObjectExpected) {
+      IExpectationSetters<GoogleStorageObjectMetadata> resultExpectationSetter = requestToResultExpectationSetter.get(
+          deleteObject);
       if (resultExpectationSetter == null) {
         storage.delete(deleteObject.getBucket(), deleteObject.getName());
         resultExpectationSetter = EasyMock.expectLastCall();

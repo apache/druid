@@ -47,80 +47,10 @@ public class GoogleStorage
    * if we have a Storage instead of a supplier of it, it can cause unnecessary config validation
    * against Google storage even when it's not used at all. To perform the config validation
    * only when it is actually used, we use a supplier.
-   *
+   * <p>
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
   private final Supplier<Storage> storage;
-
-  public static class GoogleStorageObjectMetadata
-  {
-    final String bucket;
-    final String name;
-    final Long size;
-    Long lastUpdateTime;
-
-    public GoogleStorageObjectMetadata(final String bucket, final String name, final Long size, final Long lastUpdateTime)
-    {
-      this.bucket = bucket;
-      this.name = name;
-      this.size = size;
-      this.lastUpdateTime = lastUpdateTime;
-    }
-
-    public void setLastUpdateTime(Long lastUpdateTime)
-    {
-      this.lastUpdateTime = lastUpdateTime;
-    }
-
-
-    public String getBucket()
-    {
-      return bucket;
-    }
-
-    public String getName()
-    {
-      return name;
-    }
-
-    public Long getSize()
-    {
-      return size;
-    }
-
-    public Long getLastUpdateTime()
-    {
-      return lastUpdateTime;
-    }
-  }
-
-  public static class GoogleStorageObjectPage
-  {
-    final List<GoogleStorage.GoogleStorageObjectMetadata> objectList;
-
-    @Nullable
-    final String nextPageToken;
-
-    public GoogleStorageObjectPage(
-        List<GoogleStorage.GoogleStorageObjectMetadata> objectList,
-        String nextPageToken
-    )
-    {
-      this.objectList = objectList;
-      this.nextPageToken = nextPageToken;
-    }
-
-    public List<GoogleStorage.GoogleStorageObjectMetadata> getObjectList()
-    {
-      return objectList;
-    }
-
-    @Nullable
-    public String getNextPageToken()
-    {
-      return nextPageToken;
-    }
-  }
 
   public GoogleStorage(final Supplier<Storage> storage)
   {
@@ -142,7 +72,8 @@ public class GoogleStorage
     return getInputStream(bucket, path, start, null);
   }
 
-  public InputStream getInputStream(final String bucket, final String path, long start, @Nullable Long length) throws IOException
+  public InputStream getInputStream(final String bucket, final String path, long start, @Nullable Long length)
+      throws IOException
   {
     ReadChannel reader = storage.get().reader(bucket, path);
     reader.seek(start);
@@ -161,13 +92,13 @@ public class GoogleStorage
     return Channels.newOutputStream(writer);
   }
 
-  public GoogleStorage.GoogleStorageObjectMetadata getMetadata(
+  public GoogleStorageObjectMetadata getMetadata(
       final String bucket,
       final String path
   )
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
-    return new GoogleStorage.GoogleStorageObjectMetadata(
+    return new GoogleStorageObjectMetadata(
         blob.getBucket(),
         blob.getName(),
         blob.getSize(),
@@ -180,6 +111,7 @@ public class GoogleStorage
   {
     storage.get().delete(bucket, path);
   }
+
   public boolean exists(final String bucket, final String path)
   {
 
@@ -199,7 +131,7 @@ public class GoogleStorage
     return blob.getGeneratedId();
   }
 
-  public GoogleStorage.GoogleStorageObjectPage list(
+  public GoogleStorageObjectPage list(
       final String bucket,
       @Nullable final String prefix,
       @Nullable final Long pageSize,
@@ -222,20 +154,23 @@ public class GoogleStorage
 
     Page<Blob> blobPage = storage.get().list(bucket, options.toArray(new Storage.BlobListOption[0]));
 
-    List<GoogleStorage.GoogleStorageObjectMetadata> googleStorageObjectMetadataList = blobPage.streamValues()
-                                                                                              .map(blob -> new GoogleStorage.GoogleStorageObjectMetadata(
-                                                                                                  blob.getBucket(),
-                                                                                                  blob.getName(),
-                                                                                                  blob.getSize(),
-                                                                                                  blob.getUpdateTimeOffsetDateTime()
-                                                                                                      .toEpochSecond()
-                                                                                              ))
-                                                                                              .collect(Collectors.toList());
+    List<GoogleStorageObjectMetadata> googleStorageObjectMetadataList =
+        blobPage.streamValues()
+                .map(blob -> new GoogleStorageObjectMetadata(
+                    blob.getBucket(),
+                    blob.getName(),
+                    blob.getSize(),
+                    blob.getUpdateTimeOffsetDateTime()
+                        .toEpochSecond()
+                ))
+                .collect(Collectors.toList());
 
-    return new GoogleStorage.GoogleStorageObjectPage(googleStorageObjectMetadataList, blobPage.getNextPageToken());
+    return new GoogleStorageObjectPage(googleStorageObjectMetadataList, blobPage.getNextPageToken());
 
   }
-  public void batchDelete(final String bucket, final Iterable<String> paths){
+
+  public void batchDelete(final String bucket, final Iterable<String> paths)
+  {
     storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
   }
 

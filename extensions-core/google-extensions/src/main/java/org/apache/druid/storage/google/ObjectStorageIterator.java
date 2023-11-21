@@ -26,16 +26,16 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class ObjectStorageIterator implements Iterator<GoogleStorage.GoogleStorageObjectMetadata>
+public class ObjectStorageIterator implements Iterator<GoogleStorageObjectMetadata>
 {
   private final GoogleStorage storage;
   private final Iterator<URI> uris;
   private final long maxListingLength;
-  private GoogleStorage.GoogleStorageObjectPage googleStorageObjectPage;
+  private GoogleStorageObjectPage googleStorageObjectPage;
   private URI currentUri;
   private String nextPageToken;
-  private Iterator<GoogleStorage.GoogleStorageObjectMetadata> blobIterator;
-  private GoogleStorage.GoogleStorageObjectMetadata currentObject;
+  private Iterator<GoogleStorageObjectMetadata> blobIterator;
+  private GoogleStorageObjectMetadata currentObject;
 
   public ObjectStorageIterator(GoogleStorage storage, Iterator<URI> uris, long maxListingLength)
   {
@@ -75,13 +75,13 @@ public class ObjectStorageIterator implements Iterator<GoogleStorage.GoogleStora
   }
 
   @Override
-  public GoogleStorage.GoogleStorageObjectMetadata next()
+  public GoogleStorageObjectMetadata next()
   {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
 
-    final GoogleStorage.GoogleStorageObjectMetadata retVal = currentObject;
+    final GoogleStorageObjectMetadata retVal = currentObject;
     advanceStorageObject();
     return retVal;
   }
@@ -90,7 +90,7 @@ public class ObjectStorageIterator implements Iterator<GoogleStorage.GoogleStora
   {
     while (blobIterator.hasNext() || nextPageToken != null || uris.hasNext()) {
       while (blobIterator.hasNext()) {
-        final GoogleStorage.GoogleStorageObjectMetadata next = blobIterator.next();
+        final GoogleStorageObjectMetadata next = blobIterator.next();
         // list with prefix can return directories, but they should always end with `/`, ignore them.
         // also skips empty objects.
         if (!next.getName().endsWith("/") && Long.signum(next.getSize()) > 0) {

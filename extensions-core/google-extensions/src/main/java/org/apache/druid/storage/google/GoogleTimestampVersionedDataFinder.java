@@ -47,8 +47,8 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
       long mostRecent = Long.MIN_VALUE;
       URI latest = null;
       final CloudObjectLocation baseLocation = new CloudObjectLocation(descriptorBase);
-      final GoogleStorage.GoogleStorageObjectPage googleStorageObjectPage = storage.list(baseLocation.getBucket(), baseLocation.getPath(), MAX_LISTING_KEYS, null);
-      for (GoogleStorage.GoogleStorageObjectMetadata objectMetadata : googleStorageObjectPage.getObjectList()) {
+      final GoogleStorageObjectPage googleStorageObjectPage = storage.list(baseLocation.getBucket(), baseLocation.getPath(), MAX_LISTING_KEYS, null);
+      for (GoogleStorageObjectMetadata objectMetadata : googleStorageObjectPage.getObjectList()) {
         if (GoogleUtils.isDirectoryPlaceholder(objectMetadata)) {
           continue;
         }

@@ -20,10 +20,8 @@
 package org.apache.druid.storage.google;
 
 import com.google.api.client.http.HttpResponseException;
-import com.google.cloud.storage.Blob;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -51,17 +49,17 @@ public class GoogleUtils
     return RetryUtils.retry(f, GOOGLE_RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
-  public static URI objectToUri(GoogleStorage.GoogleStorageObjectMetadata object)
+  public static URI objectToUri(GoogleStorageObjectMetadata object)
   {
     return objectToCloudObjectLocation(object).toUri(GoogleStorageDruidModule.SCHEME_GS);
   }
 
-  public static CloudObjectLocation objectToCloudObjectLocation(GoogleStorage.GoogleStorageObjectMetadata object)
+  public static CloudObjectLocation objectToCloudObjectLocation(GoogleStorageObjectMetadata object)
   {
     return new CloudObjectLocation(object.getBucket(), object.getName());
   }
 
-  public static Iterator<GoogleStorage.GoogleStorageObjectMetadata> lazyFetchingStorageObjectsIterator(
+  public static Iterator<GoogleStorageObjectMetadata> lazyFetchingStorageObjectsIterator(
       final GoogleStorage storage,
       final Iterator<URI> uris,
       final long maxListingLength
@@ -86,18 +84,18 @@ public class GoogleUtils
       GoogleInputDataConfig config,
       String bucket,
       String prefix,
-      Predicate<GoogleStorage.GoogleStorageObjectMetadata> filter
+      Predicate<GoogleStorageObjectMetadata> filter
   )
       throws Exception
   {
-    final Iterator<GoogleStorage.GoogleStorageObjectMetadata> iterator = lazyFetchingStorageObjectsIterator(
+    final Iterator<GoogleStorageObjectMetadata> iterator = lazyFetchingStorageObjectsIterator(
         storage,
         ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri(GoogleStorageDruidModule.SCHEME_GS)).iterator(),
         config.getMaxListingLength()
     );
 
     while (iterator.hasNext()) {
-      final GoogleStorage.GoogleStorageObjectMetadata nextObject = iterator.next();
+      final GoogleStorageObjectMetadata nextObject = iterator.next();
       if (filter.apply(nextObject)) {
         retryGoogleCloudStorageOperation(() -> {
           storage.delete(nextObject.getBucket(), nextObject.getName());
@@ -111,7 +109,7 @@ public class GoogleUtils
    * Similar to {@link org.apache.druid.storage.s3.ObjectSummaryIterator#isDirectoryPlaceholder}
    * Copied to avoid creating dependency on s3 extensions
    */
-  public static boolean isDirectoryPlaceholder(final GoogleStorage.GoogleStorageObjectMetadata objectMetadata)
+  public static boolean isDirectoryPlaceholder(final GoogleStorageObjectMetadata objectMetadata)
   {
     // Recognize "standard" directory place-holder indications
     if (objectMetadata.getName().endsWith("/") && objectMetadata.getSize().intValue() == 0) {

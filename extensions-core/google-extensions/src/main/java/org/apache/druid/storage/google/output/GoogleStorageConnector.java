@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
+import org.apache.druid.storage.google.GoogleStorageObjectMetadata;
 import org.apache.druid.storage.google.GoogleUtils;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
@@ -103,7 +104,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   public void deleteRecursively(String path)
   {
     final String fullPath = objectPath(path);
-    Iterator<GoogleStorage.GoogleStorageObjectMetadata> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
+    Iterator<GoogleStorageObjectMetadata> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
         storage,
         ImmutableList.of(new CloudObjectLocation(config.getBucket(), fullPath)
                              .toUri(GoogleStorageDruidModule.SCHEME_GS)).iterator(),
@@ -112,7 +113,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
 
     storage.batchDelete(
         config.getBucket(),
-        () -> Iterators.transform(storageObjects, GoogleStorage.GoogleStorageObjectMetadata::getName)
+        () -> Iterators.transform(storageObjects, GoogleStorageObjectMetadata::getName)
     );
   }
 
@@ -120,7 +121,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   public Iterator<String> listDir(String dirName)
   {
     final String fullPath = objectPath(dirName);
-    Iterator<GoogleStorage.GoogleStorageObjectMetadata> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
+    Iterator<GoogleStorageObjectMetadata> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
         storage,
         ImmutableList.of(new CloudObjectLocation(config.getBucket(), fullPath)
                              .toUri(GoogleStorageDruidModule.SCHEME_GS)).iterator(),
@@ -157,7 +158,12 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
     builder.tempDirSupplier(config::getTempDir);
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(GoogleUtils.GOOGLE_RETRY);
-    builder.objectSupplier(((start, end) -> new GoogleInputRange(start, end - start, config.getBucket(), objectPath(path))));
+    builder.objectSupplier(((start, end) -> new GoogleInputRange(
+        start,
+        end - start,
+        config.getBucket(),
+        objectPath(path)
+    )));
     builder.objectOpenFunction(new ObjectOpenFunction<GoogleInputRange>()
     {
       @Override

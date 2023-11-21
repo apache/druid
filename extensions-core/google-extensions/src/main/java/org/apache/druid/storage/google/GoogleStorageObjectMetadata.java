@@ -17,28 +17,46 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google.output;
+package org.apache.druid.storage.google;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-
-import java.util.Collections;
-import java.util.List;
-
-public class GoogleStorageConnectorModule implements DruidModule
+public class GoogleStorageObjectMetadata
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
+  final String bucket;
+  final String name;
+  final Long size;
+  Long lastUpdateTime;
+
+  public GoogleStorageObjectMetadata(final String bucket, final String name, final Long size, final Long lastUpdateTime)
   {
-    return Collections.singletonList(
-        new SimpleModule(this.getClass().getSimpleName()).registerSubtypes(GoogleStorageConnectorProvider.class));
+    this.bucket = bucket;
+    this.name = name;
+    this.size = size;
+    this.lastUpdateTime = lastUpdateTime;
   }
 
-  @Override
-  public void configure(Binder binder)
+  public void setLastUpdateTime(Long lastUpdateTime)
   {
+    this.lastUpdateTime = lastUpdateTime;
+  }
 
+
+  public String getBucket()
+  {
+    return bucket;
+  }
+
+  public String getName()
+  {
+    return name;
+  }
+
+  public Long getSize()
+  {
+    return size;
+  }
+
+  public Long getLastUpdateTime()
+  {
+    return lastUpdateTime;
   }
 }

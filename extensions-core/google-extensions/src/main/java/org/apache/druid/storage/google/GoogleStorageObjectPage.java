@@ -17,28 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google.output;
+package org.apache.druid.storage.google;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-
-import java.util.Collections;
+import javax.annotation.Nullable;
 import java.util.List;
 
-public class GoogleStorageConnectorModule implements DruidModule
+public class GoogleStorageObjectPage
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
+  final List<GoogleStorageObjectMetadata> objectList;
+
+  @Nullable
+  final String nextPageToken;
+
+  public GoogleStorageObjectPage(
+      List<GoogleStorageObjectMetadata> objectList,
+      String nextPageToken
+  )
   {
-    return Collections.singletonList(
-        new SimpleModule(this.getClass().getSimpleName()).registerSubtypes(GoogleStorageConnectorProvider.class));
+    this.objectList = objectList;
+    this.nextPageToken = nextPageToken;
   }
 
-  @Override
-  public void configure(Binder binder)
+  public List<GoogleStorageObjectMetadata> getObjectList()
   {
+    return objectList;
+  }
 
+  @Nullable
+  public String getNextPageToken()
+  {
+    return nextPageToken;
   }
 }

@@ -19,11 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-//import com.google.api.client.http.HttpRequestInitializer;
-//import com.google.api.client.http.HttpTransport;
-//import com.google.api.client.json.JsonFactory;
-//import com.google.api.services.storage.Storage;
-//import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.junit.Assert;
@@ -36,7 +31,7 @@ import java.util.stream.Collectors;
 
 public class ObjectStorageIteratorTest
 {
-  private static final ImmutableList<GoogleStorage.GoogleStorageObjectMetadata> TEST_OBJECTS =
+  private static final ImmutableList<GoogleStorageObjectMetadata> TEST_OBJECTS =
       ImmutableList.of(
           makeStorageObject("b", "foo", 10L),
           makeStorageObject("b", "foo/", 0L), // directory
@@ -53,7 +48,7 @@ public class ObjectStorageIteratorTest
   @Test
   public void testSingleObject()
   {
-     test(
+    test(
         ImmutableList.of("gs://b/foo/baz"),
         ImmutableList.of("gs://b/foo/baz"),
         5
@@ -160,11 +155,11 @@ public class ObjectStorageIteratorTest
       final int maxListingLength
   )
   {
-    final List<GoogleStorage.GoogleStorageObjectMetadata> expectedObjects = new ArrayList<>();
+    final List<GoogleStorageObjectMetadata> expectedObjects = new ArrayList<>();
 
     // O(N^2) but who cares -- the list is short.
     for (final String uri : expectedUris) {
-      final List<GoogleStorage.GoogleStorageObjectMetadata> matches = TEST_OBJECTS
+      final List<GoogleStorageObjectMetadata> matches = TEST_OBJECTS
           .stream()
           .filter(storageObject -> GoogleUtils.objectToUri(storageObject).toString().equals(uri))
           .collect(Collectors.toList());
@@ -172,7 +167,7 @@ public class ObjectStorageIteratorTest
       expectedObjects.add(Iterables.getOnlyElement(matches));
     }
 
-    final List<GoogleStorage.GoogleStorageObjectMetadata> actualObjects = ImmutableList.copyOf(
+    final List<GoogleStorageObjectMetadata> actualObjects = ImmutableList.copyOf(
         GoogleUtils.lazyFetchingStorageObjectsIterator(
             makeMockClient(TEST_OBJECTS),
             prefixes.stream().map(URI::create).iterator(),
@@ -191,13 +186,16 @@ public class ObjectStorageIteratorTest
    * Makes a mock Google Storage client that handles enough of "List" to test the functionality of the
    * {@link ObjectStorageIterator} class.
    */
-  static GoogleStorage makeMockClient(final List<GoogleStorage.GoogleStorageObjectMetadata> storageObjects)
+  static GoogleStorage makeMockClient(final List<GoogleStorageObjectMetadata> storageObjects)
   {
     return new GoogleStorage(null)
     {
       @Override
       public GoogleStorageObjectPage list(
-          final String bucket, final String prefix, final Long pageSize, final String pageToken
+          final String bucket,
+          final String prefix,
+          final Long pageSize,
+          final String pageToken
       )
       {
         {
@@ -234,8 +232,9 @@ public class ObjectStorageIteratorTest
       }
     };
   }
-  static GoogleStorage.GoogleStorageObjectMetadata makeStorageObject(final String bucket, final String key, final long size)
+
+  static GoogleStorageObjectMetadata makeStorageObject(final String bucket, final String key, final long size)
   {
-    return new GoogleStorage.GoogleStorageObjectMetadata(bucket, key, size, null);
+    return new GoogleStorageObjectMetadata(bucket, key, size, null);
   }
 }

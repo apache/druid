@@ -34,8 +34,9 @@ import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
-import org.apache.druid.storage.google.GoogleStorageDruidModule;
 import org.apache.druid.storage.google.GoogleStorage;
+import org.apache.druid.storage.google.GoogleStorageDruidModule;
+import org.apache.druid.storage.google.GoogleStorageObjectMetadata;
 import org.apache.druid.storage.google.GoogleUtils;
 
 import javax.annotation.Nonnull;
@@ -137,7 +138,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       @Override
       public long getObjectSize(CloudObjectLocation location) throws IOException
       {
-        final GoogleStorage.GoogleStorageObjectMetadata storageObject = storage.getMetadata(location.getBucket(), location.getPath());
+        final GoogleStorageObjectMetadata storageObject = storage.getMetadata(location.getBucket(), location.getPath());
         return getSize(storageObject);
       }
     }
@@ -145,7 +146,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
     return new SplitWidget();
   }
 
-  private static long getSize(final GoogleStorage.GoogleStorageObjectMetadata object)
+  private static long getSize(final GoogleStorageObjectMetadata object)
   {
     final Long sizeInLong = object.getSize();
 
