@@ -66,8 +66,6 @@ public class ObjectStorageIterator implements Iterator<GoogleStorage.GoogleStora
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-//    currentBlobPage = currentBlobPage.getNextPage();
-//    blobIterator = currentBlobPage.iterateAll().iterator();
   }
 
   @Override

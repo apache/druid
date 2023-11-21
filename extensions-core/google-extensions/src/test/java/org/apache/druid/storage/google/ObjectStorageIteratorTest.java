@@ -200,7 +200,37 @@ public class ObjectStorageIteratorTest
           final String bucket, final String prefix, final Long pageSize, final String pageToken
       )
       {
-        return new GoogleStorageObjectPage(storageObjects, null);
+        {
+          // Continuation token is an index in the "objects" list.
+          final int startIndex = pageToken == null ? 0 : Integer.parseInt(pageToken);
+
+          // Find matching objects.
+          List<GoogleStorageObjectMetadata> objects = new ArrayList<>();
+          int nextIndex = -1;
+
+          for (int i = startIndex; i < storageObjects.size(); i++) {
+            final GoogleStorageObjectMetadata storageObject = storageObjects.get(i);
+
+            if (storageObject.getBucket().equals(bucket)
+                && storageObject.getName().startsWith(prefix)) {
+
+              if (objects.size() == pageSize) {
+                // We reached our max key limit; set nextIndex (which will lead to a result with truncated = true).
+                nextIndex = i;
+                break;
+              }
+
+              // Generate a summary.
+              objects.add(storageObject);
+            }
+          }
+
+          GoogleStorageObjectPage retVal = new GoogleStorageObjectPage(
+              objects,
+              nextIndex >= 0 ? String.valueOf(nextIndex) : null
+          );
+          return retVal;
+        }
       }
     };
   }

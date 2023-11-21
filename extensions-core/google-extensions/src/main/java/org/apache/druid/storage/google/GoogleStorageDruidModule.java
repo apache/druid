@@ -105,19 +105,9 @@ public class GoogleStorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Storage getGcpStorage(
-      HttpTransport httpTransport,
-      JsonFactory jsonFactory,
-      HttpRequestInitializer requestInitializer
-  )
+  public Storage getGcpStorage()
   {
-//    return new Storage
-//        .Builder(httpTransport, jsonFactory, requestInitializer)
-//        .setApplicationName(APPLICATION_NAME)
-//        .build();
-//    return StorageOptions.Builder().setTransportOptions(httpTransport).setCredentials(requestInitializer).build();
     return StorageOptions.getDefaultInstance().getService();
-
   }
 
   /**
