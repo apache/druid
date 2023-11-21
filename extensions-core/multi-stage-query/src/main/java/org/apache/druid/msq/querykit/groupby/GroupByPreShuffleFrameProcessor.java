@@ -116,10 +116,12 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
                 closer
             );
         handedOffSegments = dataServerQueryResult.getHandedOffSegments();
-        log.info(
-            "Query to dataserver for segments found [%d] handed off segments",
-            handedOffSegments.getDescriptors().size()
-        );
+        if (!handedOffSegments.getDescriptors().isEmpty()) {
+          log.info(
+              "Query to dataserver for segments found [%d] handed off segments",
+              handedOffSegments.getDescriptors().size()
+          );
+        }
         List<Yielder<ResultRow>> yielders = dataServerQueryResult.getResultsYielders();
         yielderYielder = Yielders.each(Sequences.simple(yielders));
       }

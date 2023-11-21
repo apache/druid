@@ -89,6 +89,7 @@ public class DataServerResponseHandler<T> implements HttpResponseHandler<InputSt
   {
     trafficCopRef.set(trafficCop);
     checkQueryTimeout();
+    log.debug("Received response status[%s] for queryId[%s]", response.getStatus(), query.getId());
 
     final boolean continueReading;
     try {
@@ -185,6 +186,7 @@ public class DataServerResponseHandler<T> implements HttpResponseHandler<InputSt
   @Override
   public ClientResponse<InputStream> done(ClientResponse<InputStream> clientResponse)
   {
+    log.debug("Finished reading response for queryId[%s]", query.getId());
     synchronized (done) {
       try {
         // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
@@ -211,13 +213,6 @@ public class DataServerResponseHandler<T> implements HttpResponseHandler<InputSt
         e.getMessage()
     );
     setupResponseReadFailure(msg, e);
-  }
-
-  private byte[] getContentBytes(ChannelBuffer content)
-  {
-    byte[] contentBytes = new byte[content.readableBytes()];
-    content.readBytes(contentBytes);
-    return contentBytes;
   }
 
   private boolean enqueue(ChannelBuffer buffer, long chunkNum) throws InterruptedException
@@ -265,7 +260,7 @@ public class DataServerResponseHandler<T> implements HttpResponseHandler<InputSt
   {
     fail.set(msg);
     queue.clear();
-    queue.offer(
+    boolean ignored = queue.offer(
         InputStreamHolder.fromStream(
             new InputStream()
             {

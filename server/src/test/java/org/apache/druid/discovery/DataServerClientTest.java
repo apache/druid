@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -74,6 +75,7 @@ public class DataServerClientTest
       .intervals(new MultipleSpecificSegmentSpec(ImmutableList.of(SEGMENT_1)))
       .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+      .context(ImmutableMap.of("defaultTimeout", 5000L))
       .build();
 
     target = new DataServerClient(
@@ -137,6 +139,39 @@ public class DataServerClientTest
     );
 
     Assert.assertEquals(1, responseContext.getMissingSegments().size());
+  }
+
+  @Test
+  public void testQueryFailure() throws JsonProcessingException
+  {
+    ScanQuery scanQueryWithTimeout = query.withOverriddenContext(ImmutableMap.of("maxQueuedBytes", 1, "timeout", 0));
+    ScanResultValue scanResultValue = new ScanResultValue(
+        null,
+        ImmutableList.of("id", "name"),
+        ImmutableList.of(
+            ImmutableList.of(1, "abc"),
+            ImmutableList.of(5, "efg")
+        ));
+
+    RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/druid/v2/")
+        .jsonContent(jsonMapper, scanQueryWithTimeout);
+    serviceClient.expectAndRespond(
+        requestBuilder,
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Collections.singletonList(scanResultValue))
+    );
+
+    ResponseContext responseContext = new DefaultResponseContext();
+    Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> target.run(
+            scanQueryWithTimeout,
+            responseContext,
+            jsonMapper.getTypeFactory().constructType(ScanResultValue.class),
+            Closer.create()
+        ).toList()
+    );
   }
 
   private static class DataServerResponse

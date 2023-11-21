@@ -207,7 +207,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
               closer
           );
       handedOffSegments = dataServerQueryResult.getHandedOffSegments();
-      log.info("Query to dataserver for segments found [%d] handed off segments", handedOffSegments.getDescriptors().size());
+      if (!handedOffSegments.getDescriptors().isEmpty()) {
+        log.info(
+            "Query to dataserver for segments found [%d] handed off segments",
+            handedOffSegments.getDescriptors().size()
+        );
+      }
       RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(preparedQuery, jsonMapper);
       List<Cursor> cursors = dataServerQueryResult.getResultsYielders().stream().map(yielder -> {
         Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
