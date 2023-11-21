@@ -27,10 +27,8 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -38,7 +36,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -147,13 +144,12 @@ public class GoogleStorage
 
   public InputStream getInputStream(final String bucket, final String path, long start, @Nullable Long length) throws IOException
   {
-    try (ReadChannel reader = storage.get().reader(bucket, path)) {
-      reader.seek(start);
-      if (length != null) {
-        reader.limit(start + length - 1);
-      }
-      return Channels.newInputStream(reader);
+    ReadChannel reader = storage.get().reader(bucket, path);
+    reader.seek(start);
+    if (length != null) {
+      reader.limit(start + length);
     }
+    return Channels.newInputStream(reader);
   }
 
   public OutputStream getObjectOutputStream(
@@ -249,8 +245,4 @@ public class GoogleStorage
     return BlobInfo.newBuilder(blobId).build();
 
   }
-
-
-
-
 }

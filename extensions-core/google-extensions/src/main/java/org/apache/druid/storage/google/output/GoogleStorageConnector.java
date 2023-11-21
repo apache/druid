@@ -102,7 +102,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   @Override
   public void deleteRecursively(String path)
   {
-    Iterator<String> storageObjectNames = listDir(objectPath(path));
+    Iterator<String> storageObjectNames = listDir(path);
     storage.batchDelete(config.getBucket(), () -> storageObjectNames);
   }
 
