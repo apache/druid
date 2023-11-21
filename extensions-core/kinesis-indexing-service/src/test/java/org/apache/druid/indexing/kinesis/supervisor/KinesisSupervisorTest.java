@@ -3922,7 +3922,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     DateTime minMessageTime = DateTimes.nowUtc();
     DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
 
-    KinesisSupervisor supervisor = getSupervisor(
+    KinesisSupervisor supervisor = createSupervisor(
         1,
         1,
         true,
@@ -4063,6 +4063,77 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
     Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
     Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
+    verifyAll();
+  }
+
+  @Test
+  public void testSequenceNameDoesNotChangeWithTaskId()
+  {
+    final DateTime minMessageTime = DateTimes.nowUtc();
+    final DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
+
+    KinesisSupervisor supervisor = createSupervisor(
+        1,
+        1,
+        true,
+        "PT1H",
+        new Period("P1D"),
+        new Period("P1D"),
+        false,
+        42,
+        42,
+        dataSchema,
+        tuningConfig
+    );
+
+    // Create task1 with some start and end offsets
+    final KinesisIndexTask task1 = createKinesisIndexTask(
+        "id0",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(SHARD_ID1, "3"), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER)
+        ),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema
+    );
+
+    // Create task2 with same offsets
+    final KinesisIndexTask task2 = createKinesisIndexTask(
+        "id1",
+        0,
+        task1.getIOConfig().getStartSequenceNumbers(),
+        task1.getIOConfig().getEndSequenceNumbers(),
+        task1.getIOConfig().getMinimumMessageTime().get(),
+        task1.getIOConfig().getMaximumMessageTime().get(),
+        dataSchema
+    );
+
+    replayAll();
+
+    final String sequenceTask1 = supervisor.generateSequenceName(
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap(),
+        task1.getIOConfig().getMinimumMessageTime(),
+        task1.getIOConfig().getMaximumMessageTime(),
+        task1.getDataSchema(),
+        task1.getTuningConfig()
+    );
+    Assert.assertNotNull(sequenceTask1);
+
+    final String sequenceTask2 = supervisor.generateSequenceName(
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap(),
+        task2.getIOConfig().getMinimumMessageTime(),
+        task2.getIOConfig().getMaximumMessageTime(),
+        task2.getDataSchema(),
+        task2.getTuningConfig()
+    );
+    Assert.assertNotNull(sequenceTask2);
+
+    Assert.assertNotEquals(task1.getId(), task2.getId());
+    Assert.assertEquals(sequenceTask1, sequenceTask2);
+
     verifyAll();
   }
 
@@ -5317,7 +5388,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   /**
    * Use for tests where you don't want generateSequenceName to be overridden out
    */
-  private KinesisSupervisor getSupervisor(
+  private KinesisSupervisor createSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -5572,7 +5643,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected String generateSequenceName(
+    public String generateSequenceName(
         Map<String, String> startPartitions,
         Optional<DateTime> minimumMessageTime,
         Optional<DateTime> maximumMessageTime,
