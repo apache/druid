@@ -35,7 +35,7 @@
   </parent>
 
   <properties>
-    <kubernetes.client.version>19.0.0</kubernetes.client.version>
+    <kubernetes.client.version>16.0.3</kubernetes.client.version>
   </properties>
 
   <dependencies>
