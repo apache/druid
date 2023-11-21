@@ -51,17 +51,6 @@ public class WindowFrame
   private final int upperOffset;
   private final List<ColumnWithDirection> orderBy;
 
-
-  public WindowFrame(
-      PeerType peerType,
-      boolean lowerUnbounded,
-      int lowerOffset,
-      boolean upperUnbounded,
-      int upperOffset)
-  {
-    this(peerType, lowerUnbounded, lowerOffset, upperUnbounded, upperOffset, null);
-  }
-
   @JsonCreator
   public WindowFrame(
       @JsonProperty("peerType") PeerType peerType,
