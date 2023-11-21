@@ -394,7 +394,7 @@ def convert_total_memory_string(memory):
             physical_memory = get_physical_memory()
 
             if physical_memory is None:
-                raise ValueError('Could not automatically determine memory size. Please explitly specify the memory argument as --memory=<integer_value><m/g>')
+                raise ValueError('Could not automatically determine memory size. Please explicitly specify the memory argument as --memory=<integer_value><m/g>')
 
             return physical_memory
         elif memory.endswith(MEM_MB_SUFFIX):
