@@ -146,10 +146,10 @@ public class MarkDanglingSegmentsAsUnusedTest
   }
 
   /**
-   * Half inifinity tombstones overlapping used overshadowed segments shouldn't be marked as unused.
+   * Half-inifinity tombstones overlapping with overshadowed segments shouldn't be marked as unused.
    */
   @Test
-  public void testTombstonesWithUsedOvershadowedSegment()
+  public void testTombstonesWithUsedOvershadowedSegments()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1NumberedSegmentMinToMaxV0,
@@ -174,7 +174,7 @@ public class MarkDanglingSegmentsAsUnusedTest
   }
 
   /**
-   * Half inifinity tombstones that don't overlap with any other used segment should be marked as unused.
+   * Half-inifinity tombstones that don't overlap with any other used segment should be marked as unused.
    */
   @Test
   public void testTombstonesWithNoUsedOvershadowedSegments()
@@ -221,8 +221,6 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get(ds1);
 
-    // Verify that the dangling segments are overshadowed, so they should not be removed by the dangling
-    // segments duty; rather it'd be cleaned up by the MarkOvershadowedSegmentsAsUnused duty.
     Assert.assertTrue(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
     Assert.assertTrue(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
     Assert.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
@@ -235,13 +233,13 @@ public class MarkDanglingSegmentsAsUnusedTest
   /**
    * <p>
    * Datasource 1 has the following half-infinity tombstones:
-   * <li> {@link #ds1TombstoneSegmentMinTo2000V1} overlaps with {@link #ds1TombstoneSegmentMinTo2000V2}, so cannot be marked as unused. </li>
+   * <li> {@link #ds1TombstoneSegmentMinTo2000V1} is overshadowed by {@link #ds1TombstoneSegmentMinTo2000V2}, so cannot be marked as unused. </li>
    * <li> {@link #ds1TombstoneSegmentMinTo2000V2} overlaps with {@link #ds1TombstoneSegmentMinTo2000V1}, so cannot be marked as unused. </li>
    * <li> {@link #ds1TombstoneSegment2001ToMaxV1} doesn't overlap with any other segment and can be marked as unused. </li>
    *
-   * Note that {@link #ds1TombstoneSegmentMinTo2000V2} will be marked as unused by {@link MarkOvershadowedSegmentsAsUnused} duty
-   * and then subsequently {@link #ds1TombstoneSegmentMinTo2000V1} will be marked as unused by the {@link MarkDanglingTombstonesAsUnused} duty
-   * if there's no overlap.
+   * Note that {@link #ds1TombstoneSegmentMinTo2000V1} will be marked as unused by {@link MarkOvershadowedSegmentsAsUnused} duty
+   * and then subsequently {@link #ds1TombstoneSegmentMinTo2000V2} will be marked as unused by the {@link MarkDanglingTombstonesAsUnused}
+   * duty eventually.
    * </p>
    *
    * <p>
@@ -276,7 +274,6 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(ds1Timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
     Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
     Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
-    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV2));
 
     SegmentTimeline ds2Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
                                                          .getUsedSegmentsTimelinesPerDataSource()
@@ -288,6 +285,10 @@ public class MarkDanglingSegmentsAsUnusedTest
     runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
+  /**
+   * Half-inifinity tombstones that partially overlaps with other segments (not overshadowed) can still
+   * be marked as used.
+   */
   @Test
   public void testTombstonesWithPartiallyOverlappingUnderlyingSegment()
   {
@@ -298,11 +299,8 @@ public class MarkDanglingSegmentsAsUnusedTest
         ds2TombstoneSegment4000ToMaxV1
     );
 
-    // ds2TombstoneSegment1995To2005V0 isn't overshadowed by ds2TombstoneSegmentMinTo2000V1 since there's
-    // only a partial overlap. So both the segments should be used.
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of(
         ds2TombstoneSegment1995To2005V0,
-        ds2TombstoneSegmentMinTo2000V1,
         ds2NumberedSegment3000To4000V1
     );
     final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
@@ -319,8 +317,12 @@ public class MarkDanglingSegmentsAsUnusedTest
     runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
+  /**
+   * Half-inifinity tombstones that partially overlaps with other used segments would still be considered as used and
+   * non-overshadowed and can be marked as unused.
+   */
   @Test
-  public void testTombstonesWithPartiallyOverlappingHigherVersionSegment()
+  public void testTombstonesWithPartiallyOverlappingHigherVersionUsedSegment()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds2TombstoneSegmentMinTo2000V1,
@@ -329,10 +331,7 @@ public class MarkDanglingSegmentsAsUnusedTest
         ds2NumberedSegment1999To2500V2
     );
 
-    // ds2TombstoneSegmentMinTo2000V1 is non-overshadowed, but has a partial overlap with the used non-overshadowed
-    // segment ds2NumberedSegment1999To2500V2.
     final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of(
-        ds2TombstoneSegmentMinTo2000V1,
         ds2NumberedSegment3000To4000V1,
         ds2NumberedSegment1999To2500V2
     );
@@ -434,10 +433,10 @@ public class MarkDanglingSegmentsAsUnusedTest
   {
     params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
 
-    final Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
+    final Set<DataSegment> actualUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
 
-    Assert.assertEquals(expectedUsedSegments.size(), updatedUsedSegments.size());
-    Assert.assertTrue(updatedUsedSegments.containsAll(expectedUsedSegments));
+    Assert.assertEquals(expectedUsedSegments.size(), actualUsedSegments.size());
+    Assert.assertTrue(actualUsedSegments.containsAll(expectedUsedSegments));
 
     final CoordinatorRunStats runStats = params.getCoordinatorStats();
     Assert.assertEquals(

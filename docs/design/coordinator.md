@@ -75,9 +75,10 @@ marked as unused. During the next Coordinator's run, they will be unloaded from 
 
 ### Clean up dangling segments
 
-On each run, the Druid coordinator determines and cleans up dangling segments for each datasource. Dangling segments are segments that fit both of the following criteria:
+On each run, the Druid coordinator determines and cleans up dangling segments for each datasource. Dangling segments are segments that fit all of the following criteria:
 - It is a tombstone segment that starts at -INF or ends at INF (for example, a tombstone with an interval of `-146136543-09-08T08:23:32.096Z/2000-01-01` or `2020-01-01/146140482-04-24T15:36:27.903Z`)
-- It does not overlap with any used segment
+- It does not overlap with any overshadowed segment
+- It has 0 core partitions
 
 ### Segment availability
 

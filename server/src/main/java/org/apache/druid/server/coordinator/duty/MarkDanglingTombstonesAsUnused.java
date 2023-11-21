@@ -44,9 +44,8 @@ import java.util.Set;
 /**
  * Marks dangling tombstones not overshadowed by currently served segments as unused. A dangling segment must fit all the criteria:
  * <li> It is a tombstone that starts at {@link DateTimes#MIN} or ends at {@link DateTimes#MAX} </li>
- * <li> It has has 0 core partitions
- * i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 0</li>
- * <li> It does not overlap with any segment in the datasource's used segments timeline </li>
+ * <li> It does not overlap with any overshadowed segment in the datasource </li>
+ * <li> It has has 0 core partitions i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 0</li>
  *
  * <p>
  * Only infinite-interval tombstones are considered as candidate segments in this duty because they
@@ -57,15 +56,16 @@ import java.util.Set;
  * segment.
  * </p>
  * <p>
+ * The overlapping condition is necessary as a candidate segment can overlap with an overshadowed segment, and the latter
+ * needs to be marked as unused first by {@link MarkOvershadowedSegmentsAsUnused} duty before the tombstone candidate
+ * can be marked as unused by {@link MarkDanglingTombstonesAsUnused} duty.
+ *</p>
+ * <p>
  * Only tombstones with 0 core partitions is considered as candidate segments. Earlier generation tombstones with 1 core
  * partition ({@link TombstoneShardSpec#getNumCorePartitions()} == 1) are ignored by this duty because it can potentially
  * cause data loss in a concurrent append and replace scenario and needs to be manually cleaned up. See this
  * <a href="https://github.com/apache/druid/pull/15379">for details</a>.
  * </p>
- * <p>
- * The overlapping condition is necessary as an underlying segment that partially or fully overlaps with an infinite-interval
- * tombstone can otherwise be incorrectly exposed.
- *</p>
  */
 public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
 {
@@ -113,8 +113,8 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
    * Computes the set of dangling tombstones per datasource using the datasources snapshot. The computation is as follows:
    *
    * <li> Determine the set of used and non-overshadowed segments from the used segments' timeline. </li>
-   * <li> For each such candidate segment that is a tombstone with an infinite start or end, look at the set of used
-   * segments in the timeline to see if at least one of the intervals overlaps with the candidate segment.
+   * <li> For each such candidate segment that is a tombstone with an infinite start or end, look at the set of overshadowed
+   * segments to see if any of the intervals overlaps with the candidate segment.
    * <li> If there is no overlap, add the candidate segment to the dangling segments result set. </li>
    * There can at most be two such dangling tombstones per datasource  -- one that starts at {@link DateTimes#MIN}
    * and another that ends at {@link DateTimes#MAX}. </li>
@@ -131,7 +131,6 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
       final SegmentTimeline usedSegmentsTimeline
           = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
 
-
       final Optional<Set<DataSegment>> usedNonOvershadowedSegments =
           Optional.fromNullable(usedSegmentsTimeline)
                   .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(
@@ -142,12 +141,14 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
       if (usedNonOvershadowedSegments.isPresent()) {
         usedNonOvershadowedSegments.get().forEach(candidateSegment -> {
           if (isTombstoneWithInfiniteStartOrEnd(candidateSegment)) {
-            boolean overlaps = usedSegmentsTimeline.iterateAllObjects().stream()
+            boolean overlaps = dataSourcesSnapshot.getOvershadowedSegments().stream()
+                                                  .filter(overshadowedSegment ->
+                                                              candidateSegment.getDataSource()
+                                                                              .equals(overshadowedSegment.getDataSource()))
                                                   .anyMatch(
-                                                      usedSegment ->
-                                                          !candidateSegment.getId().equals(usedSegment.getId()) &&
+                                                      overshadowedSegment ->
                                                           candidateSegment.getInterval()
-                                                                          .overlaps(usedSegment.getInterval())
+                                                                          .overlaps(overshadowedSegment.getInterval())
                                                   );
             if (!overlaps) {
               datasourceToDanglingTombstones
