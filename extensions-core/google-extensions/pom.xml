@@ -33,6 +33,7 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
+<!--
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -44,6 +45,7 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+-->
 
     <dependencies>
         <dependency>
@@ -62,6 +64,7 @@
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
+            <version>${com.google.cloud.storage.version}</version>
         </dependency>
 
         <dependency>
