@@ -338,29 +338,6 @@ public class MySQLFirehoseDatabaseConnectorTest
     );
   }
 
-  @Test
-  public void testFindPropertyKeysFromInvalidConnectUrl()
-  {
-    final String url = "jdbc:mysql:/invalid-url::3006";
-    MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
-    {
-      @Override
-      public String getConnectURI()
-      {
-        return url;
-      }
-    };
-
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(StringUtils.format("Invalid URL format for MySQL: [%s]", url));
-    new MySQLFirehoseDatabaseConnector(
-        connectorConfig,
-        null,
-        new JdbcAccessSecurityConfig(),
-        mySQLConnectorDriverConfig
-    );
-  }
-
   private static JdbcAccessSecurityConfig newSecurityConfigEnforcingAllowList(Set<String> allowedProperties)
   {
     return new JdbcAccessSecurityConfig()

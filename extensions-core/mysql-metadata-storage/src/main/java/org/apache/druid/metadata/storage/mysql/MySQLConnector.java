@@ -47,7 +47,7 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String QUOTE_STRING = "`";
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
   private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME
-      = "com.mysql.jdbc.exceptions.MySQLTransientException";
+      = "java.sql.SQLTransientException";
   private static final String MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
       = "org.mariadb.jdbc.internal.util.exceptions.MaxAllowedPacketException";
   private static final String MYSQL_PACKET_EXCEPTION_CLASS_NAME
@@ -279,7 +279,7 @@ public class MySQLConnector extends SQLMetadataConnector
       if (failIfNotFound) {
         throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
                          + "distribution but is required to use MySQL. Please download a compatible library (for example "
-                         + "'mysql-connector-java-5.1.49.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
+                         + "'mysql-connector-java-8.2.0.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
                          + "https://druid.apache.org/downloads for more details.",
                       className
         );

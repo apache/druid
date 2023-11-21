@@ -55,7 +55,7 @@ public class JdbcAccessSecurityConfig
       "HOST",
       "PORT",
       "NUM_HOSTS",
-      "DBNAME",
+      "dbname",
 
       // PostgreSQL
       "PGHOST",

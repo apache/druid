@@ -20,14 +20,13 @@
 package org.apache.druid.metadata.storage.mysql;
 
 import com.google.common.base.Supplier;
-import com.mysql.jdbc.exceptions.MySQLTransactionRollbackException;
-import com.mysql.jdbc.exceptions.MySQLTransientException;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.SQLException;
+import java.sql.SQLTransactionRollbackException;
 import java.sql.SQLTransientConnectionException;
 import java.sql.SQLTransientException;
 
@@ -57,16 +56,15 @@ public class MySQLConnectorTest
         new MySQLConnectorSslConfig(),
         MYSQL_DRIVER_CONFIG
     );
-    Assert.assertTrue(connector.connectorIsTransientException(new MySQLTransientException()));
-    Assert.assertTrue(connector.connectorIsTransientException(new MySQLTransactionRollbackException()));
+    Assert.assertTrue(connector.connectorIsTransientException(new SQLTransientException()));
+    Assert.assertTrue(connector.connectorIsTransientException(new SQLTransactionRollbackException()));
     Assert.assertTrue(
         connector.connectorIsTransientException(new SQLException("some transient failure", "s0", 1317))
     );
     Assert.assertFalse(
         connector.connectorIsTransientException(new SQLException("totally realistic test data", "s0", 1337))
     );
-    // this method does not specially handle normal transient exceptions either, since it is not vendor specific
-    Assert.assertFalse(
+    Assert.assertTrue(
         connector.connectorIsTransientException(new SQLTransientConnectionException("transient"))
     );
   }
@@ -81,7 +79,7 @@ public class MySQLConnectorTest
         MARIADB_DRIVER_CONFIG
     );
     // no vendor specific for MariaDb, so should always be false
-    Assert.assertFalse(connector.connectorIsTransientException(new MySQLTransientException()));
+    Assert.assertFalse(connector.connectorIsTransientException(new SQLTransientException()));
     Assert.assertFalse(
         connector.connectorIsTransientException(new SQLException("some transient failure", "s0", 1317))
     );
@@ -116,7 +114,7 @@ public class MySQLConnectorTest
         connector.isRootCausePacketTooBigException(new SQLTransientException())
     );
     Assert.assertFalse(
-        connector.isRootCausePacketTooBigException(new MySQLTransientException())
+        connector.isRootCausePacketTooBigException(new SQLTransientException())
     );
   }
 
