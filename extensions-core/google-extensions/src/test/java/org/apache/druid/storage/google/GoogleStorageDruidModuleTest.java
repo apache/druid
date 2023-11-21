@@ -32,7 +32,7 @@ import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class GoogleStorageOldDruidModuleTest
+public class GoogleStorageDruidModuleTest
 {
   @Test
   public void testSegmentKillerBoundedSingleton()
