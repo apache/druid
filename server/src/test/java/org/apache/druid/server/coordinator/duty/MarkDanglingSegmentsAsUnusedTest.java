@@ -149,7 +149,7 @@ public class MarkDanglingSegmentsAsUnusedTest
    * Half-inifinity tombstones overlapping with overshadowed segments shouldn't be marked as unused.
    */
   @Test
-  public void testTombstonesWithUsedOvershadowedSegments()
+  public void testCandidateTombstonesWithUsedOvershadowedSegments()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1NumberedSegmentMinToMaxV0,
@@ -164,7 +164,7 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                             .getUsedSegmentsTimelinesPerDataSource()
                                                             .get(ds1);
 
-    // Verify that the eternity segment is overshadowed and everything else is not
+    // Verify that the half-infinity tombstone is overshadowed and everything else is not
     Assert.assertTrue(timeline.isOvershadowed(ds1NumberedSegmentMinToMaxV0));
     Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V1));
     Assert.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
@@ -177,7 +177,7 @@ public class MarkDanglingSegmentsAsUnusedTest
    * Half-inifinity tombstones that don't overlap with any other used segment should be marked as unused.
    */
   @Test
-  public void testTombstonesWithNoUsedOvershadowedSegments()
+  public void testCandidateTombstonesWithNoUsedOvershadowedSegments()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1TombstoneSegmentMinTo2000V1,
@@ -201,10 +201,10 @@ public class MarkDanglingSegmentsAsUnusedTest
   }
 
   /**
-   * Half inifinity tombstones that don't overlap with any other used segment should be marked as unused.
+   * Half-inifinity tombstones that overlap with overshadowed used segments shouldn't be marked as unused.
    */
   @Test
-  public void testOvershadowedTombstones()
+  public void testCandiateTombstonesWithManyOvershadowedSegments()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1TombstoneSegmentMinTo2000V1,
@@ -247,7 +247,7 @@ public class MarkDanglingSegmentsAsUnusedTest
    * </p>
    */
   @Test
-  public void testTombstonesInMultipleDatasources()
+  public void testCandidateTombstonesInMultipleDatasources()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds1TombstoneSegmentMinTo2000V1,
@@ -290,7 +290,7 @@ public class MarkDanglingSegmentsAsUnusedTest
    * be marked as used.
    */
   @Test
-  public void testTombstonesWithPartiallyOverlappingUnderlyingSegment()
+  public void testCandidateTombstonesWithPartiallyOverlappingSegment()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds2TombstoneSegment1995To2005V0,
@@ -322,7 +322,7 @@ public class MarkDanglingSegmentsAsUnusedTest
    * non-overshadowed and can be marked as unused.
    */
   @Test
-  public void testTombstonesWithPartiallyOverlappingHigherVersionUsedSegment()
+  public void testCandidateTombstonesWithPartiallyOverlappingHigherVersionUsedSegment()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds2TombstoneSegmentMinTo2000V1,
@@ -377,7 +377,7 @@ public class MarkDanglingSegmentsAsUnusedTest
    * marked as unused.
    */
   @Test
-  public void testDanglingTombstoneWith1CorePartition()
+  public void testTombstoneWith1CorePartition()
   {
     final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
         ds2TombstoneSegment4000ToMaxV1With1CorePartition
