@@ -155,19 +155,19 @@ public class WindowFrame
     return orderBy.stream().map(ColumnWithDirection::getColumn).collect(Collectors.toList());
   }
 
-  public int getLowerOffsetClamped(int maxValue)
+  public int getLowerOffsetClamped(int maxRows)
   {
     if (lowerUnbounded) {
-      return maxValue;
+      return maxRows;
     }
-    return Math.min(maxValue, lowerOffset);
+    return Math.min(maxRows, lowerOffset);
   }
 
-  public int getUpperOffsetClamped(int maxValue)
+  public int getUpperOffsetClamped(int maxRows)
   {
     if (upperUnbounded) {
-      return maxValue;
+      return maxRows;
     }
-    return Math.min(maxValue, upperOffset);
+    return Math.min(maxRows, upperOffset);
   }
 }

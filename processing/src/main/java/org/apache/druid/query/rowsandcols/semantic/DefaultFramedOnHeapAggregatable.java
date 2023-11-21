@@ -101,7 +101,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     int numRows = rac.numRows();
     Object[][] results = new Object[aggFactories.length][numRows];
 
-    AggCell cell = new AggCell(rac, aggFactories);
+    AggIntervalCursor cell = new AggIntervalCursor(rac, aggFactories);
 
     for (Range xRange : iter) {
 
@@ -122,7 +122,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     private final int lowerOffset;
     private final int upperOffset;
 
-    public RangeIteratorForWindow(AppendableRowsAndColumns rac, WindowFrame frame)
+    public RangeIteratorForWindow(RowsAndColumns rac, WindowFrame frame)
     {
       assert (frame.getPeerType() == PeerType.RANGE);
       rangeToRowId = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
@@ -250,17 +250,18 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
-  static class AggCell
+  /**
+   * Handles computations of aggregates for an {@link Interval}.
+   */
+  static class AggIntervalCursor
   {
     private AggregatorFactory[] aggFactories;
     Interval currentRows = new Interval(0, 0);
     private final AtomicInteger rowIdProvider;
     private final ColumnSelectorFactory columnSelectorFactory;
-
     private final Aggregator[] aggregators;
 
-
-    AggCell(AppendableRowsAndColumns rac, AggregatorFactory[] aggFactories)
+    AggIntervalCursor(AppendableRowsAndColumns rac, AggregatorFactory[] aggFactories)
     {
       this.aggFactories = aggFactories;
       aggregators = new Aggregator[aggFactories.length];
@@ -279,21 +280,20 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
 
     /**
-     * Reposition aggregation window to reflect the given rows.
+     * Reposition aggregation window to a new Interval.
      */
     public void moveTo(Interval newRows)
     {
-      // incremental addition of additional values
       if (currentRows.a == newRows.a && currentRows.b < newRows.b) {
+        // incremental addition of additional values
         for (int i = currentRows.b; i < newRows.b; i++) {
           aggregate(i);
         }
-        currentRows = newRows;
-        return;
-      }
-      newAggregators();
-      for (int i : newRows) {
-        aggregate(i);
+      } else {
+        newAggregators();
+        for (int i : newRows) {
+          aggregate(i);
+        }
       }
       currentRows = newRows;
     }
