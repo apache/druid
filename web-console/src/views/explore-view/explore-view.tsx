@@ -32,7 +32,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useLocalStorageState, useQueryManager } from '../../hooks';
-import { deepGet, filterMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
+import { deepGet, filterMap, findMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
 
 import { ControlPane } from './control-pane/control-pane';
 import { DroppableContainer } from './droppable-container/droppable-container';
@@ -156,10 +156,19 @@ async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> 
   return maxTime;
 }
 
+function getFirstTableName(q: SqlQuery): string | undefined {
+  return (
+    findMap(q.getWithParts(), withPart => {
+      if (!(withPart.query instanceof SqlQuery)) return;
+      return getFirstTableName(withPart.query);
+    }) ?? q.getFirstTableName()
+  );
+}
+
 async function extendedQueryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
   if (sqlQueryPayload.query.includes('MAX_DATA_TIME()')) {
     const parsed = SqlQuery.parse(sqlQueryPayload.query);
-    const tableName = parsed.getFirstTableName();
+    const tableName = getFirstTableName(parsed);
     if (tableName) {
       const maxTime = await getMaxTimeForTable(tableName);
       if (maxTime) {

@@ -62,6 +62,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.plumber.SinkSegmentReference;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -69,6 +70,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -169,17 +171,17 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     // Make sure this query type can handle the subquery, if present.
-    if ((dataSourceFromQuery instanceof QueryDataSource) && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
+    if ((dataSourceFromQuery instanceof QueryDataSource)
+        && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
-                                                                        .createSegmentMapFunction(
-                                                                            query,
-                                                                            cpuTimeAccumulator
-                                                                        );
-
+    final Function<SegmentReference, SegmentReference> segmentMapFn =
+        dataSourceFromQuery.createSegmentMapFunction(
+            query,
+            cpuTimeAccumulator
+        );
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
@@ -200,44 +202,34 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
           final Sink theSink = chunk.getObject();
           final SegmentId sinkSegmentId = theSink.getSegment().getId();
+          final List<SinkSegmentReference> segmentReferences =
+              theSink.acquireSegmentReferences(segmentMapFn, skipIncrementalSegment);
 
-          Iterable<QueryRunner<T>> perHydrantRunners = new SinkQueryRunners<>(
-              Iterables.transform(
-                  theSink,
-                  hydrant -> {
-                    // Hydrant might swap at any point, but if it's swapped at the start
-                    // then we know it's *definitely* swapped.
-                    final boolean hydrantDefinitelySwapped = hydrant.hasSwapped();
+          if (segmentReferences == null) {
+            // We failed to acquire references for all subsegments. Bail and report the entire sink missing.
+            return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
+          } else if (segmentReferences.isEmpty()) {
+            return new NoopQueryRunner<>();
+          }
 
-                    if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
-                      return new Pair<>(hydrant.getSegmentDataInterval(), new NoopQueryRunner<>());
-                    }
+          final Closeable releaser = () -> CloseableUtils.closeAll(segmentReferences);
 
-                    // Prevent the underlying segment from swapping when its being iterated
-                    final Optional<Pair<SegmentReference, Closeable>> maybeSegmentAndCloseable =
-                        hydrant.getSegmentForQuery(segmentMapFn);
-
-                    // if optional isn't present, we failed to acquire reference to the segment or any joinables
-                    if (!maybeSegmentAndCloseable.isPresent()) {
-                      return new Pair<>(
-                          hydrant.getSegmentDataInterval(),
-                          new ReportTimelineMissingSegmentQueryRunner<>(descriptor)
-                      );
-                    }
-                    final Pair<SegmentReference, Closeable> segmentAndCloseable = maybeSegmentAndCloseable.get();
-                    try {
-
-                      QueryRunner<T> runner = factory.createRunner(segmentAndCloseable.lhs);
+          try {
+            Iterable<QueryRunner<T>> perHydrantRunners = new SinkQueryRunners<>(
+                Iterables.transform(
+                    segmentReferences,
+                    segmentReference -> {
+                      QueryRunner<T> runner = factory.createRunner(segmentReference.getSegment());
 
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
-                      if (hydrantDefinitelySwapped && cache.isLocal()) {
-                        StorageAdapter storageAdapter = segmentAndCloseable.lhs.asStorageAdapter();
+                      if (segmentReference.isImmutable() && cache.isLocal()) {
+                        StorageAdapter storageAdapter = segmentReference.getSegment().asStorageAdapter();
                         long segmentMinTime = storageAdapter.getMinTime().getMillis();
                         long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
                         Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
                         runner = new CachingQueryRunner<>(
-                            makeHydrantCacheIdentifier(hydrant),
+                            makeHydrantCacheIdentifier(sinkSegmentId, segmentReference.getHydrantNumber()),
                             cacheKeyPrefix,
                             descriptor,
                             actualDataInterval,
@@ -254,35 +246,33 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                             cacheConfig
                         );
                       }
-                      // Make it always use Closeable to decrement()
-                      runner = QueryRunnerHelper.makeClosingQueryRunner(
-                          runner,
-                          segmentAndCloseable.rhs
-                      );
-                      return new Pair<>(segmentAndCloseable.lhs.getDataInterval(), runner);
+                      return new Pair<>(segmentReference.getSegment().getDataInterval(), runner);
                     }
-                    catch (Throwable e) {
-                      throw CloseableUtils.closeAndWrapInCatch(e, segmentAndCloseable.rhs);
-                    }
-                  }
-              )
-          );
-          return new SpecificSegmentQueryRunner<>(
-              withPerSinkMetrics(
-                  new BySegmentQueryRunner<>(
-                      sinkSegmentId,
-                      descriptor.getInterval().getStart(),
-                      factory.mergeRunners(
-                          DirectQueryProcessingPool.INSTANCE,
-                          perHydrantRunners
-                      )
-                  ),
-                  toolChest,
-                  sinkSegmentId,
-                  cpuTimeAccumulator
-              ),
-              new SpecificSegmentSpec(descriptor)
-          );
+                )
+            );
+            return QueryRunnerHelper.makeClosingQueryRunner(
+                new SpecificSegmentQueryRunner<>(
+                    withPerSinkMetrics(
+                        new BySegmentQueryRunner<>(
+                            sinkSegmentId,
+                            descriptor.getInterval().getStart(),
+                            factory.mergeRunners(
+                                DirectQueryProcessingPool.INSTANCE,
+                                perHydrantRunners
+                            )
+                        ),
+                        toolChest,
+                        sinkSegmentId,
+                        cpuTimeAccumulator
+                    ),
+                    new SpecificSegmentSpec(descriptor)
+                ),
+                releaser
+            );
+          }
+          catch (Throwable e) {
+            throw CloseableUtils.closeAndWrapInCatch(e, releaser);
+          }
         }
     );
     final QueryRunner<T> mergedRunner =
@@ -361,8 +351,16 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     return sinkTimeline;
   }
 
-  public static String makeHydrantCacheIdentifier(FireHydrant input)
+  public static String makeHydrantCacheIdentifier(final FireHydrant hydrant)
   {
-    return input.getSegmentId() + "_" + input.getCount();
+    return makeHydrantCacheIdentifier(hydrant.getSegmentId(), hydrant.getCount());
+  }
+
+  public static String makeHydrantCacheIdentifier(final SegmentId segmentId, final int hydrantNumber)
+  {
+    // Cache ID like segmentId_H0, etc. The 'H' disambiguates subsegment [foo_x_y_z partition 0 hydrant 1]
+    // from full segment [foo_x_y_z partition 1], and is therefore useful if we ever want the cache to mix full segments
+    // with subsegments (hydrants).
+    return segmentId + "_H" + hydrantNumber;
   }
 }

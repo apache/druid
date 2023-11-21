@@ -29,6 +29,7 @@ APIs
 apache.org
 AvroStorage
 ARN
+ASC
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -1280,6 +1281,7 @@ numShards
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
 2012-01-01T00
 2012-01-03T00
@@ -2324,3 +2326,7 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+LAST_VALUE
+markUnused
+markUsed
+segmentId
