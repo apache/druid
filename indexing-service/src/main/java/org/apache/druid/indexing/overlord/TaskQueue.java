@@ -522,7 +522,8 @@ public class TaskQueue
       Preconditions.checkState(active, "Queue is not active!");
       Preconditions.checkNotNull(task, "task");
       if (tasks.size() >= config.getMaxSize()) {
-        throw new TooManyTasksException(StringUtils.format("Too many tasks (max = %d)", config.getMaxSize()));
+        throw new TooManyTasksException(StringUtils.format("Too many tasks (maxQueueSize = %d), " +
+                "(currentActiveTasks = %d). Dropping extra Tasks.", config.getMaxSize(), tasks.size()));
       }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
