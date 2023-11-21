@@ -140,6 +140,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
             fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
           }
         }
+        assertEquals("Operator count mismatch!", input.expectedOperators.size(), query.getOperators().size());
       }
 
       final RowSignature outputSignature = results.signature;
