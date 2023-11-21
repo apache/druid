@@ -33,20 +33,6 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-<!--
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.google.cloud</groupId>
-                <artifactId>libraries-bom</artifactId>
-                <version>${com.google.cloud.libraries.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
--->
-
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
