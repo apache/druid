@@ -35,6 +35,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -652,7 +653,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             if (isResultLevelCache) {
               for (int postPos = 0; postPos < query.getPostAggregatorSpecs().size(); postPos++) {
                 if (!results.hasNext()) {
-                  throw new ISE("Ran out of objects while reading postaggs from cache!");
+                  throw DruidException.defensive("Ran out of objects while reading postaggs from cache!");
                 }
                 resultRow.set(postAggregatorStart + postPos, results.next());
               }
