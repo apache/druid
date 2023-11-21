@@ -324,19 +324,11 @@ public class GroupByQueryConfig
         )
     );
 
-    newConfig.maxSelectorDictionarySize = HumanReadableBytes.valueOf(
-        Math.max(
-            queryContext.getHumanReadableBytes(CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE, HumanReadableBytes.ZERO).getBytes(),
-            getConfiguredMaxSelectorDictionarySize()
-        )
-    );
+    newConfig.maxSelectorDictionarySize = queryContext
+        .getHumanReadableBytes(CTX_KEY_MAX_SELECTOR_DICTIONARY_SIZE, getConfiguredMaxSelectorDictionarySize());
 
-    newConfig.maxMergingDictionarySize = HumanReadableBytes.valueOf(
-        Math.max(
-            queryContext.getHumanReadableBytes(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, HumanReadableBytes.ZERO).getBytes(),
-            getConfiguredMaxMergingDictionarySize()
-        )
-    );
+    newConfig.maxMergingDictionarySize = queryContext
+        .getHumanReadableBytes(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getConfiguredMaxMergingDictionarySize());
 
     newConfig.forcePushDownLimit = queryContext.getBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.applyLimitPushDownToSegment = queryContext.getBoolean(
