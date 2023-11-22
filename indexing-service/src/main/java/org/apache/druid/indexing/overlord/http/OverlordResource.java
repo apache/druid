@@ -227,7 +227,7 @@ public class OverlordResource
             taskQueue.add(task);
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
-          catch (DruidException  e) {
+          catch (DruidException e) {
             return Response
                     .status(e.getStatusCode())
                     .entity(new ErrorResponse(e))
