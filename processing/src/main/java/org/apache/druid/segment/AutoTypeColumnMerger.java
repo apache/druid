@@ -81,10 +81,13 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   private NestedCommonFormatColumnSerializer serializer;
 
   private ColumnType logicalType;
+  @Nullable
+  private final ColumnType requestedType;
   private boolean isVariantType = false;
 
   public AutoTypeColumnMerger(
       String name,
+      @Nullable ColumnType requestedType,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
@@ -92,6 +95,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   {
 
     this.name = name;
+    this.requestedType = requestedType;
     this.indexSpec = indexSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.closer = closer;
@@ -148,11 +152,12 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       final FieldTypeInfo.MutableTypeSet rootTypes = mergedFields.get(NestedPathFinder.JSON_PATH_ROOT);
       final boolean rootOnly = mergedFields.size() == 1 && rootTypes != null;
 
+      final ColumnType explicitType = (requestedType != null && (requestedType.isPrimitive() || requestedType.isPrimitiveArray())) ? requestedType : null;
 
       // for backwards compat; remove this constant handling in druid 28 along with
       // indexSpec.optimizeJsonConstantColumns in favor of always writing constant columns
       // we also handle the numMergeIndex == 0 here, which also indicates that the column is a null constant
-      if (!forceNested && ((isConstant && constantValue == null) || numMergeIndex == 0)) {
+      if (explicitType == null && !forceNested && ((isConstant && constantValue == null) || numMergeIndex == 0)) {
         logicalType = ColumnType.STRING;
         serializer = new ScalarStringColumnSerializer(
             name,
@@ -160,8 +165,8 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             segmentWriteOutMedium,
             closer
         );
-      } else if (!forceNested && rootOnly && rootTypes.getSingleType() != null) {
-        logicalType = rootTypes.getSingleType();
+      } else if (explicitType != null || (!forceNested && rootOnly && rootTypes.getSingleType() != null)) {
+        logicalType = explicitType != null ? explicitType : rootTypes.getSingleType();
         // empty arrays can be missed since they don't have a type, so handle them here
         if (!logicalType.isArray() && hasArrays) {
           logicalType = ColumnTypeFactory.getInstance().ofArray(logicalType);
@@ -194,6 +199,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           case ARRAY:
             serializer = new VariantColumnSerializer(
                 name,
+                logicalType,
                 null,
                 indexSpec,
                 segmentWriteOutMedium,
@@ -220,6 +226,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         }
         serializer = new VariantColumnSerializer(
             name,
+            null,
             rootTypes.getByteValue(),
             indexSpec,
             segmentWriteOutMedium,
@@ -343,6 +350,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                                                                                          .withLogicalType(logicalType)
                                                                                          .withHasNulls(serializer.hasNulls())
                                                                                          .isVariantType(isVariantType)
+                                                                                         .withEnforceLogicalType(requestedType != null)
                                                                                          .withByteOrder(ByteOrder.nativeOrder())
                                                                                          .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                                                                          .withSerializer(serializer)

@@ -33,6 +33,9 @@ import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.VariantColumnSerializer;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
+import javax.annotation.Nullable;
+import java.util.Objects;
+
 /**
  * Common {@link DimensionSchema} for ingestion of 'standard' Druid built-in {@link ColumnType} datatypes.
  *
@@ -62,12 +65,17 @@ public class AutoTypeColumnSchema extends DimensionSchema
 {
   public static final String TYPE = "auto";
 
+  @Nullable
+  private final ColumnType requestedType;
+
   @JsonCreator
   public AutoTypeColumnSchema(
-      @JsonProperty("name") String name
+      @JsonProperty("name") String name,
+      @JsonProperty("requestedType") @Nullable ColumnType requestedType
   )
   {
     super(name, null, true);
+    this.requestedType = requestedType;
   }
 
   @Override
@@ -79,12 +87,40 @@ public class AutoTypeColumnSchema extends DimensionSchema
   @Override
   public ColumnType getColumnType()
   {
-    return ColumnType.NESTED_DATA;
+    return requestedType != null ? requestedType : ColumnType.NESTED_DATA;
+  }
+
+  @JsonProperty
+  public ColumnType getRequestedType()
+  {
+    return requestedType;
   }
 
   @Override
   public DimensionHandler<StructuredData, StructuredData, StructuredData> getDimensionHandler()
   {
-    return new NestedCommonFormatColumnHandler(getName());
+    return new NestedCommonFormatColumnHandler(getName(), requestedType);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    AutoTypeColumnSchema that = (AutoTypeColumnSchema) o;
+    return Objects.equals(requestedType, that.requestedType);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), requestedType);
   }
 }

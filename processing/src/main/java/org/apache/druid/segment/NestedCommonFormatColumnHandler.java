@@ -30,6 +30,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 
 public class NestedCommonFormatColumnHandler implements DimensionHandler<StructuredData, StructuredData, StructuredData>
@@ -41,10 +42,13 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
       );
 
   private final String name;
+  @Nullable
+  private final ColumnType requestedType;
 
-  public NestedCommonFormatColumnHandler(String name)
+  public NestedCommonFormatColumnHandler(String name, @Nullable ColumnType requestedType)
   {
     this.name = name;
+    this.requestedType = requestedType;
   }
 
   @Override
@@ -56,19 +60,19 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   @Override
   public DimensionSpec getDimensionSpec()
   {
-    return new DefaultDimensionSpec(name, name, ColumnType.NESTED_DATA);
+    return new DefaultDimensionSpec(name, name, requestedType != null ? requestedType : ColumnType.NESTED_DATA);
   }
 
   @Override
   public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
   {
-    return new AutoTypeColumnSchema(name);
+    return new AutoTypeColumnSchema(name, requestedType);
   }
 
   @Override
   public DimensionIndexer<StructuredData, StructuredData, StructuredData> makeIndexer(boolean useMaxMemoryEstimates)
   {
-    return new AutoTypeColumnIndexer();
+    return new AutoTypeColumnIndexer(requestedType);
   }
 
   @Override
@@ -80,7 +84,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
       Closer closer
   )
   {
-    return new AutoTypeColumnMerger(name, indexSpec, segmentWriteOutMedium, closer);
+    return new AutoTypeColumnMerger(name, requestedType, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

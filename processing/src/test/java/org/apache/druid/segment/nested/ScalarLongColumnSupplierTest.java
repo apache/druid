@@ -131,7 +131,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
           closer
       );
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer(null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }

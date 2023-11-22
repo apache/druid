@@ -73,7 +73,7 @@ public class DimensionSchemaUtils
                                     .getDimensionSchema(capabilities);
       }
 
-      return new AutoTypeColumnSchema(column);
+      return new AutoTypeColumnSchema(column, type != null && type.is(ValueType.COMPLEX) ? type : null);
     } else {
       // if schema information is not available, create a string dimension
       if (type == null) {
@@ -102,12 +102,12 @@ public class DimensionSchemaUtils
             return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
           } else {
             // arrayIngestMode == ArrayIngestMode.ARRAY would be true
-            return new AutoTypeColumnSchema(column);
+            return new AutoTypeColumnSchema(column, type);
           }
         } else if (elementType.isNumeric()) {
           // ValueType == LONG || ValueType == FLOAT || ValueType == DOUBLE
           if (arrayIngestMode == ArrayIngestMode.ARRAY) {
-            return new AutoTypeColumnSchema(column);
+            return new AutoTypeColumnSchema(column, type);
           } else {
             throw InvalidInput.exception(
                 "Numeric arrays can only be ingested when '%s' is set to 'array' in the MSQ query's context. "

@@ -145,11 +145,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
-                       .add(new AutoTypeColumnSchema("string"))
-                       .add(new AutoTypeColumnSchema("nest"))
-                       .add(new AutoTypeColumnSchema("nester"))
-                       .add(new AutoTypeColumnSchema("long"))
-                       .add(new AutoTypeColumnSchema("string_sparse"))
+                       .add(new AutoTypeColumnSchema("string", null))
+                       .add(new AutoTypeColumnSchema("nest", null))
+                       .add(new AutoTypeColumnSchema("nester", null))
+                       .add(new AutoTypeColumnSchema("long", null))
+                       .add(new AutoTypeColumnSchema("string_sparse", null))
                        .build()
       ).build(),
       null
@@ -160,8 +160,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
                        .add(new StringDimensionSchema("string"))
-                       .add(new AutoTypeColumnSchema("nest"))
-                       .add(new AutoTypeColumnSchema("nester"))
+                       .add(new AutoTypeColumnSchema("nest", null))
+                       .add(new AutoTypeColumnSchema("nester", null))
                        .add(new LongDimensionSchema("long"))
                        .add(new StringDimensionSchema("string_sparse"))
                        .build()

@@ -232,7 +232,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     SegmentWriteOutMediumFactory writeOutMediumFactory = TmpFileSegmentWriteOutMediumFactory.instance();
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer(null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -256,6 +256,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
       }
       VariantColumnSerializer serializer = new VariantColumnSerializer(
           fileNameBase,
+          expectedTypes.getSingleType() == null ? null : expectedLogicalType,
           expectedTypes.getSingleType() == null ? expectedTypes.getByteValue() : null,
           indexSpec,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),

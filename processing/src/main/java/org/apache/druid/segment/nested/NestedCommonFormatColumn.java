@@ -89,11 +89,13 @@ public interface NestedCommonFormatColumn extends BaseColumn
   {
     private final ColumnType logicalType;
     private final boolean hasNulls;
+    private final boolean enforceLogicalType;
 
-    public Format(ColumnType logicalType, boolean hasNulls)
+    public Format(ColumnType logicalType, boolean hasNulls, boolean enforceLogicalType)
     {
       this.logicalType = logicalType;
       this.hasNulls = hasNulls;
+      this.enforceLogicalType = enforceLogicalType;
     }
 
     @Override
@@ -105,13 +107,13 @@ public interface NestedCommonFormatColumn extends BaseColumn
     @Override
     public DimensionHandler getColumnHandler(String columnName)
     {
-      return new NestedCommonFormatColumnHandler(columnName);
+      return new NestedCommonFormatColumnHandler(columnName, enforceLogicalType ? logicalType : null);
     }
 
     @Override
     public DimensionSchema getColumnSchema(String columnName)
     {
-      return new AutoTypeColumnSchema(columnName);
+      return new AutoTypeColumnSchema(columnName, enforceLogicalType ? logicalType : null);
     }
 
     @Override
@@ -123,10 +125,11 @@ public interface NestedCommonFormatColumn extends BaseColumn
 
       if (otherFormat instanceof Format) {
         final boolean otherHasNulls = ((Format) otherFormat).hasNulls;
+        final boolean otherEnforceLogicalType = ((Format) otherFormat).enforceLogicalType;
         if (!getLogicalType().equals(otherFormat.getLogicalType())) {
-          return new Format(ColumnType.NESTED_DATA, hasNulls || otherHasNulls);
+          return new Format(ColumnType.NESTED_DATA, hasNulls || otherHasNulls, false);
         }
-        return new Format(logicalType, hasNulls || otherHasNulls);
+        return new Format(logicalType, hasNulls || otherHasNulls, enforceLogicalType || otherEnforceLogicalType);
       }
       throw new ISE(
           "Cannot merge columns of type[%s] and format[%s] and with [%s] and [%s]",

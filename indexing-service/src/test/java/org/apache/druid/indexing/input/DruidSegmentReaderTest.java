@@ -693,7 +693,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ImmutableList.of(
             StringDimensionSchema.create("strCol"),
             new DoubleDimensionSchema("dblCol"),
-            new AutoTypeColumnSchema("arrayCol")
+            new AutoTypeColumnSchema("arrayCol", null)
         )
     );
     List<AggregatorFactory> metrics = ImmutableList.of(
@@ -767,7 +767,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             ImmutableList.of(
                 StringDimensionSchema.create("strCol"),
                 new DoubleDimensionSchema("dblCol"),
-                new AutoTypeColumnSchema("arrayCol")
+                new AutoTypeColumnSchema("arrayCol", null)
             )
         ),
         ColumnsFilter.all(),
