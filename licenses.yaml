@@ -289,7 +289,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.7.20221012
+version: 2.12.7.1
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -655,7 +655,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.23.0
+version: 1.24.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -891,7 +891,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 16.0.3
+version: 11.0.4
 libraries:
   - io.kubernetes: client-java-api
 
@@ -901,7 +901,7 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 19.0.0
+version: 11.0.4
 libraries:
   - io.kubernetes: client-java-extended
 
@@ -1124,6 +1124,46 @@ license_name: MIT License
 version: "1.77"
 libraries:
   - org.bouncycastle: bcutil-jdk18on
+
+---
+
+name: org.bouncycastle bcprov-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcprov-jdk15on
+
+---
+
+name: org.bouncycastle bcprov-ext-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcprov-ext-jdk15on
+
+---
+
+name: org.bouncycastle bcpkix-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcpkix-jdk15on
+
+---
+
+name: org.bouncycastle bcutil-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcutil-jdk15on
 
 ---
 

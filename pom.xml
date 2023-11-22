@@ -359,16 +359,36 @@
                 <artifactId>snakeyaml</artifactId>
                 <version>1.33</version>
             </dependency>
-<dependency>
-    <groupId>org.apache.ant</groupId>
-    <artifactId>ant</artifactId>
-    <version>1.10.14</version>
-</dependency>
-<dependency>
-    <groupId>org.bitbucket.b_c</groupId>
-    <artifactId>jose4j</artifactId>
-    <version>0.9.3</version>
-</dependency>
+            <dependency>
+                <groupId>org.apache.ant</groupId>
+                <artifactId>ant</artifactId>
+                <version>1.10.14</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bitbucket.b_c</groupId>
+                <artifactId>jose4j</artifactId>
+                <version>0.9.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-ext-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcutil-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
