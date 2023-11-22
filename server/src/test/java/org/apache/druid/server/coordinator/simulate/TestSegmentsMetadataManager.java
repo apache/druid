@@ -33,6 +33,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -190,6 +191,16 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
                        interval,
                        Partitions.ONLY_COMPLETE
                    ));
+  }
+
+  @Override
+  public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable Integer offset
+  ) {
+    return null;
   }
 
   @Override

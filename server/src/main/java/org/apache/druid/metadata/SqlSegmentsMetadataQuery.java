@@ -117,7 +117,7 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null);
+    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null, null);
   }
 
   /**
@@ -127,15 +127,21 @@ public class SqlSegmentsMetadataQuery
    *
    * This call does not return any information about realtime segments.
    *
+   * @param dataSource The name of the datasource
+   * @param intervals  The intervals to search over
+   * @param limit      The limit of segments to return
+   * @param offset     The offset to use when retreiving matching segments. Note: This is only applied if the size of
+   *                   intervals is less than {@link #MAX_INTERVALS_PER_BATCH}
    * Returns a closeable iterator. You should close it when you are done.
    */
   public CloseableIterator<DataSegment> retrieveUnusedSegments(
       final String dataSource,
       final Collection<Interval> intervals,
-      @Nullable final Integer limit
+      @Nullable final Integer limit,
+      @Nullable final Integer offset
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit, offset);
   }
 
   /**
@@ -223,7 +229,7 @@ public class SqlSegmentsMetadataQuery
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
           Iterators.transform(
-              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, null),
+              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, null, null),
               DataSegment::getId
           )
       );
@@ -358,12 +364,13 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
       final boolean used,
-      @Nullable final Integer limit
+      @Nullable final Integer limit,
+      @Nullable final Integer offset
   )
   {
-    if (intervals.isEmpty()) {
+    if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit)
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, offset)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -371,7 +378,14 @@ public class SqlSegmentsMetadataQuery
       Integer limitPerBatch = limit;
 
       for (final List<Interval> intervalList : intervalsLists) {
-        final UnmodifiableIterator<DataSegment> iterator = retrieveSegmentsInIntervalsBatch(dataSource, intervalList, matchMode, used, limitPerBatch);
+        final UnmodifiableIterator<DataSegment> iterator = retrieveSegmentsInIntervalsBatch(
+            dataSource,
+            intervalList,
+            matchMode,
+            used,
+            limitPerBatch,
+            null // don't use offset with multiple batches for now. Note added to javadoc.
+        );
         if (limitPerBatch != null) {
           // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
           // we have reached what was requested for.
@@ -394,7 +408,8 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
       final boolean used,
-      @Nullable final Integer limit
+      @Nullable final Integer limit,
+      @Nullable final Integer offset
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -407,6 +422,10 @@ public class SqlSegmentsMetadataQuery
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
+    if (offset != null) {
+      sb.append(StringUtils.format(" ORDER BY start, %1$send%1$s", connector.getQuoteString()));
+      sb.append(StringUtils.format(connector.getOffsetClause(offset)));
+    }
     final Query<Map<String, Object>> sql = handle
         .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
         .setFetchSize(connector.getStreamingFetchSize())

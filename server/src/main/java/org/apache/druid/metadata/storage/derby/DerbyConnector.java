@@ -100,6 +100,15 @@ public class DerbyConnector extends SQLMetadataConnector
     return QUOTE_STRING;
   }
 
+  /**
+   * @return the string offset clause
+   */
+  @Override
+  public String getOffsetClause(int offset)
+  {
+    return StringUtils.format(" OFFSET %s ROWS", offset);
+  }
+
   @Override
   public DBI getDBI()
   {

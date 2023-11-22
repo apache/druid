@@ -25,10 +25,12 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.util.concurrent.Futures;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
@@ -59,6 +61,7 @@ import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.Query;
+import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
@@ -686,7 +689,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -953,6 +956,105 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
     return Optional.fromNullable(usedSegmentsTimeline)
                    .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE));
+  }
+
+  @Override
+  public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable Integer offset
+  ) {
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final SqlSegmentsMetadataQuery queryTool =
+              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper);
+
+          final List<Interval> intervals =
+              interval == null
+                  ? Intervals.ONLY_ETERNITY
+                  : Collections.singletonList(interval);
+          try (final CloseableIterator<DataSegment> iterator =
+                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, offset)) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
+    // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
+    /*
+    final boolean compareAsString = interval != null && Intervals.canCompareEndpointsAsStrings(interval);
+    final SqlSegmentsMetadataQuery.IntervalMode matchMode = SqlSegmentsMetadataQuery.IntervalMode.CONTAINS;
+    return connector.inReadOnlyTransaction(
+        new TransactionCallback<UnmodifiableIterator<DataSegment>>() {
+          @Override
+          public UnmodifiableIterator<DataSegment> inTransaction(Handle handle, TransactionStatus status) {
+            final StringBuilder sb = new StringBuilder();
+            sb.append("SELECT payload FROM %s WHERE used=false");
+
+            if (compareAsString) {
+              SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
+                  sb,
+                  ImmutableList.of(interval),
+                  matchMode,
+                  connector
+              );
+            }
+            sb.append(StringUtils.format(" ORDER BY start, %1$send%1$s", connector.getQuoteString()));
+            if (offset != null) {
+              sb.append(StringUtils.format(connector.getOffsetClause(offset)));
+            }
+            Query<Map<String, Object>> query = handle
+                .createQuery(StringUtils.format(sb.toString(), getSegmentsTable()))
+                .setFetchSize(connector.getStreamingFetchSize());
+            if (limit != null) {
+                query = query.setMaxRows(limit);
+            }
+            if (compareAsString) {
+              SqlSegmentsMetadataQuery.bindQueryIntervals(query, ImmutableList.of(interval));
+            }
+
+            ResultIterator<DataSegment> resultIterator = query.map(
+                new ResultSetMapper<DataSegment>() {
+                  @Override
+                  public DataSegment map(int index, ResultSet r, StatementContext ctx) throws SQLException {
+                    try {
+                      DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                      return replaceWithExistingSegmentIfPresent(segment);
+                    } catch (IOException e) {
+                      log.makeAlert(e, "Failed to read segment from db.").emit();
+                      // If one entry in database is corrupted doPoll() should continue to work overall. See
+                      // filter by `Objects::nonNull` below in this method.
+                      return null;
+                    }
+                  }
+                }
+            ).iterator();
+
+            return Iterators.filter(
+                resultIterator,
+                dataSegment -> {
+                  if (interval == null) {
+                    return true;
+                  } else {
+                    if (matchMode.apply(interval, dataSegment.getInterval())) {
+                      return true;
+                    }
+                    // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
+                    // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
+                    // segment interval like "20010/20011".)
+                    if (matchMode.apply(interval, dataSegment.getInterval())) {
+                      return true;
+                    }
+
+                    return false;
+                  }
+                }
+            );
+          }
+        }
+    );
+
+     */
   }
 
   @Override
