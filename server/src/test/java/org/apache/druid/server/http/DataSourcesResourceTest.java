@@ -35,6 +35,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.UnknownSegmentIdsException;
@@ -64,6 +65,7 @@ import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
+import org.easymock.IAnswer;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -584,6 +586,203 @@ public class DataSourcesResourceTest
       i--;
     }
     EasyMock.verify(inventoryView);
+  }
+
+  @Test
+  public void testGetUnusedSegmentDataSourceIntervals()
+  {
+    EasyMock.expect(segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+            EasyMock.anyString(),
+            EasyMock.anyObject(Interval.class),
+            EasyMock.anyInt(),
+            EasyMock.anyInt()
+        ))
+        .andAnswer(mockIterateAllUnusedSegmentsForDatasource())
+        .atLeastOnce();
+    EasyMock.replay(segmentsMetadataManager);
+
+    List<Interval> expectedIntervals = new ArrayList<>();
+    expectedIntervals.add(Intervals.of("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
+    expectedIntervals.add(Intervals.of("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, null);
+
+    Response response = dataSourcesResource.getIntervalsWithUnusedSegmentsOrAllUnusedSegmentsPerIntervals(
+        "invalidDataSource",
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(response.getEntity(), null);
+
+    response = dataSourcesResource.getIntervalsWithUnusedSegmentsOrAllUnusedSegmentsPerIntervals(
+        "datasource1",
+        null,
+        null,
+        null,
+        null
+    );
+    TreeSet<Interval> actualIntervals = (TreeSet) response.getEntity();
+    Assert.assertEquals(2, actualIntervals.size());
+    List<Interval> intervalsInOrderFromEarliest = expectedIntervals.stream()
+        .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1, o2))
+        .collect(Collectors.toList());
+    Assert.assertEquals(intervalsInOrderFromEarliest.get(0), actualIntervals.first());
+    Assert.assertEquals(intervalsInOrderFromEarliest.get(1), actualIntervals.last());
+
+    response = dataSourcesResource.getIntervalsWithUnusedSegmentsOrAllUnusedSegmentsPerIntervals(
+        "datasource1",
+        "simple",
+        null,
+        null,
+        null
+    );
+    TreeMap<Interval, Map<DataSourcesResource.SimpleProperties, Object>> results = (TreeMap) response.getEntity();
+    Assert.assertEquals(2, results.size());
+    Assert.assertEquals(intervalsInOrderFromEarliest.get(0), results.firstKey());
+    Assert.assertEquals(intervalsInOrderFromEarliest.get(1), results.lastKey());
+    Assert.assertEquals(1, results.firstEntry().getValue().get(DataSourcesResource.SimpleProperties.count));
+    Assert.assertEquals(1, results.lastEntry().getValue().get(DataSourcesResource.SimpleProperties.count));
+
+    response = dataSourcesResource.getIntervalsWithUnusedSegmentsOrAllUnusedSegmentsPerIntervals(
+        "datasource1",
+        null,
+        "full",
+        null,
+        null
+    );
+    Map<Interval, Map<SegmentId, Object>> results2 = ((Map<Interval, Map<SegmentId, Object>>) response.getEntity());
+    int i = 0;
+    List<DataSegment> segmentsInOrderFromEarliest = dataSegmentList.stream()
+        .filter(d -> d.getDataSource().equals("datasource1"))
+        .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.getInterval(), o2.getInterval()))
+        .collect(Collectors.toList());
+    for (Map.Entry<Interval, Map<SegmentId, Object>> entry : results2.entrySet()) {
+      for (Map.Entry<SegmentId, Object> entryInner : entry.getValue().entrySet()) {
+        Assert.assertEquals(segmentsInOrderFromEarliest.get(i).getInterval(), entry.getKey());
+        Assert.assertEquals(
+            segmentsInOrderFromEarliest.get(i),
+            ((Map<String, Object>) entry.getValue().get(segmentsInOrderFromEarliest.get(i).getId())).get("metadata")
+        );
+        i++;
+      }
+    }
+    EasyMock.verify(segmentsMetadataManager);
+  }
+
+  @Test
+  public void testGetUnusedSegmentsInIntervalInDataSource()
+  {
+    EasyMock.expect(segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+            EasyMock.anyString(),
+            EasyMock.anyObject(Interval.class),
+            EasyMock.anyInt(),
+            EasyMock.anyInt()
+        ))
+        .andAnswer(mockIterateAllUnusedSegmentsForDatasource())
+        .atLeastOnce();
+    EasyMock.replay(segmentsMetadataManager);
+
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, null);
+    Response response = dataSourcesResource.getUnusedSegmentsInInterval(
+        "invalidDataSource",
+        "2010-01-01/P1D",
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(ImmutableSet.of(), response.getEntity());
+
+    response = dataSourcesResource.getUnusedSegmentsInInterval(
+        "datasource1",
+        "2010-03-01/P1D",
+        null,
+        null,
+        null,
+        null
+    );
+    // interval not present in the datasource
+    Assert.assertEquals(ImmutableSet.of(), response.getEntity());
+
+    response = dataSourcesResource.getUnusedSegmentsInInterval("datasource1", "2010-01-01/P1D", null, null, null, null);
+    Assert.assertEquals(ImmutableSet.of(dataSegmentList.get(0).getId()), response.getEntity());
+
+    response = dataSourcesResource.getUnusedSegmentsInInterval("datasource1", "2010-01-01/P1M", null, null, null, null);
+    Assert.assertEquals(
+        ImmutableSet.of(dataSegmentList.get(1).getId(), dataSegmentList.get(0).getId()),
+        response.getEntity()
+    );
+
+    response = dataSourcesResource.getUnusedSegmentsInInterval(
+        "datasource1",
+        "2010-01-01/P1M",
+        "simple",
+        null,
+        null,
+        null
+    );
+    Map<Interval, Map<DataSourcesResource.SimpleProperties, Object>> results =
+        ((Map<Interval, Map<DataSourcesResource.SimpleProperties, Object>>) response.getEntity());
+    Assert.assertEquals(2, results.size());
+    int i;
+    for (i = 0; i < 2; i++) {
+      Assert.assertTrue(results.containsKey(dataSegmentList.get(i).getInterval()));
+      Assert.assertEquals(
+          1,
+          (results.get(dataSegmentList.get(i).getInterval())).get(DataSourcesResource.SimpleProperties.count)
+      );
+    }
+
+    response = dataSourcesResource.getUnusedSegmentsInInterval("datasource1", "2010-01-01/P1M", null, "full", null, null);
+    Map<Interval, Map<SegmentId, Object>> results1 = ((Map<Interval, Map<SegmentId, Object>>) response.getEntity());
+    i = 0;
+    List<DataSegment> segmentsInOrderFromEarliest = dataSegmentList.stream()
+        .filter(d -> d.getDataSource().equals("datasource1"))
+        .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.getInterval(), o2.getInterval()))
+        .collect(Collectors.toList());
+    for (Map.Entry<Interval, Map<SegmentId, Object>> entry : results1.entrySet()) {
+      for (Map.Entry<SegmentId, Object> entryInner : entry.getValue().entrySet()) {
+        Assert.assertEquals(segmentsInOrderFromEarliest.get(i).getInterval(), entry.getKey());
+        Assert.assertEquals(
+            segmentsInOrderFromEarliest.get(i),
+            ((Map<String, Object>) entry.getValue().get(segmentsInOrderFromEarliest.get(i).getId())).get("metadata")
+        );
+        i++;
+      }
+    }
+    EasyMock.verify(segmentsMetadataManager);
+  }
+
+  IAnswer<Iterable<DataSegment>> mockIterateAllUnusedSegmentsForDatasource()
+  {
+    return new IAnswer<Iterable<DataSegment>>() {
+      @Override
+      public Iterable<DataSegment> answer()
+      {
+        String dataSourceName = (String) EasyMock.getCurrentArguments()[0];
+        Interval interval = (Interval) EasyMock.getCurrentArguments()[1];
+        Integer limit = (Integer) EasyMock.getCurrentArguments()[2];
+        Integer offset = (Integer) EasyMock.getCurrentArguments()[3];
+        if (!"datasource1".equals(dataSourceName)) {
+          return ImmutableList.of();
+        }
+
+        List<DataSegment> allSegments = ImmutableList.of(dataSegmentList.get(0), dataSegmentList.get(1), dataSegmentList.get(2));
+        return allSegments
+            .stream()
+            .filter(d -> d.getDataSource().equals(dataSourceName)
+                         && (interval == null
+                             || (d.getInterval().getStartMillis() >= interval.getStartMillis()
+                                 && d.getInterval().getEndMillis() <= interval.getEndMillis())))
+            .skip(offset != null ? offset : 0)
+            .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.getInterval(), o2.getInterval()))
+            .limit(limit != null ? limit : allSegments.size())
+            .collect(Collectors.toList());
+      }
+    };
   }
 
   @Test

@@ -50,15 +50,11 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-
 
 public class SqlSegmentsMetadataManagerTest
 {
@@ -464,119 +460,6 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertEquals(
         ImmutableList.of(newSegment2.getInterval()),
         sqlSegmentsMetadataManager.getUnusedSegmentIntervals(newDs, DateTimes.COMPARE_DATE_AS_STRING_MIN, DateTimes.of("3000"), 5, DateTimes.nowUtc().minus(Duration.parse("PT86400S")))
-    );
-  }
-
-  @Test
-  public void testIterateAllUnusedSegmentsForDatasource() throws IOException {
-    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
-    sqlSegmentsMetadataManager.poll();
-
-    // We alter the segment table to allow nullable used_status_last_updated in order to test compatibility during druid upgrade from version without used_status_last_updated.
-    derbyConnectorRule.allowUsedFlagLastUpdatedToBeNullable();
-
-    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
-    int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource("wikipedia");
-    Assert.assertEquals(2, numChangedSegments);
-
-    String newDs = "newDataSource";
-    final DataSegment newSegment = createSegment(
-        newDs,
-        "2017-10-15T00:00:00.000/2017-10-16T00:00:00.000",
-        "2017-10-15T20:19:12.565Z",
-        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
-        0
-    );
-    publish(newSegment, false, DateTimes.nowUtc().minus(Duration.parse("PT7200S").getMillis()));
-
-    final DataSegment newSegment2 = createSegment(
-        newDs,
-        "2017-10-16T00:00:00.000/2017-10-17T00:00:00.000",
-        "2017-10-15T20:19:12.565Z",
-        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
-        0
-    );
-    publish(newSegment2, false, DateTimes.nowUtc().minus(Duration.parse("PT172800S").getMillis()));
-
-    final DataSegment newSegment3 = createSegment(
-        newDs,
-        "2017-10-17T00:00:00.000/2017-10-18T00:00:00.000",
-        "2017-10-15T20:19:12.565Z",
-        "wikipedia2/index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
-        0
-    );
-    publish(newSegment3, false, null);
-
-    Iterator<DataSegment> allUnusedSegmentsIter = sqlSegmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
-        "wikipedia",
-        null,
-        null,
-        null
-    ).iterator();
-
-    List<DataSegment> allUnusedSegments = new ArrayList<>();
-    while (allUnusedSegmentsIter.hasNext()) {
-      DataSegment next = allUnusedSegmentsIter.next();
-      allUnusedSegments.add(next);
-    }
-
-    // all segments returned in order
-    Assert.assertEquals(
-        ImmutableList.of(segment2, segment1, newSegment, newSegment2, newSegment3),
-        allUnusedSegments
-    );
-
-    Iterator<DataSegment> limitFilteredUnusedSegmentsIter = sqlSegmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
-        "wikipedia",
-        null,
-        3,
-        null
-    ).iterator();
-
-    List<DataSegment> limitFilteredUnusedSegments = new ArrayList<>();
-    while (limitFilteredUnusedSegmentsIter.hasNext()) {
-      DataSegment next = limitFilteredUnusedSegmentsIter.next();
-      limitFilteredUnusedSegments.add(next);
-    }
-
-    // segments returned limited to limit specified and returned in order
-    Assert.assertEquals(
-        ImmutableList.of(segment2, segment1, newSegment),
-        limitFilteredUnusedSegments
-    );
-
-    Iterator<DataSegment> intervalFilteredUnusedSegmentsIter = sqlSegmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
-        "wikipedia",
-        Intervals.of("2012/2013"),
-        null,
-        null
-    ).iterator();
-    List<DataSegment> intervalFilteredUnusedSegments = new ArrayList<>();
-    while (intervalFilteredUnusedSegmentsIter.hasNext()) {
-      DataSegment next = intervalFilteredUnusedSegmentsIter.next();
-      intervalFilteredUnusedSegments.add(next);
-    }
-    // all segments returned match interval filter and returned in order
-    Assert.assertEquals(
-        ImmutableList.of(segment2, segment1),
-        intervalFilteredUnusedSegments
-    );
-
-    Iterator<DataSegment> allParamsFilteredUnusedSegmentsIter = sqlSegmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
-        "wikipedia",
-        Intervals.of("2012/2013"),
-        1,
-        1
-    ).iterator();
-    List<DataSegment> allParamsFilteredUnusedSegments = new ArrayList<>();
-    while (allParamsFilteredUnusedSegmentsIter.hasNext()) {
-      DataSegment next = allParamsFilteredUnusedSegmentsIter.next();
-      allParamsFilteredUnusedSegments.add(next);
-    }
-    // all segments returned match interval filter and returned in order
-    Assert.assertEquals(
-        ImmutableList.of(segment1),
-        allParamsFilteredUnusedSegments
     );
   }
 

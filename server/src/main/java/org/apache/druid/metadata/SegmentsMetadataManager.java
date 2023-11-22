@@ -21,7 +21,6 @@ package org.apache.druid.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.collect.UnmodifiableIterator;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.timeline.DataSegment;
@@ -31,7 +30,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -133,6 +131,11 @@ public interface SegmentsMetadataManager
    * first. Note: the iteration may not be as trivially cheap as,
    * for example, iteration over an ArrayList. Try (to some reasonable extent) to organize the code so that it
    * iterates the returned iterable only once rather than several times.
+   *
+   * @param datasource the name of the datasource.
+   * @param interval   the interval to search over.
+   * @param limit      the maximum number of results to return.
+   * @param offset     the offset from which to search for results.
    */
   Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
       String datasource,

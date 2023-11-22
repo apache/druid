@@ -1231,29 +1231,30 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingNoIntervalsAndNoLimitAndOffset() throws IOException {
+  public void testRetrieveUnusedSegmentsUsingNoIntervalsAndNoLimitAndOffset() throws IOException
+  {
     final List<DataSegment> segments = createAndGetUsedYearSegments(2033, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
     int offset = 10;
     List<DataSegment> expectedSegments = segments.stream().sorted((Comparator<DataSegment>) (o1, o2) -> {
-          long o1Start = o1.getInterval().getStartMillis();
-          long o2Start = o2.getInterval().getStartMillis();
-          if (o1Start < o2Start) {
-            return -1;
-          } else if (o1Start > o2Start) {
-            return 1;
-          } else {
-            long o1End = o1.getInterval().getEndMillis();
-            long o2End = o2.getInterval().getEndMillis();
-            if (o1End < o2End) {
-              return -1;
-            }
-            return o1End > o2End
-                ? 1
-                : 0;
-          }
-        })
+      long o1Start = o1.getInterval().getStartMillis();
+      long o2Start = o2.getInterval().getStartMillis();
+      if (o1Start < o2Start) {
+        return -1;
+      } else if (o1Start > o2Start) {
+        return 1;
+      } else {
+        long o1End = o1.getInterval().getEndMillis();
+        long o2End = o2.getInterval().getEndMillis();
+        if (o1End < o2End) {
+          return -1;
+        }
+        return o1End > o2End
+            ? 1
+            : 0;
+      }
+    })
         .skip(offset)
         .collect(Collectors.toList());
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
