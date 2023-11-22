@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Contains information on a set of segments, and the {@link DruidServerMetadata} of a data server, serving
- * those segments.
+ * Contains information on a set of segments, and the {@link DruidServerMetadata} of a data server serving
+ * those segments. Used by MSQ to query dataservers directly.
  */
 public class DataServerRequestDescriptor
 {

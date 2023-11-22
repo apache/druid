@@ -186,7 +186,7 @@ public class DataServerResponseHandler<T> implements HttpResponseHandler<InputSt
   @Override
   public ClientResponse<InputStream> done(ClientResponse<InputStream> clientResponse)
   {
-    log.debug("Finished reading response for queryId[%s]", query.getId());
+    log.debug("Finished reading response for queryId[%s]. Read total[%d]", query.getId(), totalByteCount.get());
     synchronized (done) {
       try {
         // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out

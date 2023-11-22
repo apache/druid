@@ -231,8 +231,10 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         return ReturnOrAwait.returnObject(handedOffSegments);
       } else {
         final long rowsFlushed = setNextCursor(cursorYielder.get(), null);
-        assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
         closer.register(cursorYielder);
+        if (rowsFlushed > 0) {
+          return ReturnOrAwait.runAgain();
+        }
       }
     }
 

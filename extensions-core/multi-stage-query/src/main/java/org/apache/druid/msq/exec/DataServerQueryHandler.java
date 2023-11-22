@@ -150,6 +150,7 @@ public class DataServerQueryHandler
     while (!pendingRequests.isEmpty()) {
       final ResponseContext responseContext = new DefaultResponseContext();
       for (DataServerRequestDescriptor descriptor : pendingRequests) {
+        log.info("Querying server [%s] for segments[%s]", descriptor.getServerMetadata(), descriptor.getSegments());
         Yielder<RowType> yielder = fetchRowsFromDataServerInternal(descriptor, responseContext, closer, preparedQuery, mappingFunction);
 
         // Add results
