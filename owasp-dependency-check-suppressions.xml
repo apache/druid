@@ -18,8 +18,161 @@
   ~ under the License.
   -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <suppress>
+    <!-- druid-indexing-hadoop.jar is mistaken for hadoop -->
+    <notes><![CDATA[
+   file name: org.apache.druid:druid-indexing-hadoop
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-indexing\-hadoop@.*$</packageUrl>
+    <cve>CVE-2012-4449</cve>
+    <cve>CVE-2017-3162</cve>
+    <cve>CVE-2018-8009</cve>
+    <cve>CVE-2022-26612</cve>
+  </suppress>
+  <suppress>
+    <!-- druid-processing.jar is mistaken for org.processing:processing -->
+    <notes><![CDATA[
+   file name: org.apache.druid:druid-processing
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.druid/druid\-processing@.*$</packageUrl>
+    <cve>CVE-2018-1000840</cve>
+  </suppress>
+  <suppress>
+    <!-- These CVEs are for the python SDK, but Druid uses the Java SDK -->
+    <notes><![CDATA[
+   file name: openstack-swift
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-swift@.*$</packageUrl>
+    <cve>CVE-2013-7109</cve>
+    <cve>CVE-2016-0737</cve>
+    <cve>CVE-2016-0738</cve>
+    <cve>CVE-2017-16613</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: openstack-keystone-1.9.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-keystone@.*$</packageUrl>
+    <!-- These CVEs are for the python SDK, but Druid uses the Java SDK -->
+    <cve>CVE-2015-7546</cve>
+    <cve>CVE-2020-12689</cve>
+    <cve>CVE-2020-12690</cve>
+    <cve>CVE-2020-12691</cve>
+
+    <!-- This CVE affects the server -->
+    <cve>CVE-2021-3563</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+     file name: json-path-2.3.0.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/net\.minidev/json\-path@.*$</packageUrl>
+    <cve>CVE-2022-45688</cve>
+  </suppress>
+
+  <suppress>
+    <!--
+      the suppressions here aren't currently applicable, but can be resolved once we update the version
+      -->
+    <notes><![CDATA[
+   file name: jackson-databind-2.10.5.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <!-- CVE-2022-42003 and CVE-2022-42004 are related to UNWRAP_SINGLE_VALUE_ARRAYS which we do not use
+    https://nvd.nist.gov/vuln/detail/CVE-2022-42003
+    https://nvd.nist.gov/vuln/detail/CVE-2022-42004
+     -->
+    <cve>CVE-2022-42003</cve>
+    <cve>CVE-2022-42004</cve>
+  </suppress>
 
 
+  <suppress>
+    <!-- Not much for us to do as a user of the client lib, and no patch is available,
+     see https://github.com/kubernetes/kubernetes/issues/97076 -->
+    <notes><![CDATA[
+   file name: client-java-10.0.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.kubernetes/client\-java.*@10.0.1$</packageUrl>
+    <cve>CVE-2020-8554</cve>
+  </suppress>
+
+  <!-- FIXME: These are suppressed so that CI can enforce that no new vulnerable dependencies are added. -->
+  <suppress>
+    <!--
+      ~ TODO: Fix by updating hibernate-validator.
+
+      ~ Note hibernate-validator:5.3.1 introduces a change that requires an EL implementation to be in the classpath:
+      ~ https://developer.jboss.org/wiki/HibernateValidatorMigrationGuide#jive_content_id_531Final
+      ~
+      ~ For example, updating hibernate-validator causes hadoop ingestion tasks to fail:
+      ~
+      ~   Error: com.google.inject.CreationException: Unable to create injector, see the following errors:
+      ~
+      ~   1) An exception was caught and reported. Message: HV000183: Unable to initialize 'javax.el.ExpressionFactory'. Check that you have the EL dependencies on the classpath, or use ParameterMessageInterpolator instead
+      ~     at com.google.inject.internal.InjectorShell$Builder.build(InjectorShell.java:138)
+      ~
+      ~   2) No implementation for javax.validation.Validator was bound.
+      ~     at org.apache.druid.guice.ConfigModule.configure(ConfigModule.java:39)
+      ~
+      ~   2 errors
+      ~       at com.google.inject.internal.Errors.throwCreationExceptionIfErrorsExist(Errors.java:470)
+      ~       at com.google.inject.internal.InternalInjectorCreator.initializeStatically(InternalInjectorCreator.java:155)
+      ~       at com.google.inject.internal.InternalInjectorCreator.build(InternalInjectorCreator.java:107)
+      ~       at com.google.inject.Guice.createInjector(Guice.java:99)
+      ~       at com.google.inject.Guice.createInjector(Guice.java:73)
+      ~       at org.apache.druid.guice.GuiceInjectors.makeStartupInjector(GuiceInjectors.java:56)
+      ~       at org.apache.druid.indexer.HadoopDruidIndexerConfig.<clinit>(HadoopDruidIndexerConfig.java:102)
+      ~       at org.apache.druid.indexer.HadoopDruidIndexerMapper.setup(HadoopDruidIndexerMapper.java:53)
+      ~       at org.apache.druid.indexer.DetermineHashedPartitionsJob$DetermineCardinalityMapper.setup(DetermineHashedPartitionsJob.java:279)
+      ~       at org.apache.druid.indexer.DetermineHashedPartitionsJob$DetermineCardinalityMapper.run(DetermineHashedPartitionsJob.java:334)
+      ~       at org.apache.hadoop.mapred.MapTask.runNewMapper(MapTask.java:787)
+      ~       at org.apache.hadoop.mapred.MapTask.run(MapTask.java:341)
+      ~       at org.apache.hadoop.mapred.YarnChild$2.run(YarnChild.java:175)
+      ~       at java.security.AccessController.doPrivileged(Native Method)
+      ~       at javax.security.auth.Subject.doAs(Subject.java:422)
+      ~       at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1844)
+      ~       at org.apache.hadoop.mapred.YarnChild.main(YarnChild.java:169)
+      ~   Caused by: javax.validation.ValidationException: HV000183: Unable to initialize 'javax.el.ExpressionFactory'. Check that you have the EL dependencies on the classpath, or use ParameterMessageInterpolator instead
+      ~       at org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator.buildExpressionFactory(ResourceBundleMessageInterpolator.java:102)
+      ~       at org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator.<init>(ResourceBundleMessageInterpolator.java:45)
+      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.getDefaultMessageInterpolator(ConfigurationImpl.java:423)
+      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.getDefaultMessageInterpolatorConfiguredWithClassLoader(ConfigurationImpl.java:575)
+      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.getMessageInterpolator(ConfigurationImpl.java:364)
+      ~       at org.hibernate.validator.internal.engine.ValidatorFactoryImpl.<init>(ValidatorFactoryImpl.java:148)
+      ~       at org.hibernate.validator.HibernateValidator.buildValidatorFactory(HibernateValidator.java:38)
+      ~       at org.hibernate.validator.internal.engine.ConfigurationImpl.buildValidatorFactory(ConfigurationImpl.java:331)
+      ~       at javax.validation.Validation.buildDefaultValidatorFactory(Validation.java:110)
+      ~       at org.apache.druid.guice.ConfigModule.configure(ConfigModule.java:39)
+      ~       at com.google.inject.spi.Elements$RecordingBinder.install(Elements.java:340)
+      ~       at com.google.inject.spi.Elements.getElements(Elements.java:110)
+      ~       at com.google.inject.internal.InjectorShell$Builder.build(InjectorShell.java:138)
+      ~       at com.google.inject.internal.InternalInjectorCreator.build(InternalInjectorCreator.java:104)
+      ~       ... 14 more
+      ~   Caused by: java.lang.NoSuchMethodError: javax.el.ExpressionFactory.newInstance()Ljavax/el/ExpressionFactory;
+      ~       at org.hibernate.validator.messageinterpolation.ResourceBundleMessageInterpolator.buildExpressionFactory(ResourceBundleMessageInterpolator.java:98)
+      ~       ... 27 more
+      -->
+    <notes><![CDATA[
+   file name: hibernate-validator-5.3.6.Final.jar
+   file name: hibernate-validator-5.2.5.Final.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.hibernate/hibernate\-validator@.*$</packageUrl>
+    <cve>CVE-2017-7536</cve>
+    <cve>CVE-2019-10219</cve> <!-- We don't use SafeHtml validator annotation https://nvd.nist.gov/vuln/detail/CVE-2019-10219 -->
+    <cve>CVE-2019-14900</cve> <!-- Not applicable to hibernate validator https://github.com/hibernate/hibernate-orm/pull/3438 -->
+    <cve>CVE-2020-10693</cve> <!-- We don't take user input in constraint violation message https://hibernate.atlassian.net/browse/HV-1774 -->
+    <cve>CVE-2020-25638</cve>
+  </suppress>
+  <suppress>
+    <!-- TODO: Fix by updating curator-x-discovery to > 4.2.0 and updating hadoop -->
+    <notes><![CDATA[
+   file name: jackson-mapper-asl-1.9.13.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@1.9.13$</packageUrl>
+    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13 ince it is via curator-x-discovery -->
+  </suppress>
   <suppress>
     <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
     <notes><![CDATA[
@@ -40,7 +193,44 @@
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
   </suppress>
-
+  <suppress>
+    <!-- TODO: Fix by upgrading hadoop-auth version -->
+    <notes><![CDATA[
+   file name: nimbus-jose-jwt-4.41.1.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.nimbusds/nimbus\-jose\-jwt@4.41.1$</packageUrl>
+    <cve>CVE-2019-17195</cve>
+  </suppress>
+  <suppress>
+    <!-- This CVE is a false positive. The CVE is not for apacheds-i18n -->
+    <notes><![CDATA[
+   file name: apacheds-i18n-2.0.0-M15.jar
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.directory\.server/apacheds\-i18n@.*$</packageUrl>
+    <cve>CVE-2020-7791</cve>
+  </suppress>
+  <suppress>
+      <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
+      <notes><![CDATA[
+   file name: libthrift-0.6.1.jar
+   ]]></notes>
+      <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.6.1$</packageUrl>
+      <cve>CVE-2016-5397</cve>
+      <cve>CVE-2018-1320</cve>
+      <cve>CVE-2019-0205</cve>
+  </suppress>
+  <suppress>
+    <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage     -->
+    <notes><![CDATA[
+    file name: jettison-1.*.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jettison/jettison@1.*$</packageUrl>
+    <cve>CVE-2022-40149</cve>
+    <cve>CVE-2022-40150</cve>
+    <cve>CVE-2022-45685</cve>
+    <cve>CVE-2022-45693</cve>
+    <cve>CVE-2023-1436</cve>
+  </suppress>
   <suppress>
     <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
     <!-- We need to update several other components to move to Snakeyaml 2.0 to address CVE-2022-1471 -->
@@ -52,6 +242,13 @@
     <!-- false positive -->
     <cve>CVE-2023-2251</cve>
     <cve>CVE-2022-3064</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+   file name: htrace-core4-4.0.1-incubating.jar (shaded: com.fasterxml.jackson.core:jackson-annotations:2.4.0)
+   ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-annotations@2.4.0$</packageUrl>
+    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-annotations:2.4.0 since it is via htrace-core4 -->
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -646,8 +843,7 @@
   <suppress>
     <notes><![CDATA[
       file name: jackson-databind-2.12.7.1.jar
-    ]]></notes>
+     ]]></notes>
     <cve>CVE-2023-35116</cve>
   </suppress>
-
 </suppressions>
