@@ -3954,10 +3954,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           stateManager.recordThrowableEvent(e);
           log.error("Tried to add task [%s] but it already exists", indexTask.getId());
         }
-        catch (DruidException e) {
-          stateManager.recordThrowableEvent(e);
-          log.error("Tried to add task [%s] but %s", indexTask.getId(), e.getErrorCode());
-        }
       } else {
         log.error("Failed to get task queue because I'm not the leader!");
       }

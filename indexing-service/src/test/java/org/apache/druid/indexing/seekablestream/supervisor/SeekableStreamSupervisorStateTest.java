@@ -1846,7 +1846,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     return result;
   }
 
-  private void expectEmitterSupervisor(boolean suspended) throws EntryExistsException, DruidException
+  private void expectEmitterSupervisor(boolean suspended) throws EntryExistsException
   {
     spec = createMock(SeekableStreamSupervisorSpec.class);
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();

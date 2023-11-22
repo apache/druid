@@ -233,6 +233,11 @@ public class OverlordResource
                     .entity(new ErrorResponse(e))
                     .build();
           }
+          catch (org.apache.druid.common.exception.DruidException e) {
+            return Response.status(e.getResponseCode())
+                    .entity(ImmutableMap.of("error", e.getMessage()))
+                    .build();
+          }
         }
     );
   }

@@ -209,7 +209,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testSetUseLineageBasedSegmentAllocationByDefault() throws EntryExistsException, DruidException
+  public void testSetUseLineageBasedSegmentAllocationByDefault() throws EntryExistsException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -234,7 +234,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException, DruidException
+  public void testDefaultTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -269,7 +269,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException, DruidException
+  public void testUserProvidedTaskContextOverrideDefaultLineageBasedSegmentAllocation() throws EntryExistsException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -301,7 +301,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testLockConfigTakePrecedenceThanDefaultTaskContext() throws EntryExistsException, DruidException
+  public void testLockConfigTakePrecedenceThanDefaultTaskContext() throws EntryExistsException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -334,7 +334,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testUserProvidedContextOverrideLockConfig() throws EntryExistsException, DruidException
+  public void testUserProvidedContextOverrideLockConfig() throws EntryExistsException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -364,7 +364,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException, DruidException
+  public void testTaskStatusWhenExceptionIsThrownInIsReady() throws EntryExistsException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
@@ -400,7 +400,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws EntryExistsException, InterruptedException, DruidException
+  public void testKilledTasksEmitRuntimeMetricWithHttpRemote() throws EntryExistsException, InterruptedException
   {
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));

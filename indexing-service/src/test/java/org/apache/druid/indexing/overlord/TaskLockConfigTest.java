@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -52,7 +51,7 @@ public class TaskLockConfigTest
   }
 
   @Test
-  public void testDefault() throws EntryExistsException, DruidException
+  public void testDefault() throws EntryExistsException
   {
     final TaskQueue taskQueue = createTaskQueue(null);
     taskQueue.start();
@@ -66,7 +65,7 @@ public class TaskLockConfigTest
   }
 
   @Test
-  public void testNotForceTimeChunkLock() throws EntryExistsException, DruidException
+  public void testNotForceTimeChunkLock() throws EntryExistsException
   {
     final TaskQueue taskQueue = createTaskQueue(false);
     taskQueue.start();
@@ -80,7 +79,7 @@ public class TaskLockConfigTest
   }
 
   @Test
-  public void testOverwriteDefault() throws EntryExistsException, DruidException
+  public void testOverwriteDefault() throws EntryExistsException
   {
     final TaskQueue taskQueue = createTaskQueue(null);
     taskQueue.start();
