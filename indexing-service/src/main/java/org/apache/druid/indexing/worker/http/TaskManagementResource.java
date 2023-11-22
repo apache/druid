@@ -203,6 +203,7 @@ public class TaskManagementResource
   @POST
   @Path("/assignTask")
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response assignTask(Task task)
   {
     try {
