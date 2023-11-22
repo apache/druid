@@ -93,7 +93,13 @@ public interface DataSegmentKiller
     }
   }
 
-  default void killQuietly(List<DataSegment> segments) {
+  /**
+   * A more stoic killer who doesn't throw a tantrum if things get messy. Use when killing segments for best-effort
+   * cleanup. This can be leveraged to kill segments more efficiently if segment storage system offers batch deletion.
+   * @param segments the segments to kill
+   */
+  default void killQuietly(List<DataSegment> segments)
+  {
     segments.forEach(this::killQuietly);
   }
 
