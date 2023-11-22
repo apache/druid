@@ -3173,6 +3173,16 @@ libraries:
 
 ---
 
+name: org.codehaus.woodstox stax2-api
+license_category: binary
+version: 4.2.1
+module: druid-kerberos
+license_name: BSD-3-Clause License
+libraries:
+  - org.codehaus.woodstox: stax2-api
+
+---
+
 name: Kafka clients
 version: 5.5.12-ccs
 license_category: binary
@@ -4557,7 +4567,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-audit
 license_category: binary
-version: 2.0.0
+version: 2.4.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4567,7 +4577,7 @@ libraries:
 
 name: org.apache.ranger ranger-plugins-common
 license_category: binary
-version: 2.0.0
+version: 2.4.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4575,23 +4585,43 @@ libraries:
 
 ---
 
-name: com.101tec zkclient
-license_category: binary
-version: '0.10'
-module: druid-ranger-security
-license_name: Apache License version 2.0
-libraries:
-  - com.101tec: zkclient
-
----
-
 name: com.kstruct gethostname4j
 license_category: binary
-version: 0.0.2
+version: 1.0.0
 module: druid-ranger-security
 license_name: MIT License
 libraries:
   - com.kstruct: gethostname4j
+
+---
+
+name: com.amazonaws aws-java-sdk-bundle
+license_category: binary
+version: 1.12.125
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.amazonaws: aws-java-sdk-bundle
+
+---
+
+name: com.carrotsearch hppc
+license_category: binary
+version: 0.8.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.carrotsearch: hppc
+
+---
+
+name: org.locationtech.spatial4j spatial4j
+license_category: binary
+version: 0.7
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.locationtech.spatial4j: spatial4j
 
 ---
 
@@ -4617,7 +4647,7 @@ libraries:
 
 name: JOpt Simple
 license_category: binary
-version: 5.0.4
+version: 5.0.2
 module: druid-ranger-security
 license_name: MIT License
 libraries:
@@ -4628,7 +4658,7 @@ copyright: Paul R. Holser, Jr.
 
 name: org.apache.httpcomponents httpmime
 license_category: binary
-version: 4.5.3
+version: 4.5.6
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4636,9 +4666,95 @@ libraries:
 
 ---
 
+name: org.apache.httpcomponents httpasyncclient
+license_category: binary
+version: 4.1.3
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.httpcomponents: httpasyncclient
+
+---
+
+name: org.elasticsearch securesm
+license_category: binary
+version: 2.1.9
+module: druid-ranger-security
+license_name: Creative Commons CC0
+libraries:
+  - org.hdrhistogram: HdrHistogram
+
+---
+
+name: Apache Lucene 
+license_category: binary
+version: 8.4.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.lucene: lucene-analyzers-common
+  - org.apache.lucene: lucene-backward-codecs
+  - org.apache.lucene: lucene-core
+  - org.apache.lucene: lucene-grouping
+  - org.apache.lucene: lucene-highlighter
+  - org.apache.lucene: lucene-join
+  - org.apache.lucene: lucene-memory
+  - org.apache.lucene: lucene-misc
+  - org.apache.lucene: lucene-queries
+  - org.apache.lucene: lucene-queryparser
+  - org.apache.lucene: lucene-sandbox
+  - org.apache.lucene: lucene-spatial
+  - org.apache.lucene: lucene-spatial-extras
+  - org.apache.lucene: lucene-spatial3d
+  - org.apache.lucene: lucene-suggest
+
+---
+
+name: org.elasticsearch securesm
+license_category: binary
+version: 1.2
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.elasticsearch: securesm
+
+---
+
+name: Elastic Search
+license_category: binary
+version: 7.10.2
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.elasticsearch: elasticsearch
+  - org.elasticsearch: elasticsearch-cli
+  - org.elasticsearch: elasticsearch-core
+  - org.elasticsearch: elasticsearch-geo
+  - org.elasticsearch: elasticsearch-secure-sm
+  - org.elasticsearch: elasticsearch-x-content
+  - org.elasticsearch.client: elasticsearch-rest-client
+  - org.elasticsearch.client: elasticsearch-rest-high-level-client
+  - org.elasticsearch.plugin: aggs-matrix-stats-client
+  - org.elasticsearch.plugin: lang-mustache-client
+  - org.elasticsearch.plugin: mapper-extras-client
+  - org.elasticsearch.plugin: parent-join-client
+  - org.elasticsearch.plugin: rank-eval-client
+
+---
+
+name: org.apache.httpcomponents httpcore-nio
+license_category: binary
+version: 4.4.6
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.httpcomponents: httpcore-nio
+
+---
+
 name: Apache Kafka
 license_category: binary
-version: 2.0.0
+version: 2.8.1
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4651,103 +4767,74 @@ the CDDL License. The source code of jersey can be found at https://github.com/j
 
 ---
 
-name: org.apache.kafka kafka_2.11
+name: org.apache.ranger ranger-plugins
 license_category: binary
-version: 2.0.0
-module: druid-ranger-security
-license_name: Apache License version 2.0
-libraries:
-  - org.apache.kafka: kafka_2.11
-
----
-
-name: org.apache.ranger ranger-plugins-cred
-license_category: binary
-version: 2.0.0
+version: 2.4.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
   - org.apache.ranger: ranger-plugins-cred
+  - org.apache.ranger: ranger-plugin-classloader
+
+---
+
+name: Woodstox
+license_category: binary
+version: 6.2.4
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.fasterxml.woodstox: woodstox-core
+
+---
+
+name: com.github.spullara.mustache.java
+license_category: binary
+version: 0.9.6
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.github.spullara.mustache.java: compiler
+
+---
+
+name: com.tdunning t-digest
+license_category: binary
+version: 3.2
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.tdunning: t-digest
+
+---
+
+name: io.sgr s2-geometry-library-java
+license_category: binary
+version: 1.0.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - io.sgr: s2-geometry-library-java
+
+---
+
+name: org.apache.orc orc-core
+license_category: binary
+version: 1.5.8
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.orc: orc-core
 
 ---
 
 name: org.apache.solr solr-solrj
 license_category: binary
-version: 7.7.1
+version: 8.11.2
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
   - org.apache.solr: solr-solrj
-
----
-
-name: org.codehaus.woodstox stax2-api
-license_category: binary
-version: 3.1.4
-module: druid-ranger-security
-license_name: BSD-3-Clause License
-libraries:
-  - org.codehaus.woodstox: stax2-api
-
----
-
-name: org.codehaus.woodstox stax2-api
-license_category: binary
-version: 4.2.1
-module: druid-ranger-security
-license_name: BSD-3-Clause License
-libraries:
-  - org.codehaus.woodstox: stax2-api
-
----
-
-name: org.codehaus.woodstox woodstox-core-asl
-license_category: binary
-version: 4.4.1
-module: druid-ranger-security
-license_name: Apache License version 2.0
-libraries:
-  - org.codehaus.woodstox: woodstox-core-asl
-
----
-
-name: org.eclipse.persistence commonj.sdo
-license_category: binary
-version: 2.1.1
-module: druid-ranger-security
-license_name: Eclipse Distribution License 1.0
-libraries:
-  - org.eclipse.persistence: commonj.sdo
-
----
-
-name: org.eclipse.persistence eclipselink
-license_category: binary
-version: 2.5.2
-module: druid-ranger-security
-license_name: Eclipse Distribution License 1.0
-libraries:
-  - org.eclipse.persistence: eclipselink
-
----
-
-name: org.eclipse.persistence javax.persistence
-license_category: binary
-version: 2.1.0
-module: druid-ranger-security
-license_name: Eclipse Distribution License 1.0
-libraries:
-  - org.eclipse.persistence: javax.persistence
-
----
-
-name: org.noggit noggit
-license_category: binary
-version: '0.8'
-module: druid-ranger-security
-license_name: Apache License version 2.0
-libraries:
-  - org.noggit: noggit
 
 ---
 
@@ -4762,19 +4849,9 @@ copyright: LAMP/EPFL and Lightbend, Inc.
 
 ---
 
-name: org.scala-lang scala-reflect
-license_category: binary
-version: 2.11.12
-module: druid-ranger-security
-license_name: BSD-3-Clause License
-libraries:
-  - org.scala-lang: scala-reflect
-
----
-
 name: snappy-java
 license_category: binary
-version: 1.1.8.4
+version: 1.1.10.4
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
