@@ -98,6 +98,7 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -722,11 +723,19 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     baseComponentSupplier.gatherProperties(properties);
   }
 
+  /**
+   * Enables result cache testwide.
+   */
+  protected boolean isResultCacheEnabled()
+  {
+    return false;
+  }
+
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
     baseComponentSupplier.configureGuice(builder);
-//    builder.addModule(new CacheTestHelperModule(true));
+    builder.addModule(new CacheTestHelperModule(isResultCacheEnabled()));
   }
 
   @Override
