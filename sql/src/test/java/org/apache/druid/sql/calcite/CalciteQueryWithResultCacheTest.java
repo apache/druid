@@ -33,7 +33,8 @@ public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
 
   @Ignore
   @Test
-  public void testTimeseriesWithLimitAndOffset() {
+  public void testTimeseriesWithLimitAndOffset()
+  {
     // gets into an inifite loop?
   }
 

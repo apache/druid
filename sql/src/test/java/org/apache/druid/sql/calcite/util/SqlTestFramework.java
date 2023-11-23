@@ -563,11 +563,7 @@ public class SqlTestFramework
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
-        .addModule(new TestSetupModule(builder))
-        ;
-
-//        .addModule(null);
-
+        .addModule(new TestSetupModule(builder));
 
     builder.componentSupplier.configureGuice(injectorBuilder);
     this.injector = injectorBuilder.build();
