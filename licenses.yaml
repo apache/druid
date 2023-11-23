@@ -896,7 +896,7 @@ name: Jetbrains Annotations
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 13.0.0
+version: 13.0
 libraries:
   - org.jetbrains: annotations
 
@@ -993,6 +993,16 @@ libraries:
 name: io.swagger swagger-annotations
 license_category: binary
 module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.6.2
+libraries:
+  - io.swagger: swagger-annotations
+
+---
+
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
 version: 1.6.11
 libraries:
@@ -2005,6 +2015,19 @@ license_category: binary
 module: java-core
 license_name: Apache License version 2.0
 version: 0.12.0
+libraries:
+  - org.apache.yetus: audience-annotations
+notices:
+  - audience-annotations: |
+      Apache Yetus - Audience Annotations
+      Copyright 2015-2017 The Apache Software Foundation
+---
+
+name: Apache Yetus Audience Annotations Component
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.5.0
 libraries:
   - org.apache.yetus: audience-annotations
 notices:
@@ -4741,7 +4764,7 @@ libraries:
 
 ---
 
-name: Apache Lucene 
+name: Apache Lucene
 license_category: binary
 version: 8.4.0
 module: druid-ranger-security
@@ -4777,7 +4800,7 @@ libraries:
 
 name: Elastic Search
 license_category: binary
-version: 7.10.2
+version: 7.17.15
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4835,7 +4858,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 6.2.4
+version: 6.4.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
