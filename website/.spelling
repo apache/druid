@@ -2327,3 +2327,6 @@ taskslots
 loadstatus
 sqlQueryId
 LAST_VALUE
+markUnused
+markUsed
+segmentId

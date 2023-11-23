@@ -2608,7 +2608,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  protected String generateSequenceName(
+  public String generateSequenceName(
       Map<PartitionIdType, SequenceOffsetType> startPartitions,
       Optional<DateTime> minimumMessageTime,
       Optional<DateTime> maximumMessageTime,
