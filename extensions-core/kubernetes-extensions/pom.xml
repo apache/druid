@@ -80,18 +80,6 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Version override to address CVE-2020-28052 -->
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk18on</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-ext-jdk18on</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-
     <!-- others -->
     <dependency>
       <groupId>com.google.code.findbugs</groupId>

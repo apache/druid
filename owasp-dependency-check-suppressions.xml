@@ -791,7 +791,7 @@
 
   <suppress>
     <notes><![CDATA[
-      file name: okio-1.17.2.jar, okio-1.15.0.jar
+      file name: okio-1.17.2.jar, okio-1.15.0.jar okio-3.2.0.jar
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@1..*$</packageUrl>
     <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
