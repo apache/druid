@@ -1157,6 +1157,41 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testHllEstimateAsVirtualColumnWithTopNA()
+  {
+    testBuilder()
+    .sql("SELECT "
+        + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"
+        + "  dim1,\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(hllsketch_dim1,18,'HLL_4'), true),\n"
+        + "  1\n"
+        + "FROM\n"
+        + "  (select * from  druid.foo limit 10) ttt\n"
+        + "  WHERE  __time >= '1903-08-02' AND __time <= '2033-08-07'\n"
+        + "  and dim1 not like '%ikipedia' and l1 > -4\n"
+        + "  group by 1,2")
+//    .expectedQueries(ImmutableList.of(
+//                new TopNQueryBuilder()
+//                    .dataSource(CalciteTests.DATASOURCE1)
+//                    .intervals(querySegmentSpec(Filtration.eternity()))
+//                    .granularity(Granularities.ALL)
+//                    .dimension(new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE))
+//                    .virtualColumns(makeSketchEstimateExpression("v0", "hllsketch_dim1"))
+//                    .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+//                    .threshold(2)
+//                    .aggregators(new CountAggregatorFactory("a0"))
+//                    .context(QUERY_CONTEXT_DEFAULT)
+//                    .build()
+//            ))
+    .expectedResults(ImmutableList.of(
+        new Object[]{946684800000L, "", 0.0D, 1},
+        new Object[]{946771200000L, "10.1", 1.0D, 1},
+        new Object[]{946857600000L, "2", 1.0D, 1}
+            ))
+    .run();
+  }
+
   /**
    * This is an extremely subtle test, so we explain with a comment.  The `m1` column in the input data looks like
    * `["1.0", "2.0", "3.0", "4.0", "5.0", "6.0"]` while the `d1` column looks like
