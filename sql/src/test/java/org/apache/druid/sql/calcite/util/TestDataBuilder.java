@@ -65,7 +65,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -692,8 +691,7 @@ public class TestDataBuilder
         conglomerate,
         tmpDir,
         scheduler,
-        new JoinableFactoryWrapper(joinableFactoryToUse),
-        new ServerConfig()
+        new JoinableFactoryWrapper(joinableFactoryToUse)
     );
   }
 
@@ -703,8 +701,7 @@ public class TestDataBuilder
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
       final QueryScheduler scheduler,
-      final JoinableFactoryWrapper joinableFactoryWrapper,
-      final ServerConfig serverConfig
+      final JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
     final QueryableIndex index1 = IndexBuilder
@@ -784,8 +781,7 @@ public class TestDataBuilder
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
-        scheduler,
-        serverConfig
+        scheduler
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)

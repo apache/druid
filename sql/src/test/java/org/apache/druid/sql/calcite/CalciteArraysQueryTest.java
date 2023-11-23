@@ -81,7 +81,6 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -213,8 +212,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         joinableFactory,
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new ServerConfig()
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
     walker.add(
         DataSegment.builder()

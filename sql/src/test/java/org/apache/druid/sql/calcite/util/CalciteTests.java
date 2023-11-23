@@ -61,7 +61,6 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
@@ -321,8 +320,7 @@ public class CalciteTests
         conglomerate,
         tmpDir,
         scheduler,
-        joinableFactoryWrapper,
-        new ServerConfig()
+        joinableFactoryWrapper
     );
   }
 
