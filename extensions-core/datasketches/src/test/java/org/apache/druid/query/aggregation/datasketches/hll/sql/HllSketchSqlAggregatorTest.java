@@ -246,7 +246,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     super.configureGuice(builder);
     builder.addModule(new HllSketchModule());
-    builder.addModule(new CacheEnablerModule());
   }
 
   @SuppressWarnings("resource")

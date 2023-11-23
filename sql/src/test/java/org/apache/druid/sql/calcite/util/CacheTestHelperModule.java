@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.hll.sql;
+package org.apache.druid.sql.calcite.util;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -26,33 +26,60 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.server.QueryStackTests.Testrelated;
 
-public class CacheEnablerModule extends AbstractModule
+public class CacheTestHelperModule extends AbstractModule
 {
+
+  protected final Cache cache;
+  private CacheConfig cacheConfig;
+
+  static class TestCacheConfig extends CacheConfig
+  {
+
+    private boolean enableResultLevelCache;
+
+    public TestCacheConfig(boolean enableResultLevelCache)
+    {
+      this.enableResultLevelCache = enableResultLevelCache;
+    }
+
+    @Override
+    public boolean isPopulateResultLevelCache()
+    {
+      return enableResultLevelCache;
+
+    }
+
+    @Override
+    public boolean isUseResultLevelCache()
+    {
+      return enableResultLevelCache;
+    }
+
+  }
+
+  public CacheTestHelperModule(boolean enableResultLevelCache)
+  {
+    cacheConfig = new TestCacheConfig(enableResultLevelCache);
+
+    if (enableResultLevelCache) {
+      cache = MapCache.create(1_000_000L);
+    } else {
+      cache = null;
+    }
+  }
+
   @Provides
   @Testrelated
   CacheConfig getCacheConfig()
   {
-    return new CacheConfig()
-    {
-      @Override
-      public boolean isPopulateResultLevelCache()
-      {
-        return true;
-      }
-
-      @Override
-      public boolean isUseResultLevelCache()
-      {
-        return true;
-      }
-    };
+    return cacheConfig;
   }
 
   @Provides
   @Testrelated
   Cache getCache()
   {
-    return MapCache.create(1_000_000L);
+    return cache;
   }
 
   @Override

@@ -726,6 +726,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void configureGuice(DruidInjectorBuilder builder)
   {
     baseComponentSupplier.configureGuice(builder);
+//    builder.addModule(new CacheTestHelperModule(true));
   }
 
   @Override

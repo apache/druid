@@ -362,6 +362,7 @@ public class SqlTestFramework
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
+    public boolean useResultCache;
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -386,10 +387,16 @@ public class SqlTestFramework
       return this;
     }
 
+    public void withResultCache()
+    {
+      useResultCache = true;
+    }
+
     public SqlTestFramework build()
     {
       return new SqlTestFramework(this);
     }
+
   }
 
   /**
@@ -562,7 +569,13 @@ public class SqlTestFramework
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
-        .addModule(new TestSetupModule(builder));
+        .addModule(new TestSetupModule(builder))
+        .addModule(new CacheTestHelperModule(builder.useResultCache))
+        ;
+
+//        .addModule(null);
+
+
     builder.componentSupplier.configureGuice(injectorBuilder);
     this.injector = injectorBuilder.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
