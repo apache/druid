@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -137,7 +138,7 @@ public class QueryStackTests
         new RetryQueryRunnerConfig(),
         TestHelper.makeJsonMapper(),
         serverConfig,
-        null /* Cache */,
+        MapCache.create(1_000_000L),
         new CacheConfig()
         {
           @Override
@@ -155,13 +156,13 @@ public class QueryStackTests
           @Override
           public boolean isPopulateResultLevelCache()
           {
-            return false;
+            return true;
           }
 
           @Override
           public boolean isUseResultLevelCache()
           {
-            return false;
+            return true;
           }
         },
         new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),

@@ -45,6 +45,7 @@ import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -238,7 +239,8 @@ public class SqlTestFramework
           conglomerate,
           temporaryFolder,
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-          joinableFactory
+          joinableFactory,
+          new ServerConfig()
       );
     }
 

@@ -96,7 +96,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
-      final QueryScheduler scheduler
+      final QueryScheduler scheduler,
+      final ServerConfig serverConfig
   )
   {
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
@@ -113,7 +114,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         ),
         conglomerate,
         joinableFactoryWrapper.getJoinableFactory(),
-        new ServerConfig()
+        serverConfig
     );
   }
 
@@ -136,7 +137,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                         .build()
         ),
         new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryForLookup(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new ServerConfig()
     );
   }
 
