@@ -92,12 +92,12 @@ public class KafkaEmitter implements Emitter
     this.invalidLost = new AtomicLong(0L);
   }
 
-  private Callback setProducerCallback(AtomicLong lostCouter)
+  private Callback setProducerCallback(AtomicLong lostCounter)
   {
     return (recordMetadata, e) -> {
       if (e != null) {
         log.debug("Event send failed [%s]", e.getMessage());
-        lostCouter.incrementAndGet();
+        lostCounter.incrementAndGet();
       }
     };
   }
