@@ -329,7 +329,6 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         druidProcessingConfig,
         configSupplier,
         bufferPool,
-        mergePool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -339,7 +338,6 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         tooSmallDruidProcessingConfig,
         configSupplier,
         bufferPool,
-        tooSmallMergePool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -348,12 +346,12 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine)
+        new GroupByQueryQueryToolChest(groupingEngine, mergePool)
     );
 
     tooSmallGroupByFactory = new GroupByQueryRunnerFactory(
         tooSmallEngine,
-        new GroupByQueryQueryToolChest(tooSmallEngine)
+        new GroupByQueryQueryToolChest(tooSmallEngine, tooSmallMergePool)
     );
   }
 

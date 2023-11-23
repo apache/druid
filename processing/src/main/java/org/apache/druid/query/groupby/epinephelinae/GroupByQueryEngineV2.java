@@ -88,7 +88,7 @@ import java.util.stream.Stream;
  * of {@link ResultRow} objects that are not guaranteed to be in any particular order, and may not even be fully
  * grouped. It is expected that a downstream {@link GroupByMergingQueryRunnerV2} will finish grouping these results.
  *
- * This code runs on data servers, like Historicals.
+ * This code runs on data servers, like Historicals, (and also on Brokers for inlined data?)
  *
  * Used by
  * {@link GroupingEngine#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.

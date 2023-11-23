@@ -360,12 +360,11 @@ public class CachingClusteredClientBenchmark
         processingConfig,
         configSupplier,
         bufferPool,
-        mergeBufferPool,
         mapper,
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine, mergeBufferPool);
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 

@@ -30,9 +30,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -55,12 +56,15 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryResources;
+import org.apache.druid.query.groupby.GroupByUtils;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
 import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -85,7 +89,6 @@ import java.util.concurrent.TimeoutException;
 public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 {
   private static final Logger log = new Logger(GroupByMergingQueryRunnerV2.class);
-  private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
 
   private final GroupByQueryConfig config;
   private final DruidProcessingConfig processingConfig;
@@ -93,7 +96,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   private final QueryProcessingPool queryProcessingPool;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
-  private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
@@ -105,7 +107,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
       int concurrencyHint,
-      BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
       ObjectMapper spillMapper,
       String processingTmpDir
@@ -117,7 +118,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.concurrencyHint = concurrencyHint;
-    this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
@@ -135,12 +135,12 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     // will involve materializing the results for each sink before starting to feed them into the outer merge buffer.
     // I'm not sure of a better way to do this without tweaking how realtime servers do queries.
     final boolean forceChainedExecution = query.context().getBoolean(
-        CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
+        GroupByUtils.CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
     final QueryPlus<ResultRow> queryPlusForRunners = queryPlus
         .withQuery(
-            query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
+            query.withOverriddenContext(ImmutableMap.of(GroupByUtils.CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
         )
         .withoutThreadUnsafeState();
 
@@ -187,8 +187,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
               final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = getMergeBuffersHolder(
                   numMergeBuffers,
-                  hasTimeout,
-                  timeoutAt
+                  responseContext
               );
               resources.registerAll(mergeBufferHolders);
 
@@ -311,39 +310,25 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
   private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(
       int numBuffers,
-      boolean hasTimeout,
-      long timeoutAt
+      ResponseContext responseContext
   )
   {
-    try {
-      if (numBuffers > mergeBufferPool.maxSize()) {
-        throw new ResourceLimitExceededException(
-            "Query needs " + numBuffers + " merge buffers, but only "
-            + mergeBufferPool.maxSize() + " merge buffers were configured. "
-            + "Try raising druid.processing.numMergeBuffers."
-        );
-      }
-      final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolder;
-      // This will potentially block if there are no merge buffers left in the pool.
-      if (hasTimeout) {
-        final long timeout = timeoutAt - System.currentTimeMillis();
-        if (timeout <= 0) {
-          throw new QueryTimeoutException();
-        }
-        if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
-          throw new QueryTimeoutException("Cannot acquire enough merge buffers");
-        }
-      } else {
-        mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);
-      }
-      return mergeBufferHolder;
+    GroupByQueryResources resource = (GroupByQueryResources) responseContext.get(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+    if (numBuffers > resource.getNumMergingQueryRunnerMergeBuffers()) {
+      // Defensive exception, because we should have acquired the correct number of merge buffers beforehand, or
+      // thrown an RLE in the caller of the runner
+      throw DruidException.defensive(
+          "Query needs %d merge buffers for GroupByMergingQueryRunnerV2, however only %d were provided.",
+          numBuffers,
+          resource.getMergingQueryRunnerMergeBuffer()
+      );
     }
-    catch (QueryTimeoutException | ResourceLimitExceededException e) {
-      throw e;
+    final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = new ArrayList<>();
+    for (int i = 0; i < numBuffers; ++i) {
+      ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergingQueryRunnerMergeBuffer();
+      mergeBufferHolders.add(new ReferenceCountingResourceHolder<>(mergeBufferHolder.get(), mergeBufferHolder::close));
     }
-    catch (Exception e) {
-      throw new QueryInterruptedException(e);
-    }
+    return mergeBufferHolders;
   }
 
   private void waitForFutureCompletion(

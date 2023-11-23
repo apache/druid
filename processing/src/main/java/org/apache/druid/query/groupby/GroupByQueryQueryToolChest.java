@@ -34,6 +34,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -42,12 +43,14 @@ import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
@@ -75,6 +78,7 @@ import org.joda.time.DateTime;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -102,23 +106,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private final GroupingEngine groupingEngine;
   private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
+  private final BlockingPool<ByteBuffer> mergeBufferPool;
 
   @VisibleForTesting
-  public GroupByQueryQueryToolChest(GroupingEngine groupingEngine)
+  public GroupByQueryQueryToolChest(GroupingEngine groupingEngine, BlockingPool<ByteBuffer> mergeBufferPool)
   {
-    this(groupingEngine, GroupByQueryConfig::new, DefaultGroupByQueryMetricsFactory.instance());
+    this(groupingEngine, GroupByQueryConfig::new, DefaultGroupByQueryMetricsFactory.instance(), mergeBufferPool);
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupingEngine groupingEngine,
       Supplier<GroupByQueryConfig> queryConfigSupplier,
-      GroupByQueryMetricsFactory queryMetricsFactory
+      GroupByQueryMetricsFactory queryMetricsFactory,
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool
   )
   {
     this.groupingEngine = groupingEngine;
     this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
+    this.mergeBufferPool = mergeBufferPool;
   }
 
   @Override
@@ -152,7 +159,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       ResponseContext context
   )
   {
-    final GroupByQueryResources resource = groupingEngine.prepareResource(query);
+    // .. 1. Historicals, Broker -> Which is using localWalker
+    // MerginV2 ->
+    Boolean usesGroupByMergingQueryRunner = (Boolean) query
+        .getContext()
+        .getOrDefault(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true);
+    final GroupByQueryResources resource = GroupingEngine.prepareResource(
+        query,
+        mergeBufferPool,
+        usesGroupByMergingQueryRunner,
+        queryConfig
+    );
+    if (usesGroupByMergingQueryRunner) {
+      context.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, resource);
+    }
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
           query,
@@ -160,8 +180,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           runner,
           context
       );
-
-      return Sequences.withBaggage(mergedSequence, resource);
+      Closer closer = Closer.create();
+      closer.register(resource);
+      closer.register(() -> context.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS));
+      return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {
       // Error creating the Sequence; release resources.

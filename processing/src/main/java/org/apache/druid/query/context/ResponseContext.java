@@ -143,7 +143,7 @@ public abstract class ResponseContext
     private final boolean canDrop;
     private final Function<JsonParser, Object> parseFunction;
 
-    AbstractKey(String name, boolean inHeader, boolean canDrop, Class<?> serializedClass)
+    public AbstractKey(String name, boolean inHeader, boolean canDrop, Class<?> serializedClass)
     {
       this.name = name;
       this.inHeader = inHeader;
@@ -158,7 +158,7 @@ public abstract class ResponseContext
       };
     }
 
-    AbstractKey(String name, boolean inHeader, boolean canDrop, TypeReference<?> serializedTypeReference)
+    public AbstractKey(String name, boolean inHeader, boolean canDrop, TypeReference<?> serializedTypeReference)
     {
       this.name = name;
       this.inHeader = inHeader;

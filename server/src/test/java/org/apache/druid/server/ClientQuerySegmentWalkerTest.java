@@ -1492,7 +1492,8 @@ public class ClientQuerySegmentWalkerTest
                     .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
                     .build(),
                 conglomerate,
-                schedulerForTest
+                schedulerForTest,
+                new GroupByQueryConfig()
             ),
             ClusterOrLocal.CLUSTER
         ),

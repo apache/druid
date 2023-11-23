@@ -92,26 +92,57 @@ public class GroupByQueryResources implements Closeable
   }
 
   @VisibleForTesting
-  public static int countRequiredMergeBufferNum(GroupByQuery query)
+  public static int countRequiredMergeBufferNumForToolchestMerge(GroupByQuery query)
   {
     return countRequiredMergeBufferNumWithoutSubtotal(query, 1) + numMergeBuffersNeededForSubtotalsSpec(query);
   }
 
-  @Nullable
-  private final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
-  private final Deque<ByteBuffer> mergeBuffers;
-
-  public GroupByQueryResources()
+  public static int countRequiredMergeBufferNumForMergingQueryRunner(GroupByQueryConfig config, GroupByQuery query)
   {
-    this.mergeBufferHolders = null;
-    this.mergeBuffers = new ArrayDeque<>();
+    GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
+    return querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
   }
 
-  public GroupByQueryResources(List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders)
+  @Nullable
+  private final List<ReferenceCountingResourceHolder<ByteBuffer>> toolchestMergeBuffersHolders;
+
+  private final Deque<ByteBuffer> toolchestMergeBuffers = new ArrayDeque<>();
+
+  @Nullable
+  private final List<ReferenceCountingResourceHolder<ByteBuffer>> mergingQueryRunnerMergeBuffersHolders;
+
+  private final Deque<ByteBuffer> mergingQueryRunnerMergeBuffers = new ArrayDeque<>();
+
+  // TODO(laksh): Donot modify the structure of the list
+  public GroupByQueryResources(
+      @Nullable List<ReferenceCountingResourceHolder<ByteBuffer>> toolchestMergeBuffersHolders,
+      @Nullable List<ReferenceCountingResourceHolder<ByteBuffer>> mergingQueryRunnerMergeBuffersHolders
+  )
   {
-    this.mergeBufferHolders = mergeBufferHolders;
-    this.mergeBuffers = new ArrayDeque<>(mergeBufferHolders.size());
-    mergeBufferHolders.forEach(holder -> mergeBuffers.add(holder.get()));
+    this.toolchestMergeBuffersHolders = toolchestMergeBuffersHolders;
+    if (toolchestMergeBuffersHolders != null) {
+      toolchestMergeBuffersHolders.forEach(holder -> toolchestMergeBuffers.add(holder.get()));
+    }
+    this.mergingQueryRunnerMergeBuffersHolders = mergingQueryRunnerMergeBuffersHolders;
+    if (mergingQueryRunnerMergeBuffersHolders != null) {
+      mergingQueryRunnerMergeBuffersHolders.forEach(holder -> mergingQueryRunnerMergeBuffers.add(holder.get()));
+    }
+  }
+
+  public ResourceHolder<ByteBuffer> getToolchestMergeBuffer()
+  {
+    return getMergeBuffer(toolchestMergeBuffers);
+  }
+
+  public ResourceHolder<ByteBuffer> getMergingQueryRunnerMergeBuffer()
+  {
+    return getMergeBuffer(mergingQueryRunnerMergeBuffers);
+  }
+
+  public int getNumMergingQueryRunnerMergeBuffers()
+  {
+    // Should be same as the holders size
+    return mergingQueryRunnerMergeBuffers.size();
   }
 
   /**
@@ -122,9 +153,9 @@ public class GroupByQueryResources implements Closeable
    * @throws IllegalStateException if this resource is initialized with empty merge buffers, or
    *                               there isn't any available merge buffers
    */
-  public ResourceHolder<ByteBuffer> getMergeBuffer()
+  private static ResourceHolder<ByteBuffer> getMergeBuffer(Deque<ByteBuffer> acquiredBufferPool)
   {
-    final ByteBuffer buffer = mergeBuffers.pop();
+    final ByteBuffer buffer = acquiredBufferPool.pop();
     return new ResourceHolder<ByteBuffer>()
     {
       @Override
@@ -136,7 +167,7 @@ public class GroupByQueryResources implements Closeable
       @Override
       public void close()
       {
-        mergeBuffers.add(buffer);
+        acquiredBufferPool.add(buffer);
       }
     };
   }
@@ -144,11 +175,24 @@ public class GroupByQueryResources implements Closeable
   @Override
   public void close()
   {
-    if (mergeBufferHolders != null) {
-      if (mergeBuffers.size() != mergeBufferHolders.size()) {
-        log.warn("%d resources are not returned yet", mergeBufferHolders.size() - mergeBuffers.size());
+    if (toolchestMergeBuffersHolders != null) {
+      if (toolchestMergeBuffers.size() != toolchestMergeBuffersHolders.size()) {
+        log.warn(
+            "%d toolchest merge buffers are not returned yet",
+            toolchestMergeBuffersHolders.size() - toolchestMergeBuffers.size()
+        );
       }
-      mergeBufferHolders.forEach(ReferenceCountingResourceHolder::close);
+      toolchestMergeBuffersHolders.forEach(ReferenceCountingResourceHolder::close);
+    }
+
+    if (mergingQueryRunnerMergeBuffersHolders != null) {
+      if (mergingQueryRunnerMergeBuffers.size() != mergingQueryRunnerMergeBuffersHolders.size()) {
+        log.warn(
+            "%d merging query runner merge buffers are not returned yet",
+            mergingQueryRunnerMergeBuffersHolders.size() - mergingQueryRunnerMergeBuffers.size()
+        );
+      }
+      mergingQueryRunnerMergeBuffersHolders.forEach(ReferenceCountingResourceHolder::close);
     }
   }
 }

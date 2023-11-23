@@ -41,6 +41,11 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByUtils;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -74,16 +79,19 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
+  private final GroupByQueryConfig groupByQueryConfig;
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
-      @Nullable QueryScheduler scheduler
+      @Nullable QueryScheduler scheduler,
+      GroupByQueryConfig groupByQueryConfig
   )
   {
     this.timelines = timelines;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
+    this.groupByQueryConfig = groupByQueryConfig;
   }
 
   @Override
@@ -155,12 +163,25 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // Wrap baseRunner in a runner that rewrites the QuerySegmentSpec to mention the specific segments.
     // This mimics what CachingClusteredClient on the Broker does, and is required for certain queries (like Scan)
     // to function properly. SegmentServerSelector does not currently mimic CachingClusteredClient, it is using
-    // the LocalQuerySegmentWalker constructor instead since this walker is not mimic remote DruidServer objects
+    // the LocalQuerySegmentWalker constructor instead since this walker does not mimic remote DruidServer objects
     // to actually serve the queries
     return (theQuery, responseContext) -> {
       responseContext.initializeRemainingResponses();
       responseContext.addRemainingResponse(
           theQuery.getQuery().getMostSpecificId(), 0);
+
+      Object originalMergingQueryRunnerBuffers = responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+      if (theQuery.getQuery() instanceof GroupByQuery) {
+        responseContext.add(
+            GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS,
+            GroupingEngine.prepareResource(
+                (GroupByQuery) theQuery.getQuery(),
+                TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE),
+                true,
+                groupByQueryConfig
+            )
+        );
+      }
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();
         specs.forEach(spec -> segments.add(new SegmentServerSelector(spec)));
@@ -175,12 +196,22 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                     responseContext
                 )
             )
-        );
+        ).withBaggage(() -> {
+          responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+          if (originalMergingQueryRunnerBuffers != null) {
+            responseContext.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, originalMergingQueryRunnerBuffers);
+          }
+        });
       } else {
         return baseRunner.run(
             theQuery.withQuery(Queries.withSpecificSegments(theQuery.getQuery(), ImmutableList.copyOf(specs))),
             responseContext
-        );
+        ).withBaggage(() -> {
+          responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+          if (originalMergingQueryRunnerBuffers != null) {
+            responseContext.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, originalMergingQueryRunnerBuffers);
+          }
+        });
       }
     };
   }

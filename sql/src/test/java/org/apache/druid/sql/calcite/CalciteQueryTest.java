@@ -2504,7 +2504,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    requireMergeBuffers(3);
+    requireMergeBuffers(2);
 
     if (NullHandling.sqlCompatible()) {
       // Cannot vectorize due to "istrue" operator.

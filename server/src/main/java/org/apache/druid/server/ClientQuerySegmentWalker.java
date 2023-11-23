@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
@@ -58,6 +59,7 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.groupby.GroupByUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -237,13 +239,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           newQuery
       );
     } else if (canRunQueryUsingClusterWalker(newQuery)) {
+      Query<T> queryToRun = newQuery.withOverriddenContext(
+          ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+      );
       // Note: clusterClient.getQueryRunnerForIntervals() can return an empty sequence if there is no segment
       // to query, but this is not correct when there's a right or full outer join going on.
       // See https://github.com/apache/druid/issues/9229 for details.
       return new QuerySwappingQueryRunner<>(
-          decorateClusterRunner(newQuery, clusterClient.getQueryRunnerForIntervals(newQuery, intervals)),
+          decorateClusterRunner(queryToRun, clusterClient.getQueryRunnerForIntervals(queryToRun, intervals)),
           query,
-          newQuery
+          queryToRun
       );
     } else {
       // We don't expect to ever get here, because the logic earlier in this method should have rejected any query

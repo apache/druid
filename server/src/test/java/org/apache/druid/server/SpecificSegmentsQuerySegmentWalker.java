@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
@@ -96,14 +97,16 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
-      final QueryScheduler scheduler
+      final QueryScheduler scheduler,
+      final GroupByQueryConfig groupByQueryConfig
   )
   {
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
         QueryStackTests.createClusterQuerySegmentWalker(
             timelines,
             conglomerate,
-            scheduler
+            scheduler,
+            groupByQueryConfig
         ),
         QueryStackTests.createLocalQuerySegmentWalker(
             conglomerate,
@@ -121,7 +124,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
    * Create an instance without any lookups and with a default {@link JoinableFactory} that handles only inline
    * datasources.
    */
-  public SpecificSegmentsQuerySegmentWalker(final QueryRunnerFactoryConglomerate conglomerate)
+  public SpecificSegmentsQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate
+  )
   {
     this(
         conglomerate,
@@ -136,7 +141,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                         .build()
         ),
         new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryForLookup(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new GroupByQueryConfig()
     );
   }
 

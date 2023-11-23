@@ -96,7 +96,6 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         },
         GroupByQueryConfig::new,
         new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
-        new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1),
         TestHelper.makeJsonMapper(),
         new DefaultObjectMapper(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -104,7 +103,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine)
+        new GroupByQueryQueryToolChest(groupingEngine, new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1))
     );
 
     runner = QueryRunnerTestHelper.makeQueryRunner(

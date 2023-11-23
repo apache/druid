@@ -162,12 +162,11 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         processingConfig,
         configSupplier,
         bufferPools.getProcessingPool(),
-        bufferPools.getMergePool(),
         TestHelper.makeJsonMapper(),
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine, bufferPools.getMergePool());
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 

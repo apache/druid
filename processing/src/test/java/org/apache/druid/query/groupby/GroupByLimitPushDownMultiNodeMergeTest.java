@@ -579,7 +579,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         druidProcessingConfig,
         configSupplier,
         bufferPool,
-        mergePool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -589,7 +588,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         druidProcessingConfig,
         configSupplier,
         bufferPool,
-        mergePool2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -597,12 +595,12 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine)
+        new GroupByQueryQueryToolChest(groupingEngine, mergePool)
     );
 
     groupByFactory2 = new GroupByQueryRunnerFactory(
         groupingEngine2,
-        new GroupByQueryQueryToolChest(groupingEngine2)
+        new GroupByQueryQueryToolChest(groupingEngine2, mergePool2)
     );
   }
 

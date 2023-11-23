@@ -244,7 +244,6 @@ public class GroupByMultiSegmentTest
         druidProcessingConfig,
         configSupplier,
         bufferPool,
-        mergePool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -252,7 +251,7 @@ public class GroupByMultiSegmentTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine)
+        new GroupByQueryQueryToolChest(groupingEngine, mergePool)
     );
   }
 

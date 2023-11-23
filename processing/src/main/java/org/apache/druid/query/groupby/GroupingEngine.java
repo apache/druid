@@ -31,7 +31,6 @@ import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -92,7 +91,6 @@ public class GroupingEngine
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
-  private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
@@ -102,7 +100,6 @@ public class GroupingEngine
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
-      @Merging BlockingPool<ByteBuffer> mergeBufferPool,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
       QueryWatcher queryWatcher
@@ -111,7 +108,6 @@ public class GroupingEngine
     this.processingConfig = processingConfig;
     this.configSupplier = configSupplier;
     this.bufferPool = bufferPool;
-    this.mergeBufferPool = mergeBufferPool;
     this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.queryWatcher = queryWatcher;
@@ -127,9 +123,24 @@ public class GroupingEngine
    *
    * @return broker resource
    */
-  public GroupByQueryResources prepareResource(GroupByQuery query)
+  public static GroupByQueryResources prepareResource(
+      GroupByQuery query,
+      BlockingPool<ByteBuffer> mergeBufferPool,
+      boolean usesGroupByMergingQueryRunner,
+      GroupByQueryConfig groupByQueryConfig
+  )
   {
-    final int requiredMergeBufferNum = GroupByQueryResources.countRequiredMergeBufferNum(query);
+
+    final int requiredMergeBufferNumForToolchestMerge =
+        GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query);
+
+    final int requiredMergeBufferNumForMergingQueryRunner =
+        usesGroupByMergingQueryRunner
+        ? GroupByQueryResources.countRequiredMergeBufferNumForMergingQueryRunner(groupByQueryConfig, query)
+        : 0;
+
+    final int requiredMergeBufferNum =
+        requiredMergeBufferNumForToolchestMerge + requiredMergeBufferNumForMergingQueryRunner;
 
     if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
       throw new ResourceLimitExceededException(
@@ -137,7 +148,7 @@ public class GroupingEngine
           + mergeBufferPool.maxSize() + " merge buffers were configured"
       );
     } else if (requiredMergeBufferNum == 0) {
-      return new GroupByQueryResources();
+      return new GroupByQueryResources(null, null);
     } else {
       final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
       final QueryContext context = query.context();
@@ -154,7 +165,10 @@ public class GroupingEngine
             )
         );
       } else {
-        return new GroupByQueryResources(mergeBufferHolders);
+        return new GroupByQueryResources(
+            mergeBufferHolders.subList(0, requiredMergeBufferNumForToolchestMerge), 
+            mergeBufferHolders.subList(requiredMergeBufferNumForToolchestMerge, requiredMergeBufferNum)
+        );
       }
     }
   }
@@ -387,7 +401,7 @@ public class GroupingEngine
    * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
    * by that method will be fed into this method).
    * <p>
-   * This method is only called on data servers, like Historicals (not the Broker).
+   * This method is called directly on the data. For
    *
    * @param queryProcessingPool {@link QueryProcessingPool} service used for parallel execution of the query runners
    * @param queryRunners  collection of query runners to merge
@@ -405,7 +419,6 @@ public class GroupingEngine
         queryWatcher,
         queryRunners,
         processingConfig.getNumThreads(),
-        mergeBufferPool,
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
         processingConfig.getTmpDir()
@@ -465,7 +478,7 @@ public class GroupingEngine
    *
    * @param subquery           inner query
    * @param query              outer query
-   * @param resource           resources returned by {@link #prepareResource(GroupByQuery)}
+   * @param resource           resources returned by {@link #prepareResource(GroupByQuery, BlockingPool)}
    * @param subqueryResult     result rows from the subquery
    * @param wasQueryPushedDown true if the outer query was pushed down (so we only need to merge the outer query's
    *                           results, not run it from scratch like a normal outer query)
@@ -526,7 +539,7 @@ public class GroupingEngine
    * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to generate subtotals.
    *
    * @param query       query that has a "subtotalsSpec"
-   * @param resource    resources returned by {@link #prepareResource(GroupByQuery)}
+   * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool)}
    * @param queryResult result rows from the main query
    *
    * @return results for each list of subtotals in the query, concatenated together

@@ -99,12 +99,11 @@ public class GroupByQueryRunnerFailureTest
         DEFAULT_PROCESSING_CONFIG,
         configSupplier,
         BUFFER_POOL,
-        MERGE_BUFFER_POOL,
         TestHelper.makeJsonMapper(),
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine, MERGE_BUFFER_POOL);
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 

@@ -376,7 +376,6 @@ public class GroupByTypeInterfaceBenchmark
         druidProcessingConfig,
         configSupplier,
         bufferPool,
-        mergePool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
@@ -384,7 +383,7 @@ public class GroupByTypeInterfaceBenchmark
 
     factory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine)
+        new GroupByQueryQueryToolChest(groupingEngine, mergePool)
     );
   }
 
