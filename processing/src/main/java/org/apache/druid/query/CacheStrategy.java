@@ -24,6 +24,8 @@ import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
+
 import java.util.Iterator;
 import java.util.List;
 
@@ -155,19 +157,15 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
       }
 
 
-//      columnIsFinalized = isResultLevelCache &&
 
       if (isResultLevelCache) {
-//ColumnType resultType = aggregator.getResultType();
-//        ColumnType intermediateType = aggregator.getIntermediateType();
-//        if(!resultType.isPrimitive() && resultType.equals(intermediateType)) {
-//          addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
-//
-//        }else {
-//        // aggregator - type complex -> aggregator.deserialize
-//                       // else leave alone
-        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
-//        }
+        ColumnType resultType = aggregator.getResultType();
+        ColumnType intermediateType = aggregator.getIntermediateType();
+        if (true && !resultType.isPrimitive() && resultType.equals(intermediateType)) {
+          addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
+        } else {
+          addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
+        }
       } else {
         addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
       }
