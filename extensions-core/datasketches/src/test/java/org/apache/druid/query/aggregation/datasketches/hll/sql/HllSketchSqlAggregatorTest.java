@@ -1160,28 +1160,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testX()
-  {
-    cannotVectorize();
-    testBuilder()
-        .sql(
-            "SELECT "
-                + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"
-                + "  dim1,\n"
-                + "  HLL_SKETCH_ESTIMATE(DS_HLL(hllsketch_dim1,18,'HLL_4'), true),\n"
-                + "  1\n"
-                + "FROM\n"
-                + "  (select * from  druid.foo limit 10) ttt\n"
-                + "  WHERE  __time >= '1903-08-02' AND __time <= '2033-08-07'\n"
-                + "  and dim1 not like '%ikipedia' and l1 > -4\n"
-                + "  group by 1,2"
-        )
-        .run();
-    throw new RuntimeException("unreachable");
-  }
-
-  @Test
-  public void testHllEstimateAsVirtualColumnWithTopNA()
+  public void testResultCacheWithWindowing()
   {
     cannotVectorize();
     skipVectorize();

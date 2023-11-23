@@ -157,7 +157,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
         throw new ISE("Ran out of objects while reading aggregators from cache!");
       }
 
-      boolean FIX = false;
+      boolean FIX = true;
 
       if (isResultLevelCache) {
         ColumnType resultType = aggregator.getResultType();
