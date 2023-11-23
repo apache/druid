@@ -29,6 +29,7 @@ import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheCommon;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
@@ -86,7 +87,7 @@ public class BrokerSegmentMetadataCacheCommon extends SegmentMetadataCacheCommon
       }
     };
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
+    walker = new SpecificSegmentsQuerySegmentWalker(QueryStackTests.injector(), conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
         .add(segment3, index2)

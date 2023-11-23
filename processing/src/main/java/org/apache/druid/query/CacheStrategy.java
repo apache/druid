@@ -155,8 +155,10 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
       }
 
 
+//      columnIsFinalized = isResultLevelCache &&
+
       if (isResultLevelCache) {
-//        ColumnType resultType = aggregator.getResultType();
+//ColumnType resultType = aggregator.getResultType();
 //        ColumnType intermediateType = aggregator.getIntermediateType();
 //        if(!resultType.isPrimitive() && resultType.equals(intermediateType)) {
 //          addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));

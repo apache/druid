@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
+import com.google.inject.Injector;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -91,8 +92,10 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
    * Create an instance using the provided query runner factory conglomerate and lookup provider.
    * If a JoinableFactory is provided, it will be used instead of the default. If a scheduler is included,
    * the runner will schedule queries according to the scheduling config.
+   * @param injector
    */
   public SpecificSegmentsQuerySegmentWalker(
+      final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
@@ -122,9 +125,10 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
    * Create an instance without any lookups and with a default {@link JoinableFactory} that handles only inline
    * datasources.
    */
-  public SpecificSegmentsQuerySegmentWalker(final QueryRunnerFactoryConglomerate conglomerate)
+  public SpecificSegmentsQuerySegmentWalker(final Injector injector, final QueryRunnerFactoryConglomerate conglomerate)
   {
     this(
+        injector,
         conglomerate,
         new MapSegmentWrangler(
             ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()

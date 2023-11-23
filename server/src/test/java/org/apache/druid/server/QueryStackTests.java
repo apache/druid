@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.java.util.common.io.Closer;
@@ -136,7 +137,7 @@ public class QueryStackTests
         },
         joinableFactory,
         new RetryQueryRunnerConfig(),
-        TestHelper.makeJsonMapper(),
+        TestHelper.makeJsonMapper(), // X$#%$#
         serverConfig,
         MapCache.create(1_000_000L),
         new CacheConfig()
@@ -385,5 +386,10 @@ public class QueryStackTests
     }
 
     return new MapJoinableFactory(setBuilder.build(), mapBuilder.build());
+  }
+
+  public static Injector injector()
+  {
+    throw new RuntimeException("Unimplemented!");
   }
 }

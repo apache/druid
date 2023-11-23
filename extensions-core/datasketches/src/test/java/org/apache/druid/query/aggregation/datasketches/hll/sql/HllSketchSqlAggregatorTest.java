@@ -279,7 +279,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
         .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())
@@ -1194,14 +1194,14 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           + "  HLL_SKETCH_ESTIMATE(DS_HLL(DS_HLL(hllsketch_dim1,18,'HLL_4'),18,'HLL_4') OVER (PARTITION BY dim1), true),"
           + "  1\n"
           + "FROM\n"
-          + "  (select * from  druid.foo order by __time limit 3) ttt\n"
+          + "  (select * from  druid.foo ) ttt\n"
           + "  WHERE  __time >= '1903-08-02' AND __time <= '2033-08-07'\n"
           + "  and dim1 not like '%ikipedia' and l1 > -4\n"
           + "  group by 1,2")
       .expectedResults(ImmutableList.of(
-          new Object[]{946684800000L, "", 0.0D, 1},
-          new Object[]{946771200000L, "10.1", 1.0D, 1},
-          new Object[]{946857600000L, "2", 1.0D, 1}
+          new Object[]{946684800000L, "", 0.0D, 0.0D, 1},
+          new Object[]{946771200000L, "10.1", 1.0D, 1.0D, 1},
+          new Object[]{946857600000L, "2", 1.0D, 1.0D, 1}
               ))
       .run();
     }

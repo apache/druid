@@ -780,6 +780,7 @@ public class TestDataBuilder
         .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(
+        injector,
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,

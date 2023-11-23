@@ -200,6 +200,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     .buildMMappedIndex();
 
     SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(
+        injector,
         conglomerate,
         new MapSegmentWrangler(
             ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
