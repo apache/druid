@@ -286,7 +286,7 @@ public abstract class SegmentMetadataCacheCommon extends InitializedNullHandling
     resourceCloser.close();
   }
 
-  InputRow createRow(final ImmutableMap<String, ?> map)
+  public InputRow createRow(final ImmutableMap<String, ?> map)
   {
     return MapInputRowParser.parse(FOO_SCHEMA, (Map<String, Object>) map);
   }

@@ -6443,4 +6443,91 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .build()
     );
   }
+
+  @Test
+  public void testGroupByPathDynamicArg()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, ARRAY_OFFSET(JSON_PATHS(nest), 0)), "
+        + "SUM(cnt) "
+        + "FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "json_value(\"nest\",array_offset(json_paths(\"nest\"),0),'STRING')",
+                                ColumnType.STRING
+                            )
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{"100", 2L},
+            new Object[]{"200", 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonQueryDynamicArg()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT JSON_PATHS(nester), JSON_QUERY(nester, ARRAY_OFFSET(JSON_PATHS(nester), 0))\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "json_paths(\"nester\")",
+                          ColumnType.STRING_ARRAY
+                      ),
+                      expressionVirtualColumn(
+                          "v1",
+                          "json_query(\"nester\",array_offset(json_paths(\"nester\"),0))",
+                          ColumnType.NESTED_DATA
+                      )
+                  )
+                  .columns("v0", "v1")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"$.array\",\"$.n.x\"]", "[\"a\",\"b\"]"},
+            new Object[]{"[\"$\"]", "\"hello\""},
+            new Object[]{"[\"$\"]", null},
+            new Object[]{"[\"$\"]", null},
+            new Object[]{"[\"$\"]", null},
+            new Object[]{"[\"$.array\",\"$.n.x\"]", "[\"a\",\"b\"]"},
+            new Object[]{"[\"$\"]", "2"}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING_ARRAY)
+                    .add("EXPR$1", ColumnType.NESTED_DATA)
+                    .build()
+
+    );
+  }
 }
