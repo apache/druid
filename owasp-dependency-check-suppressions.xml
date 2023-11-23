@@ -549,14 +549,6 @@
   </suppress>
 
   <suppress>
-    <!-- Suppress avro cves that are only applicable to .NET SDK-->
-    <notes><![CDATA[
-    file name: avro-1.9.2.jar or avro-ipc-jetty-1.9.2.jar
-    ]]></notes>
-    <cve>CVE-2021-43045</cve>
-  </suppress>
-
-  <suppress>
     <!-- False alarm for the Async javascript library (https://github.com/caolan/async) which is a dev dependency for the web console -->
     <notes><![CDATA[
    file name: async-http-client-netty-utils-2.5.3.jar
