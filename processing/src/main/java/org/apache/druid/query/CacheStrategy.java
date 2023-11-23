@@ -37,6 +37,7 @@ import java.util.List;
 @ExtensionPoint
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
+
   /**
    * This method is deprecated and retained for backward incompatibility.
    * Returns whether the given query is cacheable or not.
@@ -156,10 +157,12 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
         throw new ISE("Ran out of objects while reading aggregators from cache!");
       }
 
+      boolean FIX = false;
+
       if (isResultLevelCache) {
         ColumnType resultType = aggregator.getResultType();
         ColumnType intermediateType = aggregator.getIntermediateType();
-        if (true && !resultType.isPrimitive() && resultType.equals(intermediateType)) {
+        if (FIX && !resultType.isPrimitive() && resultType.equals(intermediateType)) {
           addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
         } else {
           addToResultFunction.apply(aggregator.getName(), i, resultIter.next());

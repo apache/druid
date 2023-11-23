@@ -92,7 +92,6 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
    * Create an instance using the provided query runner factory conglomerate and lookup provider.
    * If a JoinableFactory is provided, it will be used instead of the default. If a scheduler is included,
    * the runner will schedule queries according to the scheduling config.
-   * @param injector
    */
   public SpecificSegmentsQuerySegmentWalker(
       final Injector injector,

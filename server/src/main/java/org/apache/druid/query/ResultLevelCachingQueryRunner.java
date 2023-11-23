@@ -99,7 +99,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           QueryPlus.wrap(query),
           responseContext
       );
-      responseContext.add(ResponseContext.Keys.ETAG, "etag-1");
       String newResultSetId = responseContext.getEntityTag();
 
 

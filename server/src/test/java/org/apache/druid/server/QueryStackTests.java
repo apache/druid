@@ -22,9 +22,12 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.BindingAnnotation;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Provider;
+import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -89,6 +92,11 @@ import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -115,6 +123,18 @@ public class QueryStackTests
     // No instantiation.
   }
 
+  static interface TestCacheKey {
+
+  }
+
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.METHOD})
+  @BindingAnnotation
+  public static @interface Testrelated {
+
+  }
+
   public static ClientQuerySegmentWalker createClientQuerySegmentWalker(
       final Injector injector,
       final QuerySegmentWalker clusterWalker,
@@ -124,6 +144,17 @@ public class QueryStackTests
       final ServerConfig serverConfig
   )
   {
+
+//    injector.getInstance(TestCacheKey.class);
+      Provider<CacheConfig> p0 = injector.getProvider(CacheConfig.class);
+CacheConfig aa = p0.get();
+
+//    Provider<CacheConfig> p = injector.getProvider(Key.get(CacheConfig.class, X11.class));
+    Provider<CacheConfig> p = injector.getProvider(Key.get(CacheConfig.class, Testrelated.class));
+    CacheConfig i = p.get();
+    injector.getInstance(Key.get(CacheConfig.class, Testrelated.class));
+//    injector.getBinding(null)(TestCacheKey.class);
+
     return new ClientQuerySegmentWalker(
         EMITTER,
         clusterWalker,
@@ -141,33 +172,8 @@ public class QueryStackTests
         injector.getInstance(ObjectMapper.class),
 //        TestHelper.makeJsonMapper(), // X$#%$#
         serverConfig,
-        MapCache.create(1_000_000L),
-        new CacheConfig()
-        {
-          @Override
-          public boolean isPopulateCache()
-          {
-            return false;
-          }
-
-          @Override
-          public boolean isUseCache()
-          {
-            return false;
-          }
-
-          @Override
-          public boolean isPopulateResultLevelCache()
-          {
-            return true;
-          }
-
-          @Override
-          public boolean isUseResultLevelCache()
-          {
-            return true;
-          }
-        },
+        injector.getInstance(Key.get(Cache.class, Testrelated.class)),
+        injector.getInstance(Key.get(CacheConfig.class, Testrelated.class)),
         new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
         new SubqueryCountStatsProvider()
     );

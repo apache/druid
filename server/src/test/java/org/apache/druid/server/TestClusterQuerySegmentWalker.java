@@ -41,6 +41,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -159,6 +160,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // to actually serve the queries
     return (theQuery, responseContext) -> {
       responseContext.initializeRemainingResponses();
+      responseContext.put(Keys.ETAG, "DUMMY_ETAG_FOR_TESTS");
       responseContext.addRemainingResponse(
           theQuery.getQuery().getMostSpecificId(), 0);
       if (scheduler != null) {
