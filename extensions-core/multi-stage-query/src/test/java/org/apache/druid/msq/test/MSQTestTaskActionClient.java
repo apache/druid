@@ -130,16 +130,12 @@ public class MSQTestTaskActionClient implements TaskActionClient
       }
     } else if (taskAction instanceof RetrieveSegmentsToReplaceAction) {
       String dataSource = ((RetrieveSegmentsToReplaceAction) taskAction).getDataSource();
-      if (!usedIntervals.containsKey(dataSource)) {
-        return (RetType) ImmutableSet.of();
-      } else {
-        return (RetType) injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
-                                 .getSegments()
-                                 .stream()
-                                 .filter(dataSegment -> dataSegment.getDataSource()
-                                                                   .equals(dataSource))
-                                 .collect(Collectors.toSet());
-      }
+      return (RetType) injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
+                               .getSegments()
+                               .stream()
+                               .filter(dataSegment -> dataSegment.getDataSource()
+                                                                 .equals(dataSource))
+                               .collect(Collectors.toSet());
     } else if (taskAction instanceof SegmentTransactionalInsertAction) {
       final Set<DataSegment> segments = ((SegmentTransactionalInsertAction) taskAction).getSegments();
       publishedSegments.addAll(segments);
