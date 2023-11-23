@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
@@ -72,7 +73,6 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -116,6 +116,7 @@ public class QueryStackTests
   }
 
   public static ClientQuerySegmentWalker createClientQuerySegmentWalker(
+      final Injector injector,
       final QuerySegmentWalker clusterWalker,
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -137,7 +138,8 @@ public class QueryStackTests
         },
         joinableFactory,
         new RetryQueryRunnerConfig(),
-        TestHelper.makeJsonMapper(), // X$#%$#
+        injector.getInstance(ObjectMapper.class),
+//        TestHelper.makeJsonMapper(), // X$#%$#
         serverConfig,
         MapCache.create(1_000_000L),
         new CacheConfig()

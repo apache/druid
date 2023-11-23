@@ -104,6 +104,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   )
   {
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
+        injector,
         QueryStackTests.createClusterQuerySegmentWalker(
             timelines,
             conglomerate,

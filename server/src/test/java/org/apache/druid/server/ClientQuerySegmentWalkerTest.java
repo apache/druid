@@ -1481,6 +1481,7 @@ public class ClientQuerySegmentWalkerTest
     }
 
     walker = QueryStackTests.createClientQuerySegmentWalker(
+        QueryStackTests.injector(),
         new CapturingWalker(
             QueryStackTests.createClusterQuerySegmentWalker(
                 ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>builder()
