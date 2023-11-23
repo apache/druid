@@ -884,26 +884,44 @@ license_name: Apache License version 2.0
 version: 19.0.0
 libraries:
   - io.kubernetes: client-java
-
----
-
-name: kubernetes official java client api
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 19.0.0
-libraries:
   - io.kubernetes: client-java-api
+  - io.kubernetes: client-java-extended
+  - io.kubernetes: client-java-extended
+  - io.kubernetes: client-java-api-fluent
+  - io.kubernetes: client-java-proto
 
 ---
 
-name: kubernetes official java client extended
+name: Jetbrains Annotations
 license_category: binary
-module: extensions/druid-kubernetes-extensions
+module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 19.0.0
+version: 13.0.0
 libraries:
-  - io.kubernetes: client-java-extended
+  - org.jetbrains: annotations
+
+---
+
+name: Jetbrains stdlib
+license_category: binary
+module: extensions/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.4.32
+libraries:
+  - org.jetbrains.kotlin: kotlin-stdlib
+  - org.jetbrains.kotlin: kotlin-stdlib-common
+
+
+---
+
+name: Jetbrains  jdk7 jdk 8
+license_category: binary
+module: extensions/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.6.20
+libraries:
+  - org.jetbrains.kotlin: kotlin-stdlib-jdk7
+  - org.jetbrains.kotlin: kotlin-stdlib-jdk8
 
 ---
 
@@ -917,13 +935,18 @@ libraries:
 
 ---
 
-name: io.prometheus simpleclient_common
+name: io.prometheus
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.0
+version: 0.16.0
 libraries:
+  - io.prometheus: simpleclient
   - io.prometheus: simpleclient_common
+  - io.prometheus: simpleclient_httpserver
+  - io.prometheus: simpleclient_tracer_common
+  - io.prometheus: simpleclient_tracer_otel
+  - io.prometheus: simpleclient_tracer_otel_agent
 
 ---
 
@@ -951,10 +974,10 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.17.2
+version: 3.2.0
 libraries:
   - com.squareup.okio: okio
-
+  - com.squareup.okio: okio-jvm
 ---
 
 name: io.gsonfire gson-fire
@@ -971,7 +994,7 @@ name: io.swagger swagger-annotations
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.6.2
+version: 1.6.11
 libraries:
   - io.swagger: swagger-annotations
 
@@ -984,16 +1007,6 @@ license_name: Apache License version 2.0
 version: 2.8.6
 libraries:
   - com.google.code.gson: gson
-
----
-
-name: io.prometheus simpleclient_httpserver
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 0.9.0
-libraries:
-  - io.prometheus: simpleclient_httpserver
 
 ---
 
@@ -1021,19 +1034,10 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.14.9
+version: 4.11.0
 libraries:
   - com.squareup.okhttp3: okhttp
-
----
-
-name: io.prometheus simpleclient
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 0.9.0
-libraries:
-  - io.prometheus: simpleclient
+  - com.squareup.okhttp3: logging-interceptor
 
 ---
 
@@ -1061,7 +1065,7 @@ name: com.flipkart.zjsonpatch zjsonpatch
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.4.11
+version: 0.4.14
 libraries:
   - com.flipkart.zjsonpatch: zjsonpatch
 
@@ -1177,21 +1181,11 @@ libraries:
 
 ---
 
-name: com.squareup.okhttp3 logging-interceptor
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 3.14.9
-libraries:
-  - com.squareup.okhttp3: logging-interceptor
-
----
-
 name: com.github.vladimir-bukhtoyarov bucket4j-core
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 4.10.0
+version: 7.6.0
 libraries:
   - com.github.vladimir-bukhtoyarov: bucket4j-core
 
@@ -2010,7 +2004,7 @@ name: Apache Yetus Audience Annotations Component
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.5.0
+version: 0.12.0
 libraries:
   - org.apache.yetus: audience-annotations
 notices:
@@ -2061,6 +2055,17 @@ notice: |
 
   For additional credits (generally to people who reported problems)
   see CREDITS file.
+
+---
+
+name: ch.qos.logback
+license_category: binary
+module: core
+license_name: Eclipse Public License 1.0
+version: 1.2.10
+libraries:
+  - ch.qos.logback: logback-classic
+  - ch.qos.logback: logback-core
 
 ---
 
@@ -2989,7 +2994,7 @@ notices:
 name: JTS
 license_category: binary
 module: java-core
-license_name: Eclipse Distribution License 1.0
+license_name: Eclipse Public License 2.0
 version: 1.19.0
 libraries:
   - org.locationtech.jts: jts-core
@@ -2997,9 +3002,9 @@ libraries:
 notices:
   - jts-core: |
       The JTS Topology Suite is a Java library for creating and manipulating vector geometry.
-      Eclipse Distribution License 1.0
+      Eclipse Public License 2.0
   - jts-io-common: |
-      Eclipse Distribution License 1.0
+      Eclipse Public License 2.0
 ---
 
 name: Apache Avro
@@ -3214,7 +3219,7 @@ libraries:
 ---
 
 name: Kafka clients
-version: 5.5.12-ccs
+version: 6.2.12-ccs
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3223,7 +3228,7 @@ libraries:
 
 ---
 name: Kafka-schema-registry-client
-version: 5.5.12
+version: 6.2.12
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3677,6 +3682,16 @@ license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
 version: 2.8.9
+libraries:
+  - com.google.code.gson: gson
+
+---
+
+name: Gson
+license_category: binary
+module: extensions/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.10.1
 libraries:
   - com.google.code.gson: gson
 
