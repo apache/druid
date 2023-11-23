@@ -34,7 +34,6 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -70,7 +69,7 @@ public abstract class DimensionSchema
         return new DoubleDimensionSchema(name);
       default:
         // the auto column indexer can handle any type
-        return new AutoTypeColumnSchema(name, type.is(ValueType.COMPLEX) ? null : ColumnTypeFactory.ofType(type));
+        return new AutoTypeColumnSchema(name, null);
     }
   }
 

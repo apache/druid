@@ -43,12 +43,12 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
 
   private final String name;
   @Nullable
-  private final ColumnType requestedType;
+  private final ColumnType castTo;
 
-  public NestedCommonFormatColumnHandler(String name, @Nullable ColumnType requestedType)
+  public NestedCommonFormatColumnHandler(String name, @Nullable ColumnType castTo)
   {
     this.name = name;
-    this.requestedType = requestedType;
+    this.castTo = castTo;
   }
 
   @Override
@@ -60,19 +60,19 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   @Override
   public DimensionSpec getDimensionSpec()
   {
-    return new DefaultDimensionSpec(name, name, requestedType != null ? requestedType : ColumnType.NESTED_DATA);
+    return new DefaultDimensionSpec(name, name, castTo != null ? castTo : ColumnType.NESTED_DATA);
   }
 
   @Override
   public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
   {
-    return new AutoTypeColumnSchema(name, requestedType);
+    return new AutoTypeColumnSchema(name, castTo);
   }
 
   @Override
   public DimensionIndexer<StructuredData, StructuredData, StructuredData> makeIndexer(boolean useMaxMemoryEstimates)
   {
-    return new AutoTypeColumnIndexer(requestedType);
+    return new AutoTypeColumnIndexer(castTo);
   }
 
   @Override
@@ -84,7 +84,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
       Closer closer
   )
   {
-    return new AutoTypeColumnMerger(name, requestedType, indexSpec, segmentWriteOutMedium, closer);
+    return new AutoTypeColumnMerger(name, castTo, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -98,6 +98,13 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   @Override
   public Comparator<ColumnValueSelector> getEncodedValueSelectorComparator()
   {
+    if (castTo != null) {
+      return (s1, s2) ->
+          castTo.getStrategy().compare(
+              StructuredData.unwrap(s1.getObject()),
+              StructuredData.unwrap(s2.getObject())
+          );
+    }
     return COMPARATOR;
   }
 

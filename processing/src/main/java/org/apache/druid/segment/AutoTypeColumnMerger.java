@@ -82,12 +82,12 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
 
   private ColumnType logicalType;
   @Nullable
-  private final ColumnType requestedType;
+  private final ColumnType castToType;
   private boolean isVariantType = false;
 
   public AutoTypeColumnMerger(
       String name,
-      @Nullable ColumnType requestedType,
+      @Nullable ColumnType castToType,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
@@ -95,7 +95,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   {
 
     this.name = name;
-    this.requestedType = requestedType;
+    this.castToType = castToType;
     this.indexSpec = indexSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.closer = closer;
@@ -152,7 +152,12 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       final FieldTypeInfo.MutableTypeSet rootTypes = mergedFields.get(NestedPathFinder.JSON_PATH_ROOT);
       final boolean rootOnly = mergedFields.size() == 1 && rootTypes != null;
 
-      final ColumnType explicitType = (requestedType != null && (requestedType.isPrimitive() || requestedType.isPrimitiveArray())) ? requestedType : null;
+      final ColumnType explicitType;
+      if (castToType != null && (castToType.isPrimitive() || castToType.isPrimitiveArray())) {
+        explicitType = castToType;
+      } else {
+        explicitType = null;
+      }
 
       // for backwards compat; remove this constant handling in druid 28 along with
       // indexSpec.optimizeJsonConstantColumns in favor of always writing constant columns
@@ -350,7 +355,8 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                                                                                          .withLogicalType(logicalType)
                                                                                          .withHasNulls(serializer.hasNulls())
                                                                                          .isVariantType(isVariantType)
-                                                                                         .withEnforceLogicalType(requestedType != null)
+                                                                                         .withEnforceLogicalType(
+                                                                                             castToType != null)
                                                                                          .withByteOrder(ByteOrder.nativeOrder())
                                                                                          .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                                                                          .withSerializer(serializer)

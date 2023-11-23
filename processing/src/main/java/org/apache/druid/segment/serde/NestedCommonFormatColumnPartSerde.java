@@ -168,6 +168,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     return isVariantType;
   }
 
+  @JsonProperty("enforceLogicalType")
+  public boolean enforceLogicalType()
+  {
+    return enforceLogicalType;
+  }
+
   @JsonProperty
   public ByteOrder getByteOrder()
   {

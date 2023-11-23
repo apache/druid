@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
@@ -66,16 +67,16 @@ public class AutoTypeColumnSchema extends DimensionSchema
   public static final String TYPE = "auto";
 
   @Nullable
-  private final ColumnType requestedType;
+  private final ColumnType castToType;
 
   @JsonCreator
   public AutoTypeColumnSchema(
       @JsonProperty("name") String name,
-      @JsonProperty("requestedType") @Nullable ColumnType requestedType
+      @JsonProperty("castToType") @Nullable ColumnType castToType
   )
   {
     super(name, null, true);
-    this.requestedType = requestedType;
+    this.castToType = castToType;
   }
 
   @Override
@@ -87,19 +88,21 @@ public class AutoTypeColumnSchema extends DimensionSchema
   @Override
   public ColumnType getColumnType()
   {
-    return requestedType != null ? requestedType : ColumnType.NESTED_DATA;
+    return castToType != null ? castToType : ColumnType.NESTED_DATA;
   }
 
+  @Nullable
   @JsonProperty
-  public ColumnType getRequestedType()
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public ColumnType getCastToType()
   {
-    return requestedType;
+    return castToType;
   }
 
   @Override
   public DimensionHandler<StructuredData, StructuredData, StructuredData> getDimensionHandler()
   {
-    return new NestedCommonFormatColumnHandler(getName(), requestedType);
+    return new NestedCommonFormatColumnHandler(getName(), castToType);
   }
 
   @Override
@@ -115,12 +118,25 @@ public class AutoTypeColumnSchema extends DimensionSchema
       return false;
     }
     AutoTypeColumnSchema that = (AutoTypeColumnSchema) o;
-    return Objects.equals(requestedType, that.requestedType);
+    return Objects.equals(castToType, that.castToType);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), requestedType);
+    return Objects.hash(super.hashCode(), castToType);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DimensionSchema{" +
+           "name='" + getName() + '\'' +
+           ", valueType=" + getColumnType() +
+           ", typeName=" + getTypeName() +
+           ", multiValueHandling=" + getMultiValueHandling() +
+           ", createBitmapIndex=" + hasBitmapIndex() +
+           ", castToType=" + castToType +
+           '}';
   }
 }

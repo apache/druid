@@ -81,9 +81,9 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   int estimatedFieldKeySize = 0;
 
   @Nullable
-  protected final ColumnType requestedType;
+  protected final ColumnType castToType;
   @Nullable
-  protected final ExpressionType requestedExpressionType;
+  protected final ExpressionType castToExpressionType;
 
   protected final StructuredDataProcessor indexerProcessor = new StructuredDataProcessor()
   {
@@ -127,14 +127,14 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     }
   };
 
-  public AutoTypeColumnIndexer(@Nullable ColumnType requestedType)
+  public AutoTypeColumnIndexer(@Nullable ColumnType castToType)
   {
-    if (requestedType != null && (requestedType.isPrimitive() || requestedType.isPrimitiveArray())) {
-      this.requestedType = requestedType;
-      this.requestedExpressionType = ExpressionType.fromColumnTypeStrict(requestedType);
+    if (castToType != null && (castToType.isPrimitive() || castToType.isPrimitiveArray())) {
+      this.castToType = castToType;
+      this.castToExpressionType = ExpressionType.fromColumnTypeStrict(castToType);
     } else {
-      this.requestedType = null;
-      this.requestedExpressionType = null;
+      this.castToType = null;
+      this.castToExpressionType = null;
     }
   }
 
@@ -150,61 +150,75 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     } else if (isConstant) {
       isConstant = Objects.equals(dimValues, constantValue);
     }
+
+    if (castToExpressionType != null) {
+      return processCast(dimValues);
+    } else {
+      return processAuto(dimValues);
+    }
+  }
+
+  /**
+   * Process values which will all be cast to {@link #castToExpressionType}. This method should not be used for
+   * and does not handle actual nested data structures, use {@link #processAuto(Object)} instead.
+   */
+  private EncodedKeyComponent<StructuredData> processCast(@Nullable Object dimValues)
+  {
     final long oldDictSizeInBytes = globalDictionary.sizeInBytes();
     final int oldFieldKeySize = estimatedFieldKeySize;
-
-    if (requestedExpressionType != null) {
-      ExprEval<?> eval = ExprEval.bestEffortOf(dimValues);
-      try {
-        eval = eval.castTo(requestedExpressionType);
-        FieldIndexer fieldIndexer = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-        if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(NestedPathFinder.JSON_PATH_ROOT);
-          fieldIndexer = new FieldIndexer(globalDictionary);
-          fieldIndexers.put(NestedPathFinder.JSON_PATH_ROOT, fieldIndexer);
-        }
-        StructuredDataProcessor.ProcessedValue<?> rootValue = fieldIndexer.processValue(eval);
-        long effectiveSizeBytes = rootValue.getSize();
-        // then, we add the delta of size change to the global dictionaries to account for any new space added by the
-        // 'raw' data
-        effectiveSizeBytes += (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
-        effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
-        return new EncodedKeyComponent<>(StructuredData.wrap(eval.value()), effectiveSizeBytes);
+    ExprEval<?> eval = ExprEval.bestEffortOf(dimValues);
+    try {
+      eval = eval.castTo(castToExpressionType);
+      FieldIndexer fieldIndexer = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
+      if (fieldIndexer == null) {
+        estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(NestedPathFinder.JSON_PATH_ROOT);
+        fieldIndexer = new FieldIndexer(globalDictionary);
+        fieldIndexers.put(NestedPathFinder.JSON_PATH_ROOT, fieldIndexer);
       }
-      catch (IAE invalidCast) {
-        if (reportParseExceptions) {
-          throw new ParseException(eval.asString(), invalidCast, "Cannot coerce to requested type [%s]", requestedType);
-        } else {
-          hasNulls = true;
-          long effectiveSizeBytes = (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
-          effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
-          return new EncodedKeyComponent<>(StructuredData.wrap(null), effectiveSizeBytes);
-        }
-      }
-    } else {
-      final StructuredData data;
-      if (dimValues == null) {
-        hasNulls = true;
-        data = null;
-      } else if (dimValues instanceof StructuredData) {
-        data = (StructuredData) dimValues;
-      } else {
-        data = new StructuredData(dimValues);
-      }
-      final StructuredDataProcessor.ProcessResults info = indexerProcessor.processFields(
-          data == null ? null : data.getValue()
-      );
-      if (info.hasObjects()) {
-        hasNestedData = true;
-      }
-      // 'raw' data is currently preserved 'as-is', and not replaced with object references to the global dictionaries
-      long effectiveSizeBytes = info.getEstimatedSize();
+      StructuredDataProcessor.ProcessedValue<?> rootValue = fieldIndexer.processValue(eval);
+      long effectiveSizeBytes = rootValue.getSize();
       // then, we add the delta of size change to the global dictionaries to account for any new space added by the
       // 'raw' data
       effectiveSizeBytes += (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
       effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
-      return new EncodedKeyComponent<>(data, effectiveSizeBytes);
+      return new EncodedKeyComponent<>(StructuredData.wrap(eval.value()), effectiveSizeBytes);
     }
+    catch (IAE invalidCast) {
+      throw new ParseException(eval.asString(), invalidCast, "Cannot coerce to requested type [%s]", castToType);
+    }
+  }
+
+  /**
+   * Process potentially nested data using {@link #indexerProcessor}, a {@link StructuredDataProcessor} which visits
+   * all children to catalog values into the {@link #globalDictionary}, building {@link FieldIndexer} along the way
+   * for each primitive or array primitive value encountered.
+   */
+  private EncodedKeyComponent<StructuredData> processAuto(@Nullable Object dimValues)
+  {
+    final long oldDictSizeInBytes = globalDictionary.sizeInBytes();
+    final int oldFieldKeySize = estimatedFieldKeySize;
+    final StructuredData data;
+    if (dimValues == null) {
+      hasNulls = true;
+      data = null;
+    } else if (dimValues instanceof StructuredData) {
+      data = (StructuredData) dimValues;
+    } else {
+      data = new StructuredData(dimValues);
+    }
+    final StructuredDataProcessor.ProcessResults info = indexerProcessor.processFields(
+        data == null ? null : data.getValue()
+    );
+    if (info.hasObjects()) {
+      hasNestedData = true;
+    }
+    // 'raw' data is currently preserved 'as-is', and not replaced with object references to the global dictionaries
+    long effectiveSizeBytes = info.getEstimatedSize();
+    // then, we add the delta of size change to the global dictionaries to account for any new space added by the
+    // 'raw' data
+    effectiveSizeBytes += (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
+    effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
+    return new EncodedKeyComponent<>(data, effectiveSizeBytes);
   }
 
   @Override
@@ -380,8 +394,8 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
 
   public ColumnType getLogicalType()
   {
-    if (requestedType != null) {
-      return requestedType;
+    if (castToType != null) {
+      return castToType;
     }
     if (hasNestedData) {
       return ColumnType.NESTED_DATA;
@@ -421,7 +435,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   @Override
   public ColumnFormat getFormat()
   {
-    return new Format(getLogicalType(), hasNulls, requestedType != null);
+    return new Format(getLogicalType(), hasNulls, castToType != null);
   }
 
   @Override
