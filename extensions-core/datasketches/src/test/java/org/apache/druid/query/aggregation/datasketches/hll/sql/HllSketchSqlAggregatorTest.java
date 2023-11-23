@@ -75,6 +75,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
@@ -1185,39 +1186,25 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     skipVectorize();
     for (int i = 0; i < 10; i++) {
       testBuilder()
+      .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
       .sql("SELECT "
           + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"
           + "  dim1,\n"
           + "  HLL_SKETCH_ESTIMATE(DS_HLL(hllsketch_dim1,18,'HLL_4'), true),\n"
+          + "  HLL_SKETCH_ESTIMATE(DS_HLL(DS_HLL(hllsketch_dim1,18,'HLL_4'),18,'HLL_4') OVER (PARTITION BY dim1), true),"
           + "  1\n"
           + "FROM\n"
-          + "  (select * from  druid.foo where dim1 != '99' order by __time limit 3) ttt\n"
+          + "  (select * from  druid.foo order by __time limit 3) ttt\n"
           + "  WHERE  __time >= '1903-08-02' AND __time <= '2033-08-07'\n"
           + "  and dim1 not like '%ikipedia' and l1 > -4\n"
           + "  group by 1,2")
-//    .expectedQueries(ImmutableList.of(
-//                new TopNQueryBuilder()
-//                    .dataSource(CalciteTests.DATASOURCE1)
-//                    .intervals(querySegmentSpec(Filtration.eternity()))
-//                    .granularity(Granularities.ALL)
-//                    .dimension(new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE))
-//                    .virtualColumns(makeSketchEstimateExpression("v0", "hllsketch_dim1"))
-//                    .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
-//                    .threshold(2)
-//                    .aggregators(new CountAggregatorFactory("a0"))
-//                    .context(QUERY_CONTEXT_DEFAULT)
-//                    .build()
-//            ))
       .expectedResults(ImmutableList.of(
           new Object[]{946684800000L, "", 0.0D, 1},
           new Object[]{946771200000L, "10.1", 1.0D, 1},
           new Object[]{946857600000L, "2", 1.0D, 1}
               ))
       .run();
-
-
-
-}
+    }
   }
 
   /**
