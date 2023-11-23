@@ -3184,7 +3184,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         for (String id : group.taskIds()) {
           killTask(
               id,
-              "All tasks in group [%s] failed to transition to publishing state",
+              "All tasks in group[%s] failed to transition to publishing state",
               groupId
           );
         }

@@ -145,7 +145,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;
-  private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
@@ -2708,8 +2707,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
     taskQueue.shutdown(
         EasyMock.contains("sequenceName-0"),
-        EasyMock.eq("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task"),
-        EasyMock.contains("sequenceName-0")
+        EasyMock.eq("Failed to set end offsets, killing task")
     );
     EasyMock.expectLastCall().times(2);
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
