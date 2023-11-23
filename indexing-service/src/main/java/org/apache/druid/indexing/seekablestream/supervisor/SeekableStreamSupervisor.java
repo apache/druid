@@ -3327,7 +3327,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
                 } else {
                   String taskId = setEndOffsetTaskIds.get(i);
-                  killTask(taskId, "Failed to send end offsets, killing task");
+                  killTask(taskId, "Failed to set end offsets, killing task");
                   taskGroup.tasks.remove(taskId);
                 }
               }
