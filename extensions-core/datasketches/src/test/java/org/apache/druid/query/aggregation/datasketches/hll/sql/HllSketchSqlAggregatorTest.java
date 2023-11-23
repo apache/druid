@@ -1158,19 +1158,43 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testX()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+                + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"
+                + "  dim1,\n"
+                + "  HLL_SKETCH_ESTIMATE(DS_HLL(hllsketch_dim1,18,'HLL_4'), true),\n"
+                + "  1\n"
+                + "FROM\n"
+                + "  (select * from  druid.foo limit 10) ttt\n"
+                + "  WHERE  __time >= '1903-08-02' AND __time <= '2033-08-07'\n"
+                + "  and dim1 not like '%ikipedia' and l1 > -4\n"
+                + "  group by 1,2"
+        )
+        .run();
+    throw new RuntimeException("unreachable");
+  }
+
+  @Test
   public void testHllEstimateAsVirtualColumnWithTopNA()
   {
-    testBuilder()
-    .sql("SELECT "
-        + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"
-        + "  dim1,\n"
-        + "  HLL_SKETCH_ESTIMATE(DS_HLL(hllsketch_dim1,18,'HLL_4'), true),\n"
-        + "  1\n"
-        + "FROM\n"
-        + "  (select * from  druid.foo limit 10) ttt\n"
-        + "  WHERE  __time >= '1903-08-02' AND __time <= '2033-08-07'\n"
-        + "  and dim1 not like '%ikipedia' and l1 > -4\n"
-        + "  group by 1,2")
+    cannotVectorize();
+    skipVectorize();
+    for (int i = 0; i < 10; i++) {
+      testBuilder()
+      .sql("SELECT "
+          + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"
+          + "  dim1,\n"
+          + "  HLL_SKETCH_ESTIMATE(DS_HLL(hllsketch_dim1,18,'HLL_4'), true),\n"
+          + "  1\n"
+          + "FROM\n"
+          + "  (select * from  druid.foo limit 10) ttt\n"
+          + "  WHERE  __time >= '1903-08-02' AND __time <= '2033-08-07'\n"
+          + "  and dim1 not like '%ikipedia' and l1 > -4\n"
+          + "  group by 1,2")
 //    .expectedQueries(ImmutableList.of(
 //                new TopNQueryBuilder()
 //                    .dataSource(CalciteTests.DATASOURCE1)
@@ -1184,12 +1208,16 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 //                    .context(QUERY_CONTEXT_DEFAULT)
 //                    .build()
 //            ))
-    .expectedResults(ImmutableList.of(
-        new Object[]{946684800000L, "", 0.0D, 1},
-        new Object[]{946771200000L, "10.1", 1.0D, 1},
-        new Object[]{946857600000L, "2", 1.0D, 1}
-            ))
-    .run();
+      .expectedResults(ImmutableList.of(
+          new Object[]{946684800000L, "", 0.0D, 1},
+          new Object[]{946771200000L, "10.1", 1.0D, 1},
+          new Object[]{946857600000L, "2", 1.0D, 1}
+              ))
+      .run();
+
+
+
+}
   }
 
   /**

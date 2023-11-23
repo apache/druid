@@ -99,7 +99,9 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           QueryPlus.wrap(query),
           responseContext
       );
+      responseContext.add(ResponseContext.Keys.ETAG, "etag-1");
       String newResultSetId = responseContext.getEntityTag();
+
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
