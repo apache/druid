@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Provider;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.io.Closer;
@@ -123,7 +122,8 @@ public class QueryStackTests
     // No instantiation.
   }
 
-  static interface TestCacheKey {
+  interface TestCacheKey
+  {
 
   }
 
@@ -131,7 +131,8 @@ public class QueryStackTests
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD})
   @BindingAnnotation
-  public static @interface Testrelated {
+  public static @interface Testrelated
+  {
 
   }
 
@@ -144,17 +145,6 @@ public class QueryStackTests
       final ServerConfig serverConfig
   )
   {
-
-//    injector.getInstance(TestCacheKey.class);
-      Provider<CacheConfig> p0 = injector.getProvider(CacheConfig.class);
-CacheConfig aa = p0.get();
-
-//    Provider<CacheConfig> p = injector.getProvider(Key.get(CacheConfig.class, X11.class));
-    Provider<CacheConfig> p = injector.getProvider(Key.get(CacheConfig.class, Testrelated.class));
-    CacheConfig i = p.get();
-    injector.getInstance(Key.get(CacheConfig.class, Testrelated.class));
-//    injector.getBinding(null)(TestCacheKey.class);
-
     return new ClientQuerySegmentWalker(
         EMITTER,
         clusterWalker,
@@ -169,8 +159,7 @@ CacheConfig aa = p0.get();
         },
         joinableFactory,
         new RetryQueryRunnerConfig(),
-        injector.getInstance(ObjectMapper.class),
-//        TestHelper.makeJsonMapper(), // X$#%$#
+        injector.getInstance(ObjectMapper.class), // TestHelper.makeJsonMapper(), // X$#%$#
         serverConfig,
         injector.getInstance(Key.get(Cache.class, Testrelated.class)),
         injector.getInstance(Key.get(CacheConfig.class, Testrelated.class)),
