@@ -1383,14 +1383,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return newContext;
   }
 
-  /**
-   * Reset the conglomerate, walker, and engine with required number of merge buffers. Default value is 2.
-   */
-  protected void requireMergeBuffers(int numMergeBuffers)
-  {
-    throw new RuntimeException();
-  }
-
   protected Map<String, Object> withTimestampResultContext(
       Map<String, Object> input,
       String timestampResultField,
