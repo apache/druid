@@ -634,7 +634,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
   @Rule
-  public SqlTestFrameworkConfig.SqlTestFrameworkRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
+  public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
   {

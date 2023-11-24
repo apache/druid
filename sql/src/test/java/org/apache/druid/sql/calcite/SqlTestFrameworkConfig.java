@@ -47,9 +47,9 @@ public @interface SqlTestFrameworkConfig
 
     Map<SqlTestFrameworkConfig, SqlTestFramework> frameworkMap = new HashMap<SqlTestFrameworkConfig, SqlTestFramework>();
 
-    public SqlTestFrameworkRule methodRule(BaseCalciteQueryTest testHost)
+    public MethodRule methodRule(BaseCalciteQueryTest testHost)
     {
-      return new SqlTestFrameworkRule(this, testHost);
+      return new MethodRule(this, testHost);
     }
 
     @Override
@@ -62,13 +62,13 @@ public @interface SqlTestFrameworkConfig
     }
   }
 
-  public static class SqlTestFrameworkRule implements TestRule
+  public static class MethodRule implements TestRule
   {
     private SqlTestFrameworkConfig config;
     private ClassRule classRule;
     private QueryComponentSupplier testHost;
 
-    public SqlTestFrameworkRule(ClassRule classRule, QueryComponentSupplier testHost)
+    public MethodRule(ClassRule classRule, QueryComponentSupplier testHost)
     {
       this.classRule = classRule;
       this.testHost = testHost;
