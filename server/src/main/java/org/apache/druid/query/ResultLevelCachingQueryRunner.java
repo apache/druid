@@ -85,7 +85,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(QueryPlus queryPlus, ResponseContext responseContext)
   {
-    if (useResultCache || populateResultCache) {
+    if (mayUseCache(queryPlus)) {
 
       final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
@@ -163,6 +163,16 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           responseContext
       );
     }
+  }
+
+  private boolean mayUseCache(QueryPlus queryPlus)
+  {
+//    query.getDataSource().getAnalysis()
+    if(!query.getDataSource().getAnalysis().isConcreteAndTableBased()) {
+      return false;
+    }
+    // this.query
+    return useResultCache || populateResultCache;
   }
 
   @Nullable

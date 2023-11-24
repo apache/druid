@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite;
 import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore
+//@Ignore
 public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
 {
   @Override
