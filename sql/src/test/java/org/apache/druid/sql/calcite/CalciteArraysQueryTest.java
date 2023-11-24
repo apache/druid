@@ -3390,10 +3390,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
-    requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
         "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, count(*) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
@@ -3463,10 +3463,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
   {
-    requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
         "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as VARCHAR ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
@@ -3529,10 +3529,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {
-    requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
         "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as DOUBLE ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
