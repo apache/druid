@@ -41,7 +41,6 @@ public class TaskConfigBuilder
   private Boolean storeEmptyColumns;
   private boolean enableTaskLevelLogPush;
   private Long tmpStorageBytesPerTask;
-
   private Boolean enableConcurrentAppendAndReplace;
 
   public TaskConfigBuilder setBaseDir(String baseDir)
