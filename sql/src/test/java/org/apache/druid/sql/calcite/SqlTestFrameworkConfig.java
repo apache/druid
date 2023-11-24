@@ -81,7 +81,8 @@ public @interface SqlTestFrameworkConfig
         return getClass()
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
-      } catch (NoSuchMethodException | SecurityException e) {
+      }
+      catch (NoSuchMethodException | SecurityException e) {
         throw new RuntimeException(e);
       }
     }

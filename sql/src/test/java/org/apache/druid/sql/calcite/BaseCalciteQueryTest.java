@@ -631,7 +631,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @ClassRule
-  public static SqlTestFrameworkConfig .ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig .ClassRule();
+  public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
   @Rule
   public SqlTestFrameworkConfig.SqlTestFrameworkRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
@@ -1389,7 +1389,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void requireMergeBuffers(int numMergeBuffers)
   {
     throw new RuntimeException();
-//    createFramework(numMergeBuffers);
   }
 
   protected Map<String, Object> withTimestampResultContext(
