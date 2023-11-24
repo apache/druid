@@ -2479,6 +2479,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testExactCountDistinctWithFilter()
   {
@@ -2501,8 +2502,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-
-    requireMergeBuffers(3);
 
     if (NullHandling.sqlCompatible()) {
       // Cannot vectorize due to "istrue" operator.
@@ -3242,6 +3241,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * This test case should be in {@link CalciteUnionQueryTest}. However, there's a bug in the test framework that
    * doesn't reset framework once the merge buffers
    */
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @NotYetSupported
   @Test
   public void testUnionAllSameTableThreeTimes()
@@ -3286,6 +3286,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
@@ -5719,11 +5720,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMergeBufferSettingHasSideEffect() {
-    requireMergeBuffers(1);
-  }
-
-  @Test
   public void testCountStarWithTimeMillisecondFilters()
   {
     testQuery(
@@ -6581,11 +6577,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 4)
   @Test
   public void testMultipleExactCountDistinctWithGroupingUsingGroupingSets()
   {
     msqIncompatible();
-    requireMergeBuffers(4);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
@@ -6845,10 +6841,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testDoubleNestedGroupBy()
   {
-    requireMergeBuffers(3);
     testQuery(
         "SELECT SUM(cnt), COUNT(*) FROM (\n"
         + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
@@ -6900,6 +6896,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testDoubleNestedGroupBy2()
   {
@@ -8195,13 +8192,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
     msqIncompatible();
     cannotVectorize();
     skipVectorize();
-    requireMergeBuffers(3);
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
@@ -10237,6 +10234,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSets()
   {
@@ -10302,11 +10300,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingAggregatorDifferentOrder()
   {
     msqIncompatible();
-    requireMergeBuffers(3);
 
     testQuery(
         "SELECT dim2, gran, SUM(cnt), GROUPING(gran, dim2)\n"
@@ -10572,6 +10570,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupByCube()
   {
@@ -10634,6 +10633,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSetsWithDummyDimension()
   {
@@ -10696,6 +10696,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSetsNoSuperset()
   {
@@ -10753,6 +10754,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSetsWithOrderByDimension()
   {
@@ -10824,6 +10826,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSetsWithOrderByAggregator()
   {
@@ -10893,6 +10896,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSetsWithOrderByAggregatorWithLimit()
   {
@@ -12487,6 +12491,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSetsWithLimit()
   {
@@ -12552,6 +12557,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testGroupingSetsWithLimitOrderByGran()
   {

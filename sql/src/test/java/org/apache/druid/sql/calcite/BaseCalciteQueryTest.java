@@ -116,6 +116,7 @@ import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
@@ -629,8 +630,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryLogHook = new QueryLogHook(() -> queryFramework().queryJsonMapper());
   }
 
+  @ClassRule
+  public static SqlTestFrameworkConfig .ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig .ClassRule();
+
   @Rule
-  public SqlTestFrameworkRule queryFrameworkRule = new SqlTestFrameworkRule(this);
+  public SqlTestFrameworkConfig.SqlTestFrameworkRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
   {
