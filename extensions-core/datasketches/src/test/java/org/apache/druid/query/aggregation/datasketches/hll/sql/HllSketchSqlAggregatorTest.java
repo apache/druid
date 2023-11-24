@@ -1158,6 +1158,12 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
+  @Override
+  protected boolean isResultCacheEnabled()
+  {
+    return true;
+  }
+
   @Test
   public void testResultCacheWithWindowing()
   {

@@ -19,9 +19,6 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.junit.Ignore;
-import org.junit.Test;
-
 //@Ignore
 public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
 {
@@ -29,20 +26,6 @@ public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
   protected boolean isResultCacheEnabled()
   {
     return true;
-  }
-
-  @Ignore
-  @Test
-  public void testTimeseriesWithLimitAndOffset()
-  {
-    // gets into an inifite loop?
-  }
-
-  @Ignore
-  @Test
-  public void testGroupByCaseWhenOfTripleAnd()
-  {
-
   }
 
 }

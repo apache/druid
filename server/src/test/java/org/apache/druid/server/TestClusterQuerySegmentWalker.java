@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -59,6 +60,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -75,16 +77,21 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
+//  private final Injector injector;
+  static AtomicInteger etagSerial = new AtomicInteger();
+
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
-      @Nullable QueryScheduler scheduler
+      @Nullable QueryScheduler scheduler//,
+//      Injector injector
   )
   {
     this.timelines = timelines;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
+//    this.injector = injector;
   }
 
   @Override
@@ -160,7 +167,8 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // to actually serve the queries
     return (theQuery, responseContext) -> {
       responseContext.initializeRemainingResponses();
-      responseContext.put(Keys.ETAG, "DUMMY_ETAG_FOR_TESTS");
+
+      responseContext.put(Keys.ETAG, getEtagForQuery(theQuery.getQuery()));
       responseContext.addRemainingResponse(
           theQuery.getQuery().getMostSpecificId(), 0);
       if (scheduler != null) {
@@ -170,8 +178,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
             scheduler.prioritizeAndLaneQuery(theQuery, segments),
             new LazySequence<>(
                 () -> baseRunner.run(
-                    theQuery.withQuery(Queries.withSpecificSegments(
-                        theQuery.getQuery(),
+                    theQuery.withQuery(Queries.withSpecificSegments(                        theQuery.getQuery(),
                         ImmutableList.copyOf(specs)
                     )),
                     responseContext
@@ -185,6 +192,17 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         );
       }
     };
+  }
+
+  private String getEtagForQuery(Query<?> query)
+  {
+    String proposedEtag = query.context().getString(QueryResource.HEADER_IF_NONE_MATCH);
+
+    if (!StringUtils.isEmpty(proposedEtag)) {
+      return proposedEtag;
+    } else {
+      return "DUMMY_ETAG_FOR_TESTS" + etagSerial.incrementAndGet();
+    }
   }
 
   private <T> QueryRunner<T> makeTableRunner(
