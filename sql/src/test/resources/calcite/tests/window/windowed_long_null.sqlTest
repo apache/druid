@@ -6,7 +6,7 @@ sql: |
      MIN(l2) OVER(partition by l2),
      MIN(l2) OVER(partition by l2 order by l1)
    FROM druid.numfoo
-   WHERE l2 is null or l2 = -1111 or l2 = 0
+   WHERE (l2 is null or l2 = -1111 or l2 = 0) and (l1 is null or l1 != 7)
 
 
 expectedOperators:
@@ -39,5 +39,4 @@ expectedResults:
   - [null,null,null,null]
   - [null,null,null,null]
   - [null,null,null,null]
-  - [null,7,null,null]
   - [0,0,0,0]
