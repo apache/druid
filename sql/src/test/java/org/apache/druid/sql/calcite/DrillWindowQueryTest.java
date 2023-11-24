@@ -82,7 +82,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -364,30 +363,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
-        if (!queryResults.isOrdered()) {
-          // in case the resultset is not ordered; order via the same comparator before comparision
-          results.sort(new ArrayRowCmp());
-          expectedResults.sort(new ArrayRowCmp());
-        }
-        assertResultsEquals(sql, expectedResults, results);
+        assertResultsValid(ResultMatchMode.EQUALS, expectedResults, queryResults);
       }
       catch (AssertionError e) {
         log.info("query: %s", sql);
         log.info(resultsToString("Expected", expectedResults));
         log.info(resultsToString("Actual", results));
-        throw e;
+        throw new AssertionError(StringUtils.format("%s while processing: %s", e.getMessage(), sql), e);
       }
-    }
-  }
-
-  static class ArrayRowCmp implements Comparator<Object[]>
-  {
-    @Override
-    public int compare(Object[] arg0, Object[] arg1)
-    {
-      String s0 = Arrays.toString(arg0);
-      String s1 = Arrays.toString(arg1);
-      return s0.compareTo(s1);
     }
   }
 
