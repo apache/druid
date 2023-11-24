@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Injector;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -366,7 +364,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       List<Object[]> expectedResults = parseResults(currentRowSignature, expectedResultsText);
       try {
         Assert.assertEquals(StringUtils.format("result count: %s", sql), expectedResultsText.size(), results.size());
-        if (!isOrdered(queryResults)) {
+        if (!queryResults.isOrdered()) {
           // in case the resultset is not ordered; order via the same comparator before comparision
           results.sort(new ArrayRowCmp());
           expectedResults.sort(new ArrayRowCmp());
@@ -379,12 +377,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         log.info(resultsToString("Actual", results));
         throw e;
       }
-    }
-
-    private boolean isOrdered(QueryResults queryResults)
-    {
-      SqlNode sqlNode = queryResults.capture.getSqlNode();
-      return SqlToRelConverter.isOrdered(sqlNode);
     }
   }
 

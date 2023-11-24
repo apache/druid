@@ -28,6 +28,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlInsert;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -164,6 +166,12 @@ public class QueryTestRunner
     public QueryResults withResults(List<Object[]> newResults)
     {
       return new QueryResults(queryContext, vectorizeOption, sqlSignature, newResults, recordedQueries, capture);
+    }
+
+    public boolean isOrdered()
+    {
+      SqlNode sqlNode = capture.getSqlNode();
+      return SqlToRelConverter.isOrdered(sqlNode);
     }
   }
 
