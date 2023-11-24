@@ -114,7 +114,7 @@ public class LookupCoordinatorManagerTest
   }
 
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     SERVICE_EMITTER.flush();
 
@@ -139,7 +139,7 @@ public class LookupCoordinatorManagerTest
   }
 
   @After
-  public void tearDown() throws IOException
+  public void tearDown()
   {
     Assert.assertEquals(0, SERVICE_EMITTER.getEvents().size());
     SERVICE_EMITTER.flush();
