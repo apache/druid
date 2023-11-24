@@ -87,6 +87,15 @@
     <cve>CVE-2022-42004</cve>
   </suppress>
 
+  <suppress>
+    <!-- Pulled in by io.kubernetes:client-java and kafka_2.13 but not fixed in either place yet -->
+    <!-- jose4j before v0.9.3 allows attackers to set a low iteration count of 1000 or less -->
+    <notes><![CDATA[
+    file name: jose4j-0.7.3.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.bitbucket\.b_c/jose4j@.*$</packageUrl>
+    <cve>CVE-2023-31582</cve>
+  </suppress>
 
   <suppress>
     <!-- Not much for us to do as a user of the client lib, and no patch is available,
@@ -760,7 +769,7 @@
     <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
     <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
     <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
-    <cve>CVE-2023-36478</cve> <!-- Fixed version of jetty is in use, but dependency check identifies pom -->
+    <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
