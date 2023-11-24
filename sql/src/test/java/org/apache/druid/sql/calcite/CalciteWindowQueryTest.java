@@ -36,6 +36,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
+import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -213,6 +214,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
               QueryContexts.ENABLE_DEBUG, true))
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
