@@ -478,7 +478,7 @@ public class GroupingEngine
    *
    * @param subquery           inner query
    * @param query              outer query
-   * @param resource           resources returned by {@link #prepareResource(GroupByQuery, BlockingPool)}
+   * @param resource           resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param subqueryResult     result rows from the subquery
    * @param wasQueryPushedDown true if the outer query was pushed down (so we only need to merge the outer query's
    *                           results, not run it from scratch like a normal outer query)
@@ -539,7 +539,7 @@ public class GroupingEngine
    * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to generate subtotals.
    *
    * @param query       query that has a "subtotalsSpec"
-   * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool)}
+   * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
    * @param queryResult result rows from the main query
    *
    * @return results for each list of subtotals in the query, concatenated together

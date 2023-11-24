@@ -57,6 +57,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByUtils;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -1553,19 +1554,22 @@ public class ClientQuerySegmentWalkerTest
     {
       Query<?> modifiedQuery;
       // Need to blast various parameters that will vary and aren't important to test for.
-      modifiedQuery = query.withOverriddenContext(
-          ImmutableMap.<String, Object>builder()
-              .put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
-              .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
-              .put(QueryContexts.FINALIZE_KEY, true)
-              .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0L)
-              .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
-              .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
-              .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
-              .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
-              .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
-              .build()
-      );
+      ImmutableMap.Builder<String, Object> contextBuilder = ImmutableMap.builder();
+      contextBuilder.put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
+                    .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
+                    .put(QueryContexts.FINALIZE_KEY, true)
+                    .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 0L)
+                    .put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false)
+                    .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
+                    .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
+                    .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
+                    .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979");
+
+      if (how == ClusterOrLocal.CLUSTER) {
+        contextBuilder.put(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false);
+      }
+
+      modifiedQuery = query.withOverriddenContext(contextBuilder.build());
 
       if (modifiedQuery.getDataSource() instanceof FrameBasedInlineDataSource) {
         // Do round-trip serialization in order to replace FrameBasedInlineDataSource with InlineDataSource, so

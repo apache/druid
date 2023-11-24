@@ -78,7 +78,7 @@ import java.util.concurrent.TimeoutException;
  * fully aggregated stream of {@link ResultRow} objects. Does not apply post-aggregators.
  *
  * The input {@code queryables} are expected to come from a {@link GroupByQueryEngineV2}. This code runs on data
- * servers, like Historicals.
+ * servers, like Historicals (????? incorrect ????)
  *
  * This class has some resemblance to {@link GroupByRowProcessor}. See the javadoc of that class for a discussion of
  * similarities and differences.
@@ -314,6 +314,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   )
   {
     GroupByQueryResources resource = (GroupByQueryResources) responseContext.get(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+    // TODO(laksh): Add NPE check
     if (numBuffers > resource.getNumMergingQueryRunnerMergeBuffers()) {
       // Defensive exception, because we should have acquired the correct number of merge buffers beforehand, or
       // thrown an RLE in the caller of the runner
@@ -326,7 +327,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = new ArrayList<>();
     for (int i = 0; i < numBuffers; ++i) {
       ResourceHolder<ByteBuffer> mergeBufferHolder = resource.getMergingQueryRunnerMergeBuffer();
-      mergeBufferHolders.add(new ReferenceCountingResourceHolder<>(mergeBufferHolder.get(), mergeBufferHolder::close));
+      mergeBufferHolders.add(new ReferenceCountingResourceHolder<>(mergeBufferHolder.get(), mergeBufferHolder));
     }
     return mergeBufferHolders;
   }
