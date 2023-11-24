@@ -5720,11 +5720,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMergeBufferSettingHasSideEffect() {
-    requireMergeBuffers(1);
-  }
-
-  @Test
   public void testCountStarWithTimeMillisecondFilters()
   {
     testQuery(
