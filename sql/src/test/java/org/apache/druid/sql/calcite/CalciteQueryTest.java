@@ -2579,6 +2579,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testExactCountDistinctLookup()
   {
@@ -2590,8 +2591,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     // ExtractionDimensionSpec cannot be vectorized
     cannotVectorize();
-
-    requireMergeBuffers(3);
 
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
