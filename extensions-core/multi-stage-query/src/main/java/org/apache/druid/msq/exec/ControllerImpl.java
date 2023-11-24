@@ -75,6 +75,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
@@ -121,6 +122,7 @@ import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
+import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
@@ -301,7 +303,7 @@ public class ControllerImpl implements Controller
   private Map<Integer, ClusterStatisticsMergeMode> stageToStatsMergingMode;
   private WorkerMemoryParameters workerMemoryParameters;
   private boolean isDurableStorageEnabled;
-  private boolean isFaultToleranceEnabled;
+  private final boolean isFaultToleranceEnabled;
   private volatile SegmentLoadStatusFetcher segmentLoadWaiter;
 
   public ControllerImpl(
@@ -314,6 +316,9 @@ public class ControllerImpl implements Controller
     this.isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         task.getQuerySpec().getQuery().context()
     );
+    this.isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(task.getQuerySpec()
+                                                                                      .getQuery()
+                                                                                      .context());
   }
 
   @Override
@@ -370,7 +375,7 @@ public class ControllerImpl implements Controller
     );
 
     if (workerTaskLauncher != null) {
-      workerTaskLauncher.waitForWorkerShutdown();
+      workerTaskLauncher.stop(true);
     }
   }
 
@@ -603,8 +608,6 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState(final Closer closer)
   {
     final QueryContext queryContext = task.getQuerySpec().getQuery().context();
-    isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(queryContext);
-
     if (isFaultToleranceEnabled) {
       if (!queryContext.containsKey(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE)) {
         // if context key not set, enable durableStorage automatically.
@@ -684,13 +687,13 @@ public class ControllerImpl implements Controller
         task.getDataSource(),
         context,
         (failedTask, fault) -> {
-          addToKernelManipulationQueue((kernel) -> {
-            if (isFaultToleranceEnabled) {
+          if (isFaultToleranceEnabled && ControllerQueryKernel.isRetriableFault(fault)) {
+            addToKernelManipulationQueue((kernel) -> {
               addToRetryQueue(kernel, failedTask.getWorkerNumber(), fault);
-            } else {
-              throw new MSQException(fault);
-            }
-          });
+            });
+          } else {
+            throw new MSQException(fault);
+          }
         },
         taskContextOverridesBuilder.build(),
         // 10 minutes +- 2 minutes jitter
@@ -1423,13 +1426,17 @@ public class ControllerImpl implements Controller
               intervalsToDrop,
               destination.getReplaceTimeChunks(),
               task.getDataSource(),
-              destination.getSegmentGranularity()
+              destination.getSegmentGranularity(),
+              Limits.MAX_PARTITION_BUCKETS
           );
           segmentsWithTombstones.addAll(tombstones);
           numTombstones = tombstones.size();
         }
         catch (IllegalStateException e) {
           throw new MSQException(e, InsertLockPreemptedFault.instance());
+        }
+        catch (TooManyBucketsException e) {
+          throw new MSQException(e, new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS));
         }
       }
 

@@ -1281,6 +1281,7 @@ numShards
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
 2012-01-01T00
 2012-01-03T00
@@ -2326,3 +2327,6 @@ taskslots
 loadstatus
 sqlQueryId
 LAST_VALUE
+markUnused
+markUsed
+segmentId

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.statistics;
+package org.apache.druid.indexing.common.task.batch;
 
 import org.apache.druid.java.util.common.StringUtils;
 
