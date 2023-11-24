@@ -128,7 +128,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1151,12 +1150,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     final List<Object[]> results = queryResults.results;
     Assert.assertEquals("Result count mismatch", expected.size(), results.size());
 
-    if (!queryResults.isOrdered()) {
-      // in case the resultset is not ordered; order via the same comparator before comparision
-      results.sort(new ArrayRowCmp());
-      expected.sort(new ArrayRowCmp());
-    }
-
     final List<ValueType> types = new ArrayList<>();
 
     final boolean isMSQ = isMSQRowType(queryResults.signature);
@@ -1196,17 +1189,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     List<String> colNames = signature.getColumnNames();
     return colNames.size() == 1 && "TASK".equals(colNames.get(0));
-  }
-
-  static class ArrayRowCmp implements Comparator<Object[]>
-  {
-    @Override
-    public int compare(Object[] arg0, Object[] arg1)
-    {
-      String s0 = Arrays.toString(arg0);
-      String s1 = Arrays.toString(arg1);
-      return s0.compareTo(s1);
-    }
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
