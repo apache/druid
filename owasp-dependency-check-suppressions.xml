@@ -854,29 +854,26 @@
      ]]></notes>
     <cve>CVE-2023-25194</cve>
   </suppress>
-    <suppress>
+  <suppress>
     <notes><![CDATA[
       file name: spatial4j-0.7.jar
      ]]></notes>
     <cve>CVE-2014-125074</cve>
   </suppress>
-    <suppress>
+  <suppress>
     <notes><![CDATA[
       file name: woodstox-core-6.4.0.jar
      ]]></notes>
     <cve>CVE-2023-34411</cve>
   </suppress>
   <!-- This is the last version of Elasticsearch code distributed under Apache 2 license -->
-  </suppress>
-    <suppress>
+  <suppress>
     <notes><![CDATA[
       file name: elasticsearch-rest-client-7.10.2.jar
      ]]></notes>
     <cve>CVE-2021-22145</cve>
   </suppress>
-
-  </suppress>
-    <suppress>
+  <suppress>
     <notes><![CDATA[
       file name: elasticsearch-*7.10.2.jar
      ]]></notes>
