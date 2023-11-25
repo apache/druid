@@ -355,7 +355,7 @@ public class TaskConfig
     return tmpStorageBytesPerTask;
   }
 
-  @JsonProperty
+  @JsonProperty("enableConcurrentAppendAndReplace")
   public boolean isConcurrentAppendAndReplaceEnabled()
   {
     return enableConcurrentAppendAndReplace;
