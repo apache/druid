@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
@@ -64,10 +63,8 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
 {
   private static final Logger log = new Logger(RetrieveSegmentsToReplaceAction.class);
 
-  @JsonIgnore
   private final String dataSource;
 
-  @JsonIgnore
   private final List<Interval> intervals;
 
   @JsonCreator

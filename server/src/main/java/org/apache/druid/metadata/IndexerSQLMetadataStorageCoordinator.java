@@ -180,17 +180,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
-    boolean intervalsAreEternity = false;
+    boolean hasEternityInterval = false;
     for (Interval interval : intervals) {
       if (Intervals.isEternity(interval)) {
-        intervalsAreEternity = true;
+        hasEternityInterval = true;
         break;
       }
     }
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
-        intervalsAreEternity ? Collections.emptyList() : intervals,
+        hasEternityInterval ? Collections.emptyList() : intervals,
         SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
         connector
     );

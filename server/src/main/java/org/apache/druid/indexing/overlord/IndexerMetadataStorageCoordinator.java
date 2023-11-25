@@ -84,7 +84,7 @@ public interface IndexerMetadataStorageCoordinator
   /**
    *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
-   * given data source and List<Interval> from the metadata store.
+   * given data source and list of intervals from the metadata store.
    *
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
