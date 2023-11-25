@@ -2658,28 +2658,28 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     insertUsedSegments(ImmutableSet.of(defaultSegment));
 
     List<Pair<DataSegment, String>> resultForIntervalOnTheLeft =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2001"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("2000/2001")));
     Assert.assertTrue(resultForIntervalOnTheLeft.isEmpty());
 
     List<Pair<DataSegment, String>> resultForIntervalOnTheRight =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("3000/3001"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("3000/3001")));
     Assert.assertTrue(resultForIntervalOnTheRight.isEmpty());
 
     List<Pair<DataSegment, String>> resultForExactInterval =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(defaultSegment.getInterval()));
     Assert.assertEquals(1, resultForExactInterval.size());
     Assert.assertEquals(defaultSegment, resultForExactInterval.get(0).lhs);
 
     List<Pair<DataSegment, String>> resultForIntervalWithLeftOverlap =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2015-01-02"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("2000/2015-01-02")));
     Assert.assertEquals(resultForExactInterval, resultForIntervalWithLeftOverlap);
 
     List<Pair<DataSegment, String>> resultForIntervalWithRightOverlap =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2015-01-01/3000"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("2015-01-01/3000")));
     Assert.assertEquals(resultForExactInterval, resultForIntervalWithRightOverlap);
 
     List<Pair<DataSegment, String>> resultForEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.ETERNITY);
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.ETERNITY));
     Assert.assertEquals(resultForExactInterval, resultForEternity);
   }
 
@@ -2690,11 +2690,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     insertUsedSegments(ImmutableSet.of(eternitySegment, firstHalfEternityRangeSegment, secondHalfEternityRangeSegment));
 
     List<Pair<DataSegment, String>> resultForRandomInterval =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(defaultSegment.getInterval()));
     Assert.assertEquals(3, resultForRandomInterval.size());
 
     List<Pair<DataSegment, String>> resultForEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), eternitySegment.getInterval());
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(eternitySegment.getInterval()));
     Assert.assertEquals(3, resultForEternity.size());
   }
 

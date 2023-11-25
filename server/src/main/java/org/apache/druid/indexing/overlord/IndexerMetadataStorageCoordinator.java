@@ -84,7 +84,7 @@ public interface IndexerMetadataStorageCoordinator
   /**
    *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
-   * given data source and interval from the metadata store.
+   * given data source and list of intervals from the metadata store.
    *
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
@@ -92,11 +92,11 @@ public interface IndexerMetadataStorageCoordinator
    * if needed.
    *
    * @param dataSource The data source to query
-   * @param interval The interval to query
+   * @param intervals The list of interval to query
    *
    * @return The DataSegments and the related created_date of segments
    */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals);
 
   /**
    * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
