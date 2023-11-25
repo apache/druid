@@ -118,7 +118,8 @@ public class DruidJoinRuleTest
   @Test
   public void test_canHandleCondition_leftEqRightFn()
   {
-    Assert.assertTrue(
+    Assert.assertEquals(
+        NullHandling.sqlCompatible(), // We don't handle non-equi join conditions for non-sql compatible mode.
         druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
@@ -139,7 +140,9 @@ public class DruidJoinRuleTest
   @Test
   public void test_canHandleCondition_leftEqLeft()
   {
-    Assert.assertTrue(
+
+    Assert.assertEquals(
+        NullHandling.sqlCompatible(), // We don't handle non-equi join conditions for non-sql compatible mode.
         druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
@@ -156,7 +159,8 @@ public class DruidJoinRuleTest
   @Test
   public void test_canHandleCondition_rightEqRight()
   {
-    Assert.assertTrue(
+    Assert.assertEquals(
+        NullHandling.sqlCompatible(), // We don't handle non-equi join conditions for non-sql compatible mode.
         druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
