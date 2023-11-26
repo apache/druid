@@ -211,10 +211,9 @@ class DependencyReportParser(HTMLParser):
             if self.license not in self.compatible_license_names:
                 try:
                     self.license = self.compatible_license_names[data]
-                except:
+                except KeyError:
                     print("Unsupported license: " + data)
                     print("For:" +  self.group_id + " "  + self.artifact_id + " in: "+ self.druid_module_name)
-                    sys.exit(1)
             else:
                 print(self.group_id + " "  + self.artifact_id + " in: " + self.druid_module_name + " with: " + self.license + " ignoring " + data)
 
