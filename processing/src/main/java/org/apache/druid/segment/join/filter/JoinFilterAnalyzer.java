@@ -195,7 +195,7 @@ public class JoinFilterAnalyzer
     }
 
     for (Filter baseTableFilter : joinFilterPreAnalysis.getNormalizedBaseTableClauses()) {
-      if (Filters.filterMatchesNull(baseTableFilter)) {
+      if (!Filters.filterMatchesNull(baseTableFilter)) {
         leftFilters.add(baseTableFilter);
       } else {
         rightFilters.add(baseTableFilter);
