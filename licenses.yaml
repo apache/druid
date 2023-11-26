@@ -199,6 +199,7 @@ libraries:
   - com.amazonaws: aws-java-sdk-sts
   - com.amazonaws: aws-java-sdk-rds
   - com.amazonaws: jmespath-java
+  - com.amazonaws: aws-java-sdk-bundle
 notice: |
   AWS SDK for Java
   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
