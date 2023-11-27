@@ -13445,22 +13445,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         invalidSqlIs(
             "Cannot apply 'ANY_VALUE' to arguments of type 'ANY_VALUE(<VARCHAR>, <INTEGER>, <CHAR(4)>)'. Supported form(s): 'ANY_VALUE(<expr>, [<maxBytesPerString>, [<aggregateMultipleValues>]])' (line [1], column [8])")
     );
-    DruidException e1 = assertThrows(DruidException.class, () -> testBuilder()
+    QueryTestBuilder qtb1 = testBuilder()
         .sql("SELECT ANY_VALUE(dim3, 1000, null) FROM foo")
-        .queryContext(ImmutableMap.of())
-        .run());
-    Assert.assertEquals(
-        "Query could not be planned. A possible reason is [The third argument 'null:NULL' to function 'EXPR$0' is not a boolean]",
-        e1.getMessage()
-    );
-    DruidException e2 = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of());
+
+    DruidException e1 = assertThrows(DruidException.class, () -> qtb1.run());
+    if (qtb1.isDecoupledMode()) {
+      Assert.assertTrue(e1.getMessage().contains("Cannot translate aggregator[ANY_VALUE($0, $1, $2)] from rel"));
+    } else {
+      Assert.assertEquals(
+          "Query could not be planned. A possible reason is [The third argument 'null:NULL' to function 'EXPR$0' is not a boolean]",
+          e1.getMessage()
+      );
+    }
+    QueryTestBuilder qtb2 = testBuilder()
         .sql("SELECT ANY_VALUE(dim3, null, true) FROM foo")
-        .queryContext(ImmutableMap.of())
-        .run());
-    Assert.assertEquals(
-        "Query could not be planned. A possible reason is [The second argument 'null:NULL' to function 'EXPR$0' is not a number]",
-        e2.getMessage()
-    );
+        .queryContext(ImmutableMap.of());
+
+    DruidException e2 = assertThrows(DruidException.class, () -> qtb2.run());
+    if (qtb2.isDecoupledMode()) {
+      Assert.assertTrue(e2.getMessage().contains("Cannot translate aggregator[ANY_VALUE($0, $1, $2)] from"));
+    } else {
+      Assert.assertEquals(
+          "Query could not be planned. A possible reason is [The second argument 'null:NULL' to function 'EXPR$0' is not a number]",
+          e2.getMessage()
+      );
+    }
   }
   @Test
   public void testStringAggMaxBytes()
