@@ -42,7 +42,7 @@ public @interface SqlTestFrameworkConfig
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
-  public static class ClassRule extends ExternalResource
+  class ClassRule extends ExternalResource
   {
 
     Map<SqlTestFrameworkConfig, SqlTestFramework> frameworkMap = new HashMap<SqlTestFrameworkConfig, SqlTestFramework>();
@@ -62,7 +62,7 @@ public @interface SqlTestFrameworkConfig
     }
   }
 
-  public static class MethodRule implements TestRule
+  class MethodRule implements TestRule
   {
     private SqlTestFrameworkConfig config;
     private ClassRule classRule;
