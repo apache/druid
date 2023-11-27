@@ -24,6 +24,7 @@ import com.google.inject.Provides;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.server.EtagProvider;
 import org.apache.druid.server.QueryStackTests.Testrelated;
 
 public class CacheTestHelperModule extends AbstractModule
@@ -31,10 +32,10 @@ public class CacheTestHelperModule extends AbstractModule
 
   protected final Cache cache;
   private CacheConfig cacheConfig;
+  private EtagProvider etagProvider;
 
   static class TestCacheConfig extends CacheConfig
   {
-
     private boolean enableResultLevelCache;
 
     public TestCacheConfig(boolean enableResultLevelCache)
@@ -62,10 +63,19 @@ public class CacheTestHelperModule extends AbstractModule
     cacheConfig = new TestCacheConfig(enableResultLevelCache);
 
     if (enableResultLevelCache) {
+      etagProvider = new EtagProvider.UseProvidedIfAvaliable();
       cache = MapCache.create(1_000_000L);
     } else {
+      etagProvider = new EtagProvider.EmptyEtagProvider();
       cache = null;
     }
+  }
+
+  @Provides
+  @EtagProvider.Annotation
+  EtagProvider etagProvider()
+  {
+    return etagProvider;
   }
 
   @Provides

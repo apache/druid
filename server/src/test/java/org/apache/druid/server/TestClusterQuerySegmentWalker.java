@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -171,7 +170,10 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     return (theQuery, responseContext) -> {
       responseContext.initializeRemainingResponses();
 
-      responseContext.put(Keys.ETAG, getEtagForQuery(theQuery.getQuery()));
+      String etag = etagProvider.getEtagFor(theQuery.getQuery());
+      if (etag != null) {
+        responseContext.put(Keys.ETAG, etag);
+      }
       responseContext.addRemainingResponse(
           theQuery.getQuery().getMostSpecificId(), 0);
       if (scheduler != null) {
@@ -195,16 +197,6 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         );
       }
     };
-  }
-
-  private String getEtagForQuery(Query<?> query)
-  {
-    String proposedEtag = query.context().getString(QueryResource.HEADER_IF_NONE_MATCH);
-    if (!StringUtils.isEmpty(proposedEtag)) {
-      return proposedEtag;
-    } else {
-      return "DUMMY_ETAG_FOR_TESTS" + etagSerial.incrementAndGet();
-    }
   }
 
   private <T> QueryRunner<T> makeTableRunner(
