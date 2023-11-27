@@ -24,19 +24,23 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
+import java.util.List;
+
 public class StringAnyAggregator implements Aggregator
 {
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
   private boolean isFound;
   private String foundValue;
+  final boolean aggregateMultipleValues;
 
-  public StringAnyAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes)
+  public StringAnyAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes, boolean aggregateMultipleValues)
   {
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
     this.foundValue = null;
     this.isFound = false;
+    this.aggregateMultipleValues = aggregateMultipleValues;
   }
 
   @Override
@@ -44,10 +48,13 @@ public class StringAnyAggregator implements Aggregator
   {
     if (!isFound) {
       final Object object = valueSelector.getObject();
-      foundValue = DimensionHandlerUtils.convertObjectToString(object);
-      if (foundValue != null && foundValue.length() > maxStringBytes) {
-        foundValue = foundValue.substring(0, maxStringBytes);
+      if (object != null && object instanceof List && !aggregateMultipleValues) {
+        List<Object> objectList = (List) object;
+        foundValue = objectList.size() > 0 ? DimensionHandlerUtils.convertObjectToString(objectList.get(0)) : null;
+      } else {
+        foundValue = DimensionHandlerUtils.convertObjectToString(object);
       }
+      foundValue = StringUtils.fastLooseChop(foundValue, maxStringBytes);
       isFound = true;
     }
   }
@@ -55,7 +62,7 @@ public class StringAnyAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return StringUtils.chop(foundValue, maxStringBytes);
+    return foundValue;
   }
 
   @Override

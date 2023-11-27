@@ -532,7 +532,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(aggregators(
-                            new StringAnyAggregatorFactory("a0", "dim3", 100)
+                            new StringAnyAggregatorFactory("a0", "dim3", 100, true)
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -598,7 +598,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(aggregators(
-                            new StringAnyAggregatorFactory("a0", "dim3", 100)
+                            new StringAnyAggregatorFactory("a0", "dim3", 100, true)
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -1482,7 +1482,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         new SubstringDimExtractionFn(0, 1)
                                     )
                                 )
-                                .setAggregatorSpecs(new StringAnyAggregatorFactory("a0", "v", 10))
+                                .setAggregatorSpecs(new StringAnyAggregatorFactory("a0", "v", 10, true))
                                 .build()
                         ),
                         "j0.",

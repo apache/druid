@@ -95,7 +95,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          Integer maxStringBytes
+          Integer maxStringBytes,
+          Boolean aggregateMultipleValues
       )
       {
         switch (type.getType()) {
@@ -121,7 +122,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          Integer maxStringBytes
+          Integer maxStringBytes,
+          Boolean aggregateMultipleValues
       )
       {
         switch (type.getType()) {
@@ -147,7 +149,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          Integer maxStringBytes
+          Integer maxStringBytes,
+          Boolean aggregateMultipleValues
       )
       {
         switch (type.getType()) {
@@ -158,7 +161,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleAnyAggregatorFactory(name, fieldName);
           case STRING:
-            return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
+            return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes, aggregateMultipleValues);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "ANY", type);
         }
@@ -170,7 +173,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         String fieldName,
         String timeColumn,
         ColumnType outputType,
-        Integer maxStringBytes
+        Integer maxStringBytes,
+        Boolean aggregateMultipleValues
     );
   }
 
@@ -244,19 +248,11 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
       case 1:
-        theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null);
+        theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null, true);
         break;
       case 2:
-        int maxStringBytes;
-        try {
-          maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
-        }
-        catch (AssertionError ae) {
-          plannerContext.setPlanningError(
-              "The second argument '%s' to function '%s' is not a number",
-              rexNodes.get(1),
-              aggregateCall.getName()
-          );
+        Integer maxStringBytes = getMaxStringBytes(rexNodes, aggregateCall, plannerContext);
+        if (maxStringBytes == null) {
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
@@ -264,7 +260,34 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             fieldName,
             null,
             outputType,
-            maxStringBytes
+            maxStringBytes.intValue(),
+            true
+        );
+        break;
+      case 3:
+        boolean aggregateMultipleValues = true;
+        try {
+          aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
+        }
+        catch (AssertionError ae) {
+          plannerContext.setPlanningError(
+              "The third argument '%s' to function '%s' is not a boolean",
+              rexNodes.get(2),
+              aggregateCall.getName()
+          );
+          return null;
+        }
+        maxStringBytes = getMaxStringBytes(rexNodes, aggregateCall, plannerContext);
+        if (maxStringBytes == null) {
+          return null;
+        }
+        theAggFactory = aggregatorType.createAggregatorFactory(
+            aggregatorName,
+            fieldName,
+            null,
+            outputType,
+            maxStringBytes,
+            aggregateMultipleValues
         );
         break;
       default:
@@ -274,11 +297,29 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             args.size()
         );
     }
-
     return Aggregation.create(
         Collections.singletonList(theAggFactory),
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorName) : null
     );
+  }
+
+  private Integer getMaxStringBytes(
+      final List<RexNode> rexNodes,
+      final AggregateCall aggregateCall,
+      final PlannerContext plannerContext
+  )
+  {
+    try {
+      return RexLiteral.intValue(rexNodes.get(1));
+    }
+    catch (AssertionError ae) {
+      plannerContext.setPlanningError(
+          "The second argument '%s' to function '%s' is not a number",
+          rexNodes.get(1),
+          aggregateCall.getName()
+      );
+      return null;
+    }
   }
 
   static String getColumnName(
@@ -372,10 +413,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           InferTypes.RETURN_TYPE,
           DefaultOperandTypeChecker
               .builder()
-              .operandNames("expr", "maxBytesPerString")
-              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+              .operandNames("expr", "maxBytesPerString", "aggregateMultipleValues")
+              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.BOOLEAN)
               .requiredOperandCount(1)
-              .literalOperands(1)
+              .literalOperands(1, 2)
               .build(),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
@@ -402,9 +443,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
       SqlParserPos pos = call.getParserPosition();
 
-      if (operands.isEmpty() || operands.size() > 2) {
+      if (operands.isEmpty() || operands.size() > 3) {
         throw InvalidSqlInput.exception(
-            "Function [%s] expects 1 or 2 arguments but found [%s]",
+            "Function [%s] expects 1 or 2 or 3 arguments but found [%s]",
             getName(),
             operands.size()
         );
@@ -416,6 +457,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
       if (operands.size() == 2) {
         newOperands.add(operands.get(1));
+      }
+      if (operands.size() == 3) {
+        newOperands.add(operands.get(2));
       }
 
       return replacementAggFunc.createCall(pos, newOperands);

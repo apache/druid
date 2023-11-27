@@ -25,6 +25,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 public class StringAnyBufferAggregator implements BufferAggregator
 {
@@ -34,11 +35,13 @@ public class StringAnyBufferAggregator implements BufferAggregator
 
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
+  final boolean aggregateMultipleValues;
 
-  public StringAnyBufferAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes)
+  public StringAnyBufferAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes, boolean aggregateMultipleValues)
   {
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
+    this.aggregateMultipleValues = aggregateMultipleValues;
   }
 
   @Override
@@ -52,7 +55,13 @@ public class StringAnyBufferAggregator implements BufferAggregator
   {
     if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
       final Object object = valueSelector.getObject();
-      String foundValue = DimensionHandlerUtils.convertObjectToString(object);
+      String foundValue = null;
+      if (object != null && object instanceof List && !aggregateMultipleValues) {
+        List<Object> objectList = (List) object;
+        foundValue = objectList.size() > 0 ? DimensionHandlerUtils.convertObjectToString(objectList.get(0)) : null;
+      } else {
+        foundValue = DimensionHandlerUtils.convertObjectToString(object);
+      }
       if (foundValue != null) {
         ByteBuffer mutationBuffer = buf.duplicate();
         mutationBuffer.position(position + FOUND_VALUE_OFFSET);

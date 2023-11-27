@@ -23,12 +23,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 public class StringAnyVectorAggregator implements VectorAggregator
 {
@@ -43,11 +46,13 @@ public class StringAnyVectorAggregator implements VectorAggregator
   @Nullable
   private final MultiValueDimensionVectorSelector multiValueSelector;
   private final int maxStringBytes;
+  final boolean aggregateMultipleValues;
 
   public StringAnyVectorAggregator(
       SingleValueDimensionVectorSelector singleValueSelector,
       MultiValueDimensionVectorSelector multiValueSelector,
-      int maxStringBytes
+      int maxStringBytes,
+      final boolean aggregateMultipleValues
   )
   {
     Preconditions.checkState(
@@ -61,6 +66,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
     this.multiValueSelector = multiValueSelector;
     this.singleValueSelector = singleValueSelector;
     this.maxStringBytes = maxStringBytes;
+    this.aggregateMultipleValues = aggregateMultipleValues;
   }
 
   @Override
@@ -78,7 +84,23 @@ public class StringAnyVectorAggregator implements VectorAggregator
         if (startRow < rows.length) {
           IndexedInts row = rows[startRow];
           @Nullable
-          String foundValue = row.size() == 0 ? null : multiValueSelector.lookupName(row.get(0));
+          String foundValue;
+          if (row.size() == 0) {
+            foundValue = null;
+          } else if (aggregateMultipleValues) {
+            if (row.size() > 1) {
+              List<String> arrayList = new ArrayList<>();
+              row.forEach(rowIndex -> {
+                String chopped = StringUtils.fastLooseChop(multiValueSelector.lookupName(rowIndex), maxStringBytes);
+                arrayList.add(chopped);
+              });
+              foundValue = DimensionHandlerUtils.convertObjectToString(arrayList);
+            } else {
+              foundValue = StringUtils.fastLooseChop(multiValueSelector.lookupName(row.get(0)), maxStringBytes);
+            }
+          } else {
+            foundValue = StringUtils.fastLooseChop(multiValueSelector.lookupName(row.get(0)), maxStringBytes);
+          }
           putValue(buf, position, foundValue);
         }
       } else if (singleValueSelector != null) {
@@ -87,7 +109,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
           int row = rows[startRow];
           @Nullable
           String foundValue = singleValueSelector.lookupName(row);
-          putValue(buf, position, foundValue);
+          putValue(buf, position, StringUtils.fastLooseChop(foundValue, maxStringBytes));
         }
       }
     }
