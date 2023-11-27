@@ -2353,6 +2353,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
+        null,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,

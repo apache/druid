@@ -97,34 +97,27 @@ public class MemoryBoundLinkedBlockingQueue<T>
     return queue.stream();
   }
 
-  // This code is taken from {om.google.common.collect.Queues#Drain}}
-  public int drain(Collection<? super ObjectContainer<T>> buffer, int numElements, long timeout, TimeUnit unit)
+  public int drain(Collection<? super ObjectContainer<T>> buffer, int bytesToDrain, long timeout, TimeUnit unit)
       throws InterruptedException
   {
     Preconditions.checkNotNull(buffer);
     long deadline = System.nanoTime() + unit.toNanos(timeout);
     int added = 0;
-
-    while (added < numElements) {
-      added += queue.drainTo(buffer, numElements - added);
-      buffer.forEach(
-          i -> {
-            currentMemory.addAndGet(-((ObjectContainer<T>) i).getSize());
-          }
-      );
-      if (added < numElements) {
-        ObjectContainer<T> e = queue.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
-
-        if (e == null) {
-          break;
-        }
-
-        currentMemory.addAndGet(-e.getSize());
-        buffer.add(e);
-        ++added;
+    int bytesAdded = 0;
+    while (bytesAdded < bytesToDrain) {
+      ObjectContainer<T> e = queue.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
+      if (e == null) {
+        break;
+      }
+      currentMemory.addAndGet(-e.getSize());
+      buffer.add(e);
+      ++added;
+      bytesAdded += e.getSize();
+      e = queue.peek();
+      if (e != null && (bytesAdded + e.getSize()) > bytesToDrain) {
+        break;
       }
     }
-
     return added;
   }
 

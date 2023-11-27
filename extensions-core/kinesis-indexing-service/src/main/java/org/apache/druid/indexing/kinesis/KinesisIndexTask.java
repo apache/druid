@@ -49,6 +49,10 @@ import java.util.Set;
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
 {
   private static final String TYPE = "index_kinesis";
+
+  // GetRecords returns maximum 10MB per call
+  // (https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html)
+  private static final long GET_RECORDS_MAX_BYTES_PER_CALL = 10_000_000L;
   private static final Logger log = new Logger(KinesisIndexTask.class);
 
   private final boolean useListShards;
@@ -78,6 +82,10 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;
+    if (tuningConfig.getRecordBufferSizeConfigured() != null) {
+      log.warn("The 'recordBufferSize' config property of the kinesis tuning config has been deprecated. "
+               + "Please use 'recordBufferSizeBytes'.");
+    }
   }
 
   @Override
@@ -197,7 +205,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
     );
     int maxFetchThreads = Math.max(
         1,
-        (int) (memoryToUse / 10_000_000L)
+        (int) (memoryToUse / GET_RECORDS_MAX_BYTES_PER_CALL)
     );
     if (fetchThreads > maxFetchThreads) {
       log.warn("fetchThreads [%d] being lowered to [%d]", fetchThreads, maxFetchThreads);

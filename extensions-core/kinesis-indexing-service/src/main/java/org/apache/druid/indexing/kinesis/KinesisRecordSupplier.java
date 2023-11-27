@@ -106,6 +106,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    */
   private static final int GET_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
   private static final int GET_SEQUENCE_NUMBER_RETRY_COUNT = 10;
+  private static final int MAX_BYTES_PER_POLL = 1_000_000;
 
   /**
    * Catch any exception and wrap it in a {@link StreamException}
@@ -439,9 +440,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
 
-    // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
-    // The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
-    // docs page for more information on how to use deaggregation
+    // the deaggregate function is implemented by the amazon-kinesis-client. Use reflection to find the deaggregate
+    // function in the classpath. See details on the docs page for more information on how to use deaggregation
     try {
       Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
       MethodHandles.Lookup lookup = MethodHandles.publicLookup();
@@ -626,7 +626,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
       records.drain(
           polledRecords,
-          expectedSize,
+          MAX_BYTES_PER_POLL,
           timeout,
           TimeUnit.MILLISECONDS
       );
@@ -1052,6 +1052,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         .filter(x -> !partitions.contains(x.getData().getStreamPartition()))
         .forEachOrdered(x -> {
           if (!newQ.offer(x)) {
+            // this should never really happen in practice but adding check here for safety.
             throw new StreamException(new ISE(StringUtils.format(
                 "Failed to insert item to new queue when resetting background fetch. "
                 + "[stream: '%s', partitionId: '%s', sequenceNumber: '%s']",

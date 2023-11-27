@@ -142,6 +142,22 @@ public class MemoryBoundLinkedBlockingQueueTest
   }
 
   @Test
+  public void test_drain_emptyQueue_succeeds() throws InterruptedException
+  {
+
+    long byteCapacity = 7L;
+    MemoryBoundLinkedBlockingQueue<byte[]> queue = setupQueue(byteCapacity, ImmutableList.of());
+    Collection<MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]>> buffer = new ArrayList<>();
+
+    int numAdded = queue.drain(buffer, 1, 1, TimeUnit.SECONDS);
+
+    Assert.assertTrue(numAdded == 0 && numAdded == buffer.size());
+    Assert.assertEquals(0, queue.size());
+    Assert.assertEquals(0L, queue.byteSize());
+    Assert.assertEquals(byteCapacity, queue.remainingCapacity());
+  }
+
+  @Test
   public void test_drain_queueWithOneItem_succeeds() throws InterruptedException
   {
 
@@ -165,21 +181,22 @@ public class MemoryBoundLinkedBlockingQueueTest
   public void test_drain_queueWithMultipleItems_succeeds() throws InterruptedException
   {
 
-    long byteCapacity = 10L;
+    long byteCapacity = 15L;
     byte[] item1 = "item1".getBytes(StandardCharsets.UTF_8);
     byte[] item2 = "item2".getBytes(StandardCharsets.UTF_8);
+    byte[] item3 = "item3".getBytes(StandardCharsets.UTF_8);
     Collection<MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]>> items = buildItemContainers(
-        ImmutableList.of(item1, item2)
+        ImmutableList.of(item1, item2, item3)
     );
     MemoryBoundLinkedBlockingQueue<byte[]> queue = setupQueue(byteCapacity, items, new NotAllDrainedQueue());
     Collection<MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]>> buffer = new ArrayList<>();
 
-    int numAdded = queue.drain(buffer, 2, 1, TimeUnit.MINUTES);
+    int numAdded = queue.drain(buffer, 10, 1, TimeUnit.MINUTES);
 
     Assert.assertTrue(numAdded == 2 && numAdded == buffer.size());
-    Assert.assertEquals(0, queue.size());
-    Assert.assertEquals(0L, queue.byteSize());
-    Assert.assertEquals(byteCapacity, queue.remainingCapacity());
+    Assert.assertEquals(1, queue.size());
+    Assert.assertEquals(item3.length, queue.byteSize());
+    Assert.assertEquals(byteCapacity - item3.length, queue.remainingCapacity());
   }
 
   private static <T> MemoryBoundLinkedBlockingQueue<T> setupQueue(

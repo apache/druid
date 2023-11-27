@@ -74,6 +74,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -98,6 +99,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("chatRetries") Long chatRetries,
       @JsonProperty("httpTimeout") Period httpTimeout,
       @JsonProperty("shutdownTimeout") Period shutdownTimeout,
+      @JsonProperty("recordBufferSize") @Deprecated @Nullable Integer recordBufferSize,
       @JsonProperty("recordBufferSizeBytes") Integer recordBufferSizeBytes,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
@@ -128,6 +130,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         handoffConditionTimeout,
         resetOffsetAutomatically,
         skipSequenceNumberAvailabilityCheck,
+        recordBufferSize,
         recordBufferSizeBytes,
         recordBufferOfferTimeout,
         recordBufferFullWait,
@@ -259,6 +262,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getHandoffConditionTimeout(),
         isResetOffsetAutomatically(),
         isSkipSequenceNumberAvailabilityCheck(),
+        getRecordBufferSizeConfigured(),
         getRecordBufferSizeBytesConfigured(),
         getRecordBufferOfferTimeout(),
         getRecordBufferFullWait(),
