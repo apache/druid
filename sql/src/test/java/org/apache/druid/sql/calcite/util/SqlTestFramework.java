@@ -508,6 +508,12 @@ public class SqlTestFramework
     }
 
     @Provides
+    public SqlTestFramework framework()
+    {
+      return SqlTestFramework.this;
+    }
+
+    @Provides
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker segmentsQuerySegmentWalker(final Injector injector)
     {

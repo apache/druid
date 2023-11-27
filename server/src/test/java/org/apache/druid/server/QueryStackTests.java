@@ -174,7 +174,7 @@ public class QueryStackTests
       @Nullable QueryScheduler scheduler
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler);
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector());
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(

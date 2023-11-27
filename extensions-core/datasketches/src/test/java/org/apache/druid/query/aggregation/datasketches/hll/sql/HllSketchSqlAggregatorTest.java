@@ -1189,6 +1189,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           new Object[]{946857600000L, "2", 1.0D, 1.0D, 1}
               ))
       .run();
+      System.out.println("|sad");
     }
   }
 

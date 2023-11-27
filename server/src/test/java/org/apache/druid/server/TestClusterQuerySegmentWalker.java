@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.inject.Injector;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
@@ -77,22 +78,24 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
-//  private final Injector injector;
+  private EtagProvider etagProvider;
+  //  private final Injector injector;
   static AtomicInteger etagSerial = new AtomicInteger();
 
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
-      @Nullable QueryScheduler scheduler//,
-//      Injector injector
+      @Nullable QueryScheduler scheduler,
+      Injector injector
   )
   {
     this.timelines = timelines;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
-//    this.injector = injector;
+    this.etagProvider = injector.getInstance(EtagProvider.KEY);
   }
+
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
@@ -197,7 +200,6 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   private String getEtagForQuery(Query<?> query)
   {
     String proposedEtag = query.context().getString(QueryResource.HEADER_IF_NONE_MATCH);
-
     if (!StringUtils.isEmpty(proposedEtag)) {
       return proposedEtag;
     } else {
