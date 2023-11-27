@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.HttpResponse;
 import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -151,12 +152,16 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
     final File outDir = FileUtils.createTempDir();
     try {
+      HttpResponse httpResponse = createMock(HttpResponse.class);
+      EasyMock.expect(httpResponse.getStatusCode()).andReturn(500).anyTimes();
+      EasyMock.replay(httpResponse);
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
-          new BlobStorageException("", null, null)
+          new BlobStorageException("", httpResponse, null)
       ).atLeastOnce();
 
-      replayAll();
+      EasyMock.replay(azureStorage);
+      EasyMock.replay(byteSourceFactory);
 
       AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory);
 

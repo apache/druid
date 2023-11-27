@@ -29,8 +29,8 @@ import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Iterator;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Utility class for miscellaneous things involving Azure.
@@ -51,15 +51,16 @@ public class AzureUtils
       return false;
     }
     for (Throwable t = e; t != null; t = t.getCause()) {
-      if (t instanceof URISyntaxException) {
-        return false;
-      }
-
       if (t instanceof BlobStorageException) {
-        return true;
+        int statusCode = ((BlobStorageException) t).getStatusCode();
+        return statusCode == 429 || statusCode == 500 || statusCode == 503;
       }
 
       if (t instanceof IOException) {
+        return true;
+      }
+
+      if (t instanceof TimeoutException) {
         return true;
       }
     }

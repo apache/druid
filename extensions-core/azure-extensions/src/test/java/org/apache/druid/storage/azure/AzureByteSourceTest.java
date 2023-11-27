@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.HttpResponse;
 import com.azure.storage.blob.models.BlobStorageException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -76,16 +77,18 @@ public class AzureByteSourceTest extends EasyMockSupport
     final String containerName = "container";
     final String blobPath = "/path/to/file";
     AzureStorage azureStorage = createMock(AzureStorage.class);
-
+    HttpResponse httpResponse = createMock(HttpResponse.class);
+    EasyMock.expect(httpResponse.getStatusCode()).andReturn(500).anyTimes();
+    EasyMock.replay(httpResponse);
     EasyMock.expect(azureStorage.getBlockBlobInputStream(NO_OFFSET, containerName, blobPath)).andThrow(
         new BlobStorageException(
             "",
-            null,
+            httpResponse,
             null
         )
     );
 
-    replayAll();
+    EasyMock.replay(azureStorage);
 
     AzureByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
 
