@@ -21,7 +21,6 @@ import {
   C,
   F,
   SqlCase,
-  SqlColumn,
   SqlExpression,
   SqlFunction,
   SqlLiteral,
@@ -39,6 +38,7 @@ import { useQueryManager } from '../../../hooks';
 import { getInitQuery } from '../utils';
 
 import { GenericOutputTable } from './components';
+import { shiftTimeInWhere } from './utils/utils';
 
 import './table-react-module.scss';
 
@@ -129,20 +129,6 @@ function toShowColumnExpression(
   }
 
   return ex.as(showColumn.name);
-}
-
-function shiftTimeInWhere(where: SqlExpression, period: string): SqlExpression {
-  return where.walk(q => {
-    if (
-      (q instanceof SqlColumn && q.getName() === '__time') ||
-      (q instanceof SqlFunction && q.getEffectiveFunctionName() === 'TIME_SHIFT') ||
-      (q instanceof SqlFunction && q.getEffectiveFunctionName() === 'MAX_DATA_TIME')
-    ) {
-      return SqlFunction.simple('TIME_SHIFT', [q, period, 1]);
-    } else {
-      return q;
-    }
-  }) as SqlExpression;
 }
 
 interface QueryAndHints {

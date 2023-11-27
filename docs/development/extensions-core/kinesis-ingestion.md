@@ -695,6 +695,8 @@ Producer Library's aggregate method for more efficient data transfer.
 
 ## Resharding
 
+[Resharding](https://docs.aws.amazon.com/streams/latest/dev/kinesis-using-sdk-java-resharding.html) is an advanced operation that lets you adjust the number of shards in a stream to adapt to changes in the rate of data flowing through a stream.
+
 When changing the shard count for a Kinesis stream, there is a window of time around the resharding operation with early shutdown of Kinesis ingestion tasks and possible task failures.
 
 The early shutdowns and task failures are expected. They occur because the supervisor updates the shard to task group mappings as shards are closed and fully read. This ensures that tasks are not running
@@ -704,6 +706,10 @@ This window with early task shutdowns and possible task failures concludes when:
 
 - All closed shards have been fully read and the Kinesis ingestion tasks have published the data from those shards, committing the "closed" state to metadata storage.
 - Any remaining tasks that had inactive shards in the assignment have been shut down. These tasks would have been created before the closed shards were completely drained.
+
+Note that when the supervisor is running and detects new partitions, tasks read new partitions from the earliest offsets, irrespective of the `useEarliestSequence` setting. This is because these new shards were immediately discovered and are therefore unlikely to experience a lag.
+
+If resharding occurs when the supervisor is suspended and `useEarliestSequence` is set to `false`, resuming the supervisor causes tasks to read the new shards from the latest sequence. This is by design so that the consumer can catch up quickly with any lag accumulated while the supervisor was suspended. 
 
 ## Kinesis known issues
 
