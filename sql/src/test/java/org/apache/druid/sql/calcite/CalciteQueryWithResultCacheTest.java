@@ -25,7 +25,7 @@ public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
   @Override
   protected boolean isResultCacheEnabled()
   {
-    return true;
-  }
 
+    return !!true;
+  }
 }
