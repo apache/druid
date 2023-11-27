@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
+import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
@@ -161,6 +162,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleAnyAggregatorFactory(name, fieldName);
           case STRING:
+          case COMPLEX:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes, aggregateMultipleValues);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "ANY", type);
@@ -271,9 +273,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         }
         boolean aggregateMultipleValues = true;
         try {
-          aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
+          aggregateMultipleValues = RexLiteral.booleanValue(Preconditions.checkNotNull(rexNodes.get(2)));
         }
-        catch (AssertionError ae) {
+        catch (Exception ae) {
           plannerContext.setPlanningError(
               "The third argument '%s' to function '%s' is not a boolean",
               rexNodes.get(2),
@@ -310,9 +312,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   )
   {
     try {
-      return RexLiteral.intValue(rexNodes.get(1));
+      return RexLiteral.intValue(Preconditions.checkNotNull(rexNodes.get(1)));
     }
-    catch (AssertionError ae) {
+    catch (Exception ae) {
       plannerContext.setPlanningError(
           "The second argument '%s' to function '%s' is not a number",
           rexNodes.get(1),

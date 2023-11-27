@@ -13440,9 +13440,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT ANY_VALUE(dim3, 1000, 'true') FROM foo")
         .queryContext(ImmutableMap.of())
         .run());
-    assertThat(e,
-               invalidSqlIs(
-                   "Cannot apply 'ANY_VALUE' to arguments of type 'ANY_VALUE(<VARCHAR>, <INTEGER>, <CHAR(4)>)'. Supported form(s): 'ANY_VALUE(<expr>, [<maxBytesPerString>, [<aggregateMultipleValues>]])' (line [1], column [8])")
+    assertThat(
+        e,
+        invalidSqlIs(
+            "Cannot apply 'ANY_VALUE' to arguments of type 'ANY_VALUE(<VARCHAR>, <INTEGER>, <CHAR(4)>)'. Supported form(s): 'ANY_VALUE(<expr>, [<maxBytesPerString>, [<aggregateMultipleValues>]])' (line [1], column [8])")
+    );
+    DruidException e1 = assertThrows(DruidException.class, () -> testBuilder()
+        .sql("SELECT ANY_VALUE(dim3, 1000, null) FROM foo")
+        .queryContext(ImmutableMap.of())
+        .run());
+    Assert.assertEquals(
+        "Query could not be planned. A possible reason is [The third argument 'null:NULL' to function 'EXPR$0' is not a boolean]",
+        e1.getMessage()
+    );
+    DruidException e2 = assertThrows(DruidException.class, () -> testBuilder()
+        .sql("SELECT ANY_VALUE(dim3, null, true) FROM foo")
+        .queryContext(ImmutableMap.of())
+        .run());
+    Assert.assertEquals(
+        "Query could not be planned. A possible reason is [The second argument 'null:NULL' to function 'EXPR$0' is not a number]",
+        e2.getMessage()
     );
   }
   @Test
