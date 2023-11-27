@@ -16,12 +16,32 @@
  * limitations under the License.
  */
 
-export * from './use-clock';
-export * from './use-constant';
-export * from './use-global-event-listener';
-export * from './use-interval';
-export * from './use-last-defined';
-export * from './use-local-storage-state';
-export * from './use-permanent-callback';
-export * from './use-query-manager';
-export * from './use-resize-observer';
+.highlight-bubble {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 10;
+  min-width: 200px;
+  max-width: 500px;
+
+  // shpitz
+  &:after {
+    content: ' ';
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 0);
+    bottom: -15px;
+    border-top: 15px solid #2f344e;
+    border-right: 15px solid transparent;
+    border-left: 15px solid transparent;
+    border-bottom: none;
+  }
+
+  .button-group {
+    margin-top: 20px;
+    text-align: right;
+
+    > *:not(:last-child) {
+      margin-right: 10px;
+    }
+  }
+}

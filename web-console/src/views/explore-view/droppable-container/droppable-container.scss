@@ -20,6 +20,7 @@
 
 .droppable-container {
   position: relative;
+  overflow: hidden;
 
   &.drop-hover {
     &::after {
