@@ -265,6 +265,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         );
         break;
       case 3:
+        maxStringBytes = getMaxStringBytes(rexNodes, aggregateCall, plannerContext);
+        if (maxStringBytes == null) {
+          return null;
+        }
         boolean aggregateMultipleValues = true;
         try {
           aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
@@ -275,10 +279,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
               rexNodes.get(2),
               aggregateCall.getName()
           );
-          return null;
-        }
-        maxStringBytes = getMaxStringBytes(rexNodes, aggregateCall, plannerContext);
-        if (maxStringBytes == null) {
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
