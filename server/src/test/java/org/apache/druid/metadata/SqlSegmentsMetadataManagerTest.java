@@ -282,8 +282,11 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
     dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    // This test is guava version sensitive when upgrading to guava > 32
+    // the order changes to
+    //  ImmutableList.of("wikipedia2", "wikipedia3", "wikipedia"),
     Assert.assertEquals(
-        ImmutableList.of("wikipedia2", "wikipedia3", "wikipedia"),
+        ImmutableList.of("wikipedia3", "wikipedia", "wikipedia2"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
                            .stream()
                            .map(ImmutableDruidDataSource::getName)
