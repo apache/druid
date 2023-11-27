@@ -171,10 +171,11 @@ public class QueryStackTests
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
-      @Nullable QueryScheduler scheduler
+      @Nullable QueryScheduler scheduler,
+      Injector injector
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector());
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector);
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(

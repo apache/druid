@@ -106,7 +106,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         QueryStackTests.createClusterQuerySegmentWalker(
             timelines,
             conglomerate,
-            scheduler
+            scheduler,
+            injector
         ),
         QueryStackTests.createLocalQuerySegmentWalker(
             conglomerate,
