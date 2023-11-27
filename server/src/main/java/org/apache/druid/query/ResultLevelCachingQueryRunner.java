@@ -167,8 +167,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
   private boolean mayUseCache(QueryPlus queryPlus)
   {
-//    query.getDataSource().getAnalysis()
-    if(!query.getDataSource().getAnalysis().isConcreteAndTableBased()) {
+    // query.getDataSource().getAnalysis()
+    if (!query.getDataSource().getAnalysis().isConcreteAndTableBased()) {
       return false;
     }
     // this.query

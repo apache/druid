@@ -60,7 +60,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -78,9 +77,6 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   @Nullable
   private final QueryScheduler scheduler;
   private EtagProvider etagProvider;
-  //  private final Injector injector;
-  static AtomicInteger etagSerial = new AtomicInteger();
-
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
@@ -94,7 +90,6 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     this.scheduler = scheduler;
     this.etagProvider = injector.getInstance(EtagProvider.KEY);
   }
-
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
@@ -183,7 +178,8 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
             scheduler.prioritizeAndLaneQuery(theQuery, segments),
             new LazySequence<>(
                 () -> baseRunner.run(
-                    theQuery.withQuery(Queries.withSpecificSegments(                        theQuery.getQuery(),
+                    theQuery.withQuery(Queries.withSpecificSegments(
+                        theQuery.getQuery(),
                         ImmutableList.copyOf(specs)
                     )),
                     responseContext
