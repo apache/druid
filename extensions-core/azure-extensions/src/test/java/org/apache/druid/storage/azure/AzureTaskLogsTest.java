@@ -59,7 +59,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
   private static final String KEY_1 = "key1";
   private static final String KEY_2 = "key2";
   private static final URI PREFIX_URI = URI.create(StringUtils.format("azure://%s/%s", CONTAINER, PREFIX));
-  // BlobStorageException is not recoverable since the client attempts retries on failed status codes internally
+  private static final int MAX_TRIES = 3;
+
   private static final Exception NON_RECOVERABLE_EXCEPTION = new BlobStorageException("", null, null);
 
   private AzureInputDataConfig inputDataConfig;
@@ -95,8 +96,10 @@ public class AzureTaskLogsTest extends EasyMockSupport
     try {
       final File logFile = new File(tmpDir, "log");
 
-      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/log");
+      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/log", MAX_TRIES);
       EasyMock.expectLastCall();
+
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
 
       replayAll();
 
@@ -117,7 +120,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
     try {
       final File logFile = new File(tmpDir, "log");
 
-      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/log");
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
+      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/log", MAX_TRIES);
       EasyMock.expectLastCall().andThrow(new IOException());
 
       replayAll();
@@ -139,7 +143,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
     try {
       final File logFile = new File(tmpDir, "log");
 
-      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/report.json");
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
+      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/report.json", MAX_TRIES);
       EasyMock.expectLastCall();
 
       replayAll();
@@ -161,7 +166,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
     try {
       final File logFile = new File(tmpDir, "status.json");
 
-      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/status.json");
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
+      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/status.json", MAX_TRIES);
       EasyMock.expectLastCall();
 
       replayAll();
@@ -183,7 +189,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
     try {
       final File logFile = new File(tmpDir, "log");
 
-      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/report.json");
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
+      azureStorage.uploadBlockBlob(logFile, CONTAINER, PREFIX + "/" + TASK_ID + "/report.json", MAX_TRIES);
       EasyMock.expectLastCall().andThrow(new IOException());
 
       replayAll();
@@ -420,6 +427,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   {
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
     EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
+    EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
 
     CloudBlobHolder object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
     CloudBlobHolder object2 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_2, TIME_1);
@@ -434,7 +442,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
     AzureTestUtils.expectDeleteObjects(
         azureStorage,
         ImmutableList.of(object1, object2),
-        ImmutableMap.of());
+        ImmutableMap.of(),
+        MAX_TRIES
+    );
     EasyMock.replay(inputDataConfig, accountConfig, timeSupplier, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
     azureTaskLogs.killAll();
     EasyMock.verify(inputDataConfig, accountConfig, timeSupplier, object1, object2, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
@@ -449,6 +459,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     try {
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
       EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
 
       object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
 
@@ -463,7 +474,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
       AzureTestUtils.expectDeleteObjects(
           azureStorage,
           ImmutableList.of(),
-          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
+          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION),
+          MAX_TRIES
       );
       EasyMock.replay(
           inputDataConfig,
@@ -494,6 +506,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   public void test_killOlderThan_noException_deletesOnlyTaskLogsOlderThan() throws Exception
   {
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+    EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
 
     CloudBlobHolder object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
     CloudBlobHolder object2 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_2, TIME_FUTURE);
@@ -508,7 +521,9 @@ public class AzureTaskLogsTest extends EasyMockSupport
     AzureTestUtils.expectDeleteObjects(
         azureStorage,
         ImmutableList.of(object1),
-        ImmutableMap.of());
+        ImmutableMap.of(),
+        MAX_TRIES
+    );
     EasyMock.replay(inputDataConfig, accountConfig, timeSupplier, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
     azureTaskLogs.killOlderThan(TIME_NOW);
     EasyMock.verify(inputDataConfig, accountConfig, timeSupplier, object1, object2, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
@@ -522,6 +537,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     AzureCloudBlobIterable azureCloudBlobIterable = null;
     try {
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
 
       object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
 
@@ -536,7 +552,8 @@ public class AzureTaskLogsTest extends EasyMockSupport
       AzureTestUtils.expectDeleteObjects(
           azureStorage,
           ImmutableList.of(),
-          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
+          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION),
+          MAX_TRIES
       );
       EasyMock.replay(
           inputDataConfig,

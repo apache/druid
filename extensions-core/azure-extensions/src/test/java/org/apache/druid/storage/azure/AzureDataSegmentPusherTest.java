@@ -68,6 +68,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private static final String UNIQUE_MATCHER_PREFIX = PREFIX + "/" + UNIQUE_MATCHER_NO_PREFIX;
   private static final String NON_UNIQUE_NO_PREFIX_MATCHER = "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip";
   private static final String NON_UNIQUE_WITH_PREFIX_MATCHER = PREFIX + "/" + "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip";
+  private static final int MAX_TRIES = 3;
 
   private static final DataSegment SEGMENT_TO_PUSH = new DataSegment(
       "foo",
@@ -91,6 +92,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   {
     azureStorage = createMock(AzureStorage.class);
     azureAccountConfig = new AzureAccountConfig();
+    azureAccountConfig.setMaxTries(MAX_TRIES);
     azureAccountConfig.setAccount(ACCOUNT);
 
     segmentConfigWithPrefix = new AzureDataSegmentConfig();
@@ -114,7 +116,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     Files.write(DATA, tmp);
 
     String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
-    azureStorage.uploadBlockBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.eq(azurePath));
+    azureStorage.uploadBlockBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.eq(azurePath), EasyMock.eq(MAX_TRIES));
     EasyMock.expectLastCall();
 
     replayAll();
@@ -147,7 +149,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     azureStorage.uploadBlockBlob(
         EasyMock.anyObject(File.class),
         EasyMock.eq(CONTAINER_NAME),
-        EasyMock.eq(PREFIX + "/" + azurePath)
+        EasyMock.eq(PREFIX + "/" + azurePath),
+        EasyMock.eq(MAX_TRIES)
     );
     EasyMock.expectLastCall();
 
@@ -180,7 +183,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     azureStorage.uploadBlockBlob(
         EasyMock.anyObject(File.class),
         EasyMock.eq(CONTAINER_NAME),
-        EasyMock.matches(UNIQUE_MATCHER_NO_PREFIX)
+        EasyMock.matches(UNIQUE_MATCHER_NO_PREFIX),
+        EasyMock.eq(MAX_TRIES)
     );
     EasyMock.expectLastCall();
 
@@ -213,7 +217,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     azureStorage.uploadBlockBlob(
         EasyMock.anyObject(File.class),
         EasyMock.eq(CONTAINER_NAME),
-        EasyMock.matches(UNIQUE_MATCHER_PREFIX)
+        EasyMock.matches(UNIQUE_MATCHER_PREFIX),
+        EasyMock.eq(MAX_TRIES)
     );
     EasyMock.expectLastCall();
 
@@ -244,7 +249,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final long size = DATA.length;
 
     String azurePath = pusher.getAzurePath(SEGMENT_TO_PUSH, useUniquePath);
-    azureStorage.uploadBlockBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.anyString());
+    azureStorage.uploadBlockBlob(EasyMock.anyObject(File.class), EasyMock.eq(CONTAINER_NAME), EasyMock.anyString(), EasyMock.eq(MAX_TRIES));
     EasyMock.expectLastCall().andThrow(new BlobStorageException("", null, null));
 
     replayAll();
@@ -283,7 +288,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final File compressedSegmentData = new File("index.zip");
     final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
 
-    azureStorage.uploadBlockBlob(compressedSegmentData, CONTAINER_NAME, azurePath);
+    azureStorage.uploadBlockBlob(compressedSegmentData, CONTAINER_NAME, azurePath, MAX_TRIES);
     EasyMock.expectLastCall();
 
     replayAll();

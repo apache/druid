@@ -179,7 +179,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   )
       throws BlobStorageException, IOException
   {
-    azureStorage.uploadBlockBlob(compressedSegmentData, segmentConfig.getContainer(), azurePath);
+    azureStorage.uploadBlockBlob(compressedSegmentData, segmentConfig.getContainer(), azurePath, accountConfig.getMaxTries());
 
     final DataSegment outSegment = segment
         .withSize(size)

@@ -111,7 +111,8 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
       blobItemIterator = storage.listBlobsWithPrefixInContainerSegmented(
           currentContainer,
           currentPrefix,
-          maxListingLength
+          maxListingLength,
+          config.getMaxTries()
       ).stream().iterator();
     }
     catch (Exception e) {

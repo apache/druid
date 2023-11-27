@@ -49,10 +49,7 @@ public class AzureClientFactory
   public BlobServiceClient getBlobServiceClient()
   {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net")
-        .retryOptions(new RetryOptions(
-            new ExponentialBackoffOptions().setMaxRetries(config.getMaxTries()).setBaseDelay(Duration.ofMillis(1000)).setMaxDelay(Duration.ofMillis(60000))
-        ));
+        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net");
 
     if (config.getKey() != null) {
       clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));

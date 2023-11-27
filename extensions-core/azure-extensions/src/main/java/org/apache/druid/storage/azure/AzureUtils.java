@@ -112,6 +112,7 @@ public class AzureUtils
   public static void deleteObjectsInPath(
       AzureStorage storage,
       AzureInputDataConfig config,
+      AzureAccountConfig accountConfig,
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       String bucket,
       String prefix,
@@ -128,7 +129,7 @@ public class AzureUtils
     while (iterator.hasNext()) {
       final CloudBlobHolder nextObject = iterator.next();
       if (filter.apply(nextObject)) {
-        storage.emptyCloudBlobDirectory(nextObject.getContainerName(), nextObject.getName());
+        storage.emptyCloudBlobDirectory(nextObject.getContainerName(), nextObject.getName(), accountConfig.getMaxTries());
       }
     }
   }
