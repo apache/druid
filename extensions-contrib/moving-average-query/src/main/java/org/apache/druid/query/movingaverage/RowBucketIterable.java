@@ -68,6 +68,7 @@ public class RowBucketIterable implements Iterable<RowBucket>
   static class RowBucketIterator implements Iterator<RowBucket>
   {
     private Yielder<RowBucket> yielder;
+    private RowBucket nexRowBucket;
     private DateTime endTime;
     private DateTime expectedBucket;
     private Period period;
@@ -120,6 +121,7 @@ public class RowBucketIterable implements Iterable<RowBucket>
         // standard case. return regular row
         yielder = yielder.next(currentBucket);
         expectedBucket = expectedBucket.plus(period);
+        nexRowBucket = currentBucket.getNextBucket();
         return currentBucket;
       } else if (!processedLastRow && yielder.get() != null && yielder.get().getNextBucket() == null) {
         // yielder.isDone, processing last row
@@ -139,6 +141,11 @@ public class RowBucketIterable implements Iterable<RowBucket>
         processedExtraRow = true;
         expectedBucket = expectedBucket.plus(period);
         return lastRow;
+      }  else if (!processedLastRow && nexRowBucket != null && nexRowBucket.getDateTime().compareTo(expectedBucket) <= 0) {
+        // yielder.isDone, processing last row
+        expectedBucket = expectedBucket.plus(period);
+        processedLastRow = true;
+        return nexRowBucket;
       } else if (expectedBucket.compareTo(endTime) < 0) {
         // add any trailing blank rows
         currentBucket = new RowBucket(expectedBucket, Collections.emptyList());
