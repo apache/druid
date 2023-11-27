@@ -4070,7 +4070,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("P1D"),
         false,
         42,
-        42,
         dataSchema,
         tuningConfig
     );
