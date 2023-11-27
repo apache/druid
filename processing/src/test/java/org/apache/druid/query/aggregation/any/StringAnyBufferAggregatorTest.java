@@ -51,7 +51,7 @@ public class StringAnyBufferAggregatorTest
   {
 
     final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
-    Integer maxStringBytes = 1024;
+    int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
@@ -79,7 +79,7 @@ public class StringAnyBufferAggregatorTest
   public void testBufferAggregateWithFoldCheck()
   {
     final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
-    Integer maxStringBytes = 1024;
+    int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
@@ -110,7 +110,7 @@ public class StringAnyBufferAggregatorTest
   {
 
     final String[] strings = {"CCCC", "AAAA", "BBBB", null, "EEEE"};
-    Integer maxStringBytes = 1024;
+    int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
@@ -139,7 +139,7 @@ public class StringAnyBufferAggregatorTest
   {
 
     final String[] strings = {null, "CCCC", "AAAA", "BBBB", "EEEE"};
-    Integer maxStringBytes = 1024;
+    int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
@@ -166,7 +166,7 @@ public class StringAnyBufferAggregatorTest
   public void testNonStringValue()
   {
     final Double[] doubles = {1.00, 2.00};
-    Integer maxStringBytes = 1024;
+    int maxStringBytes = 1024;
 
     TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);
 
@@ -195,7 +195,7 @@ public class StringAnyBufferAggregatorTest
   {
     List<String> mvd = Lists.newArrayList("AAAA", "AAAAB", "AAAC");
     final Object[] mvds = {null, "CCCC", mvd, "BBBB", "EEEE"};
-    Integer maxStringBytes = 1024;
+    int maxStringBytes = 1024;
 
     TestObjectColumnSelector<Object> objectColumnSelector = new TestObjectColumnSelector<>(mvds);
 
@@ -231,7 +231,7 @@ public class StringAnyBufferAggregatorTest
   {
     List<String> mvd = Lists.newArrayList("AAAA", "AAAAB", "AAAC");
     final Object[] mvds = {null, "CCCC", mvd, "BBBB", "EEEE"};
-    Integer maxStringBytes = 1024;
+    int maxStringBytes = 1024;
 
     TestObjectColumnSelector<Object> objectColumnSelector = new TestObjectColumnSelector<>(mvds);
 
