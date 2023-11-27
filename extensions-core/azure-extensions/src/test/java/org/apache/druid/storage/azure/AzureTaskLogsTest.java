@@ -50,8 +50,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
   private static final String PREFIX = "test/log";
   private static final String TASK_ID = "taskid";
   private static final String TASK_ID_NOT_FOUND = "taskidNotFound";
-  private static final int MAX_TRIES = 3;
-  private static final AzureTaskLogsConfig AZURE_TASK_LOGS_CONFIG = new AzureTaskLogsConfig(CONTAINER, PREFIX, MAX_TRIES);
+  private static final AzureTaskLogsConfig AZURE_TASK_LOGS_CONFIG = new AzureTaskLogsConfig(CONTAINER, PREFIX);
   private static final int MAX_KEYS = 1;
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
