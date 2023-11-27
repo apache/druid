@@ -74,7 +74,7 @@ public class AzureStorageTest extends EasyMockSupport
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
 
     replayAll();
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir("test", ""));
+    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir("test", "", null));
     verifyAll();
   }
 

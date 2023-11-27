@@ -199,12 +199,6 @@ public class AzureStorage
     blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
   }
 
-  public List<String> listDir(final String containerName, final String virtualDirPath)
-      throws BlobStorageException
-  {
-    return listDir(containerName, virtualDirPath, null);
-  }
-
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)
       throws BlobStorageException
   {
@@ -243,16 +237,6 @@ public class AzureStorage
   PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
       final String containerName,
       final String prefix,
-      int maxResults
-  ) throws BlobStorageException
-  {
-    return listBlobsWithPrefixInContainerSegmented(containerName, prefix, maxResults, null);
-  }
-
-  @VisibleForTesting
-  PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
-      final String containerName,
-      final String prefix,
       int maxResults,
       Integer maxAttempts
   ) throws BlobStorageException
@@ -264,7 +248,8 @@ public class AzureStorage
     );
   }
 
-  // If maxRetries is not specified, use the base BlobServiceClient to generate a BlobContainerClient. (It has no retry policy)
+  // If maxRetries is not specified, use the base BlobServiceClient to generate a BlobContainerClient.
+  // It has no retry policy and uses its own HttpClient, so building new BlobContainerClients is instant.
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
     return getBlobServiceClient().createBlobContainerIfNotExists(containerName);
