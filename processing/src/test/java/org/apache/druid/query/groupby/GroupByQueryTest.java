@@ -44,6 +44,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,7 +52,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class GroupByQueryTest
+public class GroupByQueryTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 

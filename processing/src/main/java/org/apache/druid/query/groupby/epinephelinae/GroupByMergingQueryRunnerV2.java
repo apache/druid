@@ -321,7 +321,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       throw DruidException.defensive(
           "Query needs %d merge buffers for GroupByMergingQueryRunnerV2, however only %d were provided.",
           numBuffers,
-          resource.getMergingQueryRunnerMergeBuffer()
+          resource.getNumMergingQueryRunnerMergeBuffers()
       );
     }
     final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = new ArrayList<>();

@@ -106,7 +106,7 @@ public class DataServerClientTest
         jsonMapper.writeValueAsBytes(Collections.singletonList(scanResultValue))
     );
 
-    ResponseContext responseContext = new DefaultResponseContext();
+    ResponseContext responseContext = DefaultResponseContext.createEmpty();
     Sequence<ScanResultValue> result = target.run(
         query,
         responseContext,

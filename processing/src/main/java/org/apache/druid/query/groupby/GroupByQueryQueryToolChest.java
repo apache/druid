@@ -161,6 +161,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     // .. 1. Historicals, Broker -> Which is using localWalker
     // MerginV2 ->
+    ResponseContext clonedContext = context.clone();
     Boolean usesGroupByMergingQueryRunner = (Boolean) query
         .getContext()
         .getOrDefault(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true);
@@ -171,18 +172,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         queryConfig
     );
     if (usesGroupByMergingQueryRunner) {
-      context.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, resource);
+      clonedContext.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, resource);
     }
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
           query,
           resource,
           runner,
-          context
+          clonedContext
       );
       Closer closer = Closer.create();
       closer.register(resource);
-      closer.register(() -> context.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS));
+      closer.register(() ->
+                          clonedContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS)
+      );
       return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {

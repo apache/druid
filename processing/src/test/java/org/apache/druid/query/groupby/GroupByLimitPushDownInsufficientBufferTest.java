@@ -53,6 +53,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -259,9 +260,9 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
 
-    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
+    // TODO(laksh)
     final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
-    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
+    // TODO(laksh)
     final TestBufferPool tooSmallMergePool = TestBufferPool.onHeap(255, 2);
 
     resourceCloser.register(() -> {
@@ -403,8 +404,22 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            theRunner.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            ),
+                            theRunner2.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            )
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
@@ -433,7 +448,12 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<ResultRow> queryResult = theRunner3.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = theRunner3.run(
+        QueryPlus.wrap(query.withOverriddenContext(
+            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+        )),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -492,8 +512,22 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            theRunner.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            ),
+                            theRunner2.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            )
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
@@ -530,7 +564,12 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         )
         .build();
 
-    Sequence<ResultRow> queryResult = theRunner3.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = theRunner3.run(
+        QueryPlus.wrap(query.withOverriddenContext(
+            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+        )),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(

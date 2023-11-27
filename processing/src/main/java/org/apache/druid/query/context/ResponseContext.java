@@ -557,6 +557,9 @@ public abstract class ResponseContext
 
   protected abstract Map<Key, Object> getDelegate();
 
+  @Override
+  public abstract ResponseContext clone();
+
   public Map<String, Object> toMap()
   {
     return CollectionUtils.mapKeys(getDelegate(), k -> k.getName());

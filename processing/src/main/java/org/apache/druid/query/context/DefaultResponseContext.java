@@ -21,6 +21,7 @@ package org.apache.druid.query.context;
 
 import org.apache.druid.guice.annotations.PublicApi;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,16 +31,33 @@ import java.util.Map;
 @PublicApi
 public class DefaultResponseContext extends ResponseContext
 {
+
+  private final HashMap<Key, Object> delegate;
+
+  private DefaultResponseContext()
+  {
+    this(Collections.emptyMap());
+  }
+
+  private DefaultResponseContext(final Map<Key, Object> delegate)
+  {
+    this.delegate = new HashMap<>(delegate);
+  }
+
   public static DefaultResponseContext createEmpty()
   {
     return new DefaultResponseContext();
   }
 
-  private final HashMap<Key, Object> delegate = new HashMap<>();
-
   @Override
   protected Map<Key, Object> getDelegate()
   {
     return delegate;
+  }
+
+  @Override
+  public ResponseContext clone()
+  {
+    return new DefaultResponseContext(delegate);
   }
 }

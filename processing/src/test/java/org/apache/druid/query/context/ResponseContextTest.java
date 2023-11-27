@@ -216,6 +216,12 @@ public class ResponseContextTest
       {
         return ImmutableMap.of(UNREGISTERED_KEY, "non-registered-key");
       }
+
+      @Override
+      public ResponseContext clone()
+      {
+        return this;
+      }
     };
     ResponseContext.createEmpty().merge(ctx);
   }

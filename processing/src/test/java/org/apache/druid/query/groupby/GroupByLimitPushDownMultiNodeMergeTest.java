@@ -55,6 +55,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -80,6 +81,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -98,7 +100,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
-public class GroupByLimitPushDownMultiNodeMergeTest
+public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandlingTest
 {
   public static final ObjectMapper JSON_MAPPER;
 
@@ -106,8 +108,9 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   private static final IndexIO INDEX_IO;
 
   private File tmpDir;
-  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory;
-  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactory2;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactoryBroker;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactoryHistorical;
+  private QueryRunnerFactory<ResultRow, GroupByQuery> groupByFactoryHistorical2;
   private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
   private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
@@ -530,15 +533,16 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     executorService = Execs.multiThreaded(3, "GroupByThreadPool[%d]");
 
     final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
-    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
-    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
-    final TestBufferPool mergePool2 = TestBufferPool.offHeap(10_000_000, 2);
+    final TestBufferPool mergePoolBroker = TestBufferPool.offHeap(10_000_000, 1);
+    final TestBufferPool mergePoolHistorical = TestBufferPool.offHeap(10_000_000, 1);
+    final TestBufferPool mergePoolHistorical2 = TestBufferPool.offHeap(10_000_000, 1);
 
     resourceCloser.register(() -> {
       // Verify that all objects have been returned to the pools.
       Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePool2.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePoolBroker.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePoolHistorical.getOutstandingObjectCount());
+      Assert.assertEquals(0, mergePoolHistorical2.getOutstandingObjectCount());
     });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
@@ -575,6 +579,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
@@ -584,23 +589,19 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         NOOP_QUERYWATCHER
     );
 
-    final GroupingEngine groupingEngine2 = new GroupingEngine(
-        druidProcessingConfig,
-        configSupplier,
-        bufferPool,
-        TestHelper.makeJsonMapper(),
-        new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
-    );
-
-    groupByFactory = new GroupByQueryRunnerFactory(
+    groupByFactoryBroker = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, mergePool)
+        new GroupByQueryQueryToolChest(groupingEngine, mergePoolBroker)
     );
 
-    groupByFactory2 = new GroupByQueryRunnerFactory(
-        groupingEngine2,
-        new GroupByQueryQueryToolChest(groupingEngine2, mergePool2)
+    groupByFactoryHistorical = new GroupByQueryRunnerFactory(
+        groupingEngine,
+        new GroupByQueryQueryToolChest(groupingEngine, mergePoolHistorical)
+    );
+
+    groupByFactoryHistorical2 = new GroupByQueryRunnerFactory(
+        groupingEngine,
+        new GroupByQueryQueryToolChest(groupingEngine, mergePoolHistorical2)
     );
   }
 
@@ -625,23 +626,26 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   @Test
   public void testDescendingNumerics()
   {
-    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getRunner1(2))
+        toolChestHistorical.mergeResults(
+            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(2))
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolChestHistorical
     );
 
+    QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            groupByFactory2.mergeRunners(executorService, getRunner2(3))
+        toolChestHistorical2.mergeResults(
+            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(3))
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolChestHistorical2
     );
+
+    QueryToolChest<ResultRow, GroupByQuery> toolChestBroker = groupByFactoryHistorical.getToolchest();
 
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
+        toolChestBroker.mergeResults(
             new QueryRunner<ResultRow>()
             {
               @Override
@@ -650,15 +654,29 @@ public class GroupByLimitPushDownMultiNodeMergeTest
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            theRunner.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            ),
+                            theRunner2.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            )
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
             }
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolChestBroker
     );
 
     QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
@@ -714,7 +732,12 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = finalRunner.run(
+        QueryPlus.wrap(query.withOverriddenContext(
+           ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+        )),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -762,23 +785,26 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
-    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getRunner1(0))
+        toolChestHistorical.mergeResults(
+            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(0))
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolChestHistorical
     );
 
+    QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            groupByFactory2.mergeRunners(executorService, getRunner2(1))
+        toolChestHistorical2.mergeResults(
+            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(1))
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolChestHistorical2
     );
+
+    QueryToolChest<ResultRow, GroupByQuery> toolchestBroker = groupByFactoryBroker.getToolchest();
 
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
+        toolchestBroker.mergeResults(
             new QueryRunner<ResultRow>()
             {
               @Override
@@ -787,15 +813,29 @@ public class GroupByLimitPushDownMultiNodeMergeTest
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            theRunner.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            ),
+                            theRunner2.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                ConcurrentResponseContext.createEmpty()
+                            )
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
             }
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolchestBroker
     );
 
     QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
@@ -839,7 +879,12 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = finalRunner.run(
+        QueryPlus.wrap(query.withOverriddenContext(
+            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+        )),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -903,23 +948,25 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
   private List<ResultRow> testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(Map<String, Object> context)
   {
-    QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getRunner1(4))
+        toolChestHistorical.mergeResults(
+            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(4))
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolChestHistorical
     );
 
+    QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            groupByFactory2.mergeRunners(executorService, getRunner2(5))
+        toolChestHistorical2.mergeResults(
+            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(5))
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolChestHistorical2
     );
 
+    QueryToolChest<ResultRow, GroupByQuery> toolchestBroker = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
+        toolchestBroker.mergeResults(
             new QueryRunner<ResultRow>()
             {
               @Override
@@ -928,15 +975,29 @@ public class GroupByLimitPushDownMultiNodeMergeTest
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            theRunner.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                responseContext
+                            ),
+                            theRunner2.run(
+                                queryPlus.withQuery(
+                                    queryPlus.getQuery().withOverriddenContext(
+                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                    )
+                                ),
+                                responseContext
+                            )
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
             }
         ),
-        (QueryToolChest) toolChest
+        (QueryToolChest) toolchestBroker
     );
 
     QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
@@ -963,7 +1024,12 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<ResultRow> queryResult = finalRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = finalRunner.run(
+        QueryPlus.wrap(query.withOverriddenContext(
+            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+        )),
+        ResponseContext.createEmpty()
+    );
     return queryResult.toList();
   }
 
@@ -972,11 +1038,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index = groupByIndices.get(qIndexNumber);
     QueryRunner<ResultRow> runner = makeQueryRunner(
-        groupByFactory,
+        groupByFactoryHistorical,
         SegmentId.dummy(index.toString()),
         new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
     );
-    runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
+    runners.add(groupByFactoryHistorical.getToolchest().preMergeQueryDecoration(runner));
     return runners;
   }
 
@@ -985,11 +1051,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     QueryableIndex index2 = groupByIndices.get(qIndexNumber);
     QueryRunner<ResultRow> tooSmallRunner = makeQueryRunner(
-        groupByFactory2,
+        groupByFactoryHistorical2,
         SegmentId.dummy(index2.toString()),
         new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))
     );
-    runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
+    runners.add(groupByFactoryHistorical2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
   }
 

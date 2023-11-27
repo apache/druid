@@ -144,7 +144,7 @@ public class LoadedSegmentDataProvider
     final int numRetriesOnMissingSegments = preparedQuery.context().getNumRetriesOnMissingSegments(DEFAULT_NUM_TRIES);
 
     log.debug("Querying severs[%s] for segment[%s], retries:[%d]", servers, segmentDescriptor, numRetriesOnMissingSegments);
-    final ResponseContext responseContext = new DefaultResponseContext();
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
 
     Pair<DataServerQueryStatus, Yielder<RowType>> statusSequencePair;
     try {

@@ -361,6 +361,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
+        () -> config,
+        DefaultGroupByQueryMetricsFactory.instance(),
         bufferPools.getMergePool()
     );
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
@@ -3745,7 +3747,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
+                    Arrays.asList(
+                        Sequences.simple(runner.run(queryPlus1, responseContext).toList()),
+                        Sequences.simple(runner.run(queryPlus2, responseContext).toList())
+                    )
                 )
             );
           }
@@ -3764,7 +3769,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(fullQuery, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
 
     List<ResultRow> allGranExpectedResults = Arrays.asList(
@@ -4091,7 +4095,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
+                    Arrays.asList(
+                        Sequences.simple(runner.run(queryPlus1, responseContext).toList()),
+                        Sequences.simple(runner.run(queryPlus2, responseContext).toList())
+                    )
                 )
             );
           }
@@ -4852,7 +4859,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
+                    Arrays.asList(
+                        Sequences.simple(runner.run(queryPlus1, responseContext).toList()),
+                        Sequences.simple(runner.run(queryPlus2, responseContext).toList())
+                    )
                 )
             );
           }
@@ -5294,7 +5304,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
+                    Arrays.asList(
+                        Sequences.simple(runner.run(queryPlus1, responseContext).toList()),
+                        Sequences.simple(runner.run(queryPlus2, responseContext).toList())
+                    )
                 )
             );
           }
@@ -5375,22 +5388,38 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
                 Sequences.simple(
-                    Arrays.asList(runner.run(queryPlus1, responseContext), runner.run(queryPlus2, responseContext))
+                    Arrays.asList(
+                        Sequences.simple(runner.run(queryPlus1, responseContext).toList()),
+                        Sequences.simple(runner.run(queryPlus2, responseContext).toList())
+                    )
                 )
             );
           }
         }
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
     // add an extra layer of merging, simulate broker forwarding query to historical
     TestHelper.assertExpectedObjects(
         expectedResults,
         factory.getToolchest().postMergeQueryDecoration(
             factory.getToolchest().mergeResults(
-                factory.getToolchest().preMergeQueryDecoration(mergedRunner)
+                (queryPlus, responseContext) ->
+                    factory.getToolchest()
+                           .preMergeQueryDecoration(mergedRunner)
+                           .run(
+                               queryPlus.withQuery(
+                                   queryPlus.getQuery().withOverriddenContext(
+                                       ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                   )
+                               ),
+                               responseContext
+                           )
             )
-        ).run(QueryPlus.wrap(query)),
+        ).run(QueryPlus.wrap(
+            query.withOverriddenContext(
+                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+            )
+        )),
         "merged"
     );
 
@@ -5398,9 +5427,23 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         expectedResults,
         factory.getToolchest().postMergeQueryDecoration(
             factory.getToolchest().mergeResults(
-                factory.getToolchest().preMergeQueryDecoration(mergedRunner)
+                (queryPlus, responseContext) ->
+                    factory.getToolchest()
+                           .preMergeQueryDecoration(mergedRunner)
+                           .run(
+                               queryPlus.withQuery(
+                                   queryPlus.getQuery().withOverriddenContext(
+                                       ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                   )
+                               ),
+                               responseContext
+                           )
             )
-        ).run(QueryPlus.wrap(expressionQuery)),
+        ).run(QueryPlus.wrap(
+            expressionQuery.withOverriddenContext(
+                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+            )
+        )),
         "merged"
     );
   }
@@ -11098,15 +11141,14 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                   queryPlus3.getQuery().getResultOrdering(),
                   Sequences.simple(
                       Arrays.asList(
-                          runner.run(queryPlus1, responseContext1),
-                          runner.run(queryPlus2, responseContext1)
+                          Sequences.simple(runner.run(queryPlus1, responseContext1).toList()),
+                          Sequences.simple(runner.run(queryPlus2, responseContext1).toList())
                       )
                   )
               )
-          ).run(queryPlus, responseContext);
+          ).run(queryPlus, ResponseContext.createEmpty());
         }
     );
-    Map<String, Object> context = new HashMap<>();
     List<ResultRow> allGranExpectedResults = Arrays.asList(
         makeRow(allGranQuery, "2011-04-02", "qualityLen", 4L, "rows", 2L),
         makeRow(allGranQuery, "2011-04-02", "qualityLen", 6L, "rows", 4L),
@@ -11166,12 +11208,19 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                     queryPlus3.getQuery().getResultOrdering(),
                     Sequences.simple(
                         Arrays.asList(
-                            runner.run(queryPlus1, responseContext1),
-                            runner.run(queryPlus2, responseContext1)
+                            Sequences.simple(runner.run(queryPlus1, responseContext1).toList()),
+                            Sequences.simple(runner.run(queryPlus2, responseContext1).toList())
                         )
                     )
                 )
-            ).run(queryPlus, responseContext);
+            ).run(
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withOverriddenContext(
+                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                    )
+                ),
+                responseContext
+            );
           }
         }
     );
@@ -11186,7 +11235,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
-        mergedRunner.run(QueryPlus.wrap(allGranQuery)),
+        mergedRunner.run(QueryPlus.wrap(allGranQuery.withOverriddenContext(
+            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+        ))),
         "merged"
     );
   }
@@ -11233,12 +11284,19 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                     queryPlus3.getQuery().getResultOrdering(),
                     Sequences.simple(
                         Arrays.asList(
-                            runner.run(queryPlus1, responseContext1),
-                            runner.run(queryPlus2, responseContext1)
+                            Sequences.simple(runner.run(queryPlus1, responseContext1).toList()),
+                            Sequences.simple(runner.run(queryPlus2, responseContext1).toList())
                         )
                     )
                 )
-            ).run(queryPlus, responseContext);
+            ).run(
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withOverriddenContext(
+                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                    )
+                ),
+                responseContext
+            );
           }
         }
     );
@@ -11251,7 +11309,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(allGranQuery, "2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<ResultRow> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
+    Iterable<ResultRow> results =
+        mergedRunner.run(
+            QueryPlus.wrap(allGranQuery.withOverriddenContext(
+                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+            ))
+        ).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -11293,17 +11356,31 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 )
             );
 
+            Object groupByResource = responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+
             return factory.getToolchest().mergeResults(
                 (queryPlus3, responseContext1) -> new MergeSequence<>(
                     queryPlus3.getQuery().getResultOrdering(),
                     Sequences.simple(
                         Arrays.asList(
-                            runner.run(queryPlus1, responseContext1),
-                            runner.run(queryPlus2, responseContext1)
+                            Sequences.simple(runner.run(queryPlus1, responseContext1).toList()),
+                            Sequences.simple(runner.run(queryPlus2, responseContext1).toList())
                         )
                     )
                 )
-            ).run(queryPlus, responseContext);
+            ).run(
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withOverriddenContext(
+                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                    )
+                ),
+                responseContext
+            ).withBaggage(() -> {
+              responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+              if (groupByResource != null) {
+                responseContext.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, groupByResource);
+              }
+            });
           }
         }
     );
@@ -11365,12 +11442,19 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                     queryPlus3.getQuery().getResultOrdering(),
                     Sequences.simple(
                         Arrays.asList(
-                            runner.run(queryPlus1, responseContext1),
-                            runner.run(queryPlus2, responseContext1)
+                            Sequences.simple(runner.run(queryPlus1, responseContext1).toList()),
+                            Sequences.simple(runner.run(queryPlus2, responseContext1).toList())
                         )
                     )
                 )
-            ).run(queryPlus, responseContext);
+            ).run(
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withOverriddenContext(
+                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                    )
+                ),
+                responseContext
+            );
           }
         }
     );
@@ -11383,7 +11467,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<ResultRow> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
+    Iterable<ResultRow> results =
+        mergedRunner.run(
+                        QueryPlus.wrap(allGranQuery.withOverriddenContext(
+                            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+                        ))
+                    )
+                    .toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -11447,12 +11537,19 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                     queryPlus3.getQuery().getResultOrdering(),
                     Sequences.simple(
                         Arrays.asList(
-                            runner.run(queryPlus1, responseContext1),
-                            runner.run(queryPlus2, responseContext1)
+                            Sequences.simple(runner.run(queryPlus1, responseContext1).toList()),
+                            Sequences.simple(runner.run(queryPlus2, responseContext1).toList())
                         )
                     )
                 )
-            ).run(queryPlus, responseContext);
+            ).run(
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withOverriddenContext(
+                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                    )
+                ),
+                responseContext
+            );
           }
         }
     );
@@ -11465,7 +11562,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(allGranQuery, "2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<ResultRow> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
+    Iterable<ResultRow> results =
+        mergedRunner.run(
+            QueryPlus.wrap(allGranQuery.withOverriddenContext(
+                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+            ))
+        ).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
