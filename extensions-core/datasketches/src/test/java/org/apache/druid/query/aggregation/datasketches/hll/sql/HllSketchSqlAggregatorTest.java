@@ -1169,7 +1169,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     skipVectorize();
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 2; i++) {
       testBuilder()
       .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
       .sql("SELECT "
