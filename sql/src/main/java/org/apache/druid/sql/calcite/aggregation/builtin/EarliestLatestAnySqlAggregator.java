@@ -162,7 +162,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleAnyAggregatorFactory(name, fieldName);
           case STRING:
-          case COMPLEX:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes, aggregateMultipleValues);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "ANY", type);
