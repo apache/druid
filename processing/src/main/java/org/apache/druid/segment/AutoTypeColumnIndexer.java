@@ -169,23 +169,24 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     ExprEval<?> eval = ExprEval.bestEffortOf(dimValues);
     try {
       eval = eval.castTo(castToExpressionType);
-      FieldIndexer fieldIndexer = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
-      if (fieldIndexer == null) {
-        estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(NestedPathFinder.JSON_PATH_ROOT);
-        fieldIndexer = new FieldIndexer(globalDictionary);
-        fieldIndexers.put(NestedPathFinder.JSON_PATH_ROOT, fieldIndexer);
-      }
-      StructuredDataProcessor.ProcessedValue<?> rootValue = fieldIndexer.processValue(eval);
-      long effectiveSizeBytes = rootValue.getSize();
-      // then, we add the delta of size change to the global dictionaries to account for any new space added by the
-      // 'raw' data
-      effectiveSizeBytes += (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
-      effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
-      return new EncodedKeyComponent<>(StructuredData.wrap(eval.value()), effectiveSizeBytes);
     }
     catch (IAE invalidCast) {
       throw new ParseException(eval.asString(), invalidCast, "Cannot coerce to requested type [%s]", castToType);
     }
+
+    FieldIndexer fieldIndexer = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
+    if (fieldIndexer == null) {
+      estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(NestedPathFinder.JSON_PATH_ROOT);
+      fieldIndexer = new FieldIndexer(globalDictionary);
+      fieldIndexers.put(NestedPathFinder.JSON_PATH_ROOT, fieldIndexer);
+    }
+    StructuredDataProcessor.ProcessedValue<?> rootValue = fieldIndexer.processValue(eval);
+    long effectiveSizeBytes = rootValue.getSize();
+    // then, we add the delta of size change to the global dictionaries to account for any new space added by the
+    // 'raw' data
+    effectiveSizeBytes += (globalDictionary.sizeInBytes() - oldDictSizeInBytes);
+    effectiveSizeBytes += (estimatedFieldKeySize - oldFieldKeySize);
+    return new EncodedKeyComponent<>(StructuredData.wrap(eval.value()), effectiveSizeBytes);
   }
 
   /**

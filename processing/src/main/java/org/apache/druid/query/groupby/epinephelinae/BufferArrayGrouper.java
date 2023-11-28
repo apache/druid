@@ -53,7 +53,7 @@ import java.util.NoSuchElementException;
  * different segments cannot be currently retrieved, this grouper can be used only when performing per-segment query
  * execution.
  */
-public class BufferArrayGrouper implements VectorGrouper, IntGrouper
+public class  BufferArrayGrouper implements VectorGrouper, IntGrouper
 {
   private final Supplier<ByteBuffer> bufferSupplier;
   private final AggregatorAdapters aggregators;

@@ -73,7 +73,10 @@ public class DimensionSchemaUtils
                                     .getDimensionSchema(capabilities);
       }
 
-      return new AutoTypeColumnSchema(column, type != null && type.is(ValueType.COMPLEX) ? type : null);
+      if (type != null && (type.isPrimitive() || type.isPrimitiveArray())) {
+        return new AutoTypeColumnSchema(column, type);
+      }
+      return new AutoTypeColumnSchema(column, null);
     } else {
       // if schema information is not available, create a string dimension
       if (type == null) {
