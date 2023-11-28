@@ -754,12 +754,11 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         return this;
       }
       if (otherFormat instanceof Format) {
-        final boolean otherHasNulls = ((Format) otherFormat).hasNulls;
-        final boolean otherEnforceLogicalType = ((Format) otherFormat).enforceLogicalType;
-        if (!getLogicalType().equals(otherFormat.getLogicalType())) {
-          return new Format(ColumnType.NESTED_DATA, hasNulls || otherHasNulls, false);
+        final Format other = (Format) otherFormat;
+        if (!getLogicalType().equals(other.getLogicalType())) {
+          return new Format(ColumnType.NESTED_DATA, hasNulls || other.hasNulls, false);
         }
-        return new Format(logicalType, hasNulls || otherHasNulls, enforceLogicalType || otherEnforceLogicalType);
+        return new Format(logicalType, hasNulls || other.hasNulls, enforceLogicalType || other.enforceLogicalType);
       }
       throw new ISE(
           "Cannot merge columns of type[%s] and format[%s] and with [%s] and [%s]",

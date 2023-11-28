@@ -351,16 +351,16 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   {
     ColumnDescriptor.Builder descriptorBuilder = new ColumnDescriptor.Builder();
 
-    final NestedCommonFormatColumnPartSerde partSerde = NestedCommonFormatColumnPartSerde.serializerBuilder()
-                                                                                         .withLogicalType(logicalType)
-                                                                                         .withHasNulls(serializer.hasNulls())
-                                                                                         .isVariantType(isVariantType)
-                                                                                         .withEnforceLogicalType(
-                                                                                             castToType != null)
-                                                                                         .withByteOrder(ByteOrder.nativeOrder())
-                                                                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                                                                         .withSerializer(serializer)
-                                                                                         .build();
+    final NestedCommonFormatColumnPartSerde partSerde =
+        NestedCommonFormatColumnPartSerde.serializerBuilder()
+                                         .withLogicalType(logicalType)
+                                         .withHasNulls(serializer.hasNulls())
+                                         .isVariantType(isVariantType)
+                                         .withEnforceLogicalType(castToType != null)
+                                         .withByteOrder(ByteOrder.nativeOrder())
+                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                         .withSerializer(serializer)
+                                         .build();
     descriptorBuilder.setValueType(ValueType.COMPLEX) // this doesn't really matter... you could say.. its complicated..
                      .setHasMultipleValues(false)
                      .addSerde(partSerde);
