@@ -4585,6 +4585,16 @@ libraries:
 
 ---
 
+name: gson
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 2.10.1
+libraries:
+  - com.google.code.gson: gson
+
+---
+
 name: com.kstruct gethostname4j
 license_category: binary
 version: 1.0.0

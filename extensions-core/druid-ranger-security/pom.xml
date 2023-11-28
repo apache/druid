@@ -187,6 +187,13 @@
             <scope>compile</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <scope>compile</scope>
+            <version>${gson.version}</version>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
