@@ -73,6 +73,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
+import org.apache.druid.query.groupby.GroupByUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.server.QueryResource;
@@ -201,9 +202,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final boolean specificSegments
   )
   {
-    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext)
+    QueryPlus<T> queryPlus1 = queryPlus.withQuery(
+        queryPlus.getQuery().withOverriddenContext(
+            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+        )
+    );
+    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus1, responseContext)
         .run(timelineConverter, specificSegments);
-    initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, result.numQueryServers);
+    initializeNumRemainingResponsesInResponseContext(queryPlus1.getQuery(), responseContext, result.numQueryServers);
     return result.sequence;
   }
 
