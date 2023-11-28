@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordination;
 
+import org.apache.druid.segment.realtime.appenderator.SinksSchema;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -32,4 +33,8 @@ public interface DataSegmentAnnouncer
   void announceSegments(Iterable<DataSegment> segments) throws IOException;
 
   void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
+
+  void announceSinksSchema(String taskId, SinksSchema sinksSchema, SinksSchema sinksSchemaChange);
+
+  void unannouceTask(String taskId);
 }

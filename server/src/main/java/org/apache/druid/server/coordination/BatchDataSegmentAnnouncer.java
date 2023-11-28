@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.realtime.appenderator.SinksSchema;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -77,6 +78,9 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
   private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
+
+  private final ConcurrentMap<String, SinksSchema> taskSinksSchema = new ConcurrentHashMap<>();
+
   @Nullable
   private final SegmentZNode dummyZnode;
 
@@ -310,6 +314,19 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     }
   }
 
+  @Override
+  public void announceSinksSchema(String taskId, SinksSchema sinksSchema, SinksSchema sinksSchemaChange)
+  {
+    changes.addChangeRequest(new SinkSchemaChangeRequest(sinksSchemaChange));
+    taskSinksSchema.put(taskId, sinksSchema);
+  }
+
+  @Override
+  public void unannouceTask(String taskId)
+  {
+    taskSinksSchema.remove(taskId);
+  }
+
   /**
    * Returns Future that lists the segment load/drop requests since given counter.
    */
@@ -330,8 +347,20 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
             }
         );
 
+        Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
+            taskSinksSchema.values(),
+            new Function<SinksSchema, DataSegmentChangeRequest>()
+            {
+              @Override
+              public SinkSchemaChangeRequest apply(SinksSchema input)
+              {
+                return new SinkSchemaChangeRequest(input);
+              }
+            }
+        );
+        Iterable<DataSegmentChangeRequest> changeRequestIterables = Iterables.concat(segments, sinkSchema);
         SettableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = SettableFuture.create();
-        future.set(ChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(segments)));
+        future.set(ChangeRequestsSnapshot.success(changes.getLastCounter(), Lists.newArrayList(changeRequestIterables)));
         return future;
       }
     } else {

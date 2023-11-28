@@ -31,6 +31,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.segment.realtime.appenderator.SinksSchema;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -112,6 +113,12 @@ public class CoordinatorServerView implements InventoryView
           {
             initialized.countDown();
             runTimelineCallbacks(TimelineCallback::timelineInitialized);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemaUpdate(SinksSchema sinksSchema)
+          {
             return ServerView.CallbackAction.CONTINUE;
           }
         }

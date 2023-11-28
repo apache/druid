@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordination;
 
+import org.apache.druid.segment.realtime.appenderator.SinksSchema;
 import org.apache.druid.timeline.DataSegment;
 
 /**
@@ -43,6 +44,16 @@ public class NoopDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   @Override
   public void unannounceSegments(Iterable<DataSegment> segments)
+  {
+  }
+
+  @Override
+  public void announceSinksSchema(String taskId, SinksSchema sinksSchema, SinksSchema sinksSchemaChange)
+  {
+  }
+
+  @Override
+  public void unannouceTask(String taskId)
   {
   }
 }

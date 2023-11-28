@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import org.apache.druid.segment.realtime.appenderator.SinksSchema;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
@@ -93,6 +94,8 @@ public interface ServerView
     CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment);
 
     CallbackAction segmentViewInitialized();
+
+    CallbackAction segmentSchemaUpdate(SinksSchema sinksSchema);
   }
 
   abstract class BaseSegmentCallback implements SegmentCallback
@@ -105,6 +108,12 @@ public interface ServerView
 
     @Override
     public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
+    {
+      return CallbackAction.CONTINUE;
+    }
+
+    @Override
+    public CallbackAction segmentSchemaUpdate(SinksSchema sinksSchema)
     {
       return CallbackAction.CONTINUE;
     }

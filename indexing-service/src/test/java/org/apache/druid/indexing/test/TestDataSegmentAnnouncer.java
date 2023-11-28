@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.test;
 
 import com.google.common.collect.Sets;
+import org.apache.druid.segment.realtime.appenderator.SinksSchema;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 
@@ -57,4 +58,13 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
     }
   }
 
+  @Override
+  public void announceSinksSchema(String taskId, SinksSchema sinksSchema, SinksSchema sinksSchemaChange)
+  {
+  }
+
+  @Override
+  public void unannouceTask(String taskId)
+  {
+  }
 }

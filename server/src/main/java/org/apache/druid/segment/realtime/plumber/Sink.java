@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -30,6 +31,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.column.ColumnFormat;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
@@ -40,6 +42,7 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import java.util.Arrays;
@@ -47,12 +50,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
@@ -69,7 +74,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final long maxBytesInMemory;
   private final boolean useMaxMemoryEstimates;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
-  private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
+  private final Map<String, ColumnFormat> dimColumnFormat = Maps.newLinkedHashMap();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
   private final String dedupColumn;
   private final Set<Long> dedupSet = new HashSet<>();
@@ -352,15 +357,12 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
           newCount = lastHydrant.getCount() + 1;
           if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
-            Map<String, ColumnFormat> oldFormat;
             if (lastHydrant.hasSwapped()) {
-              oldFormat = new HashMap<>();
               ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
               try {
                 QueryableIndex oldIndex = segment.asQueryableIndex();
                 for (String dim : oldIndex.getAvailableDimensions()) {
-                  dimOrder.add(dim);
-                  oldFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
+                  dimColumnFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
                 }
               }
               finally {
@@ -368,10 +370,10 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
               }
             } else {
               IncrementalIndex oldIndex = lastHydrant.getIndex();
-              dimOrder.addAll(oldIndex.getDimensionOrder());
-              oldFormat = oldIndex.getColumnFormats();
+              dimColumnFormat.putAll(oldIndex.getColumnFormats());
+
             }
-            newIndex.loadDimensionIterable(dimOrder, oldFormat);
+            newIndex.loadDimensionIterable(dimColumnFormat);
           }
         }
         currHydrant = new FireHydrant(newIndex, newCount, getSegment().getId());
@@ -387,6 +389,16 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     }
 
     return old;
+  }
+
+  public Map<String, ColumnType> getDimensionsForSink()
+  {
+    synchronized (hydrantLock) {
+      Map<String, ColumnType> result = Maps.newLinkedHashMap();
+      result.putAll(CollectionUtils.mapValues(dimColumnFormat, v -> v.toColumnCapabilities().toColumnType()));
+      result.putAll(CollectionUtils.mapValues(currHydrant.getIndex().getColumnFormats(),v -> v.toColumnCapabilities().toColumnType()));
+      return result;
+    }
   }
 
   @Override

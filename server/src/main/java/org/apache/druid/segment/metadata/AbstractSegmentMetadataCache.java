@@ -56,6 +56,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.realtime.appenderator.SinksSchema;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -98,16 +99,17 @@ import java.util.stream.StreamSupport;
  */
 public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformation>
 {
-  // Newest segments first, so they override older ones.
-  private static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
-      .comparing((SegmentId segmentId) -> segmentId.getInterval().getStart())
-      .reversed()
-      .thenComparing(Function.identity());
-
   private static final EmittingLogger log = new EmittingLogger(AbstractSegmentMetadataCache.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
   private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
+
+  // Newest segments first, so they override older ones.
+  protected static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
+      .comparing((SegmentId segmentId) -> segmentId.getInterval().getStart())
+      .reversed()
+      .thenComparing(Function.identity());
+
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final SegmentMetadataCacheConfig config;
   // Escalator, so we can attach an authentication result to queries we generate.
@@ -117,6 +119,26 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
+
+  // For awaitInitialization.
+  private final CountDownLatch initialized = new CountDownLatch(1);
+
+  // All mutable segments.
+  @GuardedBy("lock")
+  private final TreeSet<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
+
+  // Configured context to attach to internally generated queries.
+  private final InternalQueryConfig internalQueryConfig;
+
+  @GuardedBy("lock")
+  private boolean refreshImmediately = false;
+
+  /**
+   * Counts the total number of known segments. This variable is used only for the segments table in the system schema
+   * to initialize a map with a more proper size when it creates a snapshot. As a result, it doesn't have to be exact,
+   * and thus there is no concurrency control for this variable.
+   */
+  private int totalSegments = 0;
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
    * Use SortedMap for segments so they are merged in deterministic order, from older to newer.
@@ -161,28 +183,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    *
    * Readers can simply delegate the locking to the concurrent map and iterate map entries.
    */
-  private final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
+  protected final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
       = new ConcurrentHashMap<>();
-
-  // For awaitInitialization.
-  private final CountDownLatch initialized = new CountDownLatch(1);
-
-  // All mutable segments.
-  @GuardedBy("lock")
-  private final TreeSet<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
-
-  // Configured context to attach to internally generated queries.
-  private final InternalQueryConfig internalQueryConfig;
-
-  @GuardedBy("lock")
-  private boolean refreshImmediately = false;
-
-  /**
-   * Counts the total number of known segments. This variable is used only for the segments table in the system schema
-   * to initialize a map with a more proper size when it creates a snapshot. As a result, it doesn't have to be exact,
-   * and thus there is no concurrency control for this variable.
-   */
-  private int totalSegments = 0;
 
   protected final ExecutorService callbackExec;
 

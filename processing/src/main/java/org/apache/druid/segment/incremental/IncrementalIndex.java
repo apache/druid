@@ -900,6 +900,23 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     }
   }
 
+  public void loadDimensionIterable(
+      Map<String, ColumnFormat> oldColumnCapabilities
+  )
+  {
+    synchronized (dimensionDescs) {
+      if (!dimensionDescs.isEmpty()) {
+        throw new ISE("Cannot load dimension order when existing order[%s] is not empty.", dimensionDescs.keySet());
+      }
+      for (Map.Entry<String, ColumnFormat> columnFormatEntry : oldColumnCapabilities.entrySet()) {
+        String dim = columnFormatEntry.getKey();
+        if (dimensionDescs.get(dim) == null) {
+          addNewDimension(dim, columnFormatEntry.getValue().getColumnHandler(dim));
+        }
+      }
+    }
+  }
+
   @GuardedBy("dimensionDescs")
   private DimensionDesc addNewDimension(String dim, DimensionHandler handler)
   {
