@@ -3322,6 +3322,7 @@ module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
 libraries:
   - io.swagger: swagger-annotations
+  - io.swagger.core.v3: swagger-annotations
 
 ---
 
@@ -3343,6 +3344,18 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
+
+
+---
+
+name: swagger-annotations
+version: 2.1.10
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger: swagger-annotations
+  - io.swagger.core.v3: swagger-annotations
 
 ---
 
