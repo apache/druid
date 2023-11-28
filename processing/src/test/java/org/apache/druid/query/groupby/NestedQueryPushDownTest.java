@@ -720,14 +720,14 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
                 .simple(
                     ImmutableList.of(
                         Sequences.map(
-                            segment1Runner.run(queryPlus, responseContext),
+                            segment1Runner.run(queryPlus, ResponseContext.createEmpty()),
                             toolChest.makePreComputeManipulatorFn(
                                 (GroupByQuery) queryPlus.getQuery(),
                                 MetricManipulatorFns.deserializing()
                             )
                         ),
                         Sequences.map(
-                            segment2Runner.run(queryPlus, responseContext),
+                            segment2Runner.run(queryPlus, ResponseContext.createEmpty()),
                             toolChest.makePreComputeManipulatorFn(
                                 (GroupByQuery) queryPlus.getQuery(),
                                 MetricManipulatorFns.deserializing()
