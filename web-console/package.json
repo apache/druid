@@ -73,6 +73,7 @@
     "@druid-toolkit/visuals-react": "^0.3.3",
     "ace-builds": "~1.4.14",
     "axios": "^0.26.1",
+    "chronoshift": "^0.10.0",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.2.0",
     "core-js": "^3.10.1",

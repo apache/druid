@@ -5,6 +5,9 @@ sidebar_label: "Apache Kafka operations"
 description: "Reference topic for running and maintaining Apache Kafka supervisors"
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -149,9 +152,10 @@ twice, resulting in missing or duplicate data.
 The following example shows how to reset offsets for a kafka supervisor with the name `social_media`. Let's say the supervisor is reading
 from two kafka topics `ads_media_foo` and `ads_media_bar` and has the stored offsets: `{"ads_media_foo:0": 0, "ads_media_foo:1": 10, "ads_media_bar:0": 20, "ads_media_bar:1": 40}`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="1" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsets"
@@ -159,7 +163,8 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/so
 --data-raw '{"type":"kafka","partitions":{"type":"end","stream":"ads_media_foo|ads_media_bar","partitionOffsetMap":{"ads_media_foo:0": 3, "ads_media_bar:1": 12}}}'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="2" label="HTTP">
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/resetOffsets HTTP/1.1
@@ -178,10 +183,12 @@ Content-Type: application/json
   }
 }
 ```
+
 The above operation will reset offsets for `ads_media_foo` partition 0 and `ads_media_bar` partition 1 to offsets 3 and 12 respectively. After a successful reset,
 when the supervisor's tasks restart, they will resume reading from `{"ads_media_foo:0": 3, "ads_media_foo:1": 10, "ads_media_bar:0": 20, "ads_media_bar:1": 12}`.
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 

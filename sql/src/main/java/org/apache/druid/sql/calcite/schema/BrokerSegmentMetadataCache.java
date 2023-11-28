@@ -208,7 +208,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       if (rowSignature == null) {
         log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
         tables.remove(dataSource);
-        return;
+        continue;
       }
 
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);

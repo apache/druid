@@ -858,7 +858,8 @@ The following is a sample spec for a HDFS warehouse source:
         },
         "warehouseSource": {
             "type": "hdfs"
-        }
+        },
+        "snapshotTime": "2023-06-01T00:00:00.000Z",
       },
       "inputFormat": {
         "type": "parquet"
@@ -937,10 +938,11 @@ The following is a sample spec for a S3 warehouse source:
 |--------|-----------|---------|
 |type|Set the value to `iceberg`.|yes|
 |tableName|The Iceberg table name configured in the catalog.|yes|
-|namespace|The Iceberg namespace associated with the table|yes|
-|icebergFilter|The JSON Object that filters data files within a snapshot|no|
-|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table|yes|
-|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse|yes|
+|namespace|The Iceberg namespace associated with the table.|yes|
+|icebergFilter|The JSON Object that filters data files within a snapshot.|no|
+|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table.|yes|
+|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse.|yes|
+|snapshotTime|Timestamp in ISO8601 DateTime format that will be used to fetch the most recent snapshot as of this time.|no|
 
 ###Catalog Object
 
