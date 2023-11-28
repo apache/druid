@@ -158,13 +158,13 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   public static Collection<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{true, false, true, true, false, true}
-//        new Object[]{true, false, true, false, false, true},
-//        new Object[]{false, true, true, false, false, true},
-//        new Object[]{false, false, false, false, false, true},
-//        new Object[]{false, false, true, true, false, true},
-//        new Object[]{false, false, false, true, true, true},
-//        new Object[]{true, true, false, false, false, false}
+        new Object[]{true, true, true, true, false, true},
+        new Object[]{true, false, true, false, false, true},
+        new Object[]{false, true, true, false, false, true},
+        new Object[]{false, false, false, false, false, true},
+        new Object[]{false, false, true, true, false, true},
+        new Object[]{false, false, false, true, true, true},
+        new Object[]{true, true, false, false, false, false}
     );
   }
 

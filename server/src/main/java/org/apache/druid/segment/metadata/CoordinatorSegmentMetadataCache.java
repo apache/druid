@@ -180,26 +180,32 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
               segmentsMap = new ConcurrentSkipListMap<>(SEGMENT_ORDER);
             }
             for (Map.Entry<SegmentId, SinksSchema.SinkSchemaChange> entry : segmentIdSinkSchemaChangeMap.entrySet()) {
-              segmentsMap.compute(entry.getKey(), (segmentId, segmentMetadata) -> {
-                      if (segmentMetadata == null) {
-                        // ignore
-                        // log, alert, counter
-                        // queue
-                        // by design can't occur, alert log
-                      } else {
-                        // We know this segment.
-                        segmentMetadata = AvailableSegmentMetadata
-                            .from(segmentMetadata)
-                            .withRowSignature(mergeOrCreateRowSignature(segmentMetadata.getRowSignature(), sinksSchema.getColumnMapping(), entry.getValue()))
-                            .build();
-                      }
-                      return segmentMetadata;
+              segmentsMap.compute(
+                  entry.getKey(), (segmentId, segmentMetadata) -> {
+                    if (segmentMetadata == null) {
+                      // ignore
+                      // log, alert, counter
+                      // queue
+                      // by design can't occur, alert log
+                    } else {
+                      // We know this segment.
+                      segmentMetadata = AvailableSegmentMetadata
+                          .from(segmentMetadata)
+                          .withRowSignature(mergeOrCreateRowSignature(
+                              segmentMetadata.getRowSignature(),
+                              sinksSchema.getColumnMapping(),
+                              entry.getValue()
+                          ))
+                          .build();
                     }
-                );
-              }
-            return segmentsMap;
-          });
+                    return segmentMetadata;
+                  }
+              );
             }
+            return segmentsMap;
+          }
+      );
+    }
   }
 
   private RowSignature mergeOrCreateRowSignature(
@@ -224,7 +230,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       for (String column : previous.getColumnNames()) {
         final ColumnType columnType =
             previous.getColumnType(column)
-                        .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
+                    .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
 
         columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
       }

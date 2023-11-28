@@ -78,7 +78,6 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.checkerframework.checker.nullness.Opt;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

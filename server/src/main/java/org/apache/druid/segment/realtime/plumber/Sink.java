@@ -423,7 +423,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     synchronized (hydrantLock) {
       Map<String, ColumnType> result = Maps.newLinkedHashMap();
       result.putAll(CollectionUtils.mapValues(dimColumnFormat, v -> v.toColumnCapabilities().toColumnType()));
-      result.putAll(CollectionUtils.mapValues(currHydrant.getIndex().getColumnFormats(),v -> v.toColumnCapabilities().toColumnType()));
+      result.putAll(CollectionUtils.mapValues(currHydrant.getIndex().getColumnFormats(), v -> v.toColumnCapabilities().toColumnType()));
       return result;
     }
   }
