@@ -32,7 +32,7 @@ public class StringAnyAggregator implements Aggregator
   private final int maxStringBytes;
   private boolean isFound;
   private String foundValue;
-  final boolean aggregateMultipleValues;
+  private final boolean aggregateMultipleValues;
 
   public StringAnyAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes, boolean aggregateMultipleValues)
   {

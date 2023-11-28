@@ -253,7 +253,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null, true);
         break;
       case 2:
-        Integer maxStringBytes = getMaxStringBytes(rexNodes, aggregateCall, plannerContext);
+        Integer maxStringBytes = getMaxStringBytes(rexNodes.get(1), aggregateCall, plannerContext);
         if (maxStringBytes == null) {
           return null;
         }
@@ -267,7 +267,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         );
         break;
       case 3:
-        maxStringBytes = getMaxStringBytes(rexNodes, aggregateCall, plannerContext);
+        maxStringBytes = getMaxStringBytes(rexNodes.get(1), aggregateCall, plannerContext);
         if (maxStringBytes == null) {
           return null;
         }
@@ -306,18 +306,18 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   }
 
   private Integer getMaxStringBytes(
-      final List<RexNode> rexNodes,
+      final RexNode rexNode,
       final AggregateCall aggregateCall,
       final PlannerContext plannerContext
   )
   {
     try {
-      return RexLiteral.intValue(Preconditions.checkNotNull(rexNodes.get(1)));
+      return RexLiteral.intValue(Preconditions.checkNotNull(rexNode));
     }
     catch (Exception ae) {
       plannerContext.setPlanningError(
           "The second argument '%s' to function '%s' is not a number",
-          rexNodes.get(1),
+          rexNode,
           aggregateCall.getName()
       );
       return null;

@@ -91,15 +91,14 @@ public class StringAnyVectorAggregator implements VectorAggregator
             if (row.size() > 1) {
               List<String> arrayList = new ArrayList<>();
               row.forEach(rowIndex -> {
-                String chopped = StringUtils.fastLooseChop(multiValueSelector.lookupName(rowIndex), maxStringBytes);
-                arrayList.add(chopped);
+                arrayList.add(multiValueSelector.lookupName(rowIndex));
               });
               foundValue = DimensionHandlerUtils.convertObjectToString(arrayList);
             } else {
-              foundValue = StringUtils.fastLooseChop(multiValueSelector.lookupName(row.get(0)), maxStringBytes);
+              foundValue = multiValueSelector.lookupName(row.get(0));
             }
           } else {
-            foundValue = StringUtils.fastLooseChop(multiValueSelector.lookupName(row.get(0)), maxStringBytes);
+            foundValue = multiValueSelector.lookupName(row.get(0));
           }
           putValue(buf, position, foundValue);
         }

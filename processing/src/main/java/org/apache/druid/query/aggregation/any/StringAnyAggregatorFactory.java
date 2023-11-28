@@ -48,8 +48,8 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
-  protected final int maxStringBytes;
-  protected final boolean aggregateMultipleValues;
+  private final int maxStringBytes;
+  private final boolean aggregateMultipleValues;
 
   @JsonCreator
   public StringAnyAggregatorFactory(
