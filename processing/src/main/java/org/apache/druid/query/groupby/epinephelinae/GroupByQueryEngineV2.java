@@ -49,8 +49,10 @@ import org.apache.druid.query.groupby.epinephelinae.column.ArrayLongGroupByColum
 import org.apache.druid.query.groupby.epinephelinae.column.ArrayStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DictionaryBuildingStringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.DoubleGroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
+import org.apache.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
@@ -421,7 +423,9 @@ public class GroupByQueryEngineV2
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
         case LONG:
+          return makeNullableNumericStrategy(new LongGroupByColumnSelectorStrategy());
         case FLOAT:
+          return makeNullableNumericStrategy(new FloatGroupByColumnSelectorStrategy());
         case DOUBLE:
           return makeNullableNumericStrategy(new DoubleGroupByColumnSelectorStrategy());
         case ARRAY:
@@ -438,7 +442,6 @@ public class GroupByQueryEngineV2
               throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
 
           }
-        case COMPLEX:
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
       }
