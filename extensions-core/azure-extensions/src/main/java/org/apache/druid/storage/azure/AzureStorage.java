@@ -116,12 +116,6 @@ public class AzureStorage
     return deletedFiles;
   }
 
-  public void uploadBlockBlob(final File file, final String containerName, final String blobPath)
-      throws IOException, BlobStorageException
-  {
-    uploadBlockBlob(file, containerName, blobPath, null);
-  }
-
   public void uploadBlockBlob(final File file, final String containerName, final String blobPath, final Integer maxAttempts)
       throws IOException, BlobStorageException
   {
@@ -266,10 +260,13 @@ public class AzureStorage
       return blobContainerClientPair.rhs;
     }
 
+    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(containerName, maxRetries);
+    blobContainerClient.createIfNotExists();
+
     blobContainerClients.put(
         containerName,
-        Pair.of(maxRetries, azureClientFactory.getBlobContainerClient(containerName, maxRetries))
+        Pair.of(maxRetries, blobContainerClient)
     );
-    return blobContainerClients.get(containerName).rhs;
+    return blobContainerClient;
   }
 }
