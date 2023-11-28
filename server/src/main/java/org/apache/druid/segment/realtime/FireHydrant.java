@@ -109,7 +109,6 @@ public class FireHydrant
 
   public void swapSegment(@Nullable Segment newSegment)
   {
-    // merge the Sink schema with the schema of newSegment which is peristed firehyrant
     while (true) {
       ReferenceCountingSegment currentSegment = adapter.get();
       if (currentSegment == null && newSegment == null) {
