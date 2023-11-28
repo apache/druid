@@ -103,7 +103,7 @@ public class MemoryBoundLinkedBlockingQueue<T>
     Preconditions.checkNotNull(buffer);
     long deadline = System.nanoTime() + unit.toNanos(timeout);
     int added = 0;
-    int bytesAdded = 0;
+    long bytesAdded = 0;
     while (bytesAdded < bytesToDrain) {
       ObjectContainer<T> e = queue.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
       if (e == null) {
