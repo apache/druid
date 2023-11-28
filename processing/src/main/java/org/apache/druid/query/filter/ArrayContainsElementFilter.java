@@ -38,7 +38,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFac
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
@@ -47,8 +46,8 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
@@ -109,7 +108,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
   @Override
   public byte[] getCacheKey()
   {
-    final TypeStrategy<Object> typeStrategy = elementMatchValueEval.type().getStrategy();
+    final NullableTypeStrategy<Object> typeStrategy = elementMatchValueEval.type().getNullableStrategy();
     final int size = typeStrategy.estimateSizeBytes(elementMatchValueEval.value());
     final ByteBuffer valueBuffer = ByteBuffer.allocate(size);
     typeStrategy.write(valueBuffer, elementMatchValueEval.value(), size);
@@ -474,6 +473,12 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
     }
   }
 
+  /**
+   * {@link EqualityFilter.TypedConstantValueMatcherFactory} with special handling for scalar processors in the case
+   * matchValue is null or an array (which is not possible in equality filter, but is allowed by this filter).
+   * Uses {@link ArrayContainsPredicateFactory} for the base predicate factory so that it performs element matching
+   * instead of standard equality matching.
+   */
   private static class TypedConstantElementValueMatcherFactory extends EqualityFilter.TypedConstantValueMatcherFactory
   {
     public TypedConstantElementValueMatcherFactory(
@@ -518,21 +523,6 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
         return predicateMatcherFactory.makeLongProcessor(selector);
       }
       return super.makeLongProcessor(selector);
-    }
-
-    @Override
-    public ValueMatcher makeArrayProcessor(
-        BaseObjectColumnValueSelector<?> selector,
-        @Nullable ColumnCapabilities columnCapabilities
-    )
-    {
-      return super.makeArrayProcessor(selector, columnCapabilities);
-    }
-
-    @Override
-    public ValueMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
-    {
-      return super.makeComplexProcessor(selector);
     }
   }
 }
