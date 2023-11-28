@@ -271,7 +271,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         if (maxStringBytes == null) {
           return null;
         }
-        boolean aggregateMultipleValues = true;
+        boolean aggregateMultipleValues;
         try {
           aggregateMultipleValues = RexLiteral.booleanValue(Preconditions.checkNotNull(rexNodes.get(2)));
         }

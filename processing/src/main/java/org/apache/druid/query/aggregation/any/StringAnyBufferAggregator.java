@@ -55,7 +55,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   {
     if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
       final Object object = valueSelector.getObject();
-      String foundValue = null;
+      String foundValue;
       if (object != null && object instanceof List && !aggregateMultipleValues) {
         List<Object> objectList = (List) object;
         foundValue = objectList.size() > 0 ? DimensionHandlerUtils.convertObjectToString(objectList.get(0)) : null;
