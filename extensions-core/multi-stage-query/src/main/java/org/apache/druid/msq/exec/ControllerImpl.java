@@ -1203,15 +1203,15 @@ public class ControllerImpl implements Controller
       // Fetch all published, used segments (all non-realtime segments) from the metadata store.
       // If the task is operating with a REPLACE lock,
       // any segment created after the lock was acquired for its interval will not be considered.
-      final Collection<DataSegment> publishedUsedSegments = new HashSet<>();
-      for (Interval interval : intervals) {
-        RetrieveSegmentsToReplaceAction action = new RetrieveSegmentsToReplaceAction(dataSource, interval);
-        try {
-          publishedUsedSegments.addAll(context.taskActionClient().submit(action));
-        }
-        catch (IOException e) {
-          return Optional.empty();
-        }
+      final Collection<DataSegment> publishedUsedSegments;
+      try {
+        publishedUsedSegments = context.taskActionClient().submit(new RetrieveSegmentsToReplaceAction(
+            dataSource,
+            intervals
+        ));
+      }
+      catch (IOException e) {
+        throw new MSQException(e, UnknownFault.forException(e));
       }
 
       int realtimeCount = 0;
