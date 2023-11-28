@@ -29,8 +29,8 @@ import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Iterator;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Utility class for miscellaneous things involving Azure.
@@ -46,20 +46,23 @@ public class AzureUtils
   // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
   static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
 
+  // This logic is copied from RequestRetryOptions in the azure client. We still need this logic because some classes like
+  // RetryingInputEntity need a predicate function to tell whether to retry, seperate from the Azure client retries.
   public static final Predicate<Throwable> AZURE_RETRY = e -> {
     if (e == null) {
       return false;
     }
     for (Throwable t = e; t != null; t = t.getCause()) {
-      if (t instanceof URISyntaxException) {
-        return false;
-      }
-
       if (t instanceof BlobStorageException) {
-        return true;
+        int statusCode = ((BlobStorageException) t).getStatusCode();
+        return statusCode == 429 || statusCode == 500 || statusCode == 503;
       }
 
       if (t instanceof IOException) {
+        return true;
+      }
+
+      if (t instanceof TimeoutException) {
         return true;
       }
     }
@@ -111,6 +114,7 @@ public class AzureUtils
   public static void deleteObjectsInPath(
       AzureStorage storage,
       AzureInputDataConfig config,
+      AzureAccountConfig accountConfig,
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       String bucket,
       String prefix,
@@ -127,7 +131,7 @@ public class AzureUtils
     while (iterator.hasNext()) {
       final CloudBlobHolder nextObject = iterator.next();
       if (filter.apply(nextObject)) {
-        storage.emptyCloudBlobDirectory(nextObject.getContainerName(), nextObject.getName());
+        storage.emptyCloudBlobDirectory(nextObject.getContainerName(), nextObject.getName(), accountConfig.getMaxTries());
       }
     }
   }

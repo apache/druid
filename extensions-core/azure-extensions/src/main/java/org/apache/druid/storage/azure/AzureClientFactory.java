@@ -26,7 +26,6 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.CustomerProvidedKey;
 import com.azure.storage.common.StorageSharedKeyCredential;
 
 import java.time.Duration;
@@ -49,10 +48,7 @@ public class AzureClientFactory
   public BlobServiceClient getBlobServiceClient()
   {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net")
-        .retryOptions(new RetryOptions(
-            new ExponentialBackoffOptions().setMaxRetries(config.getMaxTries()).setBaseDelay(Duration.ofMillis(1000)).setMaxDelay(Duration.ofMillis(60000))
-        ));
+        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net");
 
     if (config.getKey() != null) {
       clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
@@ -79,7 +75,7 @@ public class AzureClientFactory
                 .setMaxDelay(Duration.ofMillis(60000))
         ));
     if (config.getKey() != null) {
-      clientBuilder.customerProvidedKey(new CustomerProvidedKey(config.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
     } else if (config.getUseAzureCredentialsChain()) {

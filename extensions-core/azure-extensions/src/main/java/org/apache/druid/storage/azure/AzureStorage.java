@@ -75,7 +75,7 @@ public class AzureStorage
    */
   private final Supplier<BlobServiceClient> blobServiceClient;
   private final AzureClientFactory azureClientFactory;
-  private final ConcurrentHashMap<Pair<String, Integer>, BlobContainerClient> blobContainerClients = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Pair<Integer, BlobContainerClient>> blobContainerClients = new ConcurrentHashMap<>();
 
   public AzureStorage(
       Supplier<BlobServiceClient> blobServiceClient,
@@ -116,10 +116,10 @@ public class AzureStorage
     return deletedFiles;
   }
 
-  public void uploadBlockBlob(final File file, final String containerName, final String blobPath)
+  public void uploadBlockBlob(final File file, final String containerName, final String blobPath, final Integer maxAttempts)
       throws IOException, BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
 
     try (FileInputStream stream = new FileInputStream(file)) {
       // By default this creates a Block blob, no need to use a specific Block blob client.
@@ -193,12 +193,6 @@ public class AzureStorage
     blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
   }
 
-  public List<String> listDir(final String containerName, final String virtualDirPath)
-      throws BlobStorageException
-  {
-    return listDir(containerName, virtualDirPath, null);
-  }
-
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)
       throws BlobStorageException
   {
@@ -237,28 +231,42 @@ public class AzureStorage
   PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
       final String containerName,
       final String prefix,
-      int maxResults
+      int maxResults,
+      Integer maxAttempts
   ) throws BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
     return blobContainerClient.listBlobs(
         new ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(maxResults),
         Duration.ofMillis(DELTA_BACKOFF_MS)
     );
   }
 
+  // If maxRetries is not specified, use the base BlobServiceClient to generate a BlobContainerClient.
+  // It has no retry policy and uses its own HttpClient, so building new BlobContainerClients is instant.
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
-    return getOrCreateBlobContainerClient(containerName, null);
+    return getBlobServiceClient().createBlobContainerIfNotExists(containerName);
   }
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
   {
-    BlobContainerClient blobContainerClient = blobContainerClients.computeIfAbsent(
-        Pair.of(containerName, maxRetries),
-        (key) -> azureClientFactory.getBlobContainerClient(key.lhs, key.rhs)
-    );
+    if (maxRetries == null) {
+      return getOrCreateBlobContainerClient(containerName);
+    }
+
+    Pair<Integer, BlobContainerClient> blobContainerClientPair = blobContainerClients.get(containerName);
+    if (blobContainerClientPair != null && blobContainerClientPair.lhs != null && blobContainerClientPair.lhs >= maxRetries) {
+      return blobContainerClientPair.rhs;
+    }
+
+    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(containerName, maxRetries);
     blobContainerClient.createIfNotExists();
+
+    blobContainerClients.put(
+        containerName,
+        Pair.of(maxRetries, blobContainerClient)
+    );
     return blobContainerClient;
   }
 }

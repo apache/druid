@@ -51,10 +51,12 @@ public class AzureStorageTest extends EasyMockSupport
   @Mock
   AzureClientFactory azureClientFactory;
 
+  private final Integer MAX_TRIES = 3;
+
+
   @Before
   public void setup() throws BlobStorageException
   {
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
     azureStorage = new AzureStorage(() -> blobServiceClient, azureClientFactory);
   }
 
@@ -68,12 +70,11 @@ public class AzureStorageTest extends EasyMockSupport
     Mockito.doReturn(pagedIterable).when(blobContainerClient).listBlobs(
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
-
     );
-    EasyMock.expect(azureClientFactory.getBlobContainerClient("test", null)).andReturn(blobContainerClient).times(1);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
 
     replayAll();
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir("test", ""));
+    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir("test", "", null));
     verifyAll();
   }
 
@@ -101,8 +102,10 @@ public class AzureStorageTest extends EasyMockSupport
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
     // Requesting a different container should create another client.
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName2, "", maxAttempts));
-    // Requesting the first container with different maxAttempts should create another client.
+    // Requesting the first container with higher maxAttempts should create another client.
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts + 1));
+    // Requesting the first container with lower maxAttempts should not create another client.
+    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts - 1));
     verifyAll();
   }
 }

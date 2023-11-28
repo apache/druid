@@ -48,6 +48,8 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   private static final String PREFIX = "test/log";
   private static final String BLOB_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
   private static final int MAX_KEYS = 1;
+  private static final int MAX_TRIES = 3;
+
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final String KEY_1 = "key1";
@@ -173,6 +175,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
     EasyMock.expect(segmentConfig.getContainer()).andReturn(CONTAINER).atLeastOnce();
     EasyMock.expect(segmentConfig.getPrefix()).andReturn(PREFIX).atLeastOnce();
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+    EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
 
     CloudBlobHolder object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
     CloudBlobHolder object2 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_2, TIME_1);
@@ -187,7 +190,9 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
     AzureTestUtils.expectDeleteObjects(
         azureStorage,
         ImmutableList.of(object1, object2),
-        ImmutableMap.of());
+        ImmutableMap.of(),
+        MAX_TRIES
+    );
     EasyMock.replay(segmentConfig, inputDataConfig, accountConfig, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
     AzureDataSegmentKiller killer = new AzureDataSegmentKiller(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
     killer.killAll();
@@ -204,6 +209,7 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       EasyMock.expect(segmentConfig.getContainer()).andReturn(CONTAINER).atLeastOnce();
       EasyMock.expect(segmentConfig.getPrefix()).andReturn(PREFIX).atLeastOnce();
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
 
       object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
 
@@ -218,7 +224,8 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
       AzureTestUtils.expectDeleteObjects(
           azureStorage,
           ImmutableList.of(),
-          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
+          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION),
+          MAX_TRIES
       );
       EasyMock.replay(
           segmentConfig,
