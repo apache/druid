@@ -944,6 +944,7 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
@@ -1490,6 +1491,7 @@ isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad

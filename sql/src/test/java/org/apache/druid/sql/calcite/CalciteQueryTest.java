@@ -2581,6 +2581,97 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExactCountDistinctLookup()
+  {
+    msqIncompatible();
+    final String sqlQuery = "SELECT CAST(LOOKUP(dim1, 'lookyloo') AS VARCHAR), "
+                            + "COUNT(DISTINCT foo.dim2), "
+                            + "SUM(foo.cnt) FROM druid.foo "
+                            + "GROUP BY 1";
+
+    // ExtractionDimensionSpec cannot be vectorized
+    cannotVectorize();
+
+    requireMergeBuffers(3);
+
+    testQuery(
+        PLANNER_CONFIG_NO_HLL.withOverrides(
+            ImmutableMap.of(
+                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                "true"
+            )
+        ),
+        sqlQuery,
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(CalciteTests.DATASOURCE1)
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(dimensions(
+                                                new ExtractionDimensionSpec(
+                                                    "dim1",
+                                                    "d0",
+                                                    ColumnType.STRING,
+                                                    new RegisteredLookupExtractionFn(
+                                                        null,
+                                                        "lookyloo",
+                                                        false,
+                                                        null,
+                                                        null,
+                                                        true
+                                                    )
+                                                ),
+                                                new DefaultDimensionSpec("dim2", "d1", ColumnType.STRING)
+                                            ))
+                                            .setAggregatorSpecs(
+                                                aggregators(
+                                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                                    new GroupingAggregatorFactory(
+                                                        "a1",
+                                                        Arrays.asList("dim1", "dim2")
+                                                    )
+                                                )
+                                            )
+                                            .setSubtotalsSpec(
+                                                ImmutableList.of(
+                                                    ImmutableList.of("d0", "d1"),
+                                                    ImmutableList.of("d0")
+                                                )
+                                            )
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(new DefaultDimensionSpec("d0", "_d0", ColumnType.STRING))
+                        .setAggregatorSpecs(aggregators(
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("_a0"),
+                                and(
+                                    notNull("d1"),
+                                    equality("a1", 0L, ColumnType.LONG)
+                                )
+                            ),
+                            new FilteredAggregatorFactory(
+                                new LongMinAggregatorFactory("_a1", "a0"),
+                                equality("a1", 1L, ColumnType.LONG)
+                            )
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), NullHandling.replaceWithDefault() ? 2L : 3L, 5L},
+            new Object[]{"xabc", 0L, 1L}
+        )
+    );
+  }
+
+  @Test
   public void testHavingOnFloatSum()
   {
     testQuery(

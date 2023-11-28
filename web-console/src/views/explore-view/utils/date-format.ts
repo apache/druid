@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-export * from './use-clock';
-export * from './use-constant';
-export * from './use-global-event-listener';
-export * from './use-interval';
-export * from './use-last-defined';
-export * from './use-local-storage-state';
-export * from './use-permanent-callback';
-export * from './use-query-manager';
-export * from './use-resize-observer';
+export const DATE_FORMAT = new Intl.DateTimeFormat('default', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});

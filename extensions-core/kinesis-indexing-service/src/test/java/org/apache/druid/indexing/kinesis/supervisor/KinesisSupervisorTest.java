@@ -130,7 +130,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
       false
   );
   private static final String DATASOURCE = "testDS";
-  private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
@@ -1094,7 +1093,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    taskQueue.shutdown("id4", "Task [%s] failed to return status, killing task", "id4");
+    taskQueue.shutdown("id4", "Task[%s] failed to return status, killing task", "id4");
     replayAll();
 
     supervisor.start();
@@ -2386,8 +2385,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
     taskQueue.shutdown(
         EasyMock.contains("sequenceName-0"),
-        EasyMock.eq("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task"),
-        EasyMock.contains("sequenceName-0")
+        EasyMock.eq("Failed to set end offsets, killing task")
     );
     EasyMock.expectLastCall().times(2);
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
