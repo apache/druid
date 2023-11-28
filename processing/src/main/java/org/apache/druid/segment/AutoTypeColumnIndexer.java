@@ -78,12 +78,14 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   protected SortedMap<String, FieldIndexer> fieldIndexers = new TreeMap<>();
   protected final ValueDictionary globalDictionary = new ValueDictionary();
 
-  int estimatedFieldKeySize = 0;
+  protected int estimatedFieldKeySize = 0;
 
+  private final String columnName;
   @Nullable
   protected final ColumnType castToType;
   @Nullable
   protected final ExpressionType castToExpressionType;
+
 
   protected final StructuredDataProcessor indexerProcessor = new StructuredDataProcessor()
   {
@@ -127,8 +129,9 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     }
   };
 
-  public AutoTypeColumnIndexer(@Nullable ColumnType castToType)
+  public AutoTypeColumnIndexer(String name, @Nullable ColumnType castToType)
   {
+    this.columnName = name;
     if (castToType != null && (castToType.isPrimitive() || castToType.isPrimitiveArray())) {
       this.castToType = castToType;
       this.castToExpressionType = ExpressionType.fromColumnTypeStrict(castToType);
@@ -171,7 +174,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       eval = eval.castTo(castToExpressionType);
     }
     catch (IAE invalidCast) {
-      throw new ParseException(eval.asString(), invalidCast, "Cannot coerce to requested type [%s]", castToType);
+      throw new ParseException(eval.asString(), invalidCast, "Cannot coerce column [%s] input to requested type [%s]", columnName, castToType);
     }
 
     FieldIndexer fieldIndexer = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
