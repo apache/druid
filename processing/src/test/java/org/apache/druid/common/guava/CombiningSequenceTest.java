@@ -57,7 +57,7 @@ public class CombiningSequenceTest
   public static Collection<Object[]> valuesToTry()
   {
     return Arrays.asList(new Object[][]{
-        {1}//, {2}, {3}, {4}, {5}, {1000}
+        {1}, {2}, {3}, {4}, {5}, {1000}
     });
   }
 
