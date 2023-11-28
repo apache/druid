@@ -504,6 +504,22 @@ Returns the current timestamp in the connection's time zone.
 
 Rounds down a timestamp by a given time unit.
 
+## DECODE_BASE64_COMPLEX
+
+`DECODE_BASE64_COMPLEX(expr1, expr2)`
+
+**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+
+Decodes complex expressions represented as literals, where `expr1` is a string literal with a valid [complex type name](sql-scalar.md#complex-type-expressions) and `expr2` is a base64-encoded string that contains a serialized value of the type defined in `expr1`.
+
+## DECODE_BASE64_UTF8
+
+`DECODE_BASE64_UTF8(expr)`
+
+**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+
+Decodes base64-encoded strings into UTF-8 encoded strings.
+
 ## DEGREES
 
 `DEGREES(<NUMERIC>)`
