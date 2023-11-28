@@ -1204,7 +1204,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
         getContext(),
-        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount()
+        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount(),
+        // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
+        false
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)

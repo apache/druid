@@ -944,6 +944,7 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
@@ -1281,6 +1282,7 @@ numShards
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
 2012-01-01T00
 2012-01-03T00
@@ -1489,6 +1491,7 @@ isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad
@@ -2326,3 +2329,6 @@ taskslots
 loadstatus
 sqlQueryId
 LAST_VALUE
+markUnused
+markUsed
+segmentId
