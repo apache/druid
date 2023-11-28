@@ -3355,7 +3355,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.11.1
+version: 1.11.3
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -5375,6 +5375,15 @@ license_file_path: licenses/bin/change-case.MIT
 
 ---
 
+name: "chronoshift"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Vadim Ogievetsky
+version: 0.10.0
+
+---
+
 name: "classnames"
 license_category: binary
 module: web-console
@@ -5903,6 +5912,15 @@ license_file_path: licenses/bin/iconv-lite.MIT
 
 ---
 
+name: "immutable-class"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Vadim Ogievetsky
+version: 0.11.2
+
+---
+
 name: "import-fresh"
 license_category: binary
 module: web-console
@@ -6100,6 +6118,26 @@ license_name: MIT License
 copyright: Alex Reardon
 version: 5.1.1
 license_file_path: licenses/bin/memoize-one.MIT
+
+---
+
+name: "moment-timezone"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Tim Wood
+version: 0.5.43
+license_file_path: licenses/bin/moment-timezone.MIT
+
+---
+
+name: "moment"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Iskren Ivov Chernev
+version: 2.29.4
+license_file_path: licenses/bin/moment.MIT
 
 ---
 

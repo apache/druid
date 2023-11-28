@@ -1098,6 +1098,36 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
       }
+    },
+    /**
+     * Comparision which accepts 1000 units of least precision.
+     */
+    EQUALS_RELATIVE_1000_ULPS {
+      static final int ASSERTION_ERROR_ULPS = 1000;
+
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell instanceof Float) {
+          float eps = ASSERTION_ERROR_ULPS * Math.ulp((Float) expectedCell);
+          assertEquals(
+              mismatchMessage(row, column),
+              (Float) expectedCell,
+              (Float) resultCell,
+              eps
+          );
+        } else if (expectedCell instanceof Double) {
+          double eps = ASSERTION_ERROR_ULPS * Math.ulp((Double) expectedCell);
+          assertEquals(
+              mismatchMessage(row, column),
+              (Double) expectedCell,
+              (Double) resultCell,
+              eps
+          );
+        } else {
+          EQUALS.validate(row, column, type, expectedCell, resultCell);
+        }
+      }
     };
 
     public abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);
