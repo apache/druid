@@ -1054,6 +1054,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     EQUALS {
       @Override
+      public
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
         assertEquals(
@@ -1064,6 +1065,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     },
     RELAX_NULLS {
       @Override
+      public
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
         if (expectedCell == null) {
@@ -1077,6 +1079,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     },
     EQUALS_EPS {
       @Override
+      public
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
         if (expectedCell instanceof Float) {
@@ -1097,7 +1100,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       }
     };
 
-    abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);
+    public abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);
 
     private static String mismatchMessage(int row, int column)
     {
