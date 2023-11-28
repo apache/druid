@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -108,8 +109,8 @@ public class GroupByQueryRunnerFactoryTest
                           query.getResultOrdering(),
                           Sequences.simple(
                               Arrays.asList(
-                                  factory.createRunner(createSegment()).run(queryPlus, responseContext),
-                                  factory.createRunner(createSegment()).run(queryPlus, responseContext)
+                                  Sequences.simple(factory.createRunner(createSegment()).run(queryPlus, responseContext).toList()),
+                                  Sequences.simple(factory.createRunner(createSegment()).run(queryPlus, responseContext).toList())
                               )
                           )
                       );
@@ -119,12 +120,28 @@ public class GroupByQueryRunnerFactoryTest
                     }
                   }
                 }
-            ).run(queryPlus, responseContext);
+            ).run(
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withOverriddenContext(
+                        ImmutableMap.of(
+                            GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2,
+                            false
+                        )
+                    )
+                ),
+                responseContext
+            );
           }
         }
     );
 
-    Sequence<ResultRow> result = mergedRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> result = mergedRunner.run(
+        QueryPlus.wrap(query.withOverriddenContext(
+            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false
+            ))
+        ),
+        ResponseContext.createEmpty()
+    );
 
     List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),
