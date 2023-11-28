@@ -26,6 +26,8 @@ import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 
+import javax.annotation.Nullable;
+
 
 public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<KubernetesAndWorkerTaskRunner>
 {
@@ -33,6 +35,7 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
 
   private final KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
   private final HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
+  @Nullable // Null, if not configured
   private final RemoteTaskRunnerFactory remoteTaskRunnerFactory;
   private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
   private final RunnerStrategy runnerStrategy;
@@ -43,7 +46,7 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   public KubernetesAndWorkerTaskRunnerFactory(
       KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory,
       HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory,
-      RemoteTaskRunnerFactory remoteTaskRunnerFactory,
+      @Nullable RemoteTaskRunnerFactory remoteTaskRunnerFactory,
       KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig,
       RunnerStrategy runnerStrategy
   )

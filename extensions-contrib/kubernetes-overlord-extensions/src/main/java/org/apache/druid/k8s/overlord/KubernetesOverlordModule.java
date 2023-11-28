@@ -37,8 +37,10 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
+import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -128,6 +130,22 @@ public class KubernetesOverlordModule implements DruidModule
     );
 
     return client;
+  }
+
+  /**
+   * In environments without Zookeeper, the standard RemoteTaskRunnerFactory may not function properly.
+   * This method checks the configured worker type and, if it's set to 'HttpRemoteTaskRunnerFactory.TYPE_NAME',
+   * returns null to avoid binding RemoteTaskRunnerFactory. Otherwise, it returns the instance provided by the parent module.
+   */
+  @Provides
+  @LazySingleton
+  RemoteTaskRunnerFactory provideRemoteTaskRunnerFactory(
+      Provider<RemoteTaskRunnerFactory> parentProvider,
+      KubernetesAndWorkerTaskRunnerConfig runnerConfig
+  )
+  {
+    String workerType = runnerConfig.getWorkerType();
+    return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType) ? null : parentProvider.get();
   }
 
   private static class RunnerStrategyProvider implements Provider<RunnerStrategy>
