@@ -18,14 +18,37 @@
   ~ under the License.
   -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
-
+  <!-- False positives -->
   <suppress>
     <notes><![CDATA[
      file name: json-path-2.3.0.jar jackson-core-2.12.7.jar
      ]]></notes>
     <cve>CVE-2022-45688</cve>
+    <cve>CVE-2023-35116</cve>
   </suppress>
 
+  <suppress>
+    <notes><![CDATA[
+      file name: grpc-context-1.27.2.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
+    <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
+    <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: commons-compress-1.23.0.jar
+    ]]></notes>
+    <cve>CVE-2023-42503</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: guava-31.1-jre.jar
+    ]]></notes>
+    <cve>CVE-2020-8908</cve>
+  </suppress>
 
   <suppress>
     <!--
@@ -314,4 +337,5 @@
     ]]></notes>
     <cve>CVE-2023-4586</cve>
   </suppress>
+
 </suppressions>
