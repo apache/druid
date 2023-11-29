@@ -40,6 +40,7 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -81,7 +82,6 @@ import java.util.function.Supplier;
  */
 public class StageDefinition
 {
-  private static final int PARTITION_STATS_MAX_BUCKETS = 5_000; // Limit for TooManyBuckets
   private static final int MAX_PARTITIONS = 25_000; // Limit for TooManyPartitions
 
   // If adding any fields here, add them to builder(StageDefinition) below too.
@@ -344,7 +344,7 @@ public class StageDefinition
         shuffleSpec.clusterBy(),
         signature,
         maxRetainedBytes,
-        PARTITION_STATS_MAX_BUCKETS,
+        Limits.MAX_PARTITION_BUCKETS,
         shuffleSpec.doesAggregate(),
         shuffleCheckHasMultipleValues
     );

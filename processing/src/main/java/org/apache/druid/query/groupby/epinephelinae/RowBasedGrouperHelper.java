@@ -1921,8 +1921,7 @@ public class RowBasedGrouperHelper
         } else {
           keyBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
         }
-        delegate.putToKeyBuffer(key, idx);
-        return true;
+        return delegate.putToKeyBuffer(key, idx);
       }
 
       @Override

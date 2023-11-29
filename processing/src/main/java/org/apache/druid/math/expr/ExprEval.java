@@ -653,6 +653,13 @@ public abstract class ExprEval<T>
   @Nullable
   public static ExprEval<?> castForEqualityComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
   {
+    if (valueToCompare.isArray() && !typeToCompareWith.isArray()) {
+      final Object[] array = valueToCompare.asArray();
+      // cannot cast array to scalar if array length is greater than 1
+      if (array != null && array.length > 1) {
+        return null;
+      }
+    }
     ExprEval<?> cast = valueToCompare.castTo(typeToCompareWith);
     if (ExpressionType.LONG.equals(typeToCompareWith) && valueToCompare.asDouble() != cast.asDouble()) {
       // make sure the DOUBLE value when cast to LONG is the same before and after the cast

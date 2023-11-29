@@ -20,7 +20,28 @@ import { C, SqlExpression } from '@druid-toolkit/query';
 import { typedVisualModule } from '@druid-toolkit/visuals-core';
 import * as echarts from 'echarts';
 
+import { highlightStore } from '../highlight-store/highlight-store';
 import { getInitQuery } from '../utils';
+
+/**
+ * Returns the cartesian coordinates of a pie slice external centroid
+ */
+function getCentroid(chart: echarts.ECharts, dataIndex: number) {
+  // see these underscores everywhere? that's because those are private properties
+  // I have no real choice but to use them, because there is no public API for this (on pie charts)
+  // #no_ragrets
+  const layout = (chart as any)._chartsViews?.[0]?._data?._itemLayouts?.[dataIndex];
+
+  if (!layout) return;
+
+  const { cx, cy, startAngle, endAngle, r } = layout;
+  const angle = (startAngle + endAngle) / 2;
+
+  const x = cx + Math.cos(angle) * r;
+  const y = cy + Math.sin(angle) * r;
+
+  return { x, y };
+}
 
 export default typedVisualModule({
   parameters: {
@@ -54,7 +75,7 @@ export default typedVisualModule({
       control: { label: 'Show others' },
     },
   },
-  module: ({ container, host, getLastUpdateEvent, updateWhere }) => {
+  module: ({ container, host, updateWhere }) => {
     const myChart = echarts.init(container, 'dark');
 
     myChart.setOption({
@@ -68,6 +89,7 @@ export default typedVisualModule({
       series: [
         {
           type: 'pie',
+          id: 'hello',
           radius: '50%',
           data: [],
           emphasis: {
@@ -81,28 +103,13 @@ export default typedVisualModule({
       ],
     });
 
-    const resizeHandler = () => {
-      myChart.resize();
-    };
-
-    window.addEventListener('resize', resizeHandler);
-
-    myChart.on('click', 'series', p => {
-      const lastUpdateEvent = getLastUpdateEvent();
-      if (!lastUpdateEvent?.parameterValues.splitColumn) return;
-
-      updateWhere(
-        lastUpdateEvent.where.toggleClauseInWhere(
-          C(lastUpdateEvent.parameterValues.splitColumn.name).equal(p.name),
-        ),
-      );
-    });
-
     return {
       async update({ table, where, parameterValues }) {
         const { splitColumn, metric, limit } = parameterValues;
 
         if (!splitColumn) return;
+
+        myChart.off('click');
 
         const result = await host.sqlQuery(
           getInitQuery(table, where)
@@ -118,25 +125,77 @@ export default typedVisualModule({
 
         if (parameterValues.showOthers) {
           const others = await host.sqlQuery(
-            getInitQuery(table, where)
-              .addSelect(metric.expression.as('value'))
-              .addWhere(C(splitColumn.name).notIn(result.getColumnByIndex(0)!)),
+            getInitQuery(
+              table,
+              where.changeClauseInWhere(
+                C(splitColumn.name).notIn(result.getColumnByIndex(0)!),
+              ) as SqlExpression,
+            ).addSelect(metric.expression.as('value')),
           );
 
-          data.push({ name: 'Others', value: others.rows[0][0] });
+          data.push({ name: 'Others', value: others.rows[0][0], __isOthers: true });
         }
 
         myChart.setOption({
           series: [
             {
-              name: metric.name,
+              id: 'hello',
               data,
             },
           ],
         });
+
+        myChart.on('click', 'series', p => {
+          if (highlightStore.getState().highlight?.data.name === p.name) {
+            highlightStore.getState().dropHighlight();
+            return;
+          }
+
+          const centroid = getCentroid(myChart, p.dataIndex);
+
+          if (!centroid) return;
+
+          const { name, value, __isOthers } = p.data as any;
+
+          highlightStore.getState().setHighlight({
+            label: name + ': ' + value,
+            x: centroid.x,
+            y: centroid.y - 20,
+            data: { name, value, dataIndex: p.dataIndex },
+            onDrop: () => {
+              highlightStore.getState().dropHighlight();
+            },
+            onSave: __isOthers
+              ? undefined
+              : () => {
+                  updateWhere(where.toggleClauseInWhere(C(splitColumn.name).equal(name)));
+                  highlightStore.getState().dropHighlight();
+                },
+          });
+        });
       },
+
+      resize() {
+        myChart.resize();
+
+        // if there is a highlight, update its x position
+        // by calculating new pixel position from the highlight's data
+        const highlight = highlightStore.getState().highlight;
+        if (highlight) {
+          const { dataIndex } = highlight.data;
+
+          const centroid = getCentroid(myChart, dataIndex);
+
+          if (!centroid) return;
+
+          highlightStore.getState().updateHighlight({
+            x: centroid.x,
+            y: centroid.y - 20,
+          });
+        }
+      },
+
       destroy() {
-        window.removeEventListener('resize', resizeHandler);
         myChart.dispose();
       },
     };

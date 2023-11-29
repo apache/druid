@@ -32,6 +32,7 @@ import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.io.CloseableIterable;
+import org.joda.time.DateTime;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,12 +55,15 @@ public abstract class IcebergCatalog
    *
    * @param tableNamespace The catalog namespace under which the table is defined
    * @param tableName      The iceberg table name
+   * @param icebergFilter      The iceberg filter that needs to be applied before reading the files
+   * @param snapshotTime      Datetime that will be used to fetch the most recent snapshot as of this time
    * @return a list of data file paths
    */
   public List<String> extractSnapshotDataFiles(
       String tableNamespace,
       String tableName,
-      IcebergFilter icebergFilter
+      IcebergFilter icebergFilter,
+      DateTime snapshotTime
   )
   {
     Catalog catalog = retrieveCatalog();
@@ -85,7 +89,9 @@ public abstract class IcebergCatalog
       if (icebergFilter != null) {
         tableScan = icebergFilter.filter(tableScan);
       }
-
+      if (snapshotTime != null) {
+        tableScan = tableScan.asOfTime(snapshotTime.getMillis());
+      }
       CloseableIterable<FileScanTask> tasks = tableScan.planFiles();
       CloseableIterable.transform(tasks, FileScanTask::file)
                        .forEach(dataFile -> dataFilePaths.add(dataFile.path().toString()));

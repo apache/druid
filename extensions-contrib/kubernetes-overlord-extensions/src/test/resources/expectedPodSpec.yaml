@@ -104,4 +104,4 @@ spec:
           name: "graveyard"
         - emptyDir: {}
           name: "kubexit"
-  ttlSecondsAfterFinished: 3600
+  ttlSecondsAfterFinished: 172800
