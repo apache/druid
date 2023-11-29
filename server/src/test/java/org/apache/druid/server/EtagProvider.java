@@ -21,13 +21,13 @@ package org.apache.druid.server;
 
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Key;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.query.Query;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface EtagProvider
@@ -59,7 +59,11 @@ public interface EtagProvider
     @Override
     public String getEtagFor(Query query)
     {
-      return "TEST_ETAG-" + etagSerial.incrementAndGet();
+      if (query.getDataSource().isCacheable(true)) {
+        return "TEST_ETAG-" + etagSerial.incrementAndGet();
+      } else {
+        return null;
+      }
     }
   }
 
@@ -68,11 +72,11 @@ public interface EtagProvider
     @Override
     public String getEtagFor(Query query)
     {
-      String proposedEtag = query.context().getString(QueryResource.HEADER_IF_NONE_MATCH);
-      if (!StringUtils.isEmpty(proposedEtag)) {
-        return proposedEtag;
+      if (query.getDataSource().isCacheable(true)) {
+        byte[] cacheKey = query.getDataSource().getCacheKey();
+        return "ETP-" + Arrays.hashCode(cacheKey);
       } else {
-        return super.getEtagFor(query);
+        return null;
       }
     }
   }
