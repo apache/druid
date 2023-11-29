@@ -365,7 +365,7 @@ public class PrometheusEmitterTest
     emitter.setPushGateway(mockPushGateway);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("task", "index_parallel")
-                                                 .build("task/run/time", 500)
+                                                 .setMetric("task/run/time", 500)
                                                  .build(ImmutableMap.of("service", "peon", "host", "druid.test.cn"));
     emitter.emit(build);
     emitter.flush();
@@ -390,7 +390,7 @@ public class PrometheusEmitterTest
     emitter.setPushGateway(mockPushGateway);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("task", "index_parallel")
-                                                 .build("task/run/time", 500)
+                                                 .setMetric("task/run/time", 500)
                                                  .build(ImmutableMap.of("service", "peon", "host", "druid.test.cn"));
     emitter.emit(build);
     emitter.flush();
