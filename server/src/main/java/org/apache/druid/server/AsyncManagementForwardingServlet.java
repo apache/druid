@@ -63,6 +63,9 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private static final String ARBITRARY_COORDINATOR_BASE_PATH = "/proxy/coordinator";
   private static final String ARBITRARY_OVERLORD_BASE_PATH = "/proxy/overlord";
 
+  // This path is used to check if the managment proxy is enabled, it simply returns {"enabled":true}
+  private static final String ENABLED_PATH = "/proxy/enabled";
+
   private final ObjectMapper jsonMapper;
   private final Provider<HttpClient> httpClientProvider;
   private final DruidHttpClientConfig httpClientConfig;
@@ -106,6 +109,9 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
           MODIFIED_PATH_ATTRIBUTE,
           request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
+    } else if (requestURI.equals(ENABLED_PATH)) {
+      handleEnabledRequest(response);
+      return;
     } else {
       handleBadRequest(response, StringUtils.format("Unsupported proxy destination [%s]", request.getRequestURI()));
       return;
@@ -185,6 +191,16 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       response.resetBuffer();
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
       jsonMapper.writeValue(response.getOutputStream(), ImmutableMap.of("error", errorMessage));
+    }
+    response.flushBuffer();
+  }
+
+  private void handleEnabledRequest(HttpServletResponse response) throws IOException
+  {
+    if (!response.isCommitted()) {
+      response.resetBuffer();
+      response.setStatus(HttpServletResponse.SC_OK);
+      jsonMapper.writeValue(response.getOutputStream(), ImmutableMap.of("enabled", true));
     }
     response.flushBuffer();
   }
