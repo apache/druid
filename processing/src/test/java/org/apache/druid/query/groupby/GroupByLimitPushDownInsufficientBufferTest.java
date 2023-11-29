@@ -259,12 +259,9 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
     final TestBufferPool bufferPool2 = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
-    final TestBufferPool bufferPool3 = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
 
-    // TODO(laksh)
-    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
-    // TODO(laksh)
-    final TestBufferPool tooSmallMergePool = TestBufferPool.onHeap(255, 2);
+    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 1);
+    final TestBufferPool tooSmallMergePool = TestBufferPool.onHeap(255, 1);
 
     resourceCloser.register(() -> {
       // Verify that all objects have been returned to the pools.

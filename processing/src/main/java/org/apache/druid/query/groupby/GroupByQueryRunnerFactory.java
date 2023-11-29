@@ -58,7 +58,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
   }
 
   /**
-   * TODO(laksh): Assumes that the caller is passing in the merge buffers in the response context
+   * @see GroupingEngine#mergeRunners(QueryProcessingPool, Iterable)
    */
   @Override
   public QueryRunner<ResultRow> mergeRunners(

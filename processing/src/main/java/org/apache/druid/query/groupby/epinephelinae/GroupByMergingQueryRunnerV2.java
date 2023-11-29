@@ -314,7 +314,10 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   )
   {
     GroupByQueryResources resource = (GroupByQueryResources) responseContext.get(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
-    // TODO(laksh): Add NPE check
+    if (resource == null) {
+      throw DruidException.defensive("Expected merge buffers to be passed in the response context while executing the "
+                                     + "GroupByMergingQueryRunnerV2, however none were provided.");
+    }
     if (numBuffers > resource.getNumMergingQueryRunnerMergeBuffers()) {
       // Defensive exception, because we should have acquired the correct number of merge buffers beforehand, or
       // thrown an RLE in the caller of the runner

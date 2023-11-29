@@ -400,8 +400,13 @@ public class GroupingEngine
    * {@link GroupByQueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}. In
    * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
    * by that method will be fed into this method).
-   * <p>
-   * This method is called directly on the data. For
+   *
+   * This is primarily called on the data servers, to merge the results from processing on the segments. This method can
+   * also be called on the brokers if the query is operating on the local data sources, like the inline
+   * datasources.
+   *
+   * It uses {@link GroupByMergingQueryRunnerV2} which requires the merge buffers to be passed in the responseContext
+   * of the query that is run.
    *
    * @param queryProcessingPool {@link QueryProcessingPool} service used for parallel execution of the query runners
    * @param queryRunners  collection of query runners to merge
