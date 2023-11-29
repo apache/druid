@@ -44,6 +44,7 @@ Base64
 Base64-encoded
 ByteBuffer
 bottlenecked
+cartesian
 concat
 CIDR
 CORS
@@ -504,6 +505,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+sub-conditions
 subarray
 subnet
 subqueries
@@ -944,6 +946,7 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
@@ -1491,6 +1494,7 @@ isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad

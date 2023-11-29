@@ -81,11 +81,12 @@
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <scala.library.version>2.13.11</scala.library.version>
         <avatica.version>1.23.0</avatica.version>
-        <avro.version>1.11.1</avro.version>
+        <avro.version>1.11.3</avro.version>
         <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
              default_config.fmpp
           -->
         <calcite.version>1.35.0</calcite.version>
+        <confluent.version>6.2.12</confluent.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
@@ -249,6 +250,14 @@
         <repository>
             <id>sigar</id>
             <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </repository>
+
+        <repository>
+            <id>cflt-public</id>
+            <url>https://packages.confluent.io/maven/</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
