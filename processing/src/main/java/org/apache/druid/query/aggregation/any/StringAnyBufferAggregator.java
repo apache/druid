@@ -74,12 +74,16 @@ public class StringAnyBufferAggregator implements BufferAggregator
     }
     if (object instanceof List) {
       List<Object> objectList = (List) object;
+      if (objectList.size() == 0) {
+        return null;
+      }
       if (objectList.size() == 1) {
         return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
       }
       if (aggregateMultipleValues) {
         return DimensionHandlerUtils.convertObjectToString(objectList);
       }
+      return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
     }
     return DimensionHandlerUtils.convertObjectToString(object);
   }

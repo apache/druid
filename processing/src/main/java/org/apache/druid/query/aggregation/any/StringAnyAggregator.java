@@ -60,6 +60,9 @@ public class StringAnyAggregator implements Aggregator
     }
     if (object instanceof List) {
       List<Object> objectList = (List) object;
+      if (objectList.size() == 0) {
+        return null;
+      }
       if (objectList.size() == 1) {
         return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
       }

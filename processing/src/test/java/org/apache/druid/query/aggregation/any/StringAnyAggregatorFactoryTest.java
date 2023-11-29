@@ -102,12 +102,7 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
     res.aggregate();
     Assert.assertEquals(null, res.get());
     StringAnyVectorAggregator vectorAggregator = target.factorizeVector(vectorSelectorFactory);
-    Assert.assertEquals(new StringAnyVectorAggregator(
-        null,
-        vectorSelectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(FIELD_NAME)),
-        1024,
-        true
-    ), vectorAggregator);
+    Assert.assertTrue(vectorAggregator.isAggregateMultipleValues());
   }
 
   @Test

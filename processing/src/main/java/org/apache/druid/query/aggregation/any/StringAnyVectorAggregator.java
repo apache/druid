@@ -166,4 +166,9 @@ public class StringAnyVectorAggregator implements VectorAggregator
       buf.putInt(position, FOUND_AND_NULL_FLAG_VALUE);
     }
   }
+
+  public boolean isAggregateMultipleValues()
+  {
+    return aggregateMultipleValues;
+  }
 }
