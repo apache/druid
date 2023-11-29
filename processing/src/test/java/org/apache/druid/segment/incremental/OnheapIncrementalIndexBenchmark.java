@@ -110,18 +110,12 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
     public MapIncrementalIndex(
         IncrementalIndexSchema incrementalIndexSchema,
-        boolean deserializeComplexMetrics,
-        boolean concurrentEventAdd,
-        boolean sortFacts,
         int maxRowCount,
         long maxBytesInMemory
     )
     {
       super(
           incrementalIndexSchema,
-          deserializeComplexMetrics,
-          concurrentEventAdd,
-          sortFacts,
           maxRowCount,
           maxBytesInMemory,
           false,
@@ -143,9 +137,6 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
               .withQueryGranularity(gran)
               .withMetrics(metrics)
               .build(),
-          true,
-          false,
-          true,
           maxRowCount,
           maxBytesInMemory,
           false,
@@ -190,7 +181,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         for (int i = 0; i < metrics.length; i++) {
           final AggregatorFactory agg = metrics[i];
           aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, getDeserializeComplexMetrics())
+              makeColumnSelectorFactory(agg, rowSupplier)
           );
         }
         Integer rowIndex;
