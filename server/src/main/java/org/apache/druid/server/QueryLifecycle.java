@@ -42,6 +42,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRuntimeAnalysis;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
@@ -186,7 +187,8 @@ public class QueryLifecycle
               }
             }
         ),
-        queryResponse.getResponseContext()
+        queryResponse.getResponseContext(),
+        queryResponse.getQueryRuntimeAnalysis()
     );
   }
 
@@ -278,13 +280,16 @@ public class QueryLifecycle
     transition(State.AUTHORIZED, State.EXECUTING);
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
+    final QueryPlus<T> queryPlus = QueryPlus.wrap((Query<T>) baseQuery)
+                                           .withIdentity(authenticationResult.getIdentity());
 
     @SuppressWarnings("unchecked")
-    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
-                                  .withIdentity(authenticationResult.getIdentity())
-                                  .run(texasRanger, responseContext);
+    final Sequence<T> res = queryPlus.run(texasRanger, responseContext);
+    final QueryRuntimeAnalysis runtimeAnalysis = (responseContext.getQueryMetrics() instanceof QueryRuntimeAnalysis) ?
+                                                 (QueryRuntimeAnalysis) responseContext.getQueryMetrics() :
+                                                 null;
 
-    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
+    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext, runtimeAnalysis);
   }
 
   /**

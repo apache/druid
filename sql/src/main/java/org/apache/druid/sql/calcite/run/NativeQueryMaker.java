@@ -253,7 +253,8 @@ public class NativeQueryMaker implements QueryMaker
               return newArray;
             }
         ),
-        results.getResponseContext()
+        results.getResponseContext(),
+        results.getQueryRuntimeAnalysis()
     );
   }
 

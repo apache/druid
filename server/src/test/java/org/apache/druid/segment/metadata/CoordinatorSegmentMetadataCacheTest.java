@@ -1052,7 +1052,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
     // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
     EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
-            .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
+            .andReturn(QueryResponse.withEmptyContextAndDebugInfo(Sequences.empty()));
 
     EasyMock.replay(factoryMock, lifecycleMock);
 

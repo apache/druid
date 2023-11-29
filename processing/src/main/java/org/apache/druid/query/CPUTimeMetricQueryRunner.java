@@ -61,6 +61,8 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
   {
     final long startRun = JvmUtils.getCurrentThreadCpuTime();
     final QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
+    // TODO - some defensive checking that we're not overwriting metrics?
+    responseContext.setQueryMetrics(queryWithMetrics.getQueryMetrics());
     final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);
 
     cpuTimeAccumulator.addAndGet(JvmUtils.getCurrentThreadCpuTime() - startRun);

@@ -20,22 +20,28 @@
 package org.apache.druid.server;
 
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryRuntimeAnalysis;
 import org.apache.druid.query.context.ResponseContext;
+
+import javax.annotation.Nullable;
 
 public class QueryResponse<T>
 {
   private final Sequence<T> results;
   private final ResponseContext responseContext;
 
-  public QueryResponse(final Sequence<T> results, final ResponseContext responseContext)
+  private final QueryRuntimeAnalysis queryRuntimeAnalysis;
+
+  public QueryResponse(final Sequence<T> results, final ResponseContext responseContext, QueryRuntimeAnalysis queryRuntimeAnalysis)
   {
     this.results = results;
     this.responseContext = responseContext;
+    this.queryRuntimeAnalysis = queryRuntimeAnalysis;
   }
 
-  public static <T> QueryResponse<T> withEmptyContext(Sequence<T> results)
+  public static <T> QueryResponse<T> withEmptyContextAndDebugInfo(Sequence<T> results)
   {
-    return new QueryResponse<T>(results, ResponseContext.createEmpty());
+    return new QueryResponse<T>(results, ResponseContext.createEmpty(), null);
   }
 
   public Sequence<T> getResults()
@@ -46,5 +52,11 @@ public class QueryResponse<T>
   public ResponseContext getResponseContext()
   {
     return responseContext;
+  }
+
+  @Nullable
+  public QueryRuntimeAnalysis getQueryRuntimeAnalysis()
+  {
+    return queryRuntimeAnalysis;
   }
 }

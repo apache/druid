@@ -60,6 +60,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunkTrailer;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -233,6 +234,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           checkQueryTimeout();
           checkTotalBytesLimit(response.getContent().readableBytes());
 
+
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
           acquireResponseMetrics().reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
@@ -340,6 +342,20 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
 
           return ClientResponse.finished(clientResponse.getObj(), continueReading);
+        }
+
+        @Override
+        public ClientResponse<InputStream> handleTrailer(
+            ClientResponse<InputStream> clientResponse,
+            HttpChunkTrailer trailer
+        )
+        {
+          if (null != trailer)
+          {
+            System.out.println(trailer.trailingHeaders().get("X-Druid-Query-Runtime-Analysis"));
+          }
+
+          return ClientResponse.finished(clientResponse.getObj());
         }
 
         @Override

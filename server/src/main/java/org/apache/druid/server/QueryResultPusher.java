@@ -38,6 +38,8 @@ import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpFields;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -66,7 +68,7 @@ public abstract class QueryResultPusher
 
   private StreamingHttpResponseAccumulator accumulator;
   private AsyncContext asyncContext;
-  private HttpServletResponse response;
+  private org.eclipse.jetty.server.Response response;
 
   public QueryResultPusher(
       HttpServletRequest request,
@@ -137,7 +139,7 @@ public abstract class QueryResultPusher
       // accumulator, we cannot properly stream results back, because the accumulator won't release control of the
       // Response until it has consumed the underlying Sequence.
       asyncContext = request.startAsync();
-      response = (HttpServletResponse) asyncContext.getResponse();
+      response = (org.eclipse.jetty.server.Response) asyncContext.getResponse();
       response.setHeader(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
       for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
         response.setHeader(entry.getKey(), entry.getValue());
@@ -149,6 +151,21 @@ public abstract class QueryResultPusher
       accumulator.flush();
 
       counter.incrementSuccess();
+      response.setTrailers(() -> {
+        HttpFields fields = new HttpFields();
+        try {
+          if (queryResponse.getQueryRuntimeAnalysis() != null) {
+            String runtimeAnalysis = jsonMapper.writeValueAsString(queryResponse.getQueryRuntimeAnalysis());
+            HttpField runtimeAnalysisField = new HttpField("X-Druid-Query-Runtime-Analysis", runtimeAnalysis);
+            fields.add(runtimeAnalysisField);
+          }
+        }
+        catch (JsonProcessingException e) {
+          log.warn(e, "Unable to serialize query runtime analysis for query [%s]", queryId);
+        }
+
+        return fields;
+      });
       accumulator.close();
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }
@@ -385,7 +402,7 @@ public abstract class QueryResultPusher
         // and encodes the string using ASCII, so 1 char is = 1 byte
         ResponseContext.SerializationResult serializationResult;
         try {
-          serializationResult = responseContext.serializeWith(
+          serializationResult = responseContext.serializeHeadersWith(
               jsonMapper,
               responseContextConfig.getMaxResponseContextHeaderSize()
           );
