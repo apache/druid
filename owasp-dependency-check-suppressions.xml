@@ -136,16 +136,18 @@
     <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
     <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
   </suppress>
- <suppress>
-    <notes><![CDATA[
-     file name: hadoop-*-3.3.1.jar
-     ]]></notes>
-      <cve>CVE-2015-7430</cve>
-      <cve>CVE-2017-3162</cve>
-      <cve>CVE-2021-31684</cve>
-      <cve>CVE-2022-3509</cve>
-      <cve>CVE-2022-40152</cve>
-  </suppress>
+
+  <!-- those are false positives, no other tools report any of those CVEs in the hadoop package -->
+  <suppress>
+      <notes><![CDATA[
+      file name: hadoop-*-3.3.1.jar
+      ]]></notes>
+        <cve>CVE-2015-7430</cve>
+        <cve>CVE-2017-3162</cve>
+        <cve>CVE-2021-31684</cve>
+        <cve>CVE-2022-3509</cve>
+        <cve>CVE-2022-40152</cve>
+    </suppress>
 
   <suppress>
     <!--
@@ -156,7 +158,7 @@
     <notes><![CDATA[
      file name: hive-storage-api-2.8.1.jar
      ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive.*</packageUrl>
     <cve>CVE-2020-13949</cve>
     <cve>CVE-2021-34538</cve>
     <cve>CVE-2021-4125</cve>
@@ -333,7 +335,7 @@
     <notes><![CDATA[
      file name: libthrift-0.13.0.jar
      ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@0.13.0$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@.*</packageUrl>
     <cve>CVE-2020-13949</cve>
   </suppress>
 
@@ -457,9 +459,9 @@
 
   <suppress>
     <notes><![CDATA[
-      file name: okio-1.17.2.jar, okio-1.15.0.jar
+      file name: okio-1.17.2.jar, okio-1.15.0.jar okio 2.8.0
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@1..*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio@..*$</packageUrl>
     <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
   </suppress>
 
@@ -498,4 +500,162 @@
     <cve>CVE-2023-4586</cve>
   </suppress>
 
+  <!-- druid cassandra storage exclusions -->
+  <suppress>
+      <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
+      <notes><![CDATA[
+   file name: libthrift-0.6.1.jar
+   ]]></notes>
+      <packageUrl regex="true">^pkg:maven/org\.apache\.thrift/libthrift@.*$</packageUrl>
+      <cve>CVE-2016-5397</cve>
+      <cve>CVE-2018-1320</cve>
+      <cve>CVE-2019-0205</cve>
+      <cve>CVE-2015-3254</cve>
+  </suppress>
+  <!-- mostly false positives, need to use dependencies from current decade  -->
+  <suppress>
+      <notes><![CDATA[
+   file name: avro-1.4.0-cassandra-1.jar  cassandra-all-1.0.8.jar
+   ]]></notes>
+      <cve>CVE-2012-6708</cve>
+      <cve>CVE-2015-9251</cve>
+      <cve>CVE-2019-11358</cve>
+      <cve>CVE-2020-11022</cve>
+      <cve>CVE-2020-11023</cve>
+      <cve>CVE-2020-7656</cve>
+      <cve>CVE-2011-4969</cve>
+      <cve>CVE-2020-17516</cve>
+      <cve>CVE-2020-13946</cve>
+  </suppress>
+  <!-- end of druid cassandra storage exclusions -->
+
+
+  <!-- druid-cloudfiles-extensions exclusions -->
+  <suppress>
+     <!-- CVEs added for completeness in pretty much dead extension  -->
+      <notes><![CDATA[
+   file name: openstack*-2.5.0.jar
+   ]]></notes>
+      <cve>CVE-2020-12689</cve>
+      <cve>CVE-2020-12691</cve>
+      <cve>CVE-2020-12690</cve>
+      <cve>CVE-2021-3563</cve>
+      <cve>CVE-2016-0738</cve>
+      <cve>CVE-2017-16613</cve>
+  </suppress>
+  <!-- end of druid-cloudfiles-extensions exclusions -->
+
+  <!-- graphite-emitter exclusions -->
+  <suppress>
+     <!-- CVEs added for completeness  -->
+      <notes><![CDATA[
+   file name: amqp-client-5.17.0.jar
+   ]]></notes>
+      <cve>CVE-2023-46120</cve>
+  </suppress>
+  <!-- end of graphite-emitter exclusions -->
+
+  <!-- ambari-metics-emitter exclusions -->
+  <suppress>
+       <!--
+         - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
+         -->
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: org.apache.hadoop:hadoop-annotations:2.6.0)
+     ]]></notes>
+     <packageUrl regex="true">^pkg:maven/org\.apache\.hadoop/hadoop\-annotations@.*$</packageUrl>
+     <cve>CVE-2015-1776</cve>
+     <cve>CVE-2016-3086</cve>
+     <cve>CVE-2016-5393</cve>
+     <cve>CVE-2016-6811</cve>
+     <cve>CVE-2017-3162</cve>
+     <cve>CVE-2018-11768</cve>
+     <cve>CVE-2018-1296</cve>
+     <cve>CVE-2018-8009</cve>
+     <cve>CVE-2018-8029</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: log4j-1.2.17.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/log4j/log4j@1.2.17$</packageUrl>
+    <cve>CVE-2019-17571</cve>
+    <cve>CVE-2021-4104</cve>
+    <cve>CVE-2020-9493</cve>
+    <cve>CVE-2022-23307</cve>
+    <cve>CVE-2022-23305</cve>
+    <cve>CVE-2022-23302</cve>
+    <cve>CVE-2023-26464</cve>
+  </suppress>
+
+  <suppress>
+    <!--
+      - TODO: The lastest version of ambari-metrics-common is 2.7.0.0.0, released in July 2018.
+      -->
+    <notes><![CDATA[
+    file name: ambari-metrics-common-2.7.0.0.0.jar (shaded: io.netty:netty:3.10.5.Final)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.5.Final$</packageUrl>
+    <cve>CVE-2019-16869</cve>
+    <cve>CVE-2019-20444</cve>
+    <cve>CVE-2019-20445</cve>
+    <cve>CVE-2021-37136</cve>
+    <cve>CVE-2021-37137</cve>
+    <cve>CVE-2021-4104</cve>
+    <cve>CVE-2020-9493</cve>
+    <cve>CVE-2022-23307</cve>
+    <cve>CVE-2022-23305</cve>
+    <cve>CVE-2022-23302</cve>
+    <cve>CVE-2022-41881</cve>
+    <cve>CVE-2020-11612</cve>
+  </suppress>
+
+  <suppress>
+     <notes><![CDATA[
+     file name: ambari-metrics-common-2.7.0.0.0.jar
+    ]]></notes>
+    <cve>CVE-2022-45855</cve>
+    <cve>CVE-2022-42009</cve>
+    <!-- Suppress hadoop CVEs that not applicable to hadoop-annotations -->
+    <cve>CVE-2022-25168</cve> <!-- Affected FileUtil.unTar(File, File) API isn't present in hadoop-annotations -->
+    <cve>CVE-2021-33036</cve> <!-- Only applicable to hadoop-yarn-server -->
+     <cve>CVE-2020-9492</cve> <!-- Applicable to webHDFS client -->
+  </suppress>
+  <!-- end of ambari-metics-emitter exclusions -->
+
+  <!-- aliyun-oss exclusions -->
+  <suppress>
+   <!-- Transitive dependency from aliyun-sdk-oss, -->
+    <notes><![CDATA[
+    file name: ini4j-0.5.4.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.ini4j/ini4j@.*$</packageUrl>
+    <vulnerabilityName>CVE-2022-41404</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- Transitive dependency from aliyun-sdk-oss, there is currently no newer version of jdom2 as well-->
+    <notes><![CDATA[
+     file name: jdom2-2.0.6.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jdom/jdom2@2.0.6$</packageUrl>
+    <cve>CVE-2021-33813</cve>
+  </suppress>
+  <!-- end of aliyun-oss exclusions -->
+
+  <!-- iceberg exclusions -->
+  <suppress>
+    <!-- Transitive dependency from aliyun-sdk-oss, there is currently no newer version of jdom2 as well-->
+    <notes><![CDATA[
+     file name: libfb303-0.9.3.jar libthrift-0.9.3.jar
+     ]]></notes>
+      <cve>CVE-2016-5397</cve>
+      <cve>CVE-2018-1320</cve>
+      <cve>CVE-2019-0210</cve>
+      <cve>CVE-2020-13949</cve>
+      <cve>CVE-2019-0205</cve>
+      <cve>CVE-2019-0210</cve>
+      <cve>CVE-2020-13949</cve>
+  </suppress>
 </suppressions>
