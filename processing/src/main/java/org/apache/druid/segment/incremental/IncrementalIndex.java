@@ -584,7 +584,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
           wasNewDim = true;
           final DimensionHandler<?, ?, ?> handler;
           if (useSchemaDiscovery) {
-            handler = new NestedCommonFormatColumnHandler(dimension);
+            handler = new NestedCommonFormatColumnHandler(dimension, null);
           } else {
             // legacy behavior: for schemaless type discovery, everything is a String
             handler = DimensionHandlerUtils.getHandlerFromCapabilities(
