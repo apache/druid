@@ -2700,7 +2700,7 @@ libraries:
 ---
 
 name: Kafka clients
-version: 5.5.12-ccs
+version: 6.2.12-ccs
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2709,7 +2709,7 @@ libraries:
 
 ---
 name: Kafka-schema-registry-client
-version: 5.5.12
+version: 6.2.12
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2771,8 +2771,79 @@ libraries:
 
 ---
 
-name: Kafka Schema Registry Client 6.0.1
-version: 6.0.1
+name: jersey-common
+version: '2.30'
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.glassfish.jersey.core: jersey-common
+
+---
+
+name: osgi-resource-locator
+version: 1.0.3
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Eclipse Public License 2.0
+libraries:
+  - org.glassfish.hk2: osgi-resource-locator
+
+---
+
+name: jakarta.inject
+version: 2.6.1
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Eclipse Public License 2.0
+libraries:
+  - org.glassfish.hk2.external: jakarta.inject
+
+---
+
+name: jakarta.annotation
+version: 1.3.5
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Eclipse Public License 2.0
+libraries:
+  - jakarta.annotation: jakarta.annotation-api
+
+---
+
+name: javax.ws.rs-api
+version: 2.1.1
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Eclipse Public License 2.0
+libraries:
+  - javax.ws.rs: javax.ws.rs-api
+
+---
+
+name: jakarta.ws.rs-api
+version: 2.1.6
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Eclipse Public License 2.0
+libraries:
+  - jakarta.ws.rs: jakarta.ws.rs-api
+
+---
+
+name: swagger-annotations
+version: 2.1.10
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger: swagger-annotations
+  - io.swagger.core.v3: swagger-annotations
+
+---
+
+name: Kafka Schema Registry Client
+version: 6.2.12
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -2783,12 +2854,24 @@ libraries:
 ---
 
 name: Confluent Kafka Client
-version: 6.0.1-ccs
+version: 6.2.12-ccs
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
+
+
+---
+
+name: swagger-annotations
+version: 2.1.10
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger: swagger-annotations
+  - io.swagger.core.v3: swagger-annotations
 
 ---
 

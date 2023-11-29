@@ -86,6 +86,7 @@
              default_config.fmpp
           -->
         <calcite.version>1.35.0</calcite.version>
+        <confluent.version>6.2.12</confluent.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
@@ -249,6 +250,14 @@
         <repository>
             <id>sigar</id>
             <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </repository>
+
+        <repository>
+            <id>cflt-public</id>
+            <url>https://packages.confluent.io/maven/</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>

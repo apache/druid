@@ -126,6 +126,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -843,10 +844,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new LongAnyAggregatorFactory("a0", "cnt"),
                           new FloatAnyAggregatorFactory("a1", "m1"),
                           new DoubleAnyAggregatorFactory("a2", "m2"),
-                          new StringAnyAggregatorFactory("a3", "dim1", 10),
+                          new StringAnyAggregatorFactory("a3", "dim1", 10, true),
                           new LongAnyAggregatorFactory("a4", "v0"),
                           new FloatAnyAggregatorFactory("a5", "v1"),
-                          new StringAnyAggregatorFactory("a6", "v2", 10)
+                          new StringAnyAggregatorFactory("a6", "v2", 10, true)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -1419,7 +1420,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setAggregatorSpecs(aggregators(new StringAnyAggregatorFactory(
                                             "a0:a",
                                             "dim1",
-                                            10
+                                            10, true
                                         )))
                                         .setPostAggregatorSpecs(
                                             ImmutableList.of(
@@ -1564,7 +1565,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       aggregators(
-                          new StringAnyAggregatorFactory("a0", "dim1", 32),
+                          new StringAnyAggregatorFactory("a0", "dim1", 32, true),
                           new LongAnyAggregatorFactory("a1", "l2"),
                           new DoubleAnyAggregatorFactory("a2", "d2"),
                           new FloatAnyAggregatorFactory("a3", "f2")
@@ -1606,7 +1607,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .filters(filter)
                   .aggregators(
                       aggregators(
-                          new StringAnyAggregatorFactory("a0", "dim1", 32),
+                          new StringAnyAggregatorFactory("a0", "dim1", 32, true),
                           new LongAnyAggregatorFactory("a1", "l2"),
                           new DoubleAnyAggregatorFactory("a2", "d2"),
                           new FloatAnyAggregatorFactory("a3", "f2")
@@ -5414,32 +5415,40 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  public void testUnplannableQueries()
+  public void testUnplannableScanOrderByNonTime()
   {
     msqIncompatible();
     // All of these queries are unplannable because they rely on features Druid doesn't support.
     // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
     // It's also here so when we do support these features, we can have "real" tests for these queries.
 
-    final Map<String, String> queries = ImmutableMap.of(
-        // SELECT query with order by non-__time.
+    assertQueryIsUnplannable(
         "SELECT dim1 FROM druid.foo ORDER BY dim1",
-        "SQL query requires ordering a table by non-time column [[dim1]], which is not supported.",
+        "SQL query requires ordering a table by non-time column [[dim1]], which is not supported."
+    );
+  }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
+  @Test
+  public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
+  {
+    msqIncompatible();
+
+    Assume.assumeFalse(NullHandling.sqlCompatible());
+
+    assertQueryIsUnplannable(
         // JOIN condition with not-equals (<>).
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
-        "SQL requires a join with 'NOT_EQUALS' condition that is not supported.",
+        "SQL requires a join with 'NOT_EQUALS' condition that is not supported."
+    );
 
+    assertQueryIsUnplannable(
         // JOIN condition with a function of both sides.
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
         "SQL requires a join with 'GREATER_THAN' condition that is not supported."
     );
-
-    for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
-      assertQueryIsUnplannable(queryErrorPair.getKey(), queryErrorPair.getValue());
-    }
   }
 
   @Test
@@ -9413,7 +9422,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       aggregators(
-                          new StringAnyAggregatorFactory("a0", "dim1", 1024),
+                          new StringAnyAggregatorFactory("a0", "dim1", 1024, true),
                           new LongAnyAggregatorFactory("a1", "l1"),
                           new StringFirstAggregatorFactory("a2", "dim1", null, 1024),
                           new LongFirstAggregatorFactory("a3", "l1", null),
@@ -9732,7 +9741,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new StringAnyAggregatorFactory("a0", "dim1", 1024),
+                                    new StringAnyAggregatorFactory("a0", "dim1", 1024, true),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
@@ -13525,6 +13534,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testStringAnyAggArgValidation()
+  {
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .sql("SELECT ANY_VALUE(dim3, 1000, 'true') FROM foo")
+        .queryContext(ImmutableMap.of())
+        .run());
+    assertThat(e, invalidSqlIs(
+        "Cannot apply 'ANY_VALUE' to arguments of type 'ANY_VALUE(<VARCHAR>, <INTEGER>, <CHAR(4)>)'. Supported form(s): 'ANY_VALUE(<expr>, [<maxBytesPerStringInt>, [<aggregateMultipleValuesBoolean>]])' (line [1], column [8])"));
+    DruidException e1 = assertThrows(DruidException.class, () -> testBuilder()
+        .sql("SELECT ANY_VALUE(dim3, 1000, null) FROM foo")
+        .queryContext(ImmutableMap.of()).run());
+    Assert.assertEquals("Illegal use of 'NULL' (line [1], column [30])", e1.getMessage());
+    DruidException e2 = assertThrows(DruidException.class, () -> testBuilder()
+        .sql("SELECT ANY_VALUE(dim3, null, true) FROM foo")
+        .queryContext(ImmutableMap.of()).run());
+    Assert.assertEquals("Illegal use of 'NULL' (line [1], column [24])", e2.getMessage());
+  }
+  @Test
   public void testStringAggMaxBytes()
   {
     cannotVectorize();
@@ -14358,7 +14385,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         new StringLastAggregatorFactory("a1", "dim1", "__time", 1024),
                         new StringFirstAggregatorFactory("a2", "dim3", "__time", 1024),
                         new StringFirstAggregatorFactory("a3", "dim1", "__time", 1024),
-                        new StringAnyAggregatorFactory("a4", "dim3", 1024)))
+                        new StringAnyAggregatorFactory("a4", "dim3", 1024, true)))
                 .build()
 
         ),

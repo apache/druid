@@ -87,21 +87,21 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
               new DoubleDimensionSchema("double"),
               new StringDimensionSchema("bool"),
               new StringDimensionSchema("variant"),
-              new AutoTypeColumnSchema("array"),
-              new AutoTypeColumnSchema("nested")
+              new AutoTypeColumnSchema("array", null),
+              new AutoTypeColumnSchema("nested", null)
           ),
           response.getLogicalDimensions()
       );
 
       Assert.assertEquals(
           ImmutableList.of(
-              new AutoTypeColumnSchema("string"),
-              new AutoTypeColumnSchema("long"),
-              new AutoTypeColumnSchema("double"),
-              new AutoTypeColumnSchema("bool"),
-              new AutoTypeColumnSchema("variant"),
-              new AutoTypeColumnSchema("array"),
-              new AutoTypeColumnSchema("nested")
+              new AutoTypeColumnSchema("string", null),
+              new AutoTypeColumnSchema("long", null),
+              new AutoTypeColumnSchema("double", null),
+              new AutoTypeColumnSchema("bool", null),
+              new AutoTypeColumnSchema("variant", null),
+              new AutoTypeColumnSchema("array", null),
+              new AutoTypeColumnSchema("nested", null)
           ),
           response.getPhysicalDimensions()
       );
@@ -152,21 +152,21 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("double"),
             new LongDimensionSchema("bool"),
             new StringDimensionSchema("variant"),
-            new AutoTypeColumnSchema("array"),
-            new AutoTypeColumnSchema("nested")
+            new AutoTypeColumnSchema("array", null),
+            new AutoTypeColumnSchema("nested", null)
         ),
         response.getLogicalDimensions()
     );
 
     Assert.assertEquals(
         ImmutableList.of(
-            new AutoTypeColumnSchema("string"),
-            new AutoTypeColumnSchema("long"),
-            new AutoTypeColumnSchema("double"),
-            new AutoTypeColumnSchema("bool"),
-            new AutoTypeColumnSchema("variant"),
-            new AutoTypeColumnSchema("array"),
-            new AutoTypeColumnSchema("nested")
+            new AutoTypeColumnSchema("string", null),
+            new AutoTypeColumnSchema("long", null),
+            new AutoTypeColumnSchema("double", null),
+            new AutoTypeColumnSchema("bool", null),
+            new AutoTypeColumnSchema("variant", null),
+            new AutoTypeColumnSchema("array", null),
+            new AutoTypeColumnSchema("nested", null)
         ),
         response.getPhysicalDimensions()
     );
@@ -256,9 +256,9 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
                              new LongDimensionSchema("long"),
                              new DoubleDimensionSchema("double"),
                              new StringDimensionSchema("bool"),
-                             new AutoTypeColumnSchema("variant"),
-                             new AutoTypeColumnSchema("array"),
-                             new AutoTypeColumnSchema("nested")
+                             new AutoTypeColumnSchema("variant", null),
+                             new AutoTypeColumnSchema("array", null),
+                             new AutoTypeColumnSchema("nested", null)
             )
         ).build(),
         null,

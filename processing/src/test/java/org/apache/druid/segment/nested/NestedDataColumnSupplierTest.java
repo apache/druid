@@ -195,7 +195,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           closer
       );
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -254,6 +254,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         ColumnType.NESTED_DATA,
         false,
         false,
+        false,
         ByteOrder.nativeOrder(),
         RoaringBitmapSerdeFactory.getInstance()
     );
@@ -275,6 +276,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     ColumnBuilder bob = new ColumnBuilder();
     NestedCommonFormatColumnPartSerde partSerde = NestedCommonFormatColumnPartSerde.createDeserializer(
         ColumnType.NESTED_DATA,
+        false,
         false,
         false,
         ByteOrder.nativeOrder(),
