@@ -450,6 +450,43 @@ Note that it is often more optimal to use a like filter instead of a regex for s
 { "type": "regex", "dimension": "someColumn", "pattern": ^50.* }
 ```
 
+## Array contains element filter
+
+The `arrayContainsElement` filter is for checking if an `ARRAY` contains a specific element, but can match against any type of column with scalar columns being treated as single element arrays.
+
+| Property | Description | Required |
+| -------- | ----------- | -------- |
+| `type` | Must be "arrayContainsElement".| Yes |
+| `column` | Input column or virtual column name to filter. | Yes |
+| `elementMatchValueType` | String specifying the type of element value to match. For example `STRING`, `LONG`, `DOUBLE`, `FLOAT`, `ARRAY<STRING>`, `ARRAY<LONG>`, or any other Druid type. The `elementMatchValueType` determines how Druid interprets the `elementMatchValue` to assist in converting to the type of elements contained in the matched `column`. | Yes |
+| `elementMatchValue` | Array element value to match, including null. | Yes |
+
+### Example: equivalent of `WHERE ARRAY_CONTAINS(someArrayColumn, 'hello')`
+
+```json
+{ "type": "arrayContainsElement", "column": "someArrayColumn", "elementMatchValueType": "STRING", "elementMatchValue": "hello" }
+```
+
+### Example: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, 1.23)`
+
+```json
+{ "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "DOUBLE", "elementMatchValue": 1.23 }
+```
+
+### Example: equivalent of `WHERE ARRAY_CONTAINS(someNumericArrayColumn, ARRAY[1, 2, 3])`
+
+```json
+{
+  "type": "and",
+  "fields": [
+    { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 1 },
+    { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 2 },
+    { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 3 }
+  ]
+}
+
+```
+
 ## Interval filter
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
