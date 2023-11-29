@@ -900,6 +900,9 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     }
   }
 
+  /**
+   * Called to initialize IncrementalIndex dimension order during index creation
+   */
   public void loadDimensionIterable(
       Map<String, ColumnFormat> oldColumnCapabilities
   )

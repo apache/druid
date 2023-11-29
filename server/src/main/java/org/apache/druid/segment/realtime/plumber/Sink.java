@@ -418,6 +418,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     return old;
   }
 
+  /**
+   * Get column information for all the {@link FireHydrant}.
+   */
   public Map<String, ColumnType> getSchema()
   {
     synchronized (hydrantLock) {

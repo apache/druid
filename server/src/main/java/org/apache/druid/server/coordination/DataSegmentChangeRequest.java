@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "load", value = SegmentChangeRequestLoad.class),
     @JsonSubTypes.Type(name = "drop", value = SegmentChangeRequestDrop.class),
     @JsonSubTypes.Type(name = "noop", value = SegmentChangeRequestNoop.class),
-    @JsonSubTypes.Type(name = "sinkSchemaChange", value = SinkSchemaChangeRequest.class)
+    @JsonSubTypes.Type(name = "sinkSchemaChange", value = SegmentsSchemaChangeRequest.class)
 })
 public interface DataSegmentChangeRequest
 {

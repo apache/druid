@@ -34,7 +34,18 @@ public interface DataSegmentAnnouncer
 
   void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
 
-  void announceSinksSchema(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange);
+  /**
+   * Announce schema for all sinks for a given task.
+   *
+   * @param taskId taskId
+   * @param segmentsSchema absolute schema for all sinks, in case the client requests full sync.
+   * @param segmentsSchemaChange schema change for all sinks
+   */
+  void announceSinkSchemaForTask(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange);
 
+  /**
+   * Unnannounce task.
+   * @param taskId taskId
+   */
   void unannouceTask(String taskId);
 }

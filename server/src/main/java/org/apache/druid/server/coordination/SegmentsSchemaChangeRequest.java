@@ -26,22 +26,22 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import javax.annotation.Nullable;
 
 /**
- *
+ * {@link DataSegmentChangeRequest} which encapsulates segment schema changes.
  */
-public class SinkSchemaChangeRequest implements DataSegmentChangeRequest
+public class SegmentsSchemaChangeRequest implements DataSegmentChangeRequest
 {
   private final SegmentsSchema segmentsSchema;
 
   @JsonCreator
-  public SinkSchemaChangeRequest(
-      @JsonProperty("sinksSchemaChange") SegmentsSchema segmentsSchema
+  public SegmentsSchemaChangeRequest(
+      @JsonProperty("segmentsSchemaChange") SegmentsSchema segmentsSchema
   )
   {
     this.segmentsSchema = segmentsSchema;
   }
 
   @JsonProperty
-  public SegmentsSchema getSinksSchemaChange()
+  public SegmentsSchema getSegmentsSchemaChange()
   {
     return segmentsSchema;
   }
@@ -49,6 +49,7 @@ public class SinkSchemaChangeRequest implements DataSegmentChangeRequest
   @Override
   public void go(DataSegmentChangeHandler handler, @Nullable DataSegmentChangeCallback callback)
   {
+    // noop
   }
 
   @Override

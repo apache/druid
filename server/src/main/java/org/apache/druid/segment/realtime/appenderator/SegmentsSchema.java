@@ -28,7 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Encapsulates schema information for multiple segments, optimise for storage by storing integer value for column information.
+ * Encapsulates schema information for multiple segments.
+ * Optimise for storage by mapping column information to integer value.
  * <p>
  * Primarily used to announce schema changes for all {@link org.apache.druid.segment.realtime.plumber.Sink}
  * created by a task in {@link StreamAppenderator}.
@@ -39,16 +40,16 @@ public class SegmentsSchema
   private final Map<Integer, ColumnInformation> columnMapping;
 
   // segmentId to schema mapping
-  private final Map<SegmentId, SegmentSchema> segmentSchemaChangeMap;
+  private final Map<SegmentId, SegmentSchema> segmentSchemaMap;
 
   @JsonCreator
   public SegmentsSchema(
       @JsonProperty("columnMapping") Map<Integer, ColumnInformation> columnMapping,
-      @JsonProperty("segmentSchemaChangeMap") Map<SegmentId, SegmentSchema> segmentSchemaChangeMap
+      @JsonProperty("segmentSchemaChangeMap") Map<SegmentId, SegmentSchema> segmentSchemaMap
   )
   {
     this.columnMapping = columnMapping;
-    this.segmentSchemaChangeMap = segmentSchemaChangeMap;
+    this.segmentSchemaMap = segmentSchemaMap;
   }
 
   @JsonProperty
@@ -58,9 +59,9 @@ public class SegmentsSchema
   }
 
   @JsonProperty
-  public Map<SegmentId, SegmentSchema> getSegmentSchemaChangeMap()
+  public Map<SegmentId, SegmentSchema> getSegmentSchemaMap()
   {
-    return segmentSchemaChangeMap;
+    return segmentSchemaMap;
   }
 
   /**
@@ -171,7 +172,7 @@ public class SegmentsSchema
   {
     return "SegmentsSchema{" +
            "columnMapping=" + columnMapping +
-           ", segmentSchemaChangeMap=" + segmentSchemaChangeMap +
+           ", segmentSchemaChangeMap=" + segmentSchemaMap +
            '}';
   }
 }

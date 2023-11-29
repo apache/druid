@@ -79,7 +79,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
 
-  private final ConcurrentMap<String, SegmentsSchema> taskSinksSchema = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, SegmentsSchema> taskSinkSchema = new ConcurrentHashMap<>();
 
   @Nullable
   private final SegmentZNode dummyZnode;
@@ -315,16 +315,16 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void announceSinksSchema(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange)
+  public void announceSinkSchemaForTask(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange)
   {
-    changes.addChangeRequest(new SinkSchemaChangeRequest(segmentsSchemaChange));
-    taskSinksSchema.put(taskId, segmentsSchema);
+    changes.addChangeRequest(new SegmentsSchemaChangeRequest(segmentsSchemaChange));
+    taskSinkSchema.put(taskId, segmentsSchema);
   }
 
   @Override
   public void unannouceTask(String taskId)
   {
-    taskSinksSchema.remove(taskId);
+    taskSinkSchema.remove(taskId);
   }
 
   /**
@@ -348,13 +348,13 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         );
 
         Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
-            taskSinksSchema.values(),
+            taskSinkSchema.values(),
             new Function<SegmentsSchema, DataSegmentChangeRequest>()
             {
               @Override
-              public SinkSchemaChangeRequest apply(SegmentsSchema input)
+              public SegmentsSchemaChangeRequest apply(SegmentsSchema input)
               {
-                return new SinkSchemaChangeRequest(input);
+                return new SegmentsSchemaChangeRequest(input);
               }
             }
         );

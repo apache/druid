@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.column.ColumnType;
@@ -37,11 +38,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class SinkSchemaUtil
 {
+
   /**
-   *
-   * @param currentSinkSchema
-   * @return
+   * Compute {@link SegmentsSchema} for the sinks.
    */
+  @VisibleForTesting
   static Optional<SegmentsSchema> computeAbsoluteSchema(
       Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema
   )
@@ -78,11 +79,9 @@ class SinkSchemaUtil
   }
 
   /**
-   *
-   * @param previousSinkSchema
-   * @param currentSinkSchema
-   * @return
+   * Compute schema change for the sinks.
    */
+  @VisibleForTesting
   static Optional<SegmentsSchema> computeSchemaChange(
       Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> previousSinkSchema,
       Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema

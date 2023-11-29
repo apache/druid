@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
@@ -42,6 +43,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -115,7 +117,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           @Override
           public ServerView.CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
           {
-            updateSchemaForRealtimeSegments(segmentsSchema);
+            updateSchemaForSegments(segmentsSchema);
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -165,71 +167,83 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
   }
 
-  public void updateSchemaForRealtimeSegments(SegmentsSchema segmentsSchema)
+  /**
+   * Update schema for segments.
+   */
+  private void updateSchemaForSegments(SegmentsSchema segmentsSchema)
   {
-    // add datasource to SinksSchema
-    String dataSource = null;
+    Map<Integer, SegmentsSchema.ColumnInformation> columnInformationMap = segmentsSchema.getColumnMapping();
+    Map<SegmentId, SegmentsSchema.SegmentSchema> segmentSchemaMap = segmentsSchema.getSegmentSchemaMap();
 
-    Map<SegmentId, SegmentsSchema.SegmentSchema> segmentIdSinkSchemaChangeMap = segmentsSchema.getSegmentSchemaChangeMap();
+    for (Map.Entry<SegmentId, SegmentsSchema.SegmentSchema> entry : segmentSchemaMap.entrySet()) {
+      SegmentId segmentId = entry.getKey();
+      SegmentsSchema.SegmentSchema segmentSchema = entry.getValue();
+      String dataSource = segmentId.getDataSource();
 
-    synchronized (lock) {
       segmentMetadataInfo.compute(
           dataSource,
-          (datasourceKey, segmentsMap) -> {
+          (dataSourceKey, segmentsMap) -> {
             if (segmentsMap == null) {
               segmentsMap = new ConcurrentSkipListMap<>(SEGMENT_ORDER);
             }
-            for (Map.Entry<SegmentId, SegmentsSchema.SegmentSchema> entry : segmentIdSinkSchemaChangeMap.entrySet()) {
-              segmentsMap.compute(
-                  entry.getKey(), (segmentId, segmentMetadata) -> {
-                    if (segmentMetadata == null) {
-                      // ignore
-                      // log, alert, counter
-                      // queue
-                      // by design can't occur, alert log
-                    } else {
-                      // We know this segment.
+            segmentsMap.compute(
+                segmentId, (id, segmentMetadata) -> {
+                  if (segmentMetadata == null) {
+                    // By design, this case shouldn't arise since both segment and schema is announced in the same flow
+                    // and messages shouldn't be lost in the poll
+                    log.makeAlert("Received schema update for unknown segment id [%s]", segmentId).emit();
+                  } else {
+                    // We know this segment.
+                    Optional<RowSignature> rowSignature =
+                        mergeOrCreateRowSignature(
+                            segmentId,
+                            segmentMetadata.getRowSignature(),
+                            columnInformationMap,
+                            segmentSchema
+                        );
+                    if (rowSignature.isPresent()) {
                       segmentMetadata = AvailableSegmentMetadata
                           .from(segmentMetadata)
-                          .withRowSignature(mergeOrCreateRowSignature(
-                              segmentMetadata.getRowSignature(),
-                              segmentsSchema.getColumnMapping(),
-                              entry.getValue()
-                          ))
+                          .withRowSignature(rowSignature.get())
                           .build();
                     }
-                    return segmentMetadata;
                   }
-              );
-            }
+                  return segmentMetadata;
+                }
+            );
             return segmentsMap;
           }
       );
     }
   }
 
-  private RowSignature mergeOrCreateRowSignature(
-      @Nullable RowSignature previous,
+  /**
+   * Merge the schema update with the existing signature of a segment or create new RowSignature.
+   */
+  @VisibleForTesting
+  Optional<RowSignature> mergeOrCreateRowSignature(
+      SegmentId segmentId,
+      @Nullable RowSignature previousSignature,
       Map<Integer, SegmentsSchema.ColumnInformation> columnMapping,
       SegmentsSchema.SegmentSchema segmentSchema
   )
   {
-    RowSignature.Builder builder = RowSignature.builder();
-    // merge using strategy
     if (!segmentSchema.isDelta()) {
-      // create new
+      // create new, doesn't matter if we already have a previous signature
+      RowSignature.Builder builder = RowSignature.builder();
       for (Integer columnInt : segmentSchema.getNewColumns()) {
         SegmentsSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
         builder.add(columnInformation.getColumnName(), columnInformation.getColumnType());
       }
-      return builder.build();
-    } else if (previous != null) {
-      // merge
+      return Optional.of(builder.build());
+    } else if (previousSignature != null) {
+      // merge the schema update with the previous signature
+      RowSignature.Builder builder = RowSignature.builder();
       final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
 
-      for (String column : previous.getColumnNames()) {
+      for (String column : previousSignature.getColumnNames()) {
         final ColumnType columnType =
-            previous.getColumnType(column)
+            previousSignature.getColumnType(column)
                     .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
 
         columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
@@ -257,11 +271,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         }
       }
       columnTypes.forEach(builder::add);
-      return builder.build();
+      return Optional.of(builder.build());
     } else {
-      // received delta but we don't have previous message, log and skip
-      log.debug("");
-      return null;
+      // we don't have the previous signature, but we received delta update, raise alert
+      // this case shouldn't arise though
+      log.makeAlert("Received delta schema update but no previous schema exists for segmentId [%s]", segmentId).emit();
+      return Optional.empty();
     }
   }
 }

@@ -1648,7 +1648,7 @@ public class StreamAppenderator implements Appenderator
 
       // announce the change
       if (sinksSchema.isPresent() || sinksSchemaChange.isPresent()) {
-        announcer.announceSinksSchema(taskId, sinksSchema.orElse(null), sinksSchemaChange.orElse(null));
+        announcer.announceSinkSchemaForTask(taskId, sinksSchema.orElse(null), sinksSchemaChange.orElse(null));
       }
     }
   }
