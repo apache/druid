@@ -3184,7 +3184,7 @@ libraries:
 ---
 
 name: Kafka clients
-version: 7.0.11-ccs
+version: 6.2.12-ccs
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3193,7 +3193,7 @@ libraries:
 
 ---
 name: Kafka-schema-registry-client
-version: 7.0.11
+version: 6.2.12
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3327,7 +3327,7 @@ libraries:
 ---
 
 name: Kafka Schema Registry Client
-version: 7.0.11
+version: 6.2.12
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -3338,7 +3338,7 @@ libraries:
 ---
 
 name: Confluent Kafka Client
-version: 7.0.11-ccs
+version: 6.2.12-ccs
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
