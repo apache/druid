@@ -231,7 +231,7 @@ public class StringAnyBufferAggregatorTest
   {
     List<String> mvd = Lists.newArrayList("AAAA", "AAAAB", "AAAC");
     final Object[] mvds = {null, "CCCC", mvd, "BBBB", "EEEE"};
-    int maxStringBytes = 1024;
+    final int maxStringBytes = 1024;
 
     TestObjectColumnSelector<Object> objectColumnSelector = new TestObjectColumnSelector<>(mvds);
 
