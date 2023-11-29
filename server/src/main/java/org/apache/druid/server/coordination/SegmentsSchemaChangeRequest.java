@@ -34,7 +34,7 @@ public class SegmentsSchemaChangeRequest implements DataSegmentChangeRequest
 
   @JsonCreator
   public SegmentsSchemaChangeRequest(
-      @JsonProperty("segmentsSchemaChange") SegmentsSchema segmentsSchema
+      @JsonProperty("segmentsSchema") SegmentsSchema segmentsSchema
   )
   {
     this.segmentsSchema = segmentsSchema;
