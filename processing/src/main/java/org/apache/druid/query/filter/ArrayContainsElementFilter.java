@@ -382,10 +382,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
         return typeDetectingArrayPredicateSupplier.get();
       }
 
-      return new FallbackPredicate<>(
-          arrayPredicates.computeIfAbsent(arrayType, (existing) -> makeArrayPredicateInternal(arrayType)),
-          ExpressionType.fromColumnTypeStrict(arrayType)
-      );
+      return new FallbackPredicate<>(computeArrayPredicate(arrayType), ExpressionType.fromColumnTypeStrict(arrayType));
     }
 
     @Override
@@ -402,11 +399,16 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
         }
         final ExprEval<?> inputEval = ExprEval.bestEffortOf(StructuredData.unwrap(input));
         final Predicate<Object[]> matcher = new FallbackPredicate<>(
-            makeArrayPredicate(ExpressionType.toColumnType(inputEval.asArrayType())),
+            computeArrayPredicate(ExpressionType.toColumnType(inputEval.asArrayType())),
             inputEval.asArrayType()
         );
         return matcher.apply(inputEval.asArray());
       });
+    }
+
+    private Predicate<Object[]> computeArrayPredicate(TypeSignature<ValueType> arrayType)
+    {
+      return arrayPredicates.computeIfAbsent(arrayType, (existing) -> makeArrayPredicateInternal(arrayType));
     }
 
     private Supplier<Predicate<Object[]>> makeTypeDetectingArrayPredicate()
