@@ -2334,3 +2334,4 @@ LAST_VALUE
 markUnused
 markUsed
 segmentId
+aggregateMultipleValues
