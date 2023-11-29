@@ -109,7 +109,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
           MODIFIED_PATH_ATTRIBUTE,
           request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
-    } else if (requestURI.equals(ENABLED_PATH)) {
+    } else if (ENABLED_PATH.equals(requestURI)) {
       handleEnabledRequest(response);
       return;
     } else {
