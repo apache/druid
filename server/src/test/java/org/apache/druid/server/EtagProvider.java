@@ -21,13 +21,17 @@ package org.apache.druid.server;
 
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Key;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.TableDataSource;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface EtagProvider
@@ -41,12 +45,12 @@ public interface EtagProvider
   {
   }
 
-  String getEtagFor(Query query);
+  String getEtagFor(Query<?> query);
 
   static class EmptyEtagProvider implements EtagProvider
   {
     @Override
-    public String getEtagFor(Query query)
+    public String getEtagFor(Query<?> query)
     {
       return null;
     }
@@ -57,7 +61,7 @@ public interface EtagProvider
     AtomicInteger etagSerial = new AtomicInteger();
 
     @Override
-    public String getEtagFor(Query query)
+    public String getEtagFor(Query<?> query)
     {
       if (query.getDataSource().isCacheable(true)) {
         return "TEST_ETAG-" + etagSerial.incrementAndGet();
@@ -67,16 +71,24 @@ public interface EtagProvider
     }
   }
 
-  static class UseProvidedIfAvaliable extends AlwaysNewEtagProvider
+  static class ProvideEtagBasedOnDatasource implements EtagProvider
   {
     @Override
-    public String getEtagFor(Query query)
+    public String getEtagFor(Query<?> query)
     {
-      if (query.getDataSource().isCacheable(true)) {
-        byte[] cacheKey = query.getDataSource().getCacheKey();
-        return "ETP-" + Arrays.hashCode(cacheKey);
-      } else {
+      if (!query.getDataSource().isCacheable(true)) {
         return null;
+      }
+      if (!(query.getDataSource() instanceof TableDataSource)) {
+        throw DruidException.defensive("only TableDataSource handled right now");
+      }
+      try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        TableDataSource tableDataSource = (TableDataSource) query.getDataSource();
+        baos.write(query.getDataSource().getCacheKey());
+        baos.write(tableDataSource.getName().getBytes(StandardCharsets.UTF_8));
+        return "ETP-" + new String(baos.toByteArray(), StandardCharsets.UTF_8);
+      } catch (IOException e) {
+        throw DruidException.defensive().build("Unexpected IOException", e);
       }
     }
   }

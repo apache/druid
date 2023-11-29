@@ -107,12 +107,6 @@ public class ExternalDataSource implements DataSource
   }
 
   @Override
-  public boolean isCacheable(boolean isBroker)
-  {
-    return false;
-  }
-
-  @Override
   public boolean isGlobal()
   {
     return false;

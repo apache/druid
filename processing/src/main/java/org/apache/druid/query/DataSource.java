@@ -65,11 +65,12 @@ public interface DataSource
   DataSource withChildren(List<DataSource> children);
 
   /**
-   * Returns true if queries on this dataSource are cacheable at both the result level and per-segment level.
-   * Currently, dataSources that do not actually reference segments (like 'inline'), are not cacheable since cache keys
-   * are always based on segment identifiers.
+   * DataSource is cacheable at both the result level and per-segment level.
    */
-  boolean isCacheable(boolean isBroker);
+  default boolean isCacheable(boolean isBroker)
+  {
+    return false;
+  }
 
   /**
    * Returns true if all servers have a full copy of this datasource. True for things like inline, lookup, etc, or

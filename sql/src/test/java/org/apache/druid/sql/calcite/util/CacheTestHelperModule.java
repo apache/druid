@@ -63,7 +63,7 @@ public class CacheTestHelperModule extends AbstractModule
     cacheConfig = new TestCacheConfig(enableResultLevelCache);
 
     if (enableResultLevelCache) {
-      etagProvider = new EtagProvider.UseProvidedIfAvaliable();
+      etagProvider = new EtagProvider.ProvideEtagBasedOnDatasource();
       cache = MapCache.create(1_000_000L);
     } else {
       etagProvider = new EtagProvider.EmptyEtagProvider();
