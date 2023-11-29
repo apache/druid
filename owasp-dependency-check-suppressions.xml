@@ -34,6 +34,7 @@
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-context@1.27.2$</packageUrl>
     <cve>CVE-2023-4785</cve> <!-- Not applicable to gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2023-4785 -->
     <cve>CVE-2023-33953</cve> <!-- Not applicable to gRPC Java - https://cloud.google.com/support/bulletins#gcp-2023-022 -->
+    <cve>CVE-2023-32732</cve>
   </suppress>
 
   <suppress>
@@ -48,6 +49,39 @@
       file name: guava-31.1-jre.jar
     ]]></notes>
     <cve>CVE-2020-8908</cve>
+  </suppress>
+
+  <!-- CVE-2022-4244 is affecting plexus-utils package,
+  plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
+  <suppress base="true">
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-interpolation@.*$</packageUrl>
+    <cve>CVE-2022-4244</cve>
+    <cve>CVE-2022-4245</cve>
+  </suppress>
+
+  <suppress>
+    <!-- This presumably applies to maven build system -->
+    <notes><![CDATA[
+     file name: maven-settings
+     ]]></notes>
+    <cve>CVE-2021-26291</cve>
+  </suppress>
+
+  <suppress>
+    <!-- LDAP authentication check bypass FP no exploitability analysis -->
+    <notes><![CDATA[
+     file name: derby-10.14.2.0.jar
+     ]]></notes>
+    <cve>CVE-2022-46337</cve>
+  </suppress>
+
+  <suppress>
+    <!-- False positive fixed in 9.4.52
+    https://nvd.nist.gov/vuln/detail/CVE-2023-36479 -->
+    <notes><![CDATA[
+     file name: jetty-servlets-9.4.53.v20231009.jar
+     ]]></notes>
+    <cve>CVE-2023-36479</cve>
   </suppress>
 
   <suppress>
@@ -67,6 +101,122 @@
   </suppress>
 
   <suppress>
+    <!-- Avatica server itself is not affected. Vulnerability exists only on client. -->
+    <notes><![CDATA[
+   file name: avatica-server-1.23.0.jar
+   ]]></notes>
+    <cve>CVE-2022-36364</cve>
+    <cve>CVE-2022-39135</cve>
+    <cve>CVE-2020-13955</cve>
+  </suppress>
+
+  <!-- DoS when using expression evaluator.guess -->
+  <suppress>
+    <notes><![CDATA[
+    file name: janino-3.1.9.jar
+    ]]></notes>
+    <cve>CVE-2023-33546</cve>
+  </suppress>
+
+  <suppress>
+    <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
+    <notes><![CDATA[
+     file name: hadoop-client-runtime-3.3.6.jar
+     ]]></notes>
+    <!-- this one is windows only - https://nvd.nist.gov/vuln/detail/CVE-2022-26612 -->
+    <cve>CVE-2022-26612</cve>
+    <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
+    <cve>CVE-2023-25613</cve>
+    <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
+    <!-- CVE from shaded dependency nimbus-jose-jwt, fixed in upcoming Hadoop release version -
+    https://github.com/apache/hadoop/commit/ad49ddda0e1d9632c8c9fcdc78fca8244e1248c9 -->
+    <cve>CVE-2023-1370</cve>
+    <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
+    <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
+    <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+    <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+  </suppress>
+ <suppress>
+    <notes><![CDATA[
+     file name: hadoop-*-3.3.1.jar
+     ]]></notes>
+      <cve>CVE-2015-7430</cve>
+      <cve>CVE-2017-3162</cve>
+      <cve>CVE-2021-31684</cve>
+      <cve>CVE-2022-3509</cve>
+      <cve>CVE-2022-40152</cve>
+  </suppress>
+
+  <suppress>
+    <!--
+      1. hive-storage-api has the thrift vulnerability too
+      2. CVE-2021-34538 pertains to Hive server.
+      3. CVE-2021-4125 only applies to the OpenShift Metering hive container images
+     -->
+    <notes><![CDATA[
+     file name: hive-storage-api-2.8.1.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@2.8.1$</packageUrl>
+    <cve>CVE-2020-13949</cve>
+    <cve>CVE-2021-34538</cve>
+    <cve>CVE-2021-4125</cve>
+  </suppress>
+
+  <suppress>
+    <!-- These are for wildfly-openssl. -->
+    <notes><![CDATA[
+    file name: wildfly-openssl-1.0.7.Final.jar
+    ]]></notes>
+    <cve>CVE-2020-10740</cve>
+    <cve>CVE-2020-25644</cve>
+    <cve>CVE-2020-10718</cve>
+    <cve>CVE-2022-1278</cve>
+  </suppress>
+
+
+  <suppress>
+    <!-- These are for elasticsearch in ranger soon to be fixed. -->
+    <notes><![CDATA[
+    file name: elasticsearch plugins
+    ]]></notes>
+    <cve>CVE-2023-31417</cve>
+    <cve>CVE-2023-31418</cve>
+    <cve>CVE-2023-31419</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: kafka-clients-3.2.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka\-clients@.*$</packageUrl>
+    <cve>CVE-2022-34917</cve>
+    <cve>CVE-2023-25194</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: woodstox-core-6.2.4.jar
+    ]]></notes>
+    <cve>CVE-2023-34411</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: spatial4j-0.7.jar:
+    ]]></notes>
+    <cve>CVE-2014-125074</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+    file name: aws-sdk-bundle
+    ]]></notes>
+    <cve>CVE-2020-36518</cve>
+    <cve>CVE-2021-46877</cve>
+    <cve>CVE-2022-41881</cve>
+  </suppress>
+
+  <suppress>
     <!-- Pulled in by io.kubernetes:client-java and kafka_2.13 but not fixed in either place yet -->
     <!-- jose4j before v0.9.3 allows attackers to set a low iteration count of 1000 or less -->
     <notes><![CDATA[
@@ -74,6 +224,16 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.bitbucket\.b_c/jose4j@.*$</packageUrl>
     <cve>CVE-2023-31582</cve>
+  </suppress>
+
+  <suppress>
+    <!-- okhttp -->
+    <notes><![CDATA[
+   file name: okhttp-*.jar
+   ]]></notes>
+    <cve>CVE-2021-0341</cve>
+    <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
+    <cve>CVE-2023-0833</cve>
   </suppress>
 
   <suppress>
