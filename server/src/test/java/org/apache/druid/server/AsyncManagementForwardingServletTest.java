@@ -327,7 +327,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     Assert.assertEquals(200, connection.getResponseCode());
     byte[] bytes = new byte[connection.getContentLength()];
     connection.getInputStream().read(bytes);
-    Assert.assertEquals(ImmutableMap.of("enabled", true), new DefaultObjectMapper().readValue(bytes, Map.class));
+    Assert.assertEquals(ImmutableMap.of("enabled", true), new ObjectMapper().readValue(bytes, Map.class));
     Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
     Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
