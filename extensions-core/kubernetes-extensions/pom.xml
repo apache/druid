@@ -35,8 +35,19 @@
   </parent>
 
   <properties>
-    <kubernetes.client.version>11.0.4</kubernetes.client.version>
+    <kubernetes.client.version>19.0.0</kubernetes.client.version>
   </properties>
+
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>okhttp</artifactId>
+          <version>4.12.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>

@@ -881,29 +881,12 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.4
+version: 19.0.0
 libraries:
   - io.kubernetes: client-java
-
----
-
-name: kubernetes official java client api
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 11.0.4
-libraries:
   - io.kubernetes: client-java-api
-
----
-
-name: kubernetes official java client extended
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 11.0.4
-libraries:
   - io.kubernetes: client-java-extended
+  - io.kubernetes: client-java-api-fluent
 
 ---
 
@@ -944,16 +927,6 @@ license_name: Apache License version 2.0
 version: 0.22.0
 libraries:
   - io.sundr: builder-annotations
-
----
-
-name: com.squareup.okio okio
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 1.17.2
-libraries:
-  - com.squareup.okio: okio
 
 ---
 
@@ -1021,10 +994,20 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.14.9
+version: 4.12.0
 libraries:
   - com.squareup.okhttp3: okhttp
 
+---
+
+name: com.squareup.okio okio
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 3.2.0
+libraries:
+  - com.squareup.okio: okio
+  - com.squareup.okio: okio-jvm
 ---
 
 name: io.prometheus simpleclient
@@ -4686,7 +4669,7 @@ libraries:
 
 ---
 
-name: Apache Lucene 
+name: Apache Lucene
 license_category: binary
 version: 8.4.0
 module: druid-ranger-security
