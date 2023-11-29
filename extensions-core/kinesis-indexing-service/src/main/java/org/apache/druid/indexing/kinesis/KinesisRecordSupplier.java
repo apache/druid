@@ -50,6 +50,7 @@ import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -73,6 +74,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -106,7 +108,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    */
   private static final int GET_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
   private static final int GET_SEQUENCE_NUMBER_RETRY_COUNT = 10;
-  private static final int MAX_BYTES_PER_POLL = 1_000_000;
 
   /**
    * Catch any exception and wrap it in a {@link StreamException}
@@ -294,8 +295,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
               );
             }
 
-            // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
-            // from this message and back off for a bit to let the buffer drain before retrying.
             recordBufferOfferWaitMillis = recordBufferOfferTimeout;
             while (!records.offer(
                 new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(currRecord, recordSize),
@@ -400,7 +399,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private final int fetchDelayMillis;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
-  private final int maxRecordsPerPoll;
+  private final int maxBytesPerPoll;
   private final int fetchThreads;
   private final int recordBufferSizeBytes;
   private final boolean useEarliestSequenceNumber;
@@ -423,7 +422,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       int recordBufferSizeBytes,
       int recordBufferOfferTimeout,
       int recordBufferFullWait,
-      int maxRecordsPerPoll,
+      int maxBytesPerPoll,
       boolean useEarliestSequenceNumber,
       boolean useListShards
   )
@@ -433,15 +432,17 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     this.fetchDelayMillis = fetchDelayMillis;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait;
-    this.maxRecordsPerPoll = maxRecordsPerPoll;
+    this.maxBytesPerPoll = maxBytesPerPoll;
     this.fetchThreads = fetchThreads;
     this.recordBufferSizeBytes = recordBufferSizeBytes;
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
     this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
 
-    // the deaggregate function is implemented by the amazon-kinesis-client. Use reflection to find the deaggregate
-    // function in the classpath. See details on the docs page for more information on how to use deaggregation
+    // The deaggregate function is implemented by the amazon-kinesis-client, whose license was formerly not compatible
+    // with Apache. The code here avoids the license issue by using reflection, but is no longer necessary since
+    // amazon-kinesis-client is now Apache-licensed and is now a dependency of Druid. This code could safely be
+    // modified to use regular calls rather than reflection.
     try {
       Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
       MethodHandles.Lookup lookup = MethodHandles.publicLookup();
@@ -620,22 +621,17 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     start();
 
     try {
-      int expectedSize = Math.min(Math.max(records.size(), 1), maxRecordsPerPoll);
-
-      List<MemoryBoundLinkedBlockingQueue.ObjectContainer<OrderedPartitionableRecord<String, String, ByteEntity>>> polledRecords = new ArrayList<>(expectedSize);
+      List<MemoryBoundLinkedBlockingQueue.ObjectContainer<OrderedPartitionableRecord<String, String, ByteEntity>>> polledRecords = new LinkedList<>();
 
       records.drain(
           polledRecords,
-          MAX_BYTES_PER_POLL,
+          maxBytesPerPoll,
           timeout,
           TimeUnit.MILLISECONDS
       );
 
-      polledRecords = polledRecords.stream()
-                                   .filter(x -> partitionResources.containsKey(x.getData().getStreamPartition()))
-                                   .collect(Collectors.toList());
-
       return polledRecords.stream()
+          .filter(x -> partitionResources.containsKey(x.getData().getStreamPartition()))
           .map(MemoryBoundLinkedBlockingQueue.ObjectContainer::getData)
           .collect(Collectors.toList());
     }
@@ -1053,13 +1049,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         .forEachOrdered(x -> {
           if (!newQ.offer(x)) {
             // this should never really happen in practice but adding check here for safety.
-            throw new StreamException(new ISE(StringUtils.format(
-                "Failed to insert item to new queue when resetting background fetch. "
+            throw DruidException.defensive("Failed to insert item to new queue when resetting background fetch. "
                 + "[stream: '%s', partitionId: '%s', sequenceNumber: '%s']",
                 x.getData().getStream(),
                 x.getData().getPartitionId(),
                 x.getData().getSequenceNumber()
-            )));
+            );
           }
         });
 

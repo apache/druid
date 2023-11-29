@@ -165,6 +165,7 @@ public class KinesisIndexTaskTuningConfigTest
         500,
         500,
         6000,
+        1_000_000,
         new Period("P3D")
     );
 
@@ -192,8 +193,10 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
     Assert.assertEquals(base.getRecordBufferFullWait(), deserialized.getRecordBufferFullWait());
     Assert.assertEquals(base.getRecordBufferOfferTimeout(), deserialized.getRecordBufferOfferTimeout());
+    Assert.assertEquals(base.getRecordBufferSizeConfigured(), deserialized.getRecordBufferSizeConfigured());
     Assert.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
     Assert.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
+    Assert.assertEquals(base.getMaxBytesPerPollConfigured(), deserialized.getMaxBytesPerPollConfigured());
   }
 
   @Test
@@ -224,6 +227,7 @@ public class KinesisIndexTaskTuningConfigTest
         false,
         500,
         500,
+        1_000_000,
         6000,
         new Period("P3D")
     );
@@ -314,6 +318,7 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         10,
+        1_000_000,
         null,
         null,
         null,

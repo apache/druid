@@ -184,6 +184,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private Long maxTotalRows = null;
   private final Period intermediateHandoffPeriod = null;
   private int maxRecordsPerPoll;
+  private int maxBytesPerPoll;
 
   @BeforeClass
   public static void setupClass()
@@ -218,6 +219,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     doHandoff = true;
     reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     maxRecordsPerPoll = 1;
+    maxBytesPerPoll = 1_000_000;
 
     recordSupplier = mock(KinesisRecordSupplier.class);
 
@@ -562,6 +564,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // as soon as any segment has more than one record, incremental publishing should happen
     maxRowsPerSegment = 2;
     maxRecordsPerPoll = 1;
+    maxBytesPerPoll = 1_000_000;
 
     recordSupplier.assign(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
@@ -1693,6 +1696,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     maxRowsPerSegment = 2;
     maxRecordsPerPoll = 1;
+    maxBytesPerPoll = 1_000_000;
     List<OrderedPartitionableRecord<String, String, ByteEntity>> records =
         clone(SINGLE_PARTITION_RECORDS);
 
@@ -2358,6 +2362,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
+        maxBytesPerPoll,
         intermediateHandoffPeriod
     );
     return createTask(taskId, dataSchema, ioConfig, tuningConfig, context);

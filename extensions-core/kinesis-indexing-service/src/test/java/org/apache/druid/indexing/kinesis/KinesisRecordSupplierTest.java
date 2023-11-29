@@ -221,7 +221,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        5,
+        1_000_000,
         true,
         false
     );
@@ -278,7 +278,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        5,
+        1_000_000,
         true,
         true
     );
@@ -385,7 +385,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             10_000,
             5000,
             5000,
-            100,
+        1_000_000,
             true,
             false
     );
@@ -442,7 +442,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -517,7 +517,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -581,7 +581,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -614,7 +614,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         100,
         5000,
         5000,
-        5,
+        1_000_000,
         true,
         false
     );
@@ -674,7 +674,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         10_000,
         5000,
         5000,
-        1,
+        1_000_000,
         true,
         false
     );
@@ -763,7 +763,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -837,7 +837,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -872,7 +872,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -959,7 +959,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         10_000,
         5000,
         5000,
-        100,
+        1_000_000,
         true,
         false
     );
@@ -1007,15 +1007,16 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   public void testIsOffsetAvailable()
   {
     AmazonKinesis mockKinesis = EasyMock.mock(AmazonKinesis.class);
-    KinesisRecordSupplier target = new KinesisRecordSupplier(mockKinesis,
-                                                             0,
-                                                             2,
-                                                             100,
-                                                             5000,
-                                                             5000,
-                                                             5,
-                                                             true,
-                                                             false
+    KinesisRecordSupplier target = new KinesisRecordSupplier(
+        mockKinesis,
+        0,
+        2,
+        100,
+        5000,
+        5000,
+        1_000_000,
+        true,
+        false
     );
     StreamPartition<String> partition = new StreamPartition<>(STREAM, SHARD_ID0);
 

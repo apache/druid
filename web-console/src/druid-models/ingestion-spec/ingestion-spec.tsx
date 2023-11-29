@@ -2089,15 +2089,15 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     ),
   },
   {
-    name: 'spec.tuningConfig.maxRecordsPerPoll',
+    name: 'spec.tuningConfig.maxBytesPerPoll',
     type: 'number',
-    defaultValue: 100,
+    defaultValue: 1000000,
     defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
-        The maximum number of records/events to be fetched from buffer per poll. The actual maximum
-        will be <Code>max(maxRecordsPerPoll, max(bufferSize, 1))</Code>.
+        The maximum number of bytes to be fetched from buffer per poll. At least one
+        record will be fetched regardless of config.</Code>.
       </>
     ),
   },

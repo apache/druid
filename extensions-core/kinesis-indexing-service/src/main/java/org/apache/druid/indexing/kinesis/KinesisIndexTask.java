@@ -86,6 +86,10 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
       log.warn("The 'recordBufferSize' config property of the kinesis tuning config has been deprecated. "
                + "Please use 'recordBufferSizeBytes'.");
     }
+    if (tuningConfig.getMaxRecordsPerPollConfigured() != null) {
+      log.warn("The 'maxRecordsPerPoll' config property of the kinesis tuning config has been deprecated. "
+               + "Please use 'maxBytesPerPoll'.");
+    }
   }
 
   @Override
@@ -116,15 +120,15 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
     final int recordBufferSizeBytes =
         tuningConfig.getRecordBufferSizeBytesOrDefault(runtimeInfo.getMaxHeapSizeBytes());
     final int fetchThreads = computeFetchThreads(runtimeInfo, tuningConfig.getFetchThreads());
-    final int maxRecordsPerPoll = tuningConfig.getMaxRecordsPerPollOrDefault();
+    final int maxBytesPerPoll = tuningConfig.getMaxBytesPerPollOrDefault();
 
     log.info(
         "Starting record supplier with fetchThreads [%d], fetchDelayMillis [%d], "
-        + "recordBufferSizeBytes [%d], maxRecordsPerPoll [%d]",
+        + "recordBufferSizeBytes [%d], maxBytesPerPoll [%d]",
         fetchThreads,
         ioConfig.getFetchDelayMillis(),
         recordBufferSizeBytes,
-        maxRecordsPerPoll
+        maxBytesPerPoll
     );
 
     return new KinesisRecordSupplier(
@@ -139,7 +143,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
         recordBufferSizeBytes,
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
-        maxRecordsPerPoll,
+        maxBytesPerPoll,
         false,
         useListShards
     );

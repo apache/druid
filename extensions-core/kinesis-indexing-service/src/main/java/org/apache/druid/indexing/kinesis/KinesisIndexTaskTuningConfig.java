@@ -56,12 +56,14 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
   private static final int DEFAULT_MAX_RECORDS_PER_POLL = 100;
+  private static final int DEFAULT_MAX_BYTES_PER_POLL = 1_000_000;
   private final Integer recordBufferSize;
   private final Integer recordBufferSizeBytes;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
   private final Integer fetchThreads;
   private final Integer maxRecordsPerPoll;
+  private final Integer maxBytesPerPoll;
 
   public KinesisIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -88,7 +90,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
-      @Nullable Integer maxRecordsPerPoll,
+      @Deprecated @Nullable Integer maxRecordsPerPoll,
+      @Nullable Integer maxBytesPerPoll,
       @Nullable Period intermediateHandoffPeriod
   )
   {
@@ -122,6 +125,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     this.recordBufferFullWait = recordBufferFullWait == null ? DEFAULT_RECORD_BUFFER_FULL_WAIT : recordBufferFullWait;
     this.fetchThreads = fetchThreads; // we handle this being null later
     this.maxRecordsPerPoll = maxRecordsPerPoll;
+    this.maxBytesPerPoll = maxBytesPerPoll;
 
     Preconditions.checkArgument(
         !(super.isResetOffsetAutomatically() && super.isSkipSequenceNumberAvailabilityCheck()),
@@ -154,7 +158,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxRecordsPerPoll") @Deprecated @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxBytesPerPoll") @Nullable Integer maxBytesPerPoll,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod
   )
   {
@@ -184,6 +189,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
+        maxBytesPerPoll,
         intermediateHandoffPeriod
     );
   }
@@ -244,9 +250,17 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     return maxRecordsPerPoll;
   }
 
-  public int getMaxRecordsPerPollOrDefault()
+  @Nullable
+  @JsonProperty("maxBytesPerPoll")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getMaxBytesPerPollConfigured()
   {
-    return DEFAULT_MAX_RECORDS_PER_POLL;
+    return maxBytesPerPoll;
+  }
+
+  public int getMaxBytesPerPollOrDefault()
+  {
+    return maxBytesPerPoll != null ? maxBytesPerPoll : DEFAULT_MAX_BYTES_PER_POLL;
   }
 
   @Override
@@ -278,6 +292,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPollConfigured(),
+        getMaxBytesPerPollConfigured(),
         getIntermediateHandoffPeriod()
     );
   }
@@ -300,6 +315,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            recordBufferOfferTimeout == that.recordBufferOfferTimeout &&
            recordBufferFullWait == that.recordBufferFullWait &&
            Objects.equals(maxRecordsPerPoll, that.maxRecordsPerPoll) &&
+           Objects.equals(maxBytesPerPoll, that.maxBytesPerPoll) &&
            Objects.equals(fetchThreads, that.fetchThreads);
   }
 
@@ -313,7 +329,8 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         recordBufferOfferTimeout,
         recordBufferFullWait,
         fetchThreads,
-        maxRecordsPerPoll
+        maxRecordsPerPoll,
+        maxBytesPerPoll
     );
   }
 
@@ -343,6 +360,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", maxRecordsPerPoll=" + maxRecordsPerPoll +
+           ", maxBytesPerPoll=" + maxBytesPerPoll +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            '}';
   }

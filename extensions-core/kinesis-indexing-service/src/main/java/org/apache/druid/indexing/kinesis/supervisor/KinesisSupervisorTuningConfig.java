@@ -75,6 +75,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -107,7 +108,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxRecordsPerPoll") @Deprecated @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxBytesPerPoll") @Nullable Integer maxBytesPerPoll,
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
@@ -140,6 +142,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
+        maxBytesPerPoll,
         intermediateHandoffPeriod
     );
 
@@ -237,6 +240,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", maxRecordsPerPoll=" + getMaxRecordsPerPollConfigured() +
+           ", maxBytesPerPoll=" + getMaxBytesPerPollConfigured() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
            ", useListShards=" + isUseListShards() +
@@ -272,6 +276,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPollConfigured(),
+        getMaxBytesPerPollConfigured(),
         getIntermediateHandoffPeriod()
     );
   }
