@@ -318,6 +318,18 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   }
 
   @Test
+  public void testProxyEnebledCheck() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/enabled", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(200, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
   public void testBadProxyDestination() throws Exception
   {
     HttpURLConnection connection = ((HttpURLConnection)
