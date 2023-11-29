@@ -308,6 +308,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
         new StringFirstAggregatorFactory("col", "col", null, 1024),
         new StringLastAggregatorFactory("col", "col", null, 1024),
         new StringAnyAggregatorFactory("col", "col", 1024, true),
+        new StringAnyAggregatorFactory("col", "col", 1024, false),
         // sketch aggs
         new CardinalityAggregatorFactory("col", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
         new HyperUniquesAggregatorFactory("col", "hyperunique"),

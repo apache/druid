@@ -48,15 +48,27 @@ public class StringAnyAggregator implements Aggregator
   {
     if (!isFound) {
       final Object object = valueSelector.getObject();
-      if (object != null && object instanceof List && !aggregateMultipleValues) {
-        List<Object> objectList = (List) object;
-        foundValue = objectList.size() > 0 ? DimensionHandlerUtils.convertObjectToString(objectList.get(0)) : null;
-      } else {
-        foundValue = DimensionHandlerUtils.convertObjectToString(object);
-      }
-      foundValue = StringUtils.fastLooseChop(foundValue, maxStringBytes);
+      foundValue = StringUtils.fastLooseChop(readValue(object), maxStringBytes);
       isFound = true;
     }
+  }
+
+  private String readValue(final Object object)
+  {
+    if (object == null) {
+      return null;
+    }
+    if (object instanceof List) {
+      List<Object> objectList = (List) object;
+      if (objectList.size() == 1) {
+        return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
+      }
+      if (aggregateMultipleValues) {
+        return DimensionHandlerUtils.convertObjectToString(objectList);
+      }
+      return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
+    }
+    return DimensionHandlerUtils.convertObjectToString(object);
   }
 
   @Override

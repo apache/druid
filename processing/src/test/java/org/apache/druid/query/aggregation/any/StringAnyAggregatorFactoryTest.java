@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.any;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -101,7 +102,12 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
     res.aggregate();
     Assert.assertEquals(null, res.get());
     StringAnyVectorAggregator vectorAggregator = target.factorizeVector(vectorSelectorFactory);
-    Assert.assertTrue(vectorAggregator.aggregateMultipleValues);
+    Assert.assertEquals(new StringAnyVectorAggregator(
+        null,
+        vectorSelectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(FIELD_NAME)),
+        1024,
+        true
+    ), vectorAggregator);
   }
 
   @Test

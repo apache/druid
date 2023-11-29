@@ -35,7 +35,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
 
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
-  final boolean aggregateMultipleValues;
+  private final boolean aggregateMultipleValues;
 
   public StringAnyBufferAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes, boolean aggregateMultipleValues)
   {
@@ -54,14 +54,7 @@ public class StringAnyBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
-      final Object object = valueSelector.getObject();
-      String foundValue;
-      if (object != null && object instanceof List && !aggregateMultipleValues) {
-        List<Object> objectList = (List) object;
-        foundValue = objectList.size() > 0 ? DimensionHandlerUtils.convertObjectToString(objectList.get(0)) : null;
-      } else {
-        foundValue = DimensionHandlerUtils.convertObjectToString(object);
-      }
+      String foundValue = readValue(valueSelector.getObject());
       if (foundValue != null) {
         ByteBuffer mutationBuffer = buf.duplicate();
         mutationBuffer.position(position + FOUND_VALUE_OFFSET);
@@ -72,6 +65,23 @@ public class StringAnyBufferAggregator implements BufferAggregator
         buf.putInt(position, FOUND_AND_NULL_FLAG_VALUE);
       }
     }
+  }
+
+  private String readValue(Object object)
+  {
+    if (object == null) {
+      return null;
+    }
+    if (object instanceof List) {
+      List<Object> objectList = (List) object;
+      if (objectList.size() == 1) {
+        return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
+      }
+      if (aggregateMultipleValues) {
+        return DimensionHandlerUtils.convertObjectToString(objectList);
+      }
+    }
+    return DimensionHandlerUtils.convertObjectToString(object);
   }
 
   @Override

@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
-import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
@@ -252,10 +251,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null, true);
         break;
       case 2:
-        Integer maxStringBytes = getMaxStringBytes(rexNodes.get(1), aggregateCall, plannerContext);
-        if (maxStringBytes == null) {
-          return null;
-        }
+        Integer maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
@@ -266,22 +262,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         );
         break;
       case 3:
-        maxStringBytes = getMaxStringBytes(rexNodes.get(1), aggregateCall, plannerContext);
-        if (maxStringBytes == null) {
-          return null;
-        }
-        boolean aggregateMultipleValues;
-        try {
-          aggregateMultipleValues = RexLiteral.booleanValue(Preconditions.checkNotNull(rexNodes.get(2)));
-        }
-        catch (Exception ae) {
-          plannerContext.setPlanningError(
-              "The third argument '%s' to function '%s' is not a boolean",
-              rexNodes.get(2),
-              aggregateCall.getName()
-          );
-          return null;
-        }
+        maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function for rexNode 1,2
+        boolean aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
@@ -293,7 +275,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         break;
       default:
         throw InvalidSqlInput.exception(
-            "Function [%s] expects 1 or 2 arguments but found [%s]",
+            "Function [%s] expects 1 or 2 or 3 arguments but found [%s]",
             aggregateCall.getName(),
             args.size()
         );
@@ -302,25 +284,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         Collections.singletonList(theAggFactory),
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorName) : null
     );
-  }
-
-  private Integer getMaxStringBytes(
-      final RexNode rexNode,
-      final AggregateCall aggregateCall,
-      final PlannerContext plannerContext
-  )
-  {
-    try {
-      return RexLiteral.intValue(Preconditions.checkNotNull(rexNode));
-    }
-    catch (Exception ae) {
-      plannerContext.setPlanningError(
-          "The second argument '%s' to function '%s' is not a number",
-          rexNode,
-          aggregateCall.getName()
-      );
-      return null;
-    }
   }
 
   static String getColumnName(
@@ -414,10 +377,11 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           InferTypes.RETURN_TYPE,
           DefaultOperandTypeChecker
               .builder()
-              .operandNames("expr", "maxBytesPerString", "aggregateMultipleValues")
+              .operandNames("expr", "maxBytesPerStringInt", "aggregateMultipleValuesBoolean")
               .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.BOOLEAN)
               .requiredOperandCount(1)
               .literalOperands(1, 2)
+              .notNullOperands(1, 2)
               .build(),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,

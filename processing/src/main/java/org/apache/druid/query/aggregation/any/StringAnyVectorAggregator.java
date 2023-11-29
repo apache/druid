@@ -46,7 +46,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
   @Nullable
   private final MultiValueDimensionVectorSelector multiValueSelector;
   private final int maxStringBytes;
-  final boolean aggregateMultipleValues;
+  private final boolean aggregateMultipleValues;
 
   public StringAnyVectorAggregator(
       SingleValueDimensionVectorSelector singleValueSelector,
@@ -84,22 +84,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
         if (startRow < rows.length) {
           IndexedInts row = rows[startRow];
           @Nullable
-          String foundValue;
-          if (row.size() == 0) {
-            foundValue = null;
-          } else if (aggregateMultipleValues) {
-            if (row.size() > 1) {
-              List<String> arrayList = new ArrayList<>();
-              row.forEach(rowIndex -> {
-                arrayList.add(multiValueSelector.lookupName(rowIndex));
-              });
-              foundValue = DimensionHandlerUtils.convertObjectToString(arrayList);
-            } else {
-              foundValue = multiValueSelector.lookupName(row.get(0));
-            }
-          } else {
-            foundValue = multiValueSelector.lookupName(row.get(0));
-          }
+          String foundValue = readValue(row);
           putValue(buf, position, foundValue);
         }
       } else if (singleValueSelector != null) {
@@ -108,10 +93,28 @@ public class StringAnyVectorAggregator implements VectorAggregator
           int row = rows[startRow];
           @Nullable
           String foundValue = singleValueSelector.lookupName(row);
-          putValue(buf, position, StringUtils.fastLooseChop(foundValue, maxStringBytes));
+          putValue(buf, position, foundValue);
         }
       }
     }
+  }
+
+  private String readValue(IndexedInts row)
+  {
+    if (row.size() == 0) {
+      return null;
+    }
+    if (aggregateMultipleValues) {
+      if (row.size() == 1) {
+        return multiValueSelector.lookupName(row.get(0));
+      }
+      List<String> arrayList = new ArrayList<>();
+      row.forEach(rowIndex -> {
+        arrayList.add(multiValueSelector.lookupName(rowIndex));
+      });
+      return DimensionHandlerUtils.convertObjectToString(arrayList);
+    }
+    return multiValueSelector.lookupName(row.get(0));
   }
 
   @Override
