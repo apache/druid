@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.any;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
