@@ -44,17 +44,17 @@ public class AzureEntity extends RetryingInputEntity
 
   @AssistedInject
   AzureEntity(
-      @Nonnull @Assisted CloudObjectLocation location,
-      @Nonnull @Assisted AzureStorage azureStorage,
+      @Nonnull @Assisted("location") CloudObjectLocation location,
+      @Nonnull @Assisted("azureStorage") AzureStorage azureStorage,
       @Nonnull AzureByteSourceFactory byteSourceFactory
 
   )
   {
     this.location = location;
 
-    // Check if a new param legacyAzureURI is passed and handle this differently
-    String[] parts = location.getPath().split("/", 2);
-    this.byteSource = byteSourceFactory.create(parts[0], parts[1], azureStorage);
+    // Storage account and container cannot have / in them
+    String[] bucketParts = location.getBucket().split("/");
+    this.byteSource = byteSourceFactory.create(bucketParts[bucketParts.length - 1], location.getPath(), azureStorage);
   }
 
   @Override

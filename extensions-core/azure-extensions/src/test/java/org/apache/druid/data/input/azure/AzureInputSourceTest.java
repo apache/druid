@@ -139,22 +139,23 @@ public class AzureInputSourceTest extends EasyMockSupport
   @Test
   public void test_createEntity_returnsExpectedEntity()
   {
-    EasyMock.expect(entityFactory.create(CLOUD_OBJECT_LOCATION_1, storage)).andReturn(azureEntity1);
+    EasyMock.expect(entityFactory.create(EasyMock.eq(CLOUD_OBJECT_LOCATION_1), EasyMock.anyObject(AzureStorage.class))).andReturn(azureEntity1);
     EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1)).times(2);
+    EasyMock.expect(azureAccountConfig.getAccount()).andReturn("storageAccount");
     replayAll();
 
     List<CloudObjectLocation> objects = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
     azureInputSource = new AzureInputSource(
-        EasyMock.anyObject(AzureStorage.class),
-        EasyMock.eq(entityFactory),
-        EasyMock.eq(azureCloudBlobIterableFactory),
-        EasyMock.eq(inputDataConfig),
-        EasyMock.eq(azureAccountConfig),
-        EasyMock.eq(EMPTY_URIS),
-        EasyMock.eq(EMPTY_PREFIXES),
-        EasyMock.eq(objects),
+        storage,
+        entityFactory,
+        azureCloudBlobIterableFactory,
+        inputDataConfig,
+        azureAccountConfig,
+        EMPTY_URIS,
+        EMPTY_PREFIXES,
+        objects,
         null,
-        EasyMock.eq(azureInputSourceConfig),
+        azureInputSourceConfig,
         null
     );
 
@@ -382,14 +383,14 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     final AzureEntity entity = new AzureEntity(
-        new CloudObjectLocation("foo", "bar"),
+        new CloudObjectLocation("foo", "container/bar"),
         storage,
         (containerName, blobPath, storage) -> null
     );
 
-    Assert.assertEquals("azure://foo/bar", azureInputSource.getSystemFieldValue(entity, SystemField.URI));
+    Assert.assertEquals("azure://foo/container/bar", azureInputSource.getSystemFieldValue(entity, SystemField.URI));
     Assert.assertEquals("foo", azureInputSource.getSystemFieldValue(entity, SystemField.BUCKET));
-    Assert.assertEquals("bar", azureInputSource.getSystemFieldValue(entity, SystemField.PATH));
+    Assert.assertEquals("container/bar", azureInputSource.getSystemFieldValue(entity, SystemField.PATH));
   }
 
   @Test
