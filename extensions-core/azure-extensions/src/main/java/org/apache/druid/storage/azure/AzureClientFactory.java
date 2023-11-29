@@ -38,20 +38,19 @@ import java.time.Duration;
 public class AzureClientFactory
 {
 
-  private final AzureAccountConfig config;
+  protected final AzureAccountConfig config;
 
   public AzureClientFactory(AzureAccountConfig config)
   {
     this.config = config;
   }
 
-  public BlobServiceClient getBlobServiceClient()
+  public BlobServiceClient getBlobServiceClient(String storageAccount)
   {
-    BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net");
+    BlobServiceClientBuilder clientBuilder = getBlobServiceClientBuilder(storageAccount);
 
     if (config.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
     } else if (config.getUseAzureCredentialsChain()) {
@@ -63,10 +62,30 @@ public class AzureClientFactory
     return clientBuilder.buildClient();
   }
 
-  public BlobContainerClient getBlobContainerClient(String containerName, Integer maxRetries)
+  public BlobContainerClient getBlobContainerClient(String storageAccount, String containerName, Integer maxRetries)
   {
-    BlobContainerClientBuilder clientBuilder = new BlobContainerClientBuilder()
-        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net")
+    BlobContainerClientBuilder clientBuilder = getBlobContainerClientBuilder(storageAccount, containerName, maxRetries);
+    if (config.getKey() != null) {
+      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, config.getKey()));
+    } else if (config.getSharedAccessStorageToken() != null) {
+      clientBuilder.sasToken(config.getSharedAccessStorageToken());
+    } else if (config.getUseAzureCredentialsChain()) {
+      // We might not use the managed identity client id in the credential chain but we can just set it here and it will no-op.
+      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
+          .managedIdentityClientId(config.getManagedIdentityClientId());
+      clientBuilder.credential(defaultAzureCredentialBuilder.build());
+    }
+    return clientBuilder.buildClient();
+  }
+
+  protected BlobServiceClientBuilder getBlobServiceClientBuilder(String storageAccount)
+  {
+    return new BlobServiceClientBuilder().endpoint("https://" + storageAccount + ".blob.core.windows.net");
+  }
+
+  protected BlobContainerClientBuilder getBlobContainerClientBuilder(String storageAccount, String containerName, Integer maxRetries)
+  {
+    return new BlobContainerClientBuilder().endpoint("https://" + storageAccount + ".blob.core.windows.net")
         .containerName(containerName)
         .retryOptions(new RetryOptions(
             new ExponentialBackoffOptions()
@@ -74,16 +93,5 @@ public class AzureClientFactory
                 .setBaseDelay(Duration.ofMillis(1000))
                 .setMaxDelay(Duration.ofMillis(60000))
         ));
-    if (config.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
-    } else if (config.getSharedAccessStorageToken() != null) {
-      clientBuilder.sasToken(config.getSharedAccessStorageToken());
-    } else if (config.getUseAzureCredentialsChain()) {
-      // We might not use the managed identity client id in the credential chain but we can just set it here and it will no-op.
-      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
-          .managedIdentityClientId(config.getManagedIdentityClientId());
-      clientBuilder.credential(defaultAzureCredentialBuilder.build());
-    }
-    return clientBuilder.buildClient();
   }
 }

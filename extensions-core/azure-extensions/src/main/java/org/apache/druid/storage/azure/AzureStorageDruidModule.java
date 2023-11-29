@@ -143,9 +143,9 @@ public class AzureStorageDruidModule implements DruidModule
    */
   @Provides
   @LazySingleton
-  public Supplier<BlobServiceClient> getBlobServiceClient(final AzureClientFactory azureClientFactory)
+  public Supplier<BlobServiceClient> getBlobServiceClient(final AzureClientFactory azureClientFactory, final AzureAccountConfig accountConfig)
   {
-    return Suppliers.memoize(azureClientFactory::getBlobServiceClient);
+    return Suppliers.memoize(() -> azureClientFactory.getBlobServiceClient(accountConfig.getAccount()));
   }
 
   @Provides

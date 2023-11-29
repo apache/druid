@@ -32,10 +32,8 @@ public class AzureClientFactoryTest
   @Test
   public void test_blobServiceClient()
   {
-    AzureAccountConfig config = new AzureAccountConfig();
-    azureClientFactory = new AzureClientFactory(config);
-    config.setAccount(ACCOUNT);
-    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient();
+    azureClientFactory = new AzureClientFactory(new AzureAccountConfig());
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(ACCOUNT);
     Assert.assertEquals(ACCOUNT, blobServiceClient.getAccountName());
   }
 
@@ -43,10 +41,8 @@ public class AzureClientFactoryTest
   public void test_blobContainerClient()
   {
     String container = "container";
-    AzureAccountConfig config = new AzureAccountConfig();
-    azureClientFactory = new AzureClientFactory(config);
-    config.setAccount(ACCOUNT);
-    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(container, null);
+    azureClientFactory = new AzureClientFactory(new AzureAccountConfig());
+    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(ACCOUNT, container, null);
     Assert.assertEquals(ACCOUNT, blobContainerClient.getAccountName());
     Assert.assertEquals(container, blobContainerClient.getBlobContainerName());
   }

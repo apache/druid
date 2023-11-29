@@ -19,12 +19,17 @@
 
 package org.apache.druid.data.input.azure;
 
+import com.google.inject.assistedinject.Assisted;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.storage.azure.AzureStorage;
 
 /**
  * Factory for creating {@link AzureEntity} objects
  */
 public interface AzureEntityFactory
 {
-  AzureEntity create(CloudObjectLocation location);
+  AzureEntity create(
+      @Assisted("location") CloudObjectLocation location,
+      @Assisted("azureStorage") AzureStorage azureStorage
+  );
 }

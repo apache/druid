@@ -26,6 +26,7 @@ import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.storage.azure.AzureByteSource;
 import org.apache.druid.storage.azure.AzureByteSourceFactory;
+import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
 
 import javax.annotation.Nonnull;
@@ -44,11 +45,16 @@ public class AzureEntity extends RetryingInputEntity
   @AssistedInject
   AzureEntity(
       @Nonnull @Assisted CloudObjectLocation location,
+      @Nonnull @Assisted AzureStorage azureStorage,
       @Nonnull AzureByteSourceFactory byteSourceFactory
+
   )
   {
     this.location = location;
-    this.byteSource = byteSourceFactory.create(location.getBucket(), location.getPath());
+
+    // Check if a new param legacyAzureURI is passed and handle this differently
+    String[] parts = location.getPath().split("/", 2);
+    this.byteSource = byteSourceFactory.create(parts[0], parts[1], azureStorage);
   }
 
   @Override

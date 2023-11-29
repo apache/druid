@@ -24,8 +24,10 @@ import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
@@ -35,7 +37,9 @@ import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.storage.azure.AzureAccountConfig;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
+import org.apache.druid.storage.azure.AzureIngestClientFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 
@@ -60,6 +64,9 @@ public class AzureInputSource extends CloudObjectInputSource
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private final AzureInputDataConfig inputDataConfig;
+  private final AzureInputSourceConfig azureInputSourceConfig;
+  private final AzureAccountConfig azureAccountConfig;
+
 
   @JsonCreator
   public AzureInputSource(
@@ -67,10 +74,12 @@ public class AzureInputSource extends CloudObjectInputSource
       @JacksonInject AzureEntityFactory entityFactory,
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       @JacksonInject AzureInputDataConfig inputDataConfig,
+      @JacksonInject AzureAccountConfig azureAccountConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("objectGlob") @Nullable String objectGlob,
+      @JsonProperty("properties") @Nullable AzureInputSourceConfig azureInputSourceConfig,
       @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields
   )
   {
@@ -82,6 +91,8 @@ public class AzureInputSource extends CloudObjectInputSource
         "AzureCloudBlobIterableFactory"
     );
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "AzureInputDataConfig");
+    this.azureInputSourceConfig = azureInputSourceConfig;
+    this.azureAccountConfig = azureAccountConfig;
   }
 
   @JsonIgnore
@@ -100,10 +111,12 @@ public class AzureInputSource extends CloudObjectInputSource
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         null,
         null,
         split.get(),
         getObjectGlob(),
+        azureInputSourceConfig,
         systemFields
     );
   }
@@ -111,15 +124,15 @@ public class AzureInputSource extends CloudObjectInputSource
   @Override
   public Object getSystemFieldValue(InputEntity entity, SystemField field)
   {
-    final AzureEntity googleEntity = (AzureEntity) entity;
+    final AzureEntity azureEntity = (AzureEntity) entity;
 
     switch (field) {
       case URI:
-        return googleEntity.getUri().toString();
+        return azureEntity.getUri().toString();
       case BUCKET:
-        return googleEntity.getLocation().getBucket();
+        return azureEntity.getLocation().getBucket();
       case PATH:
-        return googleEntity.getLocation().getPath();
+        return azureEntity.getLocation().getPath();
       default:
         return null;
     }
@@ -128,7 +141,8 @@ public class AzureInputSource extends CloudObjectInputSource
   @Override
   protected AzureEntity createEntity(CloudObjectLocation location)
   {
-    return entityFactory.create(location);
+    AzureIngestClientFactory azureIngestClientFactory = new AzureIngestClientFactory(azureAccountConfig, azureInputSourceConfig);
+    return entityFactory.create(location, new AzureStorage(Suppliers.memoize(() -> azureIngestClientFactory.getBlobServiceClient(location.getBucket())), azureIngestClientFactory));
   }
 
   @Override
@@ -176,6 +190,14 @@ public class AzureInputSource extends CloudObjectInputSource
     return new SplitWidget();
   }
 
+  @Nullable
+  @JsonProperty("properties")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public AzureInputSourceConfig getAzureInputSourceConfig()
+  {
+    return azureInputSourceConfig;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -192,13 +214,15 @@ public class AzureInputSource extends CloudObjectInputSource
     return storage.equals(that.storage) &&
            entityFactory.equals(that.entityFactory) &&
            azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
-           inputDataConfig.equals(that.inputDataConfig);
+           inputDataConfig.equals(that.inputDataConfig) &&
+           azureInputSourceConfig.equals(that.azureInputSourceConfig) &&
+           azureAccountConfig.equals(that.azureAccountConfig);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), storage, entityFactory, azureCloudBlobIterableFactory, inputDataConfig);
+    return Objects.hash(super.hashCode(), storage, entityFactory, azureCloudBlobIterableFactory, inputDataConfig, azureInputSourceConfig, azureAccountConfig);
   }
 
   @Override
@@ -209,6 +233,7 @@ public class AzureInputSource extends CloudObjectInputSource
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
            ", objectGlob=" + getObjectGlob() +
+           ", azureInputSourceConfig=" + getAzureInputSourceConfig() +
            (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
            '}';
   }

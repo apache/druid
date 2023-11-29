@@ -37,12 +37,16 @@ public class AzureDataSegmentPuller
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
 
   private final AzureByteSourceFactory byteSourceFactory;
+  private final AzureStorage azureStorage;
 
   @Inject
   public AzureDataSegmentPuller(
-      AzureByteSourceFactory byteSourceFactory)
+      AzureByteSourceFactory byteSourceFactory,
+      AzureStorage azureStorage
+  )
   {
     this.byteSourceFactory = byteSourceFactory;
+    this.azureStorage = azureStorage;
   }
 
   FileUtils.FileCopyResult getSegmentFiles(
@@ -61,7 +65,7 @@ public class AzureDataSegmentPuller
 
       final String actualBlobPath = AzureUtils.maybeRemoveAzurePathPrefix(blobPath);
 
-      final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath);
+      final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath, azureStorage);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,

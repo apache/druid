@@ -32,31 +32,20 @@ import java.util.Objects;
  */
 public class AzureInputSourceConfig
 {
-  private final String storageAccount;
   private final String sharedAccessStorageToken;
   private final String key;
   private final Boolean useAzureCredentialsChain;
 
   @JsonCreator
   public AzureInputSourceConfig(
-      @JsonProperty("storageAccount") @Nullable String storageAccount,
       @JsonProperty("sharedAccessStorageToken") @Nullable String sharedAccessStorageToken,
       @JsonProperty("key") @Nullable String key,
       @JsonProperty("useAzureCredentialsChain") @Nullable Boolean useAzureCredentialsChain
   )
   {
-    this.storageAccount = storageAccount;
     this.sharedAccessStorageToken = sharedAccessStorageToken;
     this.key = key;
     this.useAzureCredentialsChain = useAzureCredentialsChain;
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getStorageAccount()
-  {
-    return storageAccount;
   }
 
   @Nullable
@@ -87,8 +76,7 @@ public class AzureInputSourceConfig
   public String toString()
   {
     return "AzureInputSourceConfig{" +
-        "storageAccount=" + storageAccount +
-        ", sharedAccessStorageToken=" + sharedAccessStorageToken +
+        "sharedAccessStorageToken=" + sharedAccessStorageToken +
         ", key=" + key +
         ", useAzureCredentialsChain=" + useAzureCredentialsChain +
         '}';
@@ -104,8 +92,7 @@ public class AzureInputSourceConfig
       return false;
     }
     AzureInputSourceConfig that = (AzureInputSourceConfig) o;
-    return Objects.equals(storageAccount, that.storageAccount)
-        && Objects.equals(key, that.key)
+    return Objects.equals(key, that.key)
         && Objects.equals(sharedAccessStorageToken, that.sharedAccessStorageToken)
         && Objects.equals(useAzureCredentialsChain, that.useAzureCredentialsChain);
   }
@@ -113,6 +100,6 @@ public class AzureInputSourceConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(storageAccount, sharedAccessStorageToken, key, useAzureCredentialsChain);
+    return Objects.hash(sharedAccessStorageToken, key, useAzureCredentialsChain);
   }
 }

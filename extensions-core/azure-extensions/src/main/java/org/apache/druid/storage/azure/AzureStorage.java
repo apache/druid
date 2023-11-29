@@ -260,7 +260,7 @@ public class AzureStorage
       return blobContainerClientPair.rhs;
     }
 
-    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(containerName, maxRetries);
+    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(getBlobServiceClient().getAccountName(), containerName, maxRetries);
     blobContainerClient.createIfNotExists();
 
     blobContainerClients.put(

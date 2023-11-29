@@ -39,6 +39,8 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.net.URI;
+
 
 @RunWith(EasyMockRunner.class)
 public class AzureStorageTest extends EasyMockSupport
@@ -52,7 +54,7 @@ public class AzureStorageTest extends EasyMockSupport
   AzureClientFactory azureClientFactory;
 
   private final Integer MAX_TRIES = 3;
-
+  private final String ACCOUNT = "storageAccount";
 
   @Before
   public void setup() throws BlobStorageException
@@ -92,9 +94,10 @@ public class AzureStorageTest extends EasyMockSupport
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
-    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName, maxAttempts)).andReturn(blobContainerClient).times(1);
-    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName2, maxAttempts)).andReturn(blobContainerClient).times(1);
-    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName, maxAttempts + 1)).andReturn(blobContainerClient).times(1);
+    Mockito.doReturn(ACCOUNT).when(blobServiceClient).getAccountName();
+    EasyMock.expect(azureClientFactory.getBlobContainerClient(ACCOUNT, containerName, maxAttempts)).andReturn(blobContainerClient).times(1);
+    EasyMock.expect(azureClientFactory.getBlobContainerClient(ACCOUNT, containerName2, maxAttempts)).andReturn(blobContainerClient).times(1);
+    EasyMock.expect(azureClientFactory.getBlobContainerClient(ACCOUNT, containerName, maxAttempts + 1)).andReturn(blobContainerClient).times(1);
 
     replayAll();
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
@@ -107,6 +110,18 @@ public class AzureStorageTest extends EasyMockSupport
     // Requesting the first container with lower maxAttempts should not create another client.
     Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts - 1));
     verifyAll();
+  }
+
+  @Test
+  public void testURI()
+  {
+    URI uri = URI.create("azure://container/prefix1/file.json");
+    Assert.assertEquals("container", uri.getHost());
+    Assert.assertEquals("/prefix1/file.json", uri.getPath());
+
+    URI uri2 = URI.create("azure://storageAccount/container/prefix1/file.json");
+    Assert.assertEquals("storageAccount", uri2.getHost());
+    Assert.assertEquals("/container/prefix1/file.json", uri2.getPath());
   }
 }
 
