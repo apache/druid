@@ -73,7 +73,10 @@ public class DimensionSchemaUtils
                                     .getDimensionSchema(capabilities);
       }
 
-      return new AutoTypeColumnSchema(column);
+      if (type != null && (type.isPrimitive() || type.isPrimitiveArray())) {
+        return new AutoTypeColumnSchema(column, type);
+      }
+      return new AutoTypeColumnSchema(column, null);
     } else {
       // if schema information is not available, create a string dimension
       if (type == null) {
@@ -91,7 +94,7 @@ public class DimensionSchemaUtils
         if (elementType == ValueType.STRING) {
           if (arrayIngestMode == ArrayIngestMode.NONE) {
             throw InvalidInput.exception(
-                "String arrays can not be ingested when '%s' is set to '%s'. Either set '%s' in query context "
+                "String arrays can not be ingested when '%s' is set to '%s'. Set '%s' in query context "
                 + "to 'array' to ingest the string array as an array, or ingest it as an MVD by explicitly casting the "
                 + "array to an MVD with ARRAY_TO_MV function.",
                 MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
@@ -102,12 +105,12 @@ public class DimensionSchemaUtils
             return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
           } else {
             // arrayIngestMode == ArrayIngestMode.ARRAY would be true
-            return new AutoTypeColumnSchema(column);
+            return new AutoTypeColumnSchema(column, type);
           }
         } else if (elementType.isNumeric()) {
           // ValueType == LONG || ValueType == FLOAT || ValueType == DOUBLE
           if (arrayIngestMode == ArrayIngestMode.ARRAY) {
-            return new AutoTypeColumnSchema(column);
+            return new AutoTypeColumnSchema(column, type);
           } else {
             throw InvalidInput.exception(
                 "Numeric arrays can only be ingested when '%s' is set to 'array' in the MSQ query's context. "

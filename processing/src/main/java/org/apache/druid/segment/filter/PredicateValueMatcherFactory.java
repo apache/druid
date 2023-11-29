@@ -189,7 +189,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
             return getFloatPredicate().applyFloat((float) rowValue);
           } else if (rowValue instanceof Number) {
             // Double or some other non-int, non-long, non-float number.
-            return getDoublePredicate().applyDouble((double) rowValue);
+            return getDoublePredicate().applyDouble(((Number) rowValue).doubleValue());
           } else if (rowValue instanceof Object[]) {
             return getArrayPredicate().apply((Object[]) rowValue);
           } else {

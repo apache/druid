@@ -76,17 +76,18 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.5.0</apache.curator.version>
-        <apache.kafka.version>3.5.1</apache.kafka.version>
-        <apache.ranger.version>2.0.0</apache.ranger.version>
+        <apache.kafka.version>3.6.0</apache.kafka.version>
+        <apache.ranger.version>2.4.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <scala.library.version>2.13.11</scala.library.version>
         <avatica.version>1.23.0</avatica.version>
-        <avro.version>1.11.1</avro.version>
+        <avro.version>1.11.3</avro.version>
         <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
              default_config.fmpp
           -->
         <calcite.version>1.35.0</calcite.version>
-        <datasketches.version>4.1.0</datasketches.version>
+        <confluent.version>6.2.12</confluent.version>
+        <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
@@ -253,6 +254,14 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
+
+        <repository>
+            <id>cflt-public</id>
+            <url>https://packages.confluent.io/maven/</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
     <pluginRepositories>
@@ -271,7 +280,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.13</version>
+                <version>1.16.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -1809,7 +1818,7 @@
               <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.11.3</version>
+                <version>1.14.2</version>
               </plugin>
             </plugins>
         </pluginManagement>

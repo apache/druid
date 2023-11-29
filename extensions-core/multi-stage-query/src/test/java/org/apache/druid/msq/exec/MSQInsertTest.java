@@ -28,6 +28,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -59,6 +61,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -67,6 +70,16 @@ import java.util.TreeSet;
 @RunWith(Parameterized.class)
 public class MSQInsertTest extends MSQTestBase
 {
+
+  private static final String WITH_APPEND_LOCK = "WITH_APPEND_LOCK";
+  private static final Map<String, Object> QUERY_CONTEXT_WITH_APPEND_LOCK =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      Tasks.TASK_LOCK_TYPE,
+                      TaskLockType.APPEND.name().toLowerCase(Locale.ENGLISH)
+                  )
+                  .build();
   private final HashFunction fn = Hashing.murmur3_128();
 
   @Parameterized.Parameters(name = "{index}:with context {0}")
@@ -76,7 +89,8 @@ public class MSQInsertTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
+        {WITH_APPEND_LOCK, QUERY_CONTEXT_WITH_APPEND_LOCK}
     };
     return Arrays.asList(data);
   }
@@ -758,6 +772,76 @@ public class MSQInsertTest extends MSQTestBase
                              new Object[]{0L, new Object[]{""}},
                              new Object[]{0L, new Object[]{"b", "c"}},
                              new Object[]{0L, new Object[]{"d"}}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsArray()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING_ARRAY).build();
+
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) as dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(adjustedContext)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(
+                         NullHandling.replaceWithDefault() ?
+                         ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, new Object[]{"a", "b"}},
+                             new Object[]{0L, new Object[]{"b", "c"}},
+                             new Object[]{0L, new Object[]{"d"}}
+                         ) : ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, new Object[]{"a", "b"}},
+                             new Object[]{0L, new Object[]{""}},
+                             new Object[]{0L, new Object[]{"b", "c"}},
+                             new Object[]{0L, new Object[]{"d"}}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertOnFoo1WithArrayIngestModeArrayGroupByInsertAsMvd()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim3", ColumnType.STRING).build();
+
+    final Map<String, Object> adjustedContext = new HashMap<>(context);
+    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 SELECT ARRAY_TO_MV(MV_TO_ARRAY(dim3)) as dim3 FROM foo GROUP BY MV_TO_ARRAY(dim3) PARTITIONED BY ALL TIME"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(adjustedContext)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(
+                         NullHandling.replaceWithDefault() ?
+                         ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, Arrays.asList("a", "b")},
+                             new Object[]{0L, Arrays.asList("b", "c")},
+                             new Object[]{0L, "d"}
+                         ) : ImmutableList.of(
+                             new Object[]{0L, null},
+                             new Object[]{0L, ""},
+                             new Object[]{0L, Arrays.asList("a", "b")},
+                             new Object[]{0L, Arrays.asList("b", "c")},
+                             new Object[]{0L, "d"}
                          )
                      )
                      .verifyResults();

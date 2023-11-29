@@ -603,6 +603,11 @@ The following table describes the response fields when you retrieve a report for
 | `multiStageQuery.payload.status.status` | RUNNING, SUCCESS, or FAILED. |
 | `multiStageQuery.payload.status.startTime` | Start time of the query in ISO format. Only present if the query has started running. |
 | `multiStageQuery.payload.status.durationMs` | Milliseconds elapsed after the query has started running. -1 denotes that the query hasn't started running yet. |
+| `multiStageQuery.payload.status.workers` | Workers for the controller task.|
+| `multiStageQuery.payload.status.workers.<workerNumber>` | Array of worker tasks including retries. |
+| `multiStageQuery.payload.status.workers.<workerNumber>[].workerId` | Id of the worker task.| |
+| `multiStageQuery.payload.status.workers.<workerNumber>[].status` | RUNNING, SUCCESS, or FAILED.|
+| `multiStageQuery.payload.status.workers.<workerNumber>[].durationMs` | Milliseconds elapsed after the worker task started running. It is -1 for worker tasks with status RUNNING.|
 | `multiStageQuery.payload.status.pendingTasks` | Number of tasks that are not fully started. -1 denotes that the number is currently unknown. |
 | `multiStageQuery.payload.status.runningTasks` | Number of currently running tasks. Should be at least 1 since the controller is included. |
 | `multiStageQuery.payload.status.segmentLoadStatus` | Segment loading container. Only present after the segments have been published. |

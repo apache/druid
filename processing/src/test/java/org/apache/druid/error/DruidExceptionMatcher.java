@@ -45,6 +45,15 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
     return invalidInput().expectContext("sourceType", "sql");
   }
 
+  public static DruidExceptionMatcher defensive()
+  {
+    return new DruidExceptionMatcher(
+        DruidException.Persona.DEVELOPER,
+        DruidException.Category.DEFENSIVE,
+        "general"
+    );
+  }
+
   private final AllOf<DruidException> delegate;
   private final ArrayList<Matcher<? super DruidException>> matcherList;
 

@@ -22,6 +22,8 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.UnmodifiableIterator;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -40,6 +42,7 @@ import org.skife.jdbi.v2.ResultIterator;
 
 import javax.annotation.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -55,6 +58,13 @@ import java.util.stream.Collectors;
 public class SqlSegmentsMetadataQuery
 {
   private static final Logger log = new Logger(SqlSegmentsMetadataQuery.class);
+
+  /**
+   * Maximum number of intervals to consider for a batch.
+   * This is similar to {@link IndexerSQLMetadataStorageCoordinator#MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE}, but imposed
+   * on the intervals size.
+   */
+  private static final int MAX_INTERVALS_PER_BATCH = 100;
 
   private final Handle handle;
   private final SQLMetadataConnector connector;
@@ -131,6 +141,10 @@ public class SqlSegmentsMetadataQuery
   /**
    * Marks the provided segments as either used or unused.
    *
+   * For better performance, please try to
+   * 1) ensure that the caller passes only used segments to this method when marking them as unused.
+   * 2) Similarly, please try to call this method only on unused segments when marking segments as used with this method.
+   *
    * Returns the number of segments actually modified.
    */
   public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
@@ -166,7 +180,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all segments for a datasource unused that are *fully contained by* a particular interval.
+   * Marks all used segments that are *fully contained by* a particular interval as unused.
    *
    * Returns the number of segments actually modified.
    */
@@ -176,7 +190,8 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+                  + "WHERE dataSource = :dataSource AND used = true",
                   dbTables.getSegmentsTable()
               )
           )
@@ -192,7 +207,8 @@ public class SqlSegmentsMetadataQuery
       return handle
           .createStatement(
               StringUtils.format(
-                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated WHERE dataSource = :dataSource AND %s",
+                  "UPDATE %s SET used=:used, used_status_last_updated = :used_status_last_updated "
+                  + "WHERE dataSource = :dataSource AND used = true AND %s",
                   dbTables.getSegmentsTable(),
                   IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
               )
@@ -261,7 +277,119 @@ public class SqlSegmentsMetadataQuery
     return null;
   }
 
+  /**
+   * Append the condition for the interval and match mode to the given string builder with a partial query
+   * @param sb - StringBuilder containing the paritial query with SELECT clause and WHERE condition for used, datasource
+   * @param intervals - intervals to fetch the segments for
+   * @param matchMode - Interval match mode - overlaps or contains
+   * @param connector - SQL connector
+   */
+  public static void appendConditionForIntervalsAndMatchMode(
+      final StringBuilder sb,
+      final Collection<Interval> intervals,
+      final IntervalMode matchMode,
+      final SQLMetadataConnector connector
+  )
+  {
+    if (intervals.isEmpty()) {
+      return;
+    }
+
+    sb.append(" AND (");
+    for (int i = 0; i < intervals.size(); i++) {
+      sb.append(
+          matchMode.makeSqlCondition(
+              connector.getQuoteString(),
+              StringUtils.format(":start%d", i),
+              StringUtils.format(":end%d", i)
+          )
+      );
+
+      // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
+      // we are using string comparison, a segment with this start or end will not be returned otherwise.
+      if (matchMode.equals(IntervalMode.OVERLAPS)) {
+        sb.append(StringUtils.format(
+            " OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i
+        ));
+        sb.append(StringUtils.format(
+            " OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)",
+            Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i
+        ));
+      }
+
+      if (i != intervals.size() - 1) {
+        sb.append(" OR ");
+      }
+    }
+
+    // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
+    // this start and end will not be returned otherwise.
+    // Known Issue: https://github.com/apache/druid/issues/12860
+    if (matchMode.equals(IntervalMode.OVERLAPS)) {
+      sb.append(StringUtils.format(
+          " OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()
+      ));
+    }
+    sb.append(")");
+  }
+
+  /**
+   * Given a Query object bind the input intervals to it
+   * @param query Query to fetch segments
+   * @param intervals Intervals to fetch segments for
+   */
+  public static void bindQueryIntervals(final Query<Map<String, Object>> query, final Collection<Interval> intervals)
+  {
+    if (intervals.isEmpty()) {
+      return;
+    }
+
+    final Iterator<Interval> iterator = intervals.iterator();
+    for (int i = 0; iterator.hasNext(); i++) {
+      Interval interval = iterator.next();
+      query.bind(StringUtils.format("start%d", i), interval.getStart().toString())
+           .bind(StringUtils.format("end%d", i), interval.getEnd().toString());
+    }
+  }
+
   private CloseableIterator<DataSegment> retrieveSegments(
+      final String dataSource,
+      final Collection<Interval> intervals,
+      final IntervalMode matchMode,
+      final boolean used,
+      @Nullable final Integer limit
+  )
+  {
+    if (intervals.isEmpty()) {
+      return CloseableIterators.withEmptyBaggage(
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit)
+      );
+    } else {
+      final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
+      final List<Iterator<DataSegment>> resultingIterators = new ArrayList<>();
+      Integer limitPerBatch = limit;
+
+      for (final List<Interval> intervalList : intervalsLists) {
+        final UnmodifiableIterator<DataSegment> iterator = retrieveSegmentsInIntervalsBatch(dataSource, intervalList, matchMode, used, limitPerBatch);
+        if (limitPerBatch != null) {
+          // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
+          // we have reached what was requested for.
+          final List<DataSegment> dataSegments = ImmutableList.copyOf(iterator);
+          resultingIterators.add(dataSegments.iterator());
+          if (dataSegments.size() >= limitPerBatch) {
+            break;
+          }
+          limitPerBatch -= dataSegments.size();
+        } else {
+          resultingIterators.add(iterator);
+        }
+      }
+      return CloseableIterators.withEmptyBaggage(Iterators.concat(resultingIterators.iterator()));
+    }
+  }
+
+  private UnmodifiableIterator<DataSegment> retrieveSegmentsInIntervalsBatch(
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
@@ -275,36 +403,8 @@ public class SqlSegmentsMetadataQuery
     final StringBuilder sb = new StringBuilder();
     sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
 
-    if (compareAsString && !intervals.isEmpty()) {
-      sb.append(" AND (");
-      for (int i = 0; i < intervals.size(); i++) {
-        sb.append(
-            matchMode.makeSqlCondition(
-                connector.getQuoteString(),
-                StringUtils.format(":start%d", i),
-                StringUtils.format(":end%d", i)
-            )
-        );
-
-        // Add a special check for a segment which have one end at eternity and the other at some finite value. Since
-        // we are using string comparison, a segment with this start or end will not be returned otherwise.
-        if (matchMode.equals(IntervalMode.OVERLAPS)) {
-          sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" != '%s' AND \"end\" > :start%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
-          sb.append(StringUtils.format(" OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
-        }
-
-        if (i != intervals.size() - 1) {
-          sb.append(" OR ");
-        }
-      }
-
-      // Add a special check for a single segment with eternity. Since we are using string comparison, a segment with
-      // this start and end will not be returned otherwise.
-      // Known Issue: https://github.com/apache/druid/issues/12860
-      if (matchMode.equals(IntervalMode.OVERLAPS)) {
-        sb.append(StringUtils.format(" OR (start = '%s' AND \"end\" = '%s')", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd()));
-      }
-      sb.append(")");
+    if (compareAsString) {
+      appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
     final Query<Map<String, Object>> sql = handle
@@ -317,39 +417,31 @@ public class SqlSegmentsMetadataQuery
     }
 
     if (compareAsString) {
-      final Iterator<Interval> iterator = intervals.iterator();
-      for (int i = 0; iterator.hasNext(); i++) {
-        Interval interval = iterator.next();
-        sql.bind(StringUtils.format("start%d", i), interval.getStart().toString())
-           .bind(StringUtils.format("end%d", i), interval.getEnd().toString());
-      }
+      bindQueryIntervals(sql, intervals);
     }
 
     final ResultIterator<DataSegment> resultIterator =
         sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
            .iterator();
 
-    return CloseableIterators.wrap(
-        Iterators.filter(
-            resultIterator,
-            dataSegment -> {
-              if (intervals.isEmpty()) {
+    return Iterators.filter(
+        resultIterator,
+        dataSegment -> {
+          if (intervals.isEmpty()) {
+            return true;
+          } else {
+            // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
+            // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
+            // segment interval like "20010/20011".)
+            for (Interval interval : intervals) {
+              if (matchMode.apply(interval, dataSegment.getInterval())) {
                 return true;
-              } else {
-                // Must re-check that the interval matches, even if comparing as string, because the *segment interval*
-                // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
-                // segment interval like "20010/20011".)
-                for (Interval interval : intervals) {
-                  if (matchMode.apply(interval, dataSegment.getInterval())) {
-                    return true;
-                  }
-                }
-
-                return false;
               }
             }
-        ),
-        resultIterator
+
+            return false;
+          }
+        }
     );
   }
 

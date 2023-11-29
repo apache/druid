@@ -1188,6 +1188,13 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
+    public Builder setPostAggregatorSpecs(PostAggregator... postAggregatorSpecs)
+    {
+      this.postAggregatorSpecs = Lists.newArrayList(postAggregatorSpecs);
+      this.postProcessingFn = null;
+      return this;
+    }
+
     public Builder setContext(Map<String, Object> context)
     {
       this.context = context;

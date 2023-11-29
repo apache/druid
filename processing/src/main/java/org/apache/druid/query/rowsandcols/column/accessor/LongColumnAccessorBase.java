@@ -34,9 +34,13 @@ public abstract class LongColumnAccessorBase implements ColumnAccessor
 
   @Nullable
   @Override
-  public Object getObject(int rowNum)
+  public final Object getObject(int rowNum)
   {
-    return getLong(rowNum);
+    if (isNull(rowNum)) {
+      return null;
+    } else {
+      return getLong(rowNum);
+    }
   }
 
   @Override

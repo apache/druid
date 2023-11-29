@@ -42,6 +42,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -1167,9 +1168,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
 
+    final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
-            toolbox.getTaskActionClient().submit(buildPublishAction(segmentsToBeOverwritten, segmentsToPublish));
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        );
 
     final boolean published =
         newSegments.isEmpty()
@@ -1201,7 +1204,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
         getContext(),
-        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount()
+        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount(),
+        // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
+        false
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)

@@ -127,25 +127,28 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       }
       Assert.assertEquals(1, results.recordedQueries.size());
 
-      final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
-      for (int i = 0; i < input.expectedOperators.size(); ++i) {
-        final OperatorFactory expectedOperator = input.expectedOperators.get(i);
-        final OperatorFactory actualOperator = query.getOperators().get(i);
-        if (!expectedOperator.validateEquivalent(actualOperator)) {
-          assertEquals("Operator Mismatch, index[" + i + "]",
-              queryJackson.writeValueAsString(expectedOperator),
-              queryJackson.writeValueAsString(actualOperator));
-          fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
+      maybeDumpActualResults(results.results);
+      if (input.expectedOperators != null) {
+        final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
+        for (int i = 0; i < input.expectedOperators.size(); ++i) {
+          final OperatorFactory expectedOperator = input.expectedOperators.get(i);
+          final OperatorFactory actualOperator = query.getOperators().get(i);
+          if (!expectedOperator.validateEquivalent(actualOperator)) {
+            assertEquals("Operator Mismatch, index[" + i + "]",
+                queryJackson.writeValueAsString(expectedOperator),
+                queryJackson.writeValueAsString(actualOperator));
+            fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
+          }
         }
       }
-      final RowSignature outputSignature = query.getRowSignature();
+
+      final RowSignature outputSignature = results.signature;
       ColumnType[] types = new ColumnType[outputSignature.size()];
       for (int i = 0; i < outputSignature.size(); ++i) {
         types[i] = outputSignature.getColumnType(i).get();
         Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
       }
 
-      maybeDumpActualResults(results.results);
       for (Object[] result : input.expectedResults) {
         for (int i = 0; i < result.length; i++) {
           // Jackson deserializes numbers as the minimum size required to
