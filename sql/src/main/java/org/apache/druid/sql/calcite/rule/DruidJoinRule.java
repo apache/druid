@@ -211,7 +211,7 @@ public class DruidJoinRule extends RelOptRule
             );
 
     // Build a post-join filter with whatever join sub-conditions were not supported.
-    RexNode postJoinFilter = RexUtil.composeConjunction(rexBuilder, conditionAnalysis.getUnsupportedSubConditions(), true);
+    RexNode postJoinFilter = RexUtil.composeConjunction(rexBuilder, conditionAnalysis.getUnsupportedOnSubConditions(), true);
     if (postJoinFilter != null) {
       relBuilder = relBuilder.filter(postJoinFilter);
     }
@@ -273,7 +273,7 @@ public class DruidJoinRule extends RelOptRule
       // conditions. Otherwise, some left/right joins with a condition that doesn't allow nulls on join input will
       // be converted to inner joins. See Test CalciteJoinQueryTest#testFilterAndGroupByLookupUsingJoinOperatorBackwards
       // for an example.
-      return conditionAnalysis.getUnsupportedSubConditions().isEmpty();
+      return conditionAnalysis.getUnsupportedOnSubConditions().isEmpty();
     }
     
     return true;
@@ -298,9 +298,9 @@ public class DruidJoinRule extends RelOptRule
     private final List<RexLiteral> literalSubConditions;
 
     /**
-     * Sub-conditions that cannot be handled by the DruidJoinRule.
+     * Sub-conditions in join clause that cannot be handled by the DruidJoinRule.
      */
-    private final List<RexNode> unsupportedSubConditions;
+    private final List<RexNode> unsupportedOnSubConditions;
 
     private final Set<RexInputRef> rightColumns;
 
@@ -308,14 +308,14 @@ public class DruidJoinRule extends RelOptRule
         int numLeftFields,
         List<RexEquality> equalitySubConditions,
         List<RexLiteral> literalSubConditions,
-        List<RexNode> unsupportedSubConditions,
+        List<RexNode> unsupportedOnSubConditions,
         Set<RexInputRef> rightColumns
     )
     {
       this.numLeftFields = numLeftFields;
       this.equalitySubConditions = equalitySubConditions;
       this.literalSubConditions = literalSubConditions;
-      this.unsupportedSubConditions = unsupportedSubConditions;
+      this.unsupportedOnSubConditions = unsupportedOnSubConditions;
       this.rightColumns = rightColumns;
     }
 
@@ -339,7 +339,7 @@ public class DruidJoinRule extends RelOptRule
               )
               .collect(Collectors.toList()),
           literalSubConditions,
-          unsupportedSubConditions,
+          unsupportedOnSubConditions,
           rightColumns
       );
     }
@@ -368,7 +368,7 @@ public class DruidJoinRule extends RelOptRule
               )
               .collect(Collectors.toList()),
           literalSubConditions,
-          unsupportedSubConditions,
+          unsupportedOnSubConditions,
           rightColumns
       );
     }
@@ -401,9 +401,9 @@ public class DruidJoinRule extends RelOptRule
       );
     }
 
-    public List<RexNode> getUnsupportedSubConditions()
+    public List<RexNode> getUnsupportedOnSubConditions()
     {
-      return unsupportedSubConditions;
+      return unsupportedOnSubConditions;
     }
 
     @Override
@@ -413,7 +413,7 @@ public class DruidJoinRule extends RelOptRule
              "numLeftFields=" + numLeftFields +
              ", equalitySubConditions=" + equalitySubConditions +
              ", literalSubConditions=" + literalSubConditions +
-             ", unsupportedSubConditions=" + unsupportedSubConditions +
+             ", unsupportedSubConditions=" + unsupportedOnSubConditions +
              ", rightColumns=" + rightColumns +
              '}';
     }

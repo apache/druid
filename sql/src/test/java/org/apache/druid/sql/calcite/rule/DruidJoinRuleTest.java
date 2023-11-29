@@ -89,7 +89,9 @@ public class DruidJoinRuleTest
             ),
             leftType,
             null,
-            JoinRelType.INNER, ImmutableList.of(), rexBuilder
+            JoinRelType.INNER,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }
@@ -110,7 +112,9 @@ public class DruidJoinRuleTest
             ),
             leftType,
             null,
-            JoinRelType.INNER, ImmutableList.of(), rexBuilder
+            JoinRelType.INNER,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }
@@ -132,7 +136,9 @@ public class DruidJoinRuleTest
             ),
             leftType,
             null,
-            JoinRelType.INNER, ImmutableList.of(), rexBuilder
+            JoinRelType.INNER,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }
@@ -151,7 +157,9 @@ public class DruidJoinRuleTest
             ),
             leftType,
             null,
-            JoinRelType.INNER, ImmutableList.of(), rexBuilder
+            JoinRelType.INNER,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }
@@ -169,7 +177,9 @@ public class DruidJoinRuleTest
             ),
             leftType,
             null,
-            JoinRelType.INNER, ImmutableList.of(), rexBuilder
+            JoinRelType.INNER,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }
@@ -190,7 +200,9 @@ public class DruidJoinRuleTest
             ),
             leftType,
             null,
-            JoinRelType.LEFT, ImmutableList.of(), rexBuilder
+            JoinRelType.LEFT,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }
@@ -211,7 +223,9 @@ public class DruidJoinRuleTest
             ),
             leftType,
             null,
-            JoinRelType.INNER, Collections.singletonList(null), rexBuilder
+            JoinRelType.INNER,
+            Collections.singletonList(null),
+            rexBuilder
         )
     );
   }
@@ -224,7 +238,9 @@ public class DruidJoinRuleTest
             rexBuilder.makeLiteral(true),
             leftType,
             null,
-            JoinRelType.INNER, ImmutableList.of(), rexBuilder
+            JoinRelType.INNER,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }
@@ -237,7 +253,9 @@ public class DruidJoinRuleTest
             rexBuilder.makeLiteral(false),
             leftType,
             null,
-            JoinRelType.INNER, ImmutableList.of(), rexBuilder
+            JoinRelType.INNER,
+            ImmutableList.of(),
+            rexBuilder
         )
     );
   }

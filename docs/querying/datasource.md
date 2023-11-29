@@ -322,10 +322,10 @@ you to join arbitrarily many datasources.
 In Druid {{DRUIDVERSION}}, joins in native queries are implemented with a broadcast hash-join algorithm. This means
 that all datasources other than the leftmost "base" datasource must fit in memory. In native queries, the join condition
 must be an equality. In SQL, any join condition is accepted, but only equalities of a certain form
-(see [Joins in SQL](#joins-in-sql)) execute as part of a native join. For other kinds of conditions, planner will try to re-arrange
-condition such that some of the sub-conditions are evaluated as a filter on top of join and other sub-conditions are left
-out in the join condition. In worst case scenario, SQL will execute the join condition as a cross join 
-(cartesian product) plus a filter.
+(see [Joins in SQL](#joins-in-sql)) execute efficiently as part of a native join. For other kinds of conditions, planner will try
+to re-arrange condition such that some of the sub-conditions are evaluated as a filter on top of join and other 
+sub-conditions are left out in the join condition. In worst case scenario, SQL will execute the join condition as a 
+cross join (cartesian product) plus a filter.
 
 This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
 [query](#query) datasources. Refer to the [Query execution](query-execution.md#join) page for more details on how
@@ -339,9 +339,9 @@ SQL joins take the form:
 <o1> [ INNER | LEFT [OUTER] ] JOIN <o2> ON <condition>
 ```
 
-Any condition is accepted, but only certain kinds of conditions execute as part of a native join. To execute efficiently
-as part of a native join, a condition must be a single clause like the following, or an `AND` of clauses involving at 
-lease one of the following:
+Any condition is accepted, but only certain kinds of conditions execute efficiently
+as a native join. The condition must be a single clause like the following, or an `AND` of clauses involving at
+least one of the following:
 
 - Equality between fields of the same type on each side, like `t1 JOIN t2 ON t1.x = t2.x`.
 - Equality between a function call on one side, and a field on the other side, like `t1 JOIN t2 ON LOWER(t1.x) = t2.x`.
