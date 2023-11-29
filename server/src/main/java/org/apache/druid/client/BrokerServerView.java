@@ -36,7 +36,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -147,7 +147,7 @@ public class BrokerServerView implements TimelineServerView
           }
 
           @Override
-          public CallbackAction segmentSchemaUpdate(SinksSchema sinksSchema)
+          public CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
           {
             return CallbackAction.CONTINUE;
           }

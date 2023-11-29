@@ -418,13 +418,18 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     return old;
   }
 
-  public Map<String, ColumnType> getDimensionsForSink()
+  public Map<String, ColumnType> getSchema()
   {
     synchronized (hydrantLock) {
-      Map<String, ColumnType> result = Maps.newLinkedHashMap();
-      result.putAll(CollectionUtils.mapValues(dimColumnFormat, v -> v.toColumnCapabilities().toColumnType()));
-      result.putAll(CollectionUtils.mapValues(currHydrant.getIndex().getColumnFormats(), v -> v.toColumnCapabilities().toColumnType()));
-      return result;
+      Map<String, ColumnType> columnMap = Maps.newLinkedHashMap();
+
+      com.google.common.base.Function<ColumnFormat, ColumnType> columnMapper =
+          columnFormat -> columnFormat.toColumnCapabilities().toColumnType();
+
+      columnMap.putAll(CollectionUtils.mapValues(dimColumnFormat, columnMapper));
+      columnMap.putAll(CollectionUtils.mapValues(currHydrant.getIndex().getColumnFormats(), columnMapper));
+
+      return columnMap;
     }
   }
 

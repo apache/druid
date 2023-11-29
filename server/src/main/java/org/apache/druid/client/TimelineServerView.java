@@ -22,7 +22,7 @@ package org.apache.druid.client;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
@@ -103,6 +103,6 @@ public interface TimelineServerView extends ServerView
      */
     CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment);
 
-    CallbackAction segmentSchemaUpdate(SinksSchema sinksSchema);
+    CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema);
   }
 }

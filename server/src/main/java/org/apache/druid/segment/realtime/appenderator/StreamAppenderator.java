@@ -71,8 +71,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema.ColumnInformation;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema.SinkSchemaChange;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
@@ -90,12 +88,10 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -166,7 +162,7 @@ public class StreamAppenderator implements Appenderator
   private final ConcurrentHashMap<SegmentId, Set<SegmentIdWithShardSpec>>
       baseSegmentToUpgradedVersions = new ConcurrentHashMap<>();
 
-  private final SinkSchemaChangeAnnouncer sinkSchemaChangeAnnouncer;
+  private final SinkSchemaAnnouncer sinkSchemaAnnouncer;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -231,7 +227,7 @@ public class StreamAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.sinkSchemaChangeAnnouncer = new SinkSchemaChangeAnnouncer(segmentAnnouncer);
+    this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer(segmentAnnouncer, myId);
   }
 
   @Override
@@ -253,7 +249,7 @@ public class StreamAppenderator implements Appenderator
     final Object retVal = bootstrapSinksFromDisk();
     initializeExecutors();
     resetNextFlush();
-    sinkSchemaChangeAnnouncer.start();
+    sinkSchemaAnnouncer.start();
     return retVal;
   }
 
@@ -995,7 +991,7 @@ public class StreamAppenderator implements Appenderator
     // Only unlock if executors actually shut down.
     unlockBasePersistDirectory();
 
-    sinkSchemaChangeAnnouncer.stop();
+    sinkSchemaAnnouncer.stop();
   }
 
   /**
@@ -1044,7 +1040,7 @@ public class StreamAppenderator implements Appenderator
       throw new ISE("Failed to shutdown executors during close()");
     }
 
-    sinkSchemaChangeAnnouncer.stop();
+    sinkSchemaAnnouncer.stop();
   }
 
   /**
@@ -1598,25 +1594,31 @@ public class StreamAppenderator implements Appenderator
     return ROUGH_OVERHEAD_PER_SINK;
   }
 
-  private class SinkSchemaChangeAnnouncer
+  /**
+   * This inner class periodically computes the absolute and change in schema for all the {@link StreamAppenderator#sinks}
+   * and announces them.
+   */
+  private class SinkSchemaAnnouncer
   {
     private static final long SCHEMA_PUBLISH_DELAY_MILLIS = 0;
     private static final long SCHEMA_PUBLISH_PERIOD_MILLIS = 60_000;
 
     private final DataSegmentAnnouncer announcer;
     private final ScheduledExecutorService scheduledExecutorService;
-    private Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> prevSinksDimensions = new HashMap<>();
+    private final String taskId;
+    private Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> previousSinkSchema = new HashMap<>();
 
-    public SinkSchemaChangeAnnouncer(DataSegmentAnnouncer announcer)
+    SinkSchemaAnnouncer(DataSegmentAnnouncer announcer, String taskId)
     {
       this.announcer = announcer;
-      this.scheduledExecutorService = ScheduledExecutors.fixed(1, "Sink-Schema-Change-Announcer-%d");
+      this.scheduledExecutorService = ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d");
+      this.taskId = taskId;
     }
 
     void start()
     {
       scheduledExecutorService.scheduleAtFixedRate(
-          this::computeChangesForAllSinks,
+          this::computeAndAnnounce,
           SCHEMA_PUBLISH_DELAY_MILLIS,
           SCHEMA_PUBLISH_PERIOD_MILLIS,
           TimeUnit.MILLISECONDS
@@ -1625,125 +1627,29 @@ public class StreamAppenderator implements Appenderator
 
     void stop()
     {
-      announcer.unannouceTask(StreamAppenderator.this.myId);
+      announcer.unannouceTask(taskId);
       scheduledExecutorService.shutdown();
     }
 
-    public void computeChangesForAllSinks()
+    void computeAndAnnounce()
     {
-      Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currSinksDimensions = new HashMap<>();
+      Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema = new HashMap<>();
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
         Sink sink = sinkEntry.getValue();
 
-        currSinksDimensions.put(segmentIdWithShardSpec, Pair.of(sink.getDimensionsForSink(), sink.getNumRows()));
+        currentSinkSchema.put(segmentIdWithShardSpec, Pair.of(sink.getSchema(), sink.getNumRows()));
       }
 
-      Optional<SinksSchema> sinksSchema = computeCurrentSinksSchema(currSinksDimensions);
-      Optional<SinksSchema> sinksSchemaChange = computeChange(currSinksDimensions);
+      Optional<SegmentsSchema> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSchema);
+      Optional<SegmentsSchema> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSchema, currentSinkSchema);
 
-      prevSinksDimensions = currSinksDimensions;
+      previousSinkSchema = currentSinkSchema;
 
       // announce the change
       if (sinksSchema.isPresent() || sinksSchemaChange.isPresent()) {
-        announcer.announceSinksSchema(StreamAppenderator.this.myId, sinksSchema.orElse(null), sinksSchemaChange.orElse(null));
+        announcer.announceSinksSchema(taskId, sinksSchema.orElse(null), sinksSchemaChange.orElse(null));
       }
-    }
-
-    private Optional<SinksSchema> computeCurrentSinksSchema(Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currSinksDimensions)
-    {
-      Map<Integer, ColumnInformation> columnMapping = new HashMap<>();
-      Map<SegmentId, SinkSchemaChange> sinksSchemaChangeMap = new HashMap<>();
-
-      Map<String, Integer> columnReverseMapping = new HashMap<>();
-      AtomicInteger columnCount = new AtomicInteger();
-
-      for (Map.Entry<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> sinkDimensionsEntry : currSinksDimensions.entrySet()) {
-        SegmentIdWithShardSpec segmentIdWithShardSpec = sinkDimensionsEntry.getKey();
-        Map<String, ColumnType> sinkDimensions = sinkDimensionsEntry.getValue().lhs;
-        Integer numRows = sinkDimensionsEntry.getValue().rhs;
-
-        List<Integer> newColumns = Lists.newLinkedList();
-
-        // new Sink
-        for (Map.Entry<String, ColumnType> entry : sinkDimensions.entrySet()) {
-          String column = entry.getKey();
-          ColumnType columnType = entry.getValue();
-          Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-          columnMapping.computeIfAbsent(columnNumber, v -> new ColumnInformation(column, columnType));
-          newColumns.add(columnNumber);
-        }
-
-        if (newColumns.size() > 0) {
-          SinkSchemaChange sinkSchemaChange = new SinkSchemaChange(newColumns, Collections.emptyList(), numRows, false);
-          sinksSchemaChangeMap.put(segmentIdWithShardSpec.asSegmentId(), sinkSchemaChange);
-        }
-      }
-
-      return Optional.ofNullable(sinksSchemaChangeMap.isEmpty() ? null : new SinksSchema(columnMapping, sinksSchemaChangeMap));
-    }
-
-    private Optional<SinksSchema> computeChange(Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currSinksDimensions)
-    {
-      Map<Integer, ColumnInformation> columnMapping = new HashMap<>();
-      Map<SegmentId, SinkSchemaChange> sinksSchemaChangeMap = new HashMap<>();
-
-      Map<String, Integer> columnReverseMapping = new HashMap<>();
-      AtomicInteger columnCount = new AtomicInteger();
-
-      for (Map.Entry<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> sinkDimensionsEntry : currSinksDimensions.entrySet()) {
-        SegmentIdWithShardSpec segmentIdWithShardSpec = sinkDimensionsEntry.getKey();
-        Map<String, ColumnType> sinkDimensions = sinkDimensionsEntry.getValue().lhs;
-        Integer numRows = sinkDimensionsEntry.getValue().rhs;
-
-        List<Integer> newColumns = Lists.newLinkedList();
-        List<Integer> updatedColumns = Lists.newLinkedList();
-
-        boolean changed = false;
-        boolean delta = false;
-
-        if (!prevSinksDimensions.containsKey(segmentIdWithShardSpec)) {
-          // new Sink
-          for (Map.Entry<String, ColumnType> entry : sinkDimensions.entrySet()) {
-            String column = entry.getKey();
-            ColumnType columnType = entry.getValue();
-            Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-            columnMapping.computeIfAbsent(columnNumber, v -> new ColumnInformation(column, columnType));
-            newColumns.add(columnNumber);
-          }
-          if (newColumns.size() > 0 || numRows > 0) {
-            changed = true;
-          }
-        } else {
-          Map<String, ColumnType> prevSinkDimensions = prevSinksDimensions.get(segmentIdWithShardSpec).lhs;
-          Integer prevNumRows = prevSinksDimensions.get(segmentIdWithShardSpec).rhs;
-          for (Map.Entry<String, ColumnType> entry : sinkDimensions.entrySet()) {
-            String column = entry.getKey();
-            ColumnType columnType = entry.getValue();
-
-            if (!prevSinkDimensions.containsKey(column)) {
-              Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-              columnMapping.computeIfAbsent(columnNumber, v -> new ColumnInformation(column, columnType));
-              newColumns.add(columnNumber);
-            } else if (!prevSinkDimensions.get(column).equals(columnType)) {
-              Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-              columnMapping.computeIfAbsent(columnNumber, v -> new ColumnInformation(column, columnType));
-              updatedColumns.add(columnNumber);
-            }
-          }
-          if ((!Objects.equals(numRows, prevNumRows)) || (updatedColumns.size() > 0) || (newColumns.size() > 0)) {
-            changed = true;
-            delta = true;
-          }
-        }
-
-        if (changed) {
-          SinkSchemaChange sinkSchemaChange = new SinkSchemaChange(newColumns, updatedColumns, numRows, delta);
-          sinksSchemaChangeMap.put(segmentIdWithShardSpec.asSegmentId(), sinkSchemaChange);
-        }
-      }
-
-      return Optional.ofNullable(sinksSchemaChangeMap.isEmpty() ? null : new SinksSchema(columnMapping, sinksSchemaChangeMap));
     }
   }
 }

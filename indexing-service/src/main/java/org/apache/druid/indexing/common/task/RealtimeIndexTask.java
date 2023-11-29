@@ -57,7 +57,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
 import org.apache.druid.segment.realtime.SegmentPublisher;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -313,7 +313,7 @@ public class RealtimeIndexTask extends AbstractTask
       }
 
       @Override
-      public void announceSinksSchema(String taskId, SinksSchema sinksSchema, SinksSchema sinksSchemaChange)
+      public void announceSinksSchema(String taskId, SegmentsSchema sinksSchema, SegmentsSchema sinksSchemaChange)
       {
       }
 

@@ -34,7 +34,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Escalator;
@@ -140,7 +140,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SinksSchema sinksSchema)
+          public ServerView.CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

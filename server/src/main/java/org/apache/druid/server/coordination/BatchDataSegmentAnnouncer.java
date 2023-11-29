@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -79,7 +79,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
 
-  private final ConcurrentMap<String, SinksSchema> taskSinksSchema = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, SegmentsSchema> taskSinksSchema = new ConcurrentHashMap<>();
 
   @Nullable
   private final SegmentZNode dummyZnode;
@@ -315,10 +315,10 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void announceSinksSchema(String taskId, SinksSchema sinksSchema, SinksSchema sinksSchemaChange)
+  public void announceSinksSchema(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange)
   {
-    changes.addChangeRequest(new SinkSchemaChangeRequest(sinksSchemaChange));
-    taskSinksSchema.put(taskId, sinksSchema);
+    changes.addChangeRequest(new SinkSchemaChangeRequest(segmentsSchemaChange));
+    taskSinksSchema.put(taskId, segmentsSchema);
   }
 
   @Override
@@ -349,10 +349,10 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
         Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
             taskSinksSchema.values(),
-            new Function<SinksSchema, DataSegmentChangeRequest>()
+            new Function<SegmentsSchema, DataSegmentChangeRequest>()
             {
               @Override
-              public SinkSchemaChangeRequest apply(SinksSchema input)
+              public SinkSchemaChangeRequest apply(SegmentsSchema input)
               {
                 return new SinkSchemaChangeRequest(input);
               }

@@ -31,7 +31,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Escalator;
@@ -113,9 +113,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SinksSchema sinksSchema)
+          public ServerView.CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
           {
-            updateSchemaForRealtimeSegments(sinksSchema);
+            updateSchemaForRealtimeSegments(segmentsSchema);
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -165,12 +165,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     }
   }
 
-  public void updateSchemaForRealtimeSegments(SinksSchema sinksSchema)
+  public void updateSchemaForRealtimeSegments(SegmentsSchema segmentsSchema)
   {
     // add datasource to SinksSchema
     String dataSource = null;
 
-    Map<SegmentId, SinksSchema.SinkSchemaChange> segmentIdSinkSchemaChangeMap = sinksSchema.getSinksSchemaChangeMap();
+    Map<SegmentId, SegmentsSchema.SegmentSchema> segmentIdSinkSchemaChangeMap = segmentsSchema.getSegmentSchemaChangeMap();
 
     synchronized (lock) {
       segmentMetadataInfo.compute(
@@ -179,7 +179,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
             if (segmentsMap == null) {
               segmentsMap = new ConcurrentSkipListMap<>(SEGMENT_ORDER);
             }
-            for (Map.Entry<SegmentId, SinksSchema.SinkSchemaChange> entry : segmentIdSinkSchemaChangeMap.entrySet()) {
+            for (Map.Entry<SegmentId, SegmentsSchema.SegmentSchema> entry : segmentIdSinkSchemaChangeMap.entrySet()) {
               segmentsMap.compute(
                   entry.getKey(), (segmentId, segmentMetadata) -> {
                     if (segmentMetadata == null) {
@@ -193,7 +193,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                           .from(segmentMetadata)
                           .withRowSignature(mergeOrCreateRowSignature(
                               segmentMetadata.getRowSignature(),
-                              sinksSchema.getColumnMapping(),
+                              segmentsSchema.getColumnMapping(),
                               entry.getValue()
                           ))
                           .build();
@@ -210,16 +210,16 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
   private RowSignature mergeOrCreateRowSignature(
       @Nullable RowSignature previous,
-      Map<Integer, SinksSchema.ColumnInformation> columnMapping,
-      SinksSchema.SinkSchemaChange sinkSchemaChange
+      Map<Integer, SegmentsSchema.ColumnInformation> columnMapping,
+      SegmentsSchema.SegmentSchema segmentSchema
   )
   {
     RowSignature.Builder builder = RowSignature.builder();
     // merge using strategy
-    if (!sinkSchemaChange.isDelta()) {
+    if (!segmentSchema.isDelta()) {
       // create new
-      for (Integer columnInt : sinkSchemaChange.getNewColumns()) {
-        SinksSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
+      for (Integer columnInt : segmentSchema.getNewColumns()) {
+        SegmentsSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
         builder.add(columnInformation.getColumnName(), columnInformation.getColumnType());
       }
       return builder.build();
@@ -235,8 +235,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
       }
 
-      for (Integer columnInt : sinkSchemaChange.getUpdatedColumns()) {
-        SinksSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
+      for (Integer columnInt : segmentSchema.getUpdatedColumns()) {
+        SegmentsSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
         String columnName = columnInformation.getColumnName();
         if (!columnTypes.containsKey(columnName)) {
           log.debug("Column send in delta is not present ");
@@ -246,8 +246,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         }
       }
 
-      for (Integer columnInt : sinkSchemaChange.getNewColumns()) {
-        SinksSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
+      for (Integer columnInt : segmentSchema.getNewColumns()) {
+        SegmentsSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
         String columnName = columnInformation.getColumnName();
         if (columnTypes.containsKey(columnName)) {
           log.debug("How come new column is already present?");

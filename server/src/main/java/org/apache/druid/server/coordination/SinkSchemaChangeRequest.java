@@ -21,7 +21,7 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.realtime.appenderator.SinksSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 
 import javax.annotation.Nullable;
 
@@ -30,20 +30,20 @@ import javax.annotation.Nullable;
  */
 public class SinkSchemaChangeRequest implements DataSegmentChangeRequest
 {
-  private final SinksSchema sinksSchema;
+  private final SegmentsSchema segmentsSchema;
 
   @JsonCreator
   public SinkSchemaChangeRequest(
-      @JsonProperty("sinksSchemaChange") SinksSchema sinksSchema
+      @JsonProperty("sinksSchemaChange") SegmentsSchema segmentsSchema
   )
   {
-    this.sinksSchema = sinksSchema;
+    this.segmentsSchema = segmentsSchema;
   }
 
   @JsonProperty
-  public SinksSchema getSinksSchemaChange()
+  public SegmentsSchema getSinksSchemaChange()
   {
-    return sinksSchema;
+    return segmentsSchema;
   }
 
   @Override
