@@ -29,6 +29,7 @@ APIs
 apache.org
 AvroStorage
 ARN
+ASC
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -43,6 +44,7 @@ Base64
 Base64-encoded
 ByteBuffer
 bottlenecked
+cartesian
 concat
 CIDR
 CORS
@@ -440,6 +442,7 @@ preemptible
 prefetch
 prefetched
 prefetching
+precached
 prepend
 prepended
 prepending
@@ -502,6 +505,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+sub-conditions
 subarray
 subnet
 subqueries
@@ -514,6 +518,7 @@ supervisorTaskId
 SVG
 symlink
 syntaxes
+systemFields
 tiering
 timeseries
 Timeseries
@@ -747,6 +752,7 @@ TooManyWorkers
 NotEnoughMemory
 WorkerFailed
 WorkerRpcFailed
+TIMED_OUT
 # MSQ context parameters
 maxNumTasks
 taskAssignment
@@ -940,6 +946,7 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
@@ -1128,6 +1135,7 @@ simpleJson
 dimensionSpec
 flattenSpec
 binaryAsString
+replaceMissingValueWith
 sslFactory
 sslMode
 Proto
@@ -1276,6 +1284,7 @@ numShards
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
 2012-01-01T00
 2012-01-03T00
@@ -1484,6 +1493,7 @@ isnull
 ipv4_stringify
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad
@@ -2037,6 +2047,8 @@ orderbys
 org.apache.druid
 org.apache.druid.jetty.RequestLog
 org.apache.hadoop
+OSHI
+OshiSysMonitor
 overlord.html
 pendingSegments
 pre-flight
@@ -2056,6 +2068,7 @@ slf4j
 sql
 sqlQuery
 successfulSending
+[S]igar
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
@@ -2317,3 +2330,7 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+LAST_VALUE
+markUnused
+markUsed
+segmentId

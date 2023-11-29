@@ -105,13 +105,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Auto-incrementing SQL type to use for IDs
-   * Must be an integer type, which values will be automatically set by the database
-   * <p/>
-   * The resulting string will be interpolated into the table creation statement, e.g.
-   * <code>CREATE TABLE druid_table ( id <type> NOT NULL, ... )</code>
+   * Auto-incrementing integer SQL type to use for IDs.
+   * The returned string is interpolated into the table creation statement as follows:
+   * <pre>
+   * CREATE TABLE druid_table (
+   *   id &lt;serial-type&gt; NOT NULL,
+   *   col_2 VARCHAR(255) NOT NULL,
+   *   col_3 VARCHAR(255) NOT NULL
+   *   ...
+   * )
+   * </pre>
    *
-   * @return String representing the SQL type and auto-increment statement
+   * @return String representing auto-incrementing SQL integer type to use for IDs.
    */
   public abstract String getSerialType();
 
@@ -330,6 +335,29 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 "CREATE INDEX idx_%1$s_datasource_used_end_start ON %1$s(dataSource, used, %2$send%2$s, start)",
                 tableName,
                 getQuoteString()
+            )
+        )
+    );
+  }
+
+  private void createUpgradeSegmentsTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  task_id VARCHAR(255) NOT NULL,\n"
+                + "  segment_id VARCHAR(255) NOT NULL,\n"
+                + "  lock_version VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getSerialType()
+            ),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_task ON %1$s(task_id)",
+                tableName
             )
         )
     );
@@ -662,6 +690,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     // Called outside of the above conditional because we want to validate the table
     // regardless of cluster configuration for creating tables.
     validateSegmentsTable();
+  }
+
+  @Override
+  public void createUpgradeSegmentsTable()
+  {
+    if (config.get().isCreateTables()) {
+      createUpgradeSegmentsTable(tablesConfigSupplier.get().getUpgradeSegmentsTable());
+    }
   }
 
   @Override

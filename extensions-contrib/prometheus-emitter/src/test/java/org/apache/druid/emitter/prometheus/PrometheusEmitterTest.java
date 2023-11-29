@@ -49,7 +49,7 @@ public class PrometheusEmitterTest
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
-                                                 .build("segment/loadQueue/count", 10)
+                                                 .setMetric("segment/loadQueue/count", 10)
                                                  .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     Assert.assertEquals("historical", build.getService());
     Assert.assertEquals("druid.test.cn", build.getHost());
@@ -70,7 +70,7 @@ public class PrometheusEmitterTest
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
             .setDimension("server", "druid-data01.vpc.region")
-            .build("segment/loadQueue/count", 10)
+            .setMetric("segment/loadQueue/count", 10)
             .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     Assert.assertEquals("historical", build.getService());
     Assert.assertEquals("druid.test.cn", build.getHost());
@@ -93,7 +93,7 @@ public class PrometheusEmitterTest
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
-                                                 .build("segment/loadQueue/count", 10)
+                                                 .setMetric("segment/loadQueue/count", 10)
                                                  .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
@@ -115,7 +115,7 @@ public class PrometheusEmitterTest
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
-                                                 .build("segment/loadQueue/count", 10)
+                                                 .setMetric("segment/loadQueue/count", 10)
                                                  .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
@@ -136,7 +136,7 @@ public class PrometheusEmitterTest
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
-                                                 .build("segment/loadQueue/count", 10)
+                                                 .setMetric("segment/loadQueue/count", 10)
                                                  .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
@@ -159,7 +159,7 @@ public class PrometheusEmitterTest
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
-                                                 .build("segment/loadQueue/count", 10)
+                                                 .setMetric("segment/loadQueue/count", 10)
                                                  .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
@@ -182,7 +182,7 @@ public class PrometheusEmitterTest
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
-                                                 .build("segment/loadQueue/count", 10)
+                                                 .setMetric("segment/loadQueue/count", 10)
                                                  .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
@@ -210,7 +210,7 @@ public class PrometheusEmitterTest
     ServiceMetricEvent build = ServiceMetricEvent.builder()
             .setDimension("dataSource", "test")
             .setDimension("taskType", "index_parallel")
-            .build("task/run/time", 500)
+            .setMetric("task/run/time", 500)
             .build(ImmutableMap.of("service", "overlord", "host", "druid.test.cn"));
     emitter.emit(build);
     double assertEpsilon = 0.0001;
@@ -249,7 +249,7 @@ public class PrometheusEmitterTest
     emitter.setPushGateway(mockPushGateway);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
             .setDimension("task", "index_parallel")
-            .build("task/run/time", 500)
+            .setMetric("task/run/time", 500)
             .build(ImmutableMap.of("service", "peon", "host", "druid.test.cn"));
     emitter.emit(build);
     emitter.flush();

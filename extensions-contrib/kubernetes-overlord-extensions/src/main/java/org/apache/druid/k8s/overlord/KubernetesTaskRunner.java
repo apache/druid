@@ -23,6 +23,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -60,7 +61,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -193,7 +193,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
             config.getTaskLaunchTimeout().toStandardDuration().getMillis(),
-            config.getTaskTimeout().toStandardDuration().getMillis()
+            config.getTaskTimeout().toStandardDuration().getMillis(),
+            adapter.shouldUseDeepStorageForTaskPayload(task)
         );
       } else {
         taskStatus = peonLifecycle.join(
@@ -227,7 +228,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
         IndexTaskUtils.setTaskDimensions(metricBuilder, workItem.getTask());
         emitter.emit(
-            metricBuilder.build(
+            metricBuilder.setMetric(
                 "task/pending/time",
                 new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
             )
@@ -309,23 +310,25 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
-    for (Job job : client.getPeonJobs()) {
-      try {
-        Task task = adapter.toTask(job);
-        restoredTasks.add(Pair.of(task, joinAsync(task)));
-      }
-      catch (IOException e) {
-        log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
-      }
-    }
-    return restoredTasks;
+    return ImmutableList.of();
   }
 
   @Override
   @LifecycleStart
   public void start()
   {
+    log.info("Starting K8sTaskRunner...");
+    // Load tasks from previously running jobs and wait for their statuses to be updated asynchronously.
+    for (Job job : client.getPeonJobs()) {
+      try {
+        joinAsync(adapter.toTask(job));
+      }
+      catch (IOException e) {
+        log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
+      }
+    }
+    log.info("Loaded %,d tasks from previous run", tasks.size());
+
     cleanupExecutor.scheduleAtFixedRate(
         () ->
             client.deleteCompletedPeonJobsOlderThan(
@@ -338,7 +341,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     );
     log.debug("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
   }
-
 
   @Override
   @LifecycleStop

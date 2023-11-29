@@ -81,7 +81,7 @@ public class SegmentStatsMonitor extends AbstractMonitor
           .setDimension(DruidMetrics.DATASOURCE, dataSource)
           .setDimension("tier", serverConfig.getTier())
           .setDimension("priority", String.valueOf(serverConfig.getPriority()));
-      emitter.emit(builder.build("segment/rowCount/avg", averageSize));
+      emitter.emit(builder.setMetric("segment/rowCount/avg", averageSize));
     }
 
     for (Map.Entry<String, SegmentRowCountDistribution> entry : segmentLoadDropHandler.getRowCountDistributionPerDatasource()
@@ -95,7 +95,7 @@ public class SegmentStatsMonitor extends AbstractMonitor
             .setDimension("tier", serverConfig.getTier())
             .setDimension("priority", String.valueOf(serverConfig.getPriority()));
         builder.setDimension("range", bucketDimension);
-        ServiceEventBuilder<ServiceMetricEvent> output = builder.build("segment/rowCount/range/count", count);
+        ServiceEventBuilder<ServiceMetricEvent> output = builder.setMetric("segment/rowCount/range/count", count);
         emitter.emit(output);
       });
     }

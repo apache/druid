@@ -192,8 +192,8 @@ public class MaterializedViewSupervisorTest
             1024
         )
     );
-    indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
-    indexerMetadataStorageCoordinator.announceHistoricalSegments(derivativeSegments);
+    indexerMetadataStorageCoordinator.commitSegments(baseSegments);
+    indexerMetadataStorageCoordinator.commitSegments(derivativeSegments);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
@@ -252,7 +252,7 @@ public class MaterializedViewSupervisorTest
             1024
         )
     );
-    indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
+    indexerMetadataStorageCoordinator.commitSegments(baseSegments);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();

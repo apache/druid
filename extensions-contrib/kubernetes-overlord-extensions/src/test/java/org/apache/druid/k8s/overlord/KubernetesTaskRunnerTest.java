@@ -29,15 +29,14 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.easymock.EasyMock;
@@ -56,7 +55,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -89,7 +87,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .withCapacity(1)
         .build();
 
-    task = NoopTask.create(ID, 0);
+    task = K8sTestUtils.createTask(ID, 0);
 
     runner = new KubernetesTaskRunner(
         taskAdapter,
@@ -99,6 +97,89 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
         emitter
     );
+  }
+
+  @Test
+  public void test_start_withExistingJobs() throws IOException
+  {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(
+            task.getId(),
+            k -> new KubernetesWorkItem(
+                task,
+                Futures.immediateFuture(TaskStatus.success(task.getId()))
+            )
+        ).getResult();
+      }
+    };
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
+
+    replayAll();
+
+    runner.start();
+
+    verifyAll();
+
+    Assert.assertNotNull(runner.tasks);
+    Assert.assertEquals(1, runner.tasks.size());
+  }
+
+  @Test
+  public void test_start_whenDeserializationExceptionThrown_isIgnored() throws IOException
+  {
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null))
+                    .getResult();
+      }
+    };
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
+    EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
+
+    replayAll();
+
+    runner.start();
+
+    verifyAll();
+
+    Assert.assertNotNull(runner.tasks);
+    Assert.assertEquals(0, runner.tasks.size());
   }
 
   @Test
@@ -140,10 +221,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     TaskStatus taskStatus = TaskStatus.success(task.getId());
 
     EasyMock.expect(taskAdapter.fromTask(task)).andReturn(job);
+    EasyMock.expect(taskAdapter.shouldUseDeepStorageForTaskPayload(task)).andReturn(false);
     EasyMock.expect(kubernetesPeonLifecycle.run(
         EasyMock.eq(job),
         EasyMock.anyLong(),
-        EasyMock.anyLong()
+        EasyMock.anyLong(),
+        EasyMock.anyBoolean()
     )).andReturn(taskStatus);
 
     replayAll();
@@ -175,10 +258,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .build();
 
     EasyMock.expect(taskAdapter.fromTask(task)).andReturn(job);
+    EasyMock.expect(taskAdapter.shouldUseDeepStorageForTaskPayload(task)).andReturn(false);
     EasyMock.expect(kubernetesPeonLifecycle.run(
         EasyMock.eq(job),
         EasyMock.anyLong(),
-        EasyMock.anyLong()
+        EasyMock.anyLong(),
+        EasyMock.anyBoolean()
     )).andThrow(new IllegalStateException());
 
     replayAll();
@@ -264,80 +349,6 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_restore_withExistingJobs() throws IOException
-  {
-    KubernetesTaskRunner runner = new KubernetesTaskRunner(
-        taskAdapter,
-        config,
-        peonClient,
-        httpClient,
-        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
-    ) {
-      @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
-      {
-        return new KubernetesWorkItem(task, null).getResult();
-      }
-    };
-
-    Job job = new JobBuilder()
-        .withNewMetadata()
-        .withName(ID)
-        .endMetadata()
-        .build();
-
-    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
-    EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
-
-    replayAll();
-
-    List<Pair<Task, ListenableFuture<TaskStatus>>> tasks = runner.restore();
-
-    verifyAll();
-
-    Assert.assertNotNull(tasks);
-    Assert.assertEquals(1, tasks.size());
-  }
-
-  @Test
-  public void test_restore_whenDeserializationExceptionThrown_isIgnored() throws IOException
-  {
-    KubernetesTaskRunner runner = new KubernetesTaskRunner(
-        taskAdapter,
-        config,
-        peonClient,
-        httpClient,
-        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
-        emitter
-    ) {
-      @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
-      {
-        return new KubernetesWorkItem(task, null).getResult();
-      }
-    };
-
-    Job job = new JobBuilder()
-        .withNewMetadata()
-        .withName(ID)
-        .endMetadata()
-        .build();
-
-    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
-    EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
-
-    replayAll();
-
-    List<Pair<Task, ListenableFuture<TaskStatus>>> tasks = runner.restore();
-
-    verifyAll();
-
-    Assert.assertNotNull(tasks);
-    Assert.assertEquals(0, tasks.size());
-  }
-
-  @Test
   public void test_getTotalTaskSlotCount()
   {
     Map<String, Long> slotCount = runner.getTotalTaskSlotCount();
@@ -367,7 +378,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_getRunningTasks()
   {
-    Task pendingTask = NoopTask.create("pending-id", 0);
+    Task pendingTask = K8sTestUtils.createTask("pending-id", 0);
     KubernetesWorkItem pendingWorkItem = new KubernetesWorkItem(pendingTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -377,7 +388,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
     runner.tasks.put(pendingTask.getId(), pendingWorkItem);
 
-    Task runningTask = NoopTask.create("running-id", 0);
+    Task runningTask = K8sTestUtils.createTask("running-id", 0);
     KubernetesWorkItem runningWorkItem = new KubernetesWorkItem(runningTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -396,7 +407,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_getPendingTasks()
   {
-    Task pendingTask = NoopTask.create("pending-id", 0);
+    Task pendingTask = K8sTestUtils.createTask("pending-id", 0);
     KubernetesWorkItem pendingWorkItem = new KubernetesWorkItem(pendingTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
@@ -406,7 +417,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     };
     runner.tasks.put(pendingTask.getId(), pendingWorkItem);
 
-    Task runningTask = NoopTask.create("running-id", 0);
+    Task runningTask = K8sTestUtils.createTask("running-id", 0);
     KubernetesWorkItem runningWorkItem = new KubernetesWorkItem(runningTask, null) {
       @Override
       protected RunnerTaskState getRunnerTaskState()

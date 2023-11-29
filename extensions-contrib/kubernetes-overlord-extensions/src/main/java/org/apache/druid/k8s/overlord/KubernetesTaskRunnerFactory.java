@@ -58,7 +58,6 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
 
-
   @Inject
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
@@ -137,7 +136,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           startupLoggingConfig,
           druidNode,
-          smileMapper
+          smileMapper,
+          taskLogs
       );
     } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
       return new PodTemplateTaskAdapter(
@@ -145,7 +145,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           druidNode,
           smileMapper,
-          properties
+          properties,
+          taskLogs
       );
     } else {
       return new SingleContainerTaskAdapter(
@@ -154,7 +155,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           startupLoggingConfig,
           druidNode,
-          smileMapper
+          smileMapper,
+          taskLogs
       );
     }
   }

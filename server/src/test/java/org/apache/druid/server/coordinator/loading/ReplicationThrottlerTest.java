@@ -34,8 +34,7 @@ public class ReplicationThrottlerTest
     final int replicationThrottleLimit = 10;
     ReplicationThrottler throttler = new ReplicationThrottler(
         ImmutableMap.of(),
-        replicationThrottleLimit,
-        1000
+        replicationThrottleLimit
     );
 
     // Verify that both the tiers can be assigned replicas upto the limit
@@ -54,8 +53,7 @@ public class ReplicationThrottlerTest
     final int replicationThrottleLimit = 10;
     ReplicationThrottler throttler = new ReplicationThrottler(
         ImmutableMap.of(TIER_1, 10, TIER_2, 7),
-        replicationThrottleLimit,
-        1000
+        replicationThrottleLimit
     );
 
     // T1 cannot be assigned any more replicas

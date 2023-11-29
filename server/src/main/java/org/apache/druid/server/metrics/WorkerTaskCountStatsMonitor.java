@@ -74,7 +74,7 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       builder.setDimension(DruidMetrics.CATEGORY, workerCategory);
       builder.setDimension(DruidMetrics.WORKER_VERSION, workerVersion);
-      emitter.emit(builder.build(metricName, value));
+      emitter.emit(builder.setMetric(metricName, value));
     }
   }
 }

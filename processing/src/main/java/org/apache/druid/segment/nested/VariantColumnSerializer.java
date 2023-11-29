@@ -26,12 +26,16 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -79,10 +83,13 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   private ByteBuffer columnNameBytes = null;
   private boolean hasNulls;
   @Nullable
+  private final ExpressionType expectedExpressionType;
+  @Nullable
   private final Byte variantTypeSetByte;
 
   public VariantColumnSerializer(
       String name,
+      @Nullable ColumnType logicalType,
       @Nullable Byte variantTypeSetByte,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -90,11 +97,11 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   )
   {
     this.name = name;
+    this.expectedExpressionType = logicalType != null ? ExpressionType.fromColumnTypeStrict(logicalType) : null;
     this.variantTypeSetByte = variantTypeSetByte;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
-    this.dictionaryIdLookup = new DictionaryIdLookup();
   }
 
   @Override
@@ -151,6 +158,16 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
     arrayDictionaryWriter.open();
     arrayElementDictionaryWriter = new FixedIndexedIntWriter(segmentWriteOutMedium, true);
     arrayElementDictionaryWriter.open();
+    dictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            FileUtils.getTempDir(),
+            dictionaryWriter,
+            longDictionaryWriter,
+            doubleDictionaryWriter,
+            arrayDictionaryWriter
+        )
+    );
   }
 
   @Override
@@ -177,7 +194,6 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
 
     // null is always 0
     dictionaryWriter.write(null);
-    dictionaryIdLookup.addString(null);
     for (String value : strings) {
       value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
@@ -185,7 +201,6 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
       }
 
       dictionaryWriter.write(value);
-      dictionaryIdLookup.addString(value);
     }
 
     for (Long value : longs) {
@@ -193,7 +208,6 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
         continue;
       }
       longDictionaryWriter.write(value);
-      dictionaryIdLookup.addLong(value);
     }
 
     for (Double value : doubles) {
@@ -201,7 +215,6 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
         continue;
       }
       doubleDictionaryWriter.write(value);
-      dictionaryIdLookup.addDouble(value);
     }
 
     for (int[] value : arrays) {
@@ -209,7 +222,6 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
         continue;
       }
       arrayDictionaryWriter.write(value);
-      dictionaryIdLookup.addArray(value);
     }
     dictionarySerialized = true;
   }
@@ -222,8 +234,24 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
     }
 
     ExprEval eval = ExprEval.bestEffortOf(StructuredData.unwrap(selector.getObject()));
+    if (expectedExpressionType != null) {
+      try {
+        eval = eval.castTo(expectedExpressionType);
+      }
+      catch (IAE invalidCast) {
+        // write null
+        intermediateValueWriter.write(0);
+        hasNulls = true;
+        return;
+      }
+    }
     if (eval.isArray()) {
       Object[] array = eval.asArray();
+      if (array == null) {
+        intermediateValueWriter.write(0);
+        hasNulls = true;
+        return;
+      }
       int[] globalIds = new int[array.length];
       for (int i = 0; i < array.length; i++) {
         if (array[i] == null) {
@@ -378,10 +406,30 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
       channel.write(ByteBuffer.wrap(new byte[]{variantTypeSetByte}));
     }
 
-    writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
-    writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
-    writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
-    writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
+    if (dictionaryIdLookup.getStringBufferMapper() != null) {
+      SmooshedFileMapper fileMapper = dictionaryIdLookup.getStringBufferMapper();
+      for (String internalName : fileMapper.getInternalFilenames()) {
+        smoosher.add(internalName, fileMapper.mapFile(internalName));
+      }
+    } else {
+      writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
+    }
+    if (dictionaryIdLookup.getLongBuffer() != null) {
+      writeInternal(smoosher, dictionaryIdLookup.getLongBuffer(), LONG_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
+    }
+    if (dictionaryIdLookup.getDoubleBuffer() != null) {
+      writeInternal(smoosher, dictionaryIdLookup.getDoubleBuffer(), DOUBLE_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
+    }
+    if (dictionaryIdLookup.getArrayBuffer() != null) {
+      writeInternal(smoosher, dictionaryIdLookup.getArrayBuffer(), ARRAY_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
+    }
+
     writeInternal(smoosher, arrayElementDictionaryWriter, ARRAY_ELEMENT_DICTIONARY_FILE_NAME);
     writeInternal(smoosher, encodedValueSerializer, ENCODED_VALUE_COLUMN_FILE_NAME);
     writeInternal(smoosher, bitmapIndexWriter, BITMAP_INDEX_FILE_NAME);

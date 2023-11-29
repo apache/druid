@@ -88,9 +88,9 @@ public class Windowing
   private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
       .put("LAG", (agg) ->
-          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1)))
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1)))
       .put("LEAD", (agg) ->
-          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1)))
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1, 1)))
       .put("FIRST_VALUE", (agg) ->
           new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
       .put("LAST_VALUE", (agg) ->
@@ -115,7 +115,8 @@ public class Windowing
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
       final RowSignature sourceRowSignature,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final VirtualColumnRegistry virtualColumnRegistry
   )
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
@@ -172,12 +173,17 @@ public class Windowing
 
         ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
         if (maker == null) {
+
           final Aggregation aggregation = GroupByRules.translateAggregateCall(
               plannerContext,
               sourceRowSignature,
-              null,
+              virtualColumnRegistry,
               rexBuilder,
-              partialQuery.getSelectProject(),
+              InputAccessor.buildFor(
+                  rexBuilder,
+                  sourceRowSignature,
+                  partialQuery.getSelectProject(),
+                  window.constants),
               Collections.emptyList(),
               aggName,
               aggregateCall,

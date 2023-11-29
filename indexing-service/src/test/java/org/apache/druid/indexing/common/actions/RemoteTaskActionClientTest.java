@@ -87,7 +87,7 @@ public class RemoteTaskActionClientTest
     final BytesFullResponseHolder responseHolder = new BytesFullResponseHolder(httpResponse);
     responseHolder.addChunk(objectMapper.writeValueAsBytes(expectedResponse));
 
-    final Task task = NoopTask.create("id", 0);
+    final Task task = NoopTask.create();
     final LockListAction action = new LockListAction();
 
     EasyMock.expect(
@@ -123,7 +123,7 @@ public class RemoteTaskActionClientTest
         StandardCharsets.UTF_8
     ).addChunk("testSubmitWithIllegalStatusCode");
 
-    final Task task = NoopTask.create("id", 0);
+    final Task task = NoopTask.create();
     final LockListAction action = new LockListAction();
     EasyMock.expect(
                 directOverlordClient.request(

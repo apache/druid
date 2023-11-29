@@ -966,7 +966,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
       IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      emitter.emit(metricBuilder.build(
+      emitter.emit(metricBuilder.setMetric(
           "task/pending/time",
           new Duration(workItem.getQueueInsertionTime(), DateTimes.nowUtc()).getMillis())
       );

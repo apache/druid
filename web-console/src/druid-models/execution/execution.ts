@@ -164,6 +164,18 @@ function formatPendingMessage(
   }
 }
 
+interface SegmentStatus {
+  duration: number;
+  onDemandSegments: number;
+  pendingSegments: number;
+  precachedSegments: number;
+  startTime: Date;
+  state: 'INIT' | 'WAITING' | 'SUCCESS';
+  totalSegments: number;
+  unknownSegments: number;
+  usedSegments: number;
+}
+
 export interface ExecutionValue {
   engine: DruidEngine;
   id: string;
@@ -182,6 +194,7 @@ export interface ExecutionValue {
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
   _payload?: MsqTaskPayloadResponse;
+  segmentStatus?: SegmentStatus;
 }
 
 export class Execution {
@@ -292,6 +305,11 @@ export class Execution {
     const startTime = new Date(deepGet(taskReport, 'multiStageQuery.payload.status.startTime'));
     const durationMs = deepGet(taskReport, 'multiStageQuery.payload.status.durationMs');
 
+    const segmentLoaderStatus = deepGet(
+      taskReport,
+      'multiStageQuery.payload.status.segmentLoadWaiterStatus',
+    );
+
     let result: QueryResult | undefined;
     const resultsPayload: {
       signature: { name: string; type: string }[];
@@ -313,6 +331,7 @@ export class Execution {
       engine: 'sql-msq-task',
       id,
       status: Execution.normalizeTaskStatus(status),
+      segmentStatus: segmentLoaderStatus,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
       duration: typeof durationMs === 'number' ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
@@ -369,6 +388,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
+  public readonly segmentStatus?: SegmentStatus;
 
   public readonly _payload?: { payload: any; task: string };
 
@@ -390,6 +410,7 @@ export class Execution {
     this.error = value.error;
     this.warnings = nonEmptyArray(value.warnings) ? value.warnings : undefined;
     this.capacityInfo = value.capacityInfo;
+    this.segmentStatus = value.segmentStatus;
 
     this._payload = value._payload;
   }
@@ -412,6 +433,7 @@ export class Execution {
       error: this.error,
       warnings: this.warnings,
       capacityInfo: this.capacityInfo,
+      segmentStatus: this.segmentStatus,
 
       _payload: this._payload,
     };
@@ -524,6 +546,34 @@ export class Execution {
   public isWaitingForQuery(): boolean {
     const { status } = this;
     return status !== 'SUCCESS' && status !== 'FAILED';
+  }
+
+  public getSegmentStatusDescription() {
+    const { segmentStatus } = this;
+
+    let label = '';
+
+    switch (segmentStatus?.state) {
+      case 'INIT':
+        label = 'Waiting for segments loading to start...';
+        break;
+
+      case 'WAITING':
+        label = 'Waiting for segments loading to complete...';
+        break;
+
+      case 'SUCCESS':
+        label = 'Segments loaded successfully in ' + segmentStatus.duration + 'ms.';
+        break;
+
+      default:
+        break;
+    }
+
+    return {
+      label,
+      ...segmentStatus,
+    };
   }
 
   public isFullyComplete(): boolean {

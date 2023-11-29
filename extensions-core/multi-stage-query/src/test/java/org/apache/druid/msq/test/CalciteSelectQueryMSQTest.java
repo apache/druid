@@ -85,7 +85,8 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
         queryJsonMapper,
         injector,
         new MSQTestTaskActionClient(queryJsonMapper),
-        workerMemoryParameters
+        workerMemoryParameters,
+        ImmutableList.of()
     );
     return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }
@@ -144,7 +145,14 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 
   @Ignore
   @Override
-  public void testUnplannableQueries()
+  public void testUnplannableScanOrderByNonTime()
+  {
+
+  }
+
+  @Ignore
+  @Override
+  public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
   {
 
   }
@@ -154,6 +162,18 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   public void testQueryWithMoreThanMaxNumericInFilter()
   {
 
+  }
+
+  @Ignore
+  @Override
+  public void testUnSupportedNullsFirst()
+  {
+  }
+
+  @Ignore
+  @Override
+  public void testUnSupportedNullsLast()
+  {
   }
 
   /**

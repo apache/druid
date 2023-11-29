@@ -47,7 +47,7 @@ public class QueryExceptionCompat extends DruidException.Failure
   {
     return bob.forPersona(DruidException.Persona.OPERATOR)
               .ofCategory(convertFailType(exception.getFailType()))
-              .build(exception.getMessage())
+              .build(exception, "%s", exception.getMessage())
               .withContext("host", exception.getHost())
               .withContext("errorClass", exception.getErrorClass())
               .withContext("legacyErrorCode", exception.getErrorCode());

@@ -18,7 +18,7 @@
  */
 
 /*
- * Druid note: this file is copied from core/src/main/codegen/templates/Parser.jj in Calcite 1.34.0, with changes to
+ * Druid note: this file is copied from core/src/main/codegen/templates/Parser.jj in Calcite 1.35.0, with changes to
  * to add two elements of Druid syntax to the FROM clause:
  *
  * id [ (<args>) ]

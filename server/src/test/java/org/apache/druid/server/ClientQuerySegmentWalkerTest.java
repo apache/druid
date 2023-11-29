@@ -59,6 +59,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -81,6 +82,7 @@ import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
@@ -215,7 +217,7 @@ public class ClientQuerySegmentWalkerTest
   private QueryRunnerFactoryConglomerate conglomerate;
 
   // Queries that are issued; checked by "testQuery" against its "expectedQueries" parameter.
-  private List<ExpectedQuery> issuedQueries = new ArrayList<>();
+  private final List<ExpectedQuery> issuedQueries = new ArrayList<>();
 
   // A ClientQuerySegmentWalker that has two segments: one for FOO and one for BAR; each with interval INTERVAL,
   // version VERSION, and shard spec SHARD_SPEC.
@@ -717,7 +719,6 @@ public class ClientQuerySegmentWalkerTest
 
     testQuery(
         query,
-        // GroupBy handles its own subqueries; only the inner one will go to the cluster.
         ImmutableList.of(
             ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
@@ -805,6 +806,73 @@ public class ClientQuerySegmentWalkerTest
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }
 
+  @Test // Regression test for bug fixed in https://github.com/apache/druid/pull/15300
+  public void testScanOnScanWithStringExpression()
+  {
+    initWalker(
+        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1", QueryContexts.MAX_SUBQUERY_BYTES_KEY, "1000"),
+        scheduler
+    );
+
+    final Query<?> subquery =
+        Druids.newScanQueryBuilder()
+              .dataSource(FOO)
+              .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+              .columns("s")
+              .legacy(false)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .build()
+              .withId(DUMMY_QUERY_ID);
+
+    final Query<?> query =
+        Druids.newScanQueryBuilder()
+              .dataSource(new QueryDataSource(subquery))
+              .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "v",
+                      "case_searched(s == 'x',2,3)",
+                      ColumnType.LONG,
+                      ExprMacroTable.nil()
+                  )
+              )
+              .columns("v")
+              .legacy(false)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .build()
+              .withId(DUMMY_QUERY_ID);
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
+            ExpectedQuery.local(
+                query.withDataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(
+                            new Object[]{"x"},
+                            new Object[]{"x"},
+                            new Object[]{"y"},
+                            new Object[]{"z"}
+                        ),
+                        RowSignature.builder().add("s", null).build()
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(
+            new Object[]{2L},
+            new Object[]{2L},
+            new Object[]{3L},
+            new Object[]{3L}
+        )
+    );
+
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+  }
 
   @Test
   public void testTimeseriesOnGroupByOnTableErrorTooLarge()
@@ -1499,7 +1567,19 @@ public class ClientQuerySegmentWalkerTest
       );
 
       if (modifiedQuery.getDataSource() instanceof FrameBasedInlineDataSource) {
-        // Do this recursively for if the query's datasource is a query datasource
+        // Do round-trip serialization in order to replace FrameBasedInlineDataSource with InlineDataSource, so
+        // comparisons work independently of whether we are using frames or regular inline datasets.
+        try {
+          modifiedQuery = modifiedQuery.withDataSource(
+              TestHelper.JSON_MAPPER.readValue(
+                  TestHelper.JSON_MAPPER.writeValueAsBytes(modifiedQuery.getDataSource()),
+                  DataSource.class
+              )
+          );
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       }
 
       this.query = modifiedQuery;

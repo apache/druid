@@ -34,7 +34,8 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.common.exception.DruidException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -63,6 +64,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
@@ -226,9 +228,15 @@ public class OverlordResource
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
           catch (DruidException e) {
+            return Response
+                    .status(e.getStatusCode())
+                    .entity(new ErrorResponse(e))
+                    .build();
+          }
+          catch (org.apache.druid.common.exception.DruidException e) {
             return Response.status(e.getResponseCode())
-                           .entity(ImmutableMap.of("error", e.getMessage()))
-                           .build();
+                    .entity(ImmutableMap.of("error", e.getMessage()))
+                    .build();
           }
         }
     );
@@ -260,6 +268,7 @@ public class OverlordResource
     }
   }
 
+  @Deprecated
   @POST
   @Path("/lockedIntervals")
   @Produces(MediaType.APPLICATION_JSON)
@@ -272,6 +281,20 @@ public class OverlordResource
 
     // Build the response
     return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
+  }
+
+  @POST
+  @Path("/lockedIntervals/v2")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getDatasourceLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    if (lockFilterPolicies == null || lockFilterPolicies.isEmpty()) {
+      return Response.status(Status.BAD_REQUEST).entity("No filter provided").build();
+    }
+
+    // Build the response
+    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(lockFilterPolicies)).build();
   }
 
   @GET

@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>28.0.0-SNAPSHOT</version>
+        <version>29.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -363,7 +363,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
-            <version>5.5.12</version>
+            <version>6.2.12</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
@@ -398,7 +398,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-protobuf-provider</artifactId>
-            <version>5.5.12</version>
+            <version>6.2.12</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -592,7 +592,7 @@
                                         <DRUID_INTEGRATION_TEST_INDEXER>${it.indexer}</DRUID_INTEGRATION_TEST_INDEXER>
                                         <MYSQL_VERSION>${mysql.version}</MYSQL_VERSION>
                                         <MARIA_VERSION>2.7.3</MARIA_VERSION>
-                                        <CONFLUENT_VERSION>5.5.1</CONFLUENT_VERSION>
+                                        <CONFLUENT_VERSION>6.2.12</CONFLUENT_VERSION>
                                         <KAFKA_VERSION>${apache.kafka.version}</KAFKA_VERSION>
                                         <ZK_VERSION>${zookeeper.version}</ZK_VERSION>
                                         <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>

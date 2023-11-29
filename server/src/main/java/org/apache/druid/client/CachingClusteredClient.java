@@ -79,6 +79,7 @@ import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -436,19 +437,34 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
-      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
+      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache;
+      final Set<String> filterFieldsForPruning;
+
+      final boolean trySecondaryPartititionPruning =
+          query.getFilter() != null && query.context().isSecondaryPartitionPruningEnabled();
+
+      if (trySecondaryPartititionPruning) {
+        dimensionRangeCache = new HashMap<>();
+        filterFieldsForPruning =
+            DimFilterUtils.onlyBaseFields(query.getFilter().getRequiredColumns(), dataSourceAnalysis);
+      } else {
+        dimensionRangeCache = null;
+        filterFieldsForPruning = null;
+      }
+
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
-        if (query.context().isSecondaryPartitionPruningEnabled()) {
+        if (trySecondaryPartititionPruning) {
           filteredChunks = DimFilterUtils.filterShards(
               query.getFilter(),
+              filterFieldsForPruning,
               holder.getObject(),
               partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
               dimensionRangeCache
           );
         } else {
-          filteredChunks = Sets.newHashSet(holder.getObject());
+          filteredChunks = Sets.newLinkedHashSet(holder.getObject());
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
@@ -844,39 +860,42 @@ public class CachingClusteredClient implements QuerySegmentWalker
     }
   }
 
-  private static class TimelineConverter implements UnaryOperator<TimelineLookup<String, ServerSelector>>
+  /**
+   * Helper class to build a new timeline of filtered segments.
+   */
+  public static class TimelineConverter<T extends Overshadowable<T>> implements UnaryOperator<TimelineLookup<String, T>>
   {
     private final Iterable<SegmentDescriptor> specs;
 
-    TimelineConverter(final Iterable<SegmentDescriptor> specs)
+    public TimelineConverter(final Iterable<SegmentDescriptor> specs)
     {
       this.specs = specs;
     }
 
     @Override
-    public TimelineLookup<String, ServerSelector> apply(TimelineLookup<String, ServerSelector> timeline)
+    public TimelineLookup<String, T> apply(TimelineLookup<String, T> timeline)
     {
-      final VersionedIntervalTimeline<String, ServerSelector> timeline2 =
-          new VersionedIntervalTimeline<>(Ordering.natural(), true);
-      Iterator<PartitionChunkEntry<String, ServerSelector>> unfilteredIterator =
+      Iterator<PartitionChunkEntry<String, T>> unfilteredIterator =
           Iterators.transform(specs.iterator(), spec -> toChunkEntry(timeline, spec));
-      Iterator<PartitionChunkEntry<String, ServerSelector>> iterator = Iterators.filter(
+      Iterator<PartitionChunkEntry<String, T>> iterator = Iterators.filter(
           unfilteredIterator,
           Objects::nonNull
       );
+      final VersionedIntervalTimeline<String, T> newTimeline =
+          new VersionedIntervalTimeline<>(Ordering.natural(), true);
       // VersionedIntervalTimeline#addAll implementation is much more efficient than calling VersionedIntervalTimeline#add
       // in a loop when there are lot of segments to be added for same interval and version.
-      timeline2.addAll(iterator);
-      return timeline2;
+      newTimeline.addAll(iterator);
+      return newTimeline;
     }
 
     @Nullable
-    private PartitionChunkEntry<String, ServerSelector> toChunkEntry(
-        TimelineLookup<String, ServerSelector> timeline,
+    private PartitionChunkEntry<String, T> toChunkEntry(
+        TimelineLookup<String, T> timeline,
         SegmentDescriptor spec
     )
     {
-      PartitionChunk<ServerSelector> chunk = timeline.findChunk(
+      PartitionChunk<T> chunk = timeline.findChunk(
           spec.getInterval(),
           spec.getVersion(),
           spec.getPartitionNumber()

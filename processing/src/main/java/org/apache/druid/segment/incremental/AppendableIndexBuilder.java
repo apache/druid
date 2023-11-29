@@ -100,12 +100,6 @@ public abstract class AppendableIndexBuilder
     return this;
   }
 
-  public AppendableIndexBuilder setSortFacts(final boolean sortFacts)
-  {
-    this.sortFacts = sortFacts;
-    return this;
-  }
-
   public AppendableIndexBuilder setMaxRowCount(final int maxRowCount)
   {
     this.maxRowCount = maxRowCount;

@@ -35,10 +35,10 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -53,7 +53,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -399,21 +398,15 @@ public class FrameProcessorExecutor
    * Runs a sequence of processors and returns a future that resolves when execution is complete. Returns a value
    * accumulated using the provided {@code accumulateFn}.
    *
-   * @param processors               sequence of processors to run
-   * @param initialResult            initial value for result accumulation. If there are no processors at all, this
-   *                                 is returned.
-   * @param accumulateFn             result accumulator. Applied in a critical section, so it should be something
-   *                                 that executes quickly. It gets {@code initialResult} for the initial accumulation.
+   * @param processorManager         processors to run
    * @param maxOutstandingProcessors maximum number of processors to run at once
    * @param bouncer                  additional limiter on outstanding processors, beyond maxOutstandingProcessors.
    *                                 Useful when there is some finite resource being shared against multiple different
    *                                 calls to this method.
    * @param cancellationId           optional cancellation id for {@link #runFully}.
    */
-  public <T, ResultType> ListenableFuture<ResultType> runAllFully(
-      final Sequence<? extends FrameProcessor<T>> processors,
-      final ResultType initialResult,
-      final BiFunction<ResultType, T, ResultType> accumulateFn,
+  public <T, R> ListenableFuture<R> runAllFully(
+      final ProcessorManager<T, R> processorManager,
       final int maxOutstandingProcessors,
       final Bouncer bouncer,
       @Nullable final String cancellationId
@@ -421,10 +414,8 @@ public class FrameProcessorExecutor
   {
     // Logic resides in a separate class in order to keep this one simpler.
     return new RunAllFullyWidget<>(
-        processors,
+        processorManager,
         this,
-        initialResult,
-        accumulateFn,
         maxOutstandingProcessors,
         bouncer,
         cancellationId

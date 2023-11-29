@@ -303,15 +303,15 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
 
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         ImmutableList.of(
-            new AutoTypeColumnSchema("someIntValueMap"),
-            new AutoTypeColumnSchema("someStringValueMap"),
-            new AutoTypeColumnSchema("someRecord"),
-            new AutoTypeColumnSchema("someRecordArray"),
+            new AutoTypeColumnSchema("someIntValueMap", null),
+            new AutoTypeColumnSchema("someStringValueMap", null),
+            new AutoTypeColumnSchema("someRecord", null),
+            new AutoTypeColumnSchema("someRecordArray", null),
             new LongDimensionSchema("tSomeIntValueMap8"),
             new LongDimensionSchema("tSomeIntValueMap8_2"),
             new StringDimensionSchema("tSomeStringValueMap8"),
             new LongDimensionSchema("tSomeRecordSubLong"),
-            new AutoTypeColumnSchema("tSomeRecordArray0"),
+            new AutoTypeColumnSchema("tSomeRecordArray0", null),
             new StringDimensionSchema("tSomeRecordArray0nestedString")
         )
     );

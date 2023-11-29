@@ -423,6 +423,7 @@ describe('WorkbenchQuery', () => {
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
             useCache: false,
+            waitUntilSegmentsLoad: true,
           },
           header: true,
           query: 'INSERT INTO wiki2 SELECT * FROM wikipedia',
@@ -479,6 +480,18 @@ describe('WorkbenchQuery', () => {
           TIME_PARSE(pickup_datetime) AS __time,
           *
         FROM TABLE(
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
+      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
+    });
+
+    it('works with INSERT (unparsable with paren)', () => {
+      const sql = sane`
+        -- Some comment
+        INSERT into trips2
+        (SELECT TIME_PARSE(pickup_datetime) AS __time,
       `;
 
       const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);

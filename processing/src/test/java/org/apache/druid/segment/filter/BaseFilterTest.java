@@ -62,6 +62,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.AutoTypeColumnSchema;
@@ -136,9 +137,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new ExpressionVirtualColumn("exprLong", "1 + 2", ColumnType.LONG, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vdim0", "dim0", ColumnType.STRING, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vdim1", "dim1", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vs0", "s0", ColumnType.STRING, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vd0", "d0", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vf0", "f0", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vl0", "l0", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("nestedArrayLong", "array(arrayLong)", ColumnType.ofArray(ColumnType.LONG_ARRAY), TestExprMacroTable.INSTANCE),
           new ListFilteredVirtualColumn("allow-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), true),
           new ListFilteredVirtualColumn("deny-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), false),
           new ListFilteredVirtualColumn("allow-dim2", DefaultDimensionSpec.of("dim2"), ImmutableSet.of("a"), true),
@@ -149,20 +152,25 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000"));
   static final DimensionsSpec DEFAULT_DIM_SPEC = new DimensionsSpec(
       ImmutableList.<DimensionSchema>builder()
-                   .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                       "dim0",
-                       "dim1",
-                       "dim2",
-                       "dim3",
-                       "timeDim"
-                   )))
+                   .addAll(
+                       DimensionsSpec.getDefaultSchemas(
+                           ImmutableList.of(
+                               "dim0",
+                               "dim1",
+                               "dim2",
+                               "dim3",
+                               "timeDim",
+                               "s0"
+                           )
+                       )
+                   )
                    .add(new DoubleDimensionSchema("d0"))
                    .add(new FloatDimensionSchema("f0"))
                    .add(new LongDimensionSchema("l0"))
-                   .add(new AutoTypeColumnSchema("arrayString"))
-                   .add(new AutoTypeColumnSchema("arrayLong"))
-                   .add(new AutoTypeColumnSchema("arrayDouble"))
-                   .add(new AutoTypeColumnSchema("variant"))
+                   .add(new AutoTypeColumnSchema("arrayString", ColumnType.STRING_ARRAY))
+                   .add(new AutoTypeColumnSchema("arrayLong", ColumnType.LONG_ARRAY))
+                   .add(new AutoTypeColumnSchema("arrayDouble", ColumnType.DOUBLE_ARRAY))
+                   .add(new AutoTypeColumnSchema("variant", null))
                    .build()
   );
 
@@ -180,6 +188,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                   .add("dim1", ColumnType.STRING)
                   .add("dim2", ColumnType.STRING)
                   .add("timeDim", ColumnType.STRING)
+                  .add("s0", ColumnType.STRING)
                   .add("d0", ColumnType.DOUBLE)
                   .add("f0", ColumnType.FLOAT)
                   .add("l0", ColumnType.LONG)
@@ -195,6 +204,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           "",
           ImmutableList.of("a", "b"),
           "2017-07-25",
+          "",
           0.0,
           0.0f,
           0L,
@@ -208,6 +218,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           "10",
           ImmutableList.of(),
           "2017-07-25",
+          "a",
           10.1,
           10.1f,
           100L,
@@ -221,6 +232,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           "2",
           ImmutableList.of(""),
           "2017-05-25",
+          "b",
           null,
           5.5f,
           40L,
@@ -234,6 +246,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           "1",
           ImmutableList.of("a"),
           "2020-01-25",
+          null,
           120.0245,
           110.0f,
           null,
@@ -247,6 +260,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           "abdef",
           ImmutableList.of("c"),
           null,
+          "c",
           60.0,
           null,
           9001L,
@@ -260,6 +274,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           "abc",
           null,
           "2020-01-25",
+          "a",
           765.432,
           123.45f,
           12345L,
@@ -283,7 +298,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   }
 
 
-  static InputRow makeSchemaRow(
+  public static InputRow makeSchemaRow(
       final InputRowParser<Map<String, Object>> parser,
       final RowSignature signature,
       @Nullable Object... elements
@@ -427,7 +442,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -455,7 +470,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -484,7 +499,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .getDimensions()
                                                         .stream()
                                                         .map(
-                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                         )
                                                         .collect(Collectors.toList())
                                               ),
@@ -1034,7 +1049,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     final List<String> values = new ArrayList<>();
     for (InputRow row : rows) {
       rowSupplier.set(row);
-      if (matcher.matches()) {
+      if (matcher.matches(false)) {
         values.add((String) row.getRaw(selectColumn));
       }
     }
@@ -1055,6 +1070,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         && !(adapter instanceof FrameStorageAdapter);
 
     assertFilterMatches(filter, expectedRows, testVectorized);
+    // test double inverted
+    if (!StringUtils.toLowerCase(testName).contains("concise")) {
+      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, testVectorized);
+    }
   }
 
   protected void assertFilterMatchesSkipArrays(
@@ -1078,6 +1097,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       Assert.assertTrue(t.getMessage().contains("ARRAY"));
     } else {
       assertFilterMatches(filter, expectedRows, testVectorized);
+      // test double inverted
+      if (!StringUtils.toLowerCase(testName).contains("concise")) {
+        assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, testVectorized);
+      }
     }
   }
 
@@ -1087,6 +1110,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     assertFilterMatches(filter, expectedRows, false);
+    // test double inverted
+    if (!StringUtils.toLowerCase(testName).contains("concise")) {
+      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, false);
+    }
   }
 
   private void assertFilterMatches(

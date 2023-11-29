@@ -95,7 +95,7 @@ public class DefineClassUtils
   }
 
   /**
-   * "Compile" a MethodHandle that is equilavent to:
+   * "Compile" a MethodHandle that is equivalent to:
    *
    *  Class<?> defineClass(Class targetClass, byte[] byteCode, String className) {
    *    return Unsafe.defineClass(
@@ -147,7 +147,7 @@ public class DefineClassUtils
     //   defineClass(className, byteCode, 0, length, targetClass)
     defineClass = MethodHandles.insertArguments(defineClass, 2, (int) 0);
 
-    // JDK8 does not implement MethodHandles.arrayLength so we have to roll our own
+    // JDK8 does not implement MethodHandles.arrayLength, so we have to roll our own
     MethodHandle arrayLength = lookup.findStatic(
         lookup.lookupClass(),
         "getArrayLength",
@@ -169,6 +169,16 @@ public class DefineClassUtils
     );
 
     return defineClass;
+  }
+
+  /**
+   * This method is referenced in Java 8 using method handle, therefore it is not actually unused, and shouldn't be
+   * removed (till Java 8 is supported)
+   */
+  @SuppressWarnings("unused") // method is referenced and used in defineClassJava8
+  static int getArrayLength(byte[] bytes)
+  {
+    return bytes.length;
   }
 
   public static Class defineClass(

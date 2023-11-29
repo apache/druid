@@ -59,6 +59,7 @@ public class KillSupervisorsCustomDuty extends MetadataCleanupDuty implements Co
     super(
         "supervisors",
         "KillSupervisorsCustomDuty",
+        true,
         // Use the same period as metadata store management so that validation passes
         // Actual period of custom duties is configured by the user
         coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod(),

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
@@ -28,11 +29,12 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
   public static final String REPORT_KEY = "ingestionStatsAndErrors";
 
   @JsonProperty
-  private String taskId;
+  private final String taskId;
 
   @JsonProperty
-  private IngestionStatsAndErrorsTaskReportData payload;
+  private final IngestionStatsAndErrorsTaskReportData payload;
 
+  @JsonCreator
   public IngestionStatsAndErrorsTaskReport(
       @JsonProperty("taskId") String taskId,
       @JsonProperty("payload") IngestionStatsAndErrorsTaskReportData payload

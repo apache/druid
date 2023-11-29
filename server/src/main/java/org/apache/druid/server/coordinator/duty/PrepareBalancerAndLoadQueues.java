@@ -94,7 +94,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     collectHistoricalStats(cluster, stats);
     collectUsedSegmentStats(params, stats);
 
-    int numBalancerThreads = params.getCoordinatorDynamicConfig().getBalancerComputeThreads();
+    final int numBalancerThreads = segmentLoadingConfig.getBalancerComputeThreads();
     final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(numBalancerThreads);
     log.info(
         "Using balancer strategy [%s] with [%d] threads.",

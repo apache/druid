@@ -59,6 +59,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -227,7 +228,6 @@ public class NamespaceLookupExtractorFactoryTest
     );
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
-
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
@@ -284,6 +284,40 @@ public class NamespaceLookupExtractorFactoryTest
 
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
     verify(entry).getCacheState();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache);
+  }
+
+  @Test
+  public void testAwaitInitializationOnCacheNotInitialized() throws Exception
+  {
+    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
+    {
+      @Override
+      public long getPollMs()
+      {
+        return 0;
+      }
+
+      @Override
+      public long getLoadTimeoutMills()
+      {
+        return 1;
+      }
+    };
+    expectScheduleAndWaitOnce(extractionNamespace);
+    when(entry.getCacheState()).thenReturn(CacheScheduler.NoCache.CACHE_NOT_INITIALIZED);
+
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        scheduler
+    );
+    Assert.assertTrue(namespaceLookupExtractorFactory.start());
+    namespaceLookupExtractorFactory.awaitInitialization();
+    Assert.assertThrows(ISE.class, () -> namespaceLookupExtractorFactory.get());
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verify(entry, times(2)).getCacheState();
+    verify(entry).awaitTotalUpdatesWithTimeout(1, 1);
+    Thread.sleep(10);
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
