@@ -2097,7 +2097,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     info: (
       <>
         The maximum number of bytes to be fetched from buffer per poll. At least one
-        record will be fetched regardless of config.</Code>.
+        record will be fetched regardless of config.
       </>
     ),
   },
