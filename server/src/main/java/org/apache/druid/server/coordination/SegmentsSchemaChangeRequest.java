@@ -26,7 +26,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
 import javax.annotation.Nullable;
 
 /**
- * {@link DataSegmentChangeRequest} which encapsulates segment schema changes.
+ * Implementation of {@link DataSegmentChangeRequest}, which encapsulates segment schema changes.
  */
 public class SegmentsSchemaChangeRequest implements DataSegmentChangeRequest
 {
