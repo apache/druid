@@ -19,8 +19,6 @@
 
 package org.apache.druid.data.input.azure;
 
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -35,7 +33,6 @@ import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.storage.azure.AzureAccountConfig;
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
@@ -83,8 +80,6 @@ public class AzureInputSourceTest extends EasyMockSupport
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureInputDataConfig inputDataConfig;
-  private AzureInputSourceConfig azureInputSourceConfig;
-  private AzureAccountConfig azureAccountConfig;
 
   private InputSplit<List<CloudObjectLocation>> inputSplit;
   private AzureEntity azureEntity1;
@@ -113,8 +108,6 @@ public class AzureInputSourceTest extends EasyMockSupport
     inputDataConfig = createMock(AzureInputDataConfig.class);
     cloudBlobDruid1 = createMock(CloudBlobHolder.class);
     azureCloudBlobIterable = createMock(AzureCloudBlobIterable.class);
-    azureInputSourceConfig = createMock(AzureInputSourceConfig.class);
-    azureAccountConfig = createMock(AzureAccountConfig.class);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -126,12 +119,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
         null
     );
   }
@@ -139,9 +130,8 @@ public class AzureInputSourceTest extends EasyMockSupport
   @Test
   public void test_createEntity_returnsExpectedEntity()
   {
-    EasyMock.expect(entityFactory.create(EasyMock.eq(CLOUD_OBJECT_LOCATION_1), EasyMock.anyObject(AzureStorage.class))).andReturn(azureEntity1);
+    EasyMock.expect(entityFactory.create(CLOUD_OBJECT_LOCATION_1)).andReturn(azureEntity1);
     EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1)).times(2);
-    EasyMock.expect(azureAccountConfig.getAccount()).andReturn("storageAccount");
     replayAll();
 
     List<CloudObjectLocation> objects = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
@@ -150,12 +140,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         objects,
         null,
-        azureInputSourceConfig,
         null
     );
 
@@ -166,7 +154,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   }
 
   @Test
-  public void test_createSplits_successfullyCreatesCloudLocation_returnsExpectedLocations()
+  public void test_createSplits_successfullyCreatesCloudLocation_returnsExpectedLocations() throws Exception
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
@@ -186,12 +174,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
         null
     );
 
@@ -208,6 +194,7 @@ public class AzureInputSourceTest extends EasyMockSupport
 
   @Test
   public void test_getPrefixesSplitStream_withObjectGlob_successfullyCreatesCloudLocation_returnsExpectedLocations()
+      throws Exception
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
@@ -237,12 +224,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         objectGlob,
-        azureInputSourceConfig,
         null
     );
 
@@ -269,12 +254,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
         null
     );
 
@@ -292,18 +275,16 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
         null
     );
 
     String actualToString = azureInputSource.toString();
     Assert.assertEquals(
-        "AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null, azureInputSourceConfig=" + azureInputSourceConfig.toString() + "}",
+        "AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null}",
         actualToString
     );
   }
@@ -317,12 +298,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
@@ -333,7 +312,6 @@ public class AzureInputSourceTest extends EasyMockSupport
         + "prefixes=[azure://container/blob], "
         + "objects=[], "
         + "objectGlob=null, "
-        + "azureInputSourceConfig=" + azureInputSourceConfig.toString() + ", "
         + "systemFields=[__file_uri, __file_bucket, __file_path]"
         + "}",
         actualToString
@@ -349,12 +327,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
         null
     );
     Assert.assertEquals(ImmutableSet.of(AzureInputSource.SCHEME), azureInputSource.getTypes());
@@ -368,12 +344,10 @@ public class AzureInputSourceTest extends EasyMockSupport
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
-        azureAccountConfig,
         EMPTY_URIS,
         ImmutableList.of(PREFIX_URI),
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
@@ -383,14 +357,13 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     final AzureEntity entity = new AzureEntity(
-        new CloudObjectLocation("foo", "container/bar"),
-        storage,
-        (containerName, blobPath, storage) -> null
+        new CloudObjectLocation("foo", "bar"),
+        (containerName, blobPath) -> null
     );
 
-    Assert.assertEquals("azure://foo/container/bar", azureInputSource.getSystemFieldValue(entity, SystemField.URI));
+    Assert.assertEquals("azure://foo/bar", azureInputSource.getSystemFieldValue(entity, SystemField.URI));
     Assert.assertEquals("foo", azureInputSource.getSystemFieldValue(entity, SystemField.BUCKET));
-    Assert.assertEquals("container/bar", azureInputSource.getSystemFieldValue(entity, SystemField.PATH));
+    Assert.assertEquals("bar", azureInputSource.getSystemFieldValue(entity, SystemField.PATH));
   }
 
   @Test
@@ -399,15 +372,12 @@ public class AzureInputSourceTest extends EasyMockSupport
     EqualsVerifier.forClass(AzureInputSource.class)
                   .usingGetClass()
                   .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
-                  .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
                   .withNonnullFields("storage")
                   .withNonnullFields("entityFactory")
                   .withNonnullFields("azureCloudBlobIterableFactory")
                   .withNonnullFields("inputDataConfig")
                   .withNonnullFields("objectGlob")
                   .withNonnullFields("scheme")
-                  .withNonnullFields("azureInputSourceConfig")
-                  .withNonnullFields("azureAccountConfig")
                   .verify();
   }
 
