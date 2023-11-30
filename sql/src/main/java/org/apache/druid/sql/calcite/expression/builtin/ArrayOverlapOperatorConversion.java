@@ -164,6 +164,11 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
         if (exprEval.isArray()) {
           final Object[] arrayElements = exprEval.asArray();
+          if (arrayElements.length == 0) {
+            // this isn't likely possible today because array constructor function does not accept empty argument list
+            // but just in case, return null
+            return null;
+          }
           final List<DimFilter> filters = new ArrayList<>(arrayElements.length);
           final ColumnType elementType = ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type()));
           for (final Object val : arrayElements) {
