@@ -20,11 +20,15 @@
 package org.apache.druid.storage.google.output;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
@@ -59,8 +63,20 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
     this.storage = googleStorage;
     this.config = config;
     this.inputDataConfig = inputDataConfig;
-  }
 
+    Preconditions.checkNotNull(config, "config is null");
+    Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in s3 config");
+
+    try {
+      FileUtils.mkdirp(config.getTempDir());
+    }
+    catch (IOException e) {
+      throw new RE(
+          e,
+          StringUtils.format("Cannot create tempDir : [%s] for google storage connector", config.getTempDir())
+      );
+    }
+  }
 
   @Override
   public boolean pathExists(String path)
