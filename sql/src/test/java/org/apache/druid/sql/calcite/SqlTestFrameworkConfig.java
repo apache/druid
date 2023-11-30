@@ -34,6 +34,12 @@ import java.lang.annotation.Target;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Annotation to specify desired framework settings.
+ *
+ * This class provides junit rule facilities to build the framework accordingly to the annotation.
+ * These rules also cache the previously created frameworks.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface SqlTestFrameworkConfig
@@ -42,6 +48,9 @@ public @interface SqlTestFrameworkConfig
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
+  /**
+   * @see {@link SqlTestFrameworkConfig}
+   */
   class ClassRule extends ExternalResource
   {
 
@@ -62,6 +71,9 @@ public @interface SqlTestFrameworkConfig
     }
   }
 
+  /**
+   * @see {@link SqlTestFrameworkConfig}
+   */
   class MethodRule implements TestRule
   {
     private SqlTestFrameworkConfig config;
