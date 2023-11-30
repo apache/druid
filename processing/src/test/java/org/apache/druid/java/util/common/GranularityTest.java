@@ -847,7 +847,7 @@ public class GranularityTest
     DateTime start = DateTimes.of("2011-01-01T00:00:00");
     DateTime end = DateTimes.of("2011-01-14T00:00:00");
 
-    Iterator<Interval> intervals = DAY.getIterable(new Interval(start, end)).iterator();
+    Iterator<Interval> intervals = DAY.getIterable(new Interval(start, end), Integer.MAX_VALUE).iterator();
 
     Assert.assertEquals(Intervals.of("2011-01-01/P1d"), intervals.next());
     Assert.assertEquals(Intervals.of("2011-01-02/P1d"), intervals.next());
@@ -863,12 +863,23 @@ public class GranularityTest
     Assert.assertEquals(Intervals.of("2011-01-12/P1d"), intervals.next());
     Assert.assertEquals(Intervals.of("2011-01-13/P1d"), intervals.next());
 
-    try {
-      intervals.next();
-    }
-    catch (NoSuchElementException e) {
-      Assert.assertTrue(true);
-    }
+    Assert.assertThrows(NoSuchElementException.class, intervals::next);
+  }
+
+  @Test
+  public void testGetIterableWithLimit()
+  {
+    DateTime start = DateTimes.of("2011-01-01T00:00:00");
+    DateTime end = DateTimes.of("2011-01-14T00:00:00");
+
+    Iterator<Interval> intervals = DAY.getIterable(new Interval(start, end), 3).iterator();
+
+    Assert.assertEquals(Intervals.of("2011-01-01/P1d"), intervals.next());
+    Assert.assertEquals(Intervals.of("2011-01-02/P1d"), intervals.next());
+    Assert.assertEquals(Intervals.of("2011-01-03/P1d"), intervals.next());
+
+    Assert.assertThrows(IllegalArgumentException.class, intervals::next);
+
   }
 
   @Test
@@ -928,7 +939,8 @@ public class GranularityTest
         new Interval(
             new DateTime("2017-10-14", saoPaulo),
             new DateTime("2017-10-17", saoPaulo)
-        )
+        ),
+        Integer.MAX_VALUE
     );
 
     // Similar to what query engines do: call granularity.bucketStart on the datetimes returned by their cursors.

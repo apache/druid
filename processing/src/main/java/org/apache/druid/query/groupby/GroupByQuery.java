@@ -758,7 +758,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         return null;
       }
       final DateTime timeStart = intervals.get(0).getStart();
-      return granularity.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
+      return granularity.getIterable(new Interval(timeStart, timeStart.plus(1)), 1).iterator().next().getStart();
     } else {
       return null;
     }

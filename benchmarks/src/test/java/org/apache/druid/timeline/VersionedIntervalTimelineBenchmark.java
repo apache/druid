@@ -89,7 +89,7 @@ public class VersionedIntervalTimelineBenchmark
     final int numCompactedSegments =
         (int) (numInitialRootGenSegmentsPerInterval * COMPACTED_SEGMENTS_RATIO_TO_INITIAL_SEGMENTS);
 
-    intervals = Lists.newArrayList(segmentGranularity.getDefaultGranularity().getIterable(TOTAL_INTERVAL));
+    intervals = Lists.newArrayList(segmentGranularity.getDefaultGranularity().getIterable(TOTAL_INTERVAL, 365));
     segments = new ArrayList<>(intervals.size() * numInitialRootGenSegmentsPerInterval);
     Map<Interval, Integer> nextRootGenPartitionIds = Maps.newHashMapWithExpectedSize(intervals.size());
     Map<Interval, Integer> nextNonRootGenPartitionIds = Maps.newHashMapWithExpectedSize(intervals.size());

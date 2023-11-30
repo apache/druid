@@ -58,7 +58,7 @@ public class QueryGranularityTest
   @Test
   public void testIterableNone()
   {
-    final Iterator<Interval> iterator = Granularities.NONE.getIterable(Intervals.utc(0, 1000)).iterator();
+    final Iterator<Interval> iterator = Granularities.NONE.getIterable(Intervals.utc(0, 1000), 10_000).iterator();
     int count = 0;
     while (iterator.hasNext()) {
       Assert.assertEquals(count, iterator.next().getStartMillis());
@@ -77,7 +77,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-01T09:39:00.000Z"),
             DateTimes.of("2011-01-01T09:40:00.000Z")
         ),
-        Granularities.MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.THREE)))
+        Granularities.MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.THREE)), 10_000)
     );
   }
 
@@ -93,7 +93,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-01T09:40:00.000Z"),
             DateTimes.of("2011-01-01T09:41:00.000Z")
         ),
-        Granularities.MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.THREE)))
+        Granularities.MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.THREE)), 10_000)
     );
   }
 
@@ -108,7 +108,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-01T09:45:00.000Z"),
             DateTimes.of("2011-01-01T10:00:00.000Z")
         ),
-        Granularities.FIFTEEN_MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.minutes(45))))
+        Granularities.FIFTEEN_MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.minutes(45))), 10_000)
     );
   }
 
@@ -124,7 +124,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-01T10:00:00.000Z"),
             DateTimes.of("2011-01-01T10:15:00.000Z")
         ),
-        Granularities.FIFTEEN_MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.minutes(45))))
+        Granularities.FIFTEEN_MINUTE.getIterable(new Interval(baseTime, baseTime.plus(Minutes.minutes(45))), 10_000)
     );
   }
 
@@ -138,7 +138,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-01T09:00:00.000Z"),
             DateTimes.of("2011-01-01T10:00:00.000Z"),
             DateTimes.of("2011-01-01T11:00:00.000Z")
-        ), Granularities.HOUR.getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(3))))
+        ), Granularities.HOUR.getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(3))), 10_000)
     );
   }
 
@@ -153,7 +153,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-01T10:00:00.000Z"),
             DateTimes.of("2011-01-01T11:00:00.000Z"),
             DateTimes.of("2011-01-01T12:00:00.000Z")
-        ), Granularities.HOUR.getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(3))))
+        ), Granularities.HOUR.getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(3))), 10_000)
     );
   }
 
@@ -168,7 +168,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-02T00:00:00.000Z"),
             DateTimes.of("2011-01-03T00:00:00.000Z")
         ),
-        Granularities.DAY.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
+        Granularities.DAY.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))), 10_000)
     );
   }
 
@@ -184,7 +184,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-03T00:00:00.000Z"),
             DateTimes.of("2011-01-04T00:00:00.000Z")
         ),
-        Granularities.DAY.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
+        Granularities.DAY.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))), 10_000)
     );
   }
 
@@ -199,7 +199,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-10T00:00:00.000Z"),
             DateTimes.of("2011-01-17T00:00:00.000Z")
         ),
-        Granularities.WEEK.getIterable(new Interval(baseTime, baseTime.plus(Weeks.THREE)))
+        Granularities.WEEK.getIterable(new Interval(baseTime, baseTime.plus(Weeks.THREE)), 10_000)
     );
   }
 
@@ -215,7 +215,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-01-10T00:00:00.000Z"),
             DateTimes.of("2011-01-17T00:00:00.000Z")
         ),
-        Granularities.WEEK.getIterable(new Interval(baseTime, baseTime.plus(Weeks.THREE)))
+        Granularities.WEEK.getIterable(new Interval(baseTime, baseTime.plus(Weeks.THREE)), 10_000)
     );
   }
 
@@ -230,7 +230,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-02-01T00:00:00.000Z"),
             DateTimes.of("2011-03-01T00:00:00.000Z")
         ),
-        Granularities.MONTH.getIterable(new Interval(baseTime, baseTime.plus(Months.THREE)))
+        Granularities.MONTH.getIterable(new Interval(baseTime, baseTime.plus(Months.THREE)), 10_000)
     );
   }
 
@@ -246,7 +246,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-03-01T00:00:00.000Z"),
             DateTimes.of("2011-04-01T00:00:00.000Z")
         ),
-        Granularities.MONTH.getIterable(new Interval(baseTime, baseTime.plus(Months.THREE)))
+        Granularities.MONTH.getIterable(new Interval(baseTime, baseTime.plus(Months.THREE)), 10_000)
     );
   }
 
@@ -261,7 +261,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-04-01T00:00:00.000Z"),
             DateTimes.of("2011-07-01T00:00:00.000Z")
         ),
-        Granularities.QUARTER.getIterable(new Interval(baseTime, baseTime.plus(Months.NINE)))
+        Granularities.QUARTER.getIterable(new Interval(baseTime, baseTime.plus(Months.NINE)), 10_000)
     );
   }
 
@@ -277,7 +277,7 @@ public class QueryGranularityTest
             DateTimes.of("2011-07-01T00:00:00.000Z"),
             DateTimes.of("2011-10-01T00:00:00.000Z")
         ),
-        Granularities.QUARTER.getIterable(new Interval(baseTime, baseTime.plus(Months.NINE)))
+        Granularities.QUARTER.getIterable(new Interval(baseTime, baseTime.plus(Months.NINE)), 10_000)
     );
   }
 
@@ -292,7 +292,7 @@ public class QueryGranularityTest
             DateTimes.of("2012-01-01T00:00:00.000Z"),
             DateTimes.of("2013-01-01T00:00:00.000Z")
         ),
-        Granularities.YEAR.getIterable(new Interval(baseTime, baseTime.plus(Years.THREE)))
+        Granularities.YEAR.getIterable(new Interval(baseTime, baseTime.plus(Years.THREE)), 10_000)
     );
   }
 
@@ -308,7 +308,7 @@ public class QueryGranularityTest
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             DateTimes.of("2014-01-01T00:00:00.000Z")
         ),
-        Granularities.YEAR.getIterable(new Interval(baseTime, baseTime.plus(Years.THREE)))
+        Granularities.YEAR.getIterable(new Interval(baseTime, baseTime.plus(Years.THREE)), 10_000)
     );
   }
 
@@ -324,7 +324,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-06T00:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1D"), null, tz)
-            .getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
+            .getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))), 10_000)
     );
 
     assertSameInterval(
@@ -336,7 +336,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-04T03:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("PT1H"), null, tz)
-            .getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(5))))
+            .getIterable(new Interval(baseTime, baseTime.plus(Hours.hours(5))), 10_000)
     );
 
     final PeriodGranularity hour = new PeriodGranularity(new Period("PT1H"), null, tz);
@@ -458,7 +458,7 @@ public class QueryGranularityTest
             new DateTime("2013-02-01T00:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1M"), null, tz)
-            .getIterable(new Interval(baseTime, baseTime.plus(Months.months(3))))
+            .getIterable(new Interval(baseTime, baseTime.plus(Months.months(3))), 10_000)
     );
   }
 
@@ -475,7 +475,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-19T00:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1W"), null, tz)
-            .getIterable(new Interval(baseTime, baseTime.plus(Weeks.weeks(3))))
+            .getIterable(new Interval(baseTime, baseTime.plus(Weeks.weeks(3))), 10_000)
     );
 
     assertSameInterval(
@@ -485,7 +485,7 @@ public class QueryGranularityTest
             new DateTime("2012-11-17T10:00:00.000-08:00", tz)
         ),
         new PeriodGranularity(new Period("P1W"), baseTime, tz)
-            .getIterable(new Interval(baseTime, baseTime.plus(Weeks.weeks(3))))
+            .getIterable(new Interval(baseTime, baseTime.plus(Weeks.weeks(3))), 10_000)
     );
   }
 
@@ -794,7 +794,7 @@ public class QueryGranularityTest
 
     assertSameInterval(
         Collections.singletonList(baseTime),
-        Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
+        Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))), 10_000)
     );
   }
 
@@ -805,7 +805,7 @@ public class QueryGranularityTest
 
     assertSameInterval(
         Collections.singletonList(baseTime),
-        Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))))
+        Granularities.ALL.getIterable(new Interval(baseTime, baseTime.plus(Days.days(3))), 10_000)
     );
   }
 

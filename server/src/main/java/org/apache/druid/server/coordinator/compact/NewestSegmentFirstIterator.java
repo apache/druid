@@ -111,13 +111,21 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             // For example, if the original is interval of 2020-01-28/2020-02-03 with WEEK granularity
             // and the configuredSegmentGranularity is MONTH, the segment will be split to two segments
             // of 2020-01/2020-02 and 2020-02/2020-03.
-            if (Intervals.ETERNITY.equals(segment.getInterval())) {
-              // This is to prevent the coordinator from crashing as raised in https://github.com/apache/druid/issues/13208
-              log.warn("Cannot compact datasource[%s] with ALL granularity", dataSource);
-              return;
+            try {
+              for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval(), 365)) {
+                intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+              }
             }
-            for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
-              intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>()).add(segment);
+            catch (IllegalStateException ise) {
+              log.warn(
+                  "Cannot compact datasource[%s] granularity [%s] is too fine-grained for "
+                  + "interval [%s] of segment [%s]. Try manual compaction instead.",
+                  dataSource,
+                  configuredSegmentGranularity,
+                  segment.getInterval(),
+                  segment.getId()
+              );
+              return;
             }
           }
           for (Map.Entry<Interval, Set<DataSegment>> partitionsPerInterval : intervalToPartitionMap.entrySet()) {

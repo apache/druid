@@ -112,7 +112,7 @@ public class GranularityPathSpec implements PathSpec
   {
     final Set<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
     for (Interval inputInterval : config.getInputIntervals()) {
-      for (Interval interval : dataGranularity.getIterable(inputInterval)) {
+      for (Interval interval : dataGranularity.getIterable(inputInterval, 365)) {
         intervals.add(trim(inputInterval, interval));
       }
     }
