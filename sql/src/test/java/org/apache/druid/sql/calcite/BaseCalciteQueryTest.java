@@ -678,19 +678,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     baseComponentSupplier.gatherProperties(properties);
   }
 
-  /**
-   * Enables result cache testwide.
-   */
-  protected boolean isResultCacheEnabled()
-  {
-    return false;
-  }
-
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
     baseComponentSupplier.configureGuice(builder);
-//    builder.addModule(new CacheTestHelperModule(isResultCacheEnabled()));
   }
 
   @Override

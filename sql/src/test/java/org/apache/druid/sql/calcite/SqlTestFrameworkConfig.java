@@ -34,6 +34,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,7 +45,7 @@ import java.util.Map;
  * These rules also cache the previously created frameworks.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.TYPE})
 public @interface SqlTestFrameworkConfig
 {
   int numMergeBuffers() default 0;
@@ -115,9 +116,11 @@ public @interface SqlTestFrameworkConfig
     public SqlTestFrameworkConfig defaultConfig()
     {
       try {
-        return getClass()
+        SqlTestFrameworkConfig annotation = getClass()
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
+        Method m = annotation.getClass().getMethods()[0];
+        return annotation;
       }
       catch (NoSuchMethodException | SecurityException e) {
         throw new RuntimeException(e);

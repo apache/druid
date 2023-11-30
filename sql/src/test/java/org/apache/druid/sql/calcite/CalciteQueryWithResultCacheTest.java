@@ -19,18 +19,14 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.junit.Ignore;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCacheMode;
 
 /**
  * This test enable ResultCache behind all the testcases. As a result failing
  * tests because of incorrect cache usage might be expected.
  */
-@Ignore
+
+@SqlTestFrameworkConfig(resultCache = ResultCacheMode.ENABLE_ISOLATED)
 public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
 {
-  @Override
-  protected boolean isResultCacheEnabled()
-  {
-    return true;
-  }
 }
