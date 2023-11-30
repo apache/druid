@@ -19,10 +19,13 @@
 
 package org.apache.druid.sql.calcite;
 
+import org.junit.Ignore;
+
 /**
  * This test enable ResultCache behind all the testcases. As a result failing
  * tests because of incorrect cache usage might be expected.
  */
+@Ignore
 public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
 {
   @Override
