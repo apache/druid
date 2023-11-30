@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.parquet;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
@@ -41,6 +40,8 @@ import java.util.List;
  */
 public class WikiParquetReaderTest extends BaseParquetReaderTest
 {
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
   @Test
   public void testWiki() throws IOException
   {
@@ -79,10 +80,7 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"user\" : \"nuclear\",\n"
                                 + "  \"timestamp\" : \"2013-08-31T01:02:33Z\"\n"
                                 + "}";
-    ObjectMapper convertTreeTool = new ObjectMapper();
-    JsonNode expectedJson = convertTreeTool.readTree(expectedJsonString);
-    JsonNode targetJsonNode = convertTreeTool.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
-    Assert.assertEquals(expectedJson, targetJsonNode);
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJsonString), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
