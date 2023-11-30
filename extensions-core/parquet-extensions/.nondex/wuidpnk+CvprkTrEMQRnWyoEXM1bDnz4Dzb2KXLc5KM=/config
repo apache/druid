@@ -1,0 +1,11 @@
+nondexFilter=.*
+nondexMode=FULL
+nondexSeed=933178
+nondexStart=0
+nondexEnd=9223372036854775807
+nondexPrintstack=false
+nondexDir=/home/wenxiuw2/druid/extensions-core/parquet-extensions/.nondex
+nondexJarDir=/home/wenxiuw2/druid/extensions-core/parquet-extensions/.nondex
+nondexExecid=wuidpnk+CvprkTrEMQRnWyoEXM1bDnz4Dzb2KXLc5KM=
+nondexLogging=CONFIG
+test=
