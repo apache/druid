@@ -72,6 +72,16 @@
   </suppress>
 
   <suppress>
+    <!-- Pulled in by io.kubernetes:client-java and kafka_2.13 but not fixed in either place yet -->
+    <!-- jose4j before v0.9.3 allows attackers to set a low iteration count of 1000 or less -->
+    <notes><![CDATA[
+    file name: jose4j-0.7.3.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.bitbucket\.b_c/jose4j@.*$</packageUrl>
+    <cve>CVE-2023-31582</cve>
+  </suppress>
+
+  <suppress>
     <!-- Not much for us to do as a user of the client lib, and no patch is available,
      see https://github.com/kubernetes/kubernetes/issues/97076 -->
     <notes><![CDATA[
