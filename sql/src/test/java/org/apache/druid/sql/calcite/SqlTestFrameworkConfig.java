@@ -19,10 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.inject.Module;
 import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MethodRule.ConfigurationInstance;
-import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.junit.rules.ExternalResource;
@@ -55,31 +52,15 @@ public @interface SqlTestFrameworkConfig
 
   static enum ResultCacheMode {
     DISABLED,
-    ENABLE_ISOLATED;
-
-    Module makeModule()
-    {
-      return new CacheTestHelperModule(this);
-    }
-
-    public boolean isPopulateResultLevelCache()
-    {
-      return this != DISABLED;
-    }
-
-    public boolean isUseResultLevelCache()
-    {
-      return this != DISABLED;
-    }
+    ENABLE_ISOLATED
   }
-
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
   class ClassRule extends ExternalResource
   {
 
-    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
+    Map<SqlTestFrameworkConfig, SqlTestFramework> frameworkMap = new HashMap<SqlTestFrameworkConfig, SqlTestFramework>();
 
     public MethodRule methodRule(BaseCalciteQueryTest testHost)
     {
@@ -89,10 +70,10 @@ public @interface SqlTestFrameworkConfig
     @Override
     protected void after()
     {
-      for (ConfigurationInstance f : configMap.values()) {
+      for (SqlTestFramework f : frameworkMap.values()) {
         f.close();
       }
-      configMap.clear();
+      frameworkMap.clear();
     }
   }
 
@@ -131,36 +112,21 @@ public @interface SqlTestFrameworkConfig
       if (config == null) {
         config = defaultConfig();
       }
-      SqlTestFramework framework = get();
-
-
       return base;
     }
 
     public SqlTestFramework get()
     {
-      return classRule.configMap.computeIfAbsent(config, ConfigurationInstance::new).framework;
+      return classRule.frameworkMap.computeIfAbsent(config, this::createFramework);
     }
 
-    class ConfigurationInstance {
-
-      public SqlTestFramework framework;
-
-      ConfigurationInstance(SqlTestFrameworkConfig config)
-      {
-        SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
-            .minTopNThreshold(config.minTopNThreshold())
-            .mergeBufferCount(config.numMergeBuffers())
-            .withExtraModule(config.resultCache().makeModule());
-        framework = builder.build();
-      }
-
-      public void close()
-      {
-        framework.close();
-      }
+    private SqlTestFramework createFramework(SqlTestFrameworkConfig config)
+    {
+      SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+          .minTopNThreshold(config.minTopNThreshold())
+          .mergeBufferCount(config.numMergeBuffers());
+      return builder.build();
     }
-
   }
 
 }

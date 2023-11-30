@@ -575,7 +575,7 @@ public class SqlTestFramework
         .addModule(new TestSetupModule(builder));
 
     builder.componentSupplier.configureGuice(injectorBuilder);
-    injectorBuilder.addModules(builder.extraModules.toArray(new Module[0]));
+    // injectorBuilder.addModules(builder.extraModules)
     this.injector = injectorBuilder.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
