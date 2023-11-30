@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
@@ -67,6 +68,8 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -362,6 +365,7 @@ public class SqlTestFramework
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
+    private List<Module> extraModules= new ArrayList<>();
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -386,11 +390,16 @@ public class SqlTestFramework
       return this;
     }
 
+    public Builder withExtraModule(Module m)
+    {
+      this.extraModules.add(m);
+      return this;
+    }
+
     public SqlTestFramework build()
     {
       return new SqlTestFramework(this);
     }
-
   }
 
   /**
@@ -566,6 +575,7 @@ public class SqlTestFramework
         .addModule(new TestSetupModule(builder));
 
     builder.componentSupplier.configureGuice(injectorBuilder);
+    // injectorBuilder.addModules(builder.extraModules)
     this.injector = injectorBuilder.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());

@@ -48,6 +48,12 @@ public @interface SqlTestFrameworkConfig
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
+  ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
+
+  static enum ResultCacheMode {
+    DISABLED,
+    ENABLE_ISOLATED
+  }
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
@@ -122,4 +128,5 @@ public @interface SqlTestFrameworkConfig
       return builder.build();
     }
   }
+
 }

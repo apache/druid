@@ -74,6 +74,8 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCacheMode;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -231,6 +233,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           new HllPostAggExprMacros.HLLSketchEstimateExprMacro()
       )
   );
+
 
   @Override
   public void gatherProperties(Properties properties)
@@ -1164,6 +1167,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     return true;
   }
 
+  @SqlTestFrameworkConfig(resultCache = ResultCacheMode.ENABLE_ISOLATED)
   @Test
   public void testResultCacheWithWindowing()
   {

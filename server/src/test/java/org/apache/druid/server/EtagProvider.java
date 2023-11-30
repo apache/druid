@@ -87,7 +87,8 @@ public interface EtagProvider
         baos.write(query.getDataSource().getCacheKey());
         baos.write(tableDataSource.getName().getBytes(StandardCharsets.UTF_8));
         return "ETP-" + new String(baos.toByteArray(), StandardCharsets.UTF_8);
-      } catch (IOException e) {
+      }
+      catch (IOException e) {
         throw DruidException.defensive().build("Unexpected IOException", e);
       }
     }
