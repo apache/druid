@@ -80,7 +80,8 @@ public class DefaultK8sApiClient implements K8sApiClient
   )
   {
     try {
-      V1PodList podList = coreV1Api.listNamespacedPod(podNamespace, null, null, null, null, labelSelector, 0, null, null, null, null, false);      Preconditions.checkState(podList != null, "WTH: NULL podList");
+      V1PodList podList = coreV1Api.listNamespacedPod(podNamespace, null, null, null, null, labelSelector, 0, null, null, null, null, false);
+      Preconditions.checkState(podList != null, "WTH: NULL podList");
 
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
       for (V1Pod podDef : podList.getItems()) {
