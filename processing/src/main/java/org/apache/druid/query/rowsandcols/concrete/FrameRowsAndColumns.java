@@ -44,6 +44,7 @@ public class FrameRowsAndColumns implements RowsAndColumns
 
   public FrameRowsAndColumns(Frame frame, RowSignature signature)
   {
+    //this.frame = frame;
     this.frame = FrameType.COLUMNAR.ensureType(frame);
     this.signature = signature;
   }

@@ -83,7 +83,6 @@ public abstract class  BaseLeafFrameProcessor implements FrameProcessor<Object>
     final ReturnOrAwait<Unit> retVal;
 
     if (baseInput.hasSegment()) {
-      // run with data in historicals
       SegmentWithDescriptor segment = baseInput.getSegment();
       if (segment.getDescriptor().isLoadedOnServer()) {
         retVal = runWithLoadedSegment(baseInput.getSegment());
@@ -91,7 +90,6 @@ public abstract class  BaseLeafFrameProcessor implements FrameProcessor<Object>
         retVal = runWithSegment(baseInput.getSegment());
       }
     } else {
-      // run with data in broker
       retVal = runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
     }
 
