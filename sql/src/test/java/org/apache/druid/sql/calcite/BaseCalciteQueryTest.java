@@ -114,6 +114,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -632,7 +633,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @ClassRule
   public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
-  @Rule(order = 3)
+  @Rule
   public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
@@ -640,8 +641,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryFrameworkRule.get();
   }
 
-  @Override
-  public void beforeNewFrameworkCreateHook() throws Exception
+  @Before
+  public void before() throws Exception
   {
     baseComponentSupplier = new StandardComponentSupplier(
         temporaryFolder.newFolder()
