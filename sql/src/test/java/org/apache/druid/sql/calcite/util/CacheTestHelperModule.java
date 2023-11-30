@@ -26,6 +26,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.server.EtagProvider;
 import org.apache.druid.server.QueryStackTests.Testrelated;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCacheMode;
 
 public class CacheTestHelperModule extends AbstractModule
 {
@@ -36,33 +37,32 @@ public class CacheTestHelperModule extends AbstractModule
 
   static class TestCacheConfig extends CacheConfig
   {
-    private boolean enableResultLevelCache;
+    private ResultCacheMode resultLevelCache;
 
-    public TestCacheConfig(boolean enableResultLevelCache)
+    public TestCacheConfig(ResultCacheMode resultCacheMode)
     {
-      this.enableResultLevelCache = enableResultLevelCache;
+      this.resultLevelCache = resultCacheMode;
     }
 
     @Override
     public boolean isPopulateResultLevelCache()
     {
-      return enableResultLevelCache;
-
+      return resultLevelCache.isPopulateResultLevelCache();
     }
 
     @Override
     public boolean isUseResultLevelCache()
     {
-      return enableResultLevelCache;
+      return resultLevelCache.isUseResultLevelCache();
     }
 
   }
 
-  public CacheTestHelperModule(boolean enableResultLevelCache)
+  public CacheTestHelperModule(ResultCacheMode resultCacheMode)
   {
-    cacheConfig = new TestCacheConfig(enableResultLevelCache);
+    cacheConfig = new TestCacheConfig(resultCacheMode);
 
-    if (enableResultLevelCache) {
+    if (resultCacheMode == ResultCacheMode.ENABLE_ISOLATED) {
       etagProvider = new EtagProvider.ProvideEtagBasedOnDatasource();
       cache = MapCache.create(1_000_000L);
     } else {
