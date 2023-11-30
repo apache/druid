@@ -399,13 +399,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             SystemFields.none(),
             new HttpInputSourceConfig(null)
         ),
-        new JsonInputFormat(
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
+        new JsonInputFormat(null, null, null, null, null),
         RowSignature.builder()
                     .add("x", ColumnType.STRING)
                     .add("y", ColumnType.STRING)
