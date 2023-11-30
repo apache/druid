@@ -114,12 +114,13 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestRule;
+import org.junit.runners.model.Statement;
 
 import javax.annotation.Nullable;
 
@@ -630,10 +631,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryLogHook = new QueryLogHook(() -> queryFramework().queryJsonMapper());
   }
 
+  @Rule(order = 3)
+  public TestRule setupBaseComponentSupplierRule = (base, description) -> {
+    return new Statement()
+    {
+      @Override
+      public void evaluate() throws Throwable
+      {
+        baseComponentSupplier = new StandardComponentSupplier(
+            temporaryFolder.newFolder()
+        );
+        base.evaluate();
+      }
+    };
+  };
+
   @ClassRule
   public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
-  @Rule
+  @Rule(order=4)
   public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
@@ -641,13 +657,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryFrameworkRule.get();
   }
 
-  @Before
-  public void before() throws Exception
-  {
-    baseComponentSupplier = new StandardComponentSupplier(
-        temporaryFolder.newFolder()
-    );
-  }
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(

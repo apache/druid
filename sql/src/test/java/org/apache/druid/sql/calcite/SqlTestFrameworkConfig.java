@@ -131,10 +131,18 @@ public @interface SqlTestFrameworkConfig
       if (config == null) {
         config = defaultConfig();
       }
-      SqlTestFramework framework = get();
+      return new Statement()
+      {
 
+        @Override
+        public void evaluate() throws Throwable
+        {
+          SqlTestFramework framework = get();
+          base.evaluate();
 
-      return base;
+        }
+      };
+
     }
 
     public SqlTestFramework get()
