@@ -24,6 +24,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
