@@ -289,7 +289,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.12.7
+version: 2.12.7.1
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -2500,7 +2500,7 @@ name: Gson
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 2.2.4
+version: 2.10.1
 libraries:
   - com.google.code.gson: gson
 
