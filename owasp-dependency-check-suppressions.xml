@@ -233,9 +233,9 @@
     <notes><![CDATA[
    file name: okhttp-*.jar
    ]]></notes>
-    <cve>CVE-2021-0341</cve>
+    <cve>CVE-2021-0341</cve>  <!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
     <cve>CVE-2016-2402</cve>	<!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
-    <cve>CVE-2023-0833</cve>
+    <cve>CVE-2023-0833</cve>  <!-- Suppressed since okhttp requests in Druid are internal, and not user-facing -->
   </suppress>
 
   <suppress>
