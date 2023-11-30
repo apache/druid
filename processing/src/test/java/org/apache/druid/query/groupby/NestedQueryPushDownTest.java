@@ -132,7 +132,6 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
                 ))
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
   }
