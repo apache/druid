@@ -22,47 +22,62 @@ package org.apache.druid.segment;
 import org.apache.druid.error.DruidException;
 
 /**
- * Object based column selector.
+ * This class is convenient for implementation of "object-sourcing" {@link ColumnValueSelector}s, it provides default
+ * implementations for all {@link ColumnValueSelector}'s methods except {@link #getObject()} and {@link
+ * #classOfObject()}.
  *
- * This abstract class provides a {@link ColumnValueSelector} based on the methods of {@link BaseObjectColumnValueSelector}.
+ * This class should appear ONLY in "extends" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseObjectColumnValueSelector} must be used instead.
+ *
+ * This is a class rather than an interface unlike {@link LongColumnSelector}, {@link FloatColumnSelector} and {@link
+ * DoubleColumnSelector} solely in order to make {@link #isNull()} method final.
  */
 public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
-  private static final String COLUMN_IS_NULL_ERROR_MESSAGE = "Invalid usage pattern: method returning primitive called - but the column is null";
-
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
   @Override
-  public final float getFloat()
+  public float getFloat()
   {
-    T value = getObject();
-    if (value == null) {
-      throw DruidException.defensive(COLUMN_IS_NULL_ERROR_MESSAGE);
-    }
-    return ((Number) value).floatValue();
+    throw DruidException.defensive("use getObject() instead");
   }
 
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
   @Override
-  public final double getDouble()
+  public double getDouble()
   {
-    T value = getObject();
-    if (value == null) {
-      throw DruidException.defensive(COLUMN_IS_NULL_ERROR_MESSAGE);
-    }
-    return ((Number) value).doubleValue();
+    throw DruidException.defensive("use getObject() instead");
   }
 
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
   @Override
-  public final long getLong()
+  public long getLong()
   {
-    T value = getObject();
-    if (value == null) {
-      throw DruidException.defensive(COLUMN_IS_NULL_ERROR_MESSAGE);
-    }
-    return ((Number) value).longValue();
+    throw DruidException.defensive("use getObject() instead");
   }
 
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector since it always returns false.
+   * There is no need to call this method.
+   */
+  @Deprecated
   @Override
   public final boolean isNull()
   {
-    return getObject() == null;
+    throw DruidException.defensive("use getObject() instead");
   }
 }
