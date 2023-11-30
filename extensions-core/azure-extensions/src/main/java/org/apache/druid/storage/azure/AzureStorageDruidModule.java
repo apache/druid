@@ -34,6 +34,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -80,7 +81,8 @@ public class AzureStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(AzureInputSource.class, SCHEME)
+            new NamedType(AzureInputSource.class, SCHEME),
+            new NamedType(AzureStorageAccountInputSource.class, AzureStorageAccountInputSource.SCHEME)
         )
     );
   }
