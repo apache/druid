@@ -25,14 +25,11 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MethodRule.Configurat
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.rules.ExternalResource;
-import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -84,9 +81,9 @@ public @interface SqlTestFrameworkConfig
 
     Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
 
-    public MethodRule methodRule(BaseCalciteQueryTest testHost, TemporaryFolder temporaryFolder)
+    public MethodRule methodRule(BaseCalciteQueryTest testHost)
     {
-      return new MethodRule(this, testHost, temporaryFolder);
+      return new MethodRule(this, testHost);
     }
 
     @Override
@@ -107,13 +104,11 @@ public @interface SqlTestFrameworkConfig
     private SqlTestFrameworkConfig config;
     private ClassRule classRule;
     private QueryComponentSupplier testHost;
-    private TemporaryFolder temporaryFolder;
 
-    public MethodRule(ClassRule classRule, QueryComponentSupplier testHost, TemporaryFolder temporaryFolder)
+    public MethodRule(ClassRule classRule, QueryComponentSupplier testHost)
     {
       this.classRule = classRule;
       this.testHost = testHost;
-      this.temporaryFolder = temporaryFolder;
     }
 
     @SqlTestFrameworkConfig
@@ -136,7 +131,7 @@ public @interface SqlTestFrameworkConfig
       if (config == null) {
         config = defaultConfig();
       }
-//      SqlTestFramework framework = get();
+      SqlTestFramework framework = get();
 
 
       return base;
@@ -144,38 +139,20 @@ public @interface SqlTestFrameworkConfig
 
     public SqlTestFramework get()
     {
-      return getCurrentConfigInstance().framework;
-    }
-
-    public QueryComponentSupplier getQueryComponentSupplier()
-    {
-      return getCurrentConfigInstance().baseComponentSupplier;
-    }
-
-    private ConfigurationInstance getCurrentConfigInstance()
-    {
-      return classRule.configMap.computeIfAbsent(config, ConfigurationInstance::new);
+      return classRule.configMap.computeIfAbsent(config, ConfigurationInstance::new).framework;
     }
 
     class ConfigurationInstance {
 
       public SqlTestFramework framework;
-      private StandardComponentSupplier baseComponentSupplier;
 
       ConfigurationInstance(SqlTestFrameworkConfig config)
       {
-        try {
-          baseComponentSupplier = new StandardComponentSupplier(
-              temporaryFolder.newFolder()
-          );
-          SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
-              .minTopNThreshold(config.minTopNThreshold())
-              .mergeBufferCount(config.numMergeBuffers())
-              .withExtraModule(config.resultCache().makeModule());
-          framework = builder.build();
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+            .minTopNThreshold(config.minTopNThreshold())
+            .mergeBufferCount(config.numMergeBuffers())
+            .withExtraModule(config.resultCache().makeModule());
+        framework = builder.build();
       }
 
       public void close()

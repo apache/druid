@@ -104,6 +104,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardPlannerComponentSupplier;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlParameter;
@@ -113,6 +114,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -297,7 +299,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public QueryLogHook queryLogHook;
 
-//  private QueryComponentSupplier baseComponentSupplier;
+  public QueryComponentSupplier baseComponentSupplier;
   public PlannerComponentSupplier basePlannerComponentSupplier = new StandardPlannerComponentSupplier();
 
   public BaseCalciteQueryTest()
@@ -632,28 +634,21 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
   @Rule
-  public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this, temporaryFolder);
+  public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
   {
     return queryFrameworkRule.get();
   }
 
-  public QueryComponentSupplier queryComponentSupplier()
+  @Before
+  public void before() throws Exception
   {
-    return queryFrameworkRule.getQueryComponentSupplier();
+    baseComponentSupplier = new StandardComponentSupplier(
+        temporaryFolder.newFolder()
+    );
   }
 
-//  @Before
-//  public void before() throws Exception
-//  {
-//
-//    baseComponentSupplier = new StandardComponentSupplier(
-//        temporaryFolder.newFolder()
-//    );
-//    queryFramework();
-//  }
-//
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -661,7 +656,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final Injector injector
   ) throws IOException
   {
-    return queryComponentSupplier().createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
   }
 
   @Override
@@ -672,7 +667,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   )
   {
     if (engine0 == null) {
-      return queryComponentSupplier().createEngine(qlf, queryJsonMapper, injector);
+      return baseComponentSupplier.createEngine(qlf, queryJsonMapper, injector);
     } else {
       return engine0;
     }
@@ -681,7 +676,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Override
   public void gatherProperties(Properties properties)
   {
-    queryComponentSupplier().gatherProperties(properties);
+    baseComponentSupplier.gatherProperties(properties);
   }
 
   /**
@@ -695,32 +690,32 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
-    queryComponentSupplier().configureGuice(builder);
+    baseComponentSupplier.configureGuice(builder);
 //    builder.addModule(new CacheTestHelperModule(isResultCacheEnabled()));
   }
 
   @Override
   public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
   {
-    return queryComponentSupplier().createCongolmerate(builder, closer);
+    return baseComponentSupplier.createCongolmerate(builder, closer);
   }
 
   @Override
   public void configureJsonMapper(ObjectMapper mapper)
   {
-    queryComponentSupplier().configureJsonMapper(mapper);
+    baseComponentSupplier.configureJsonMapper(mapper);
   }
 
   @Override
   public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
   {
-    return queryComponentSupplier().createJoinableFactoryWrapper(lookupProvider);
+    return baseComponentSupplier.createJoinableFactoryWrapper(lookupProvider);
   }
 
   @Override
   public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
   {
-    queryComponentSupplier().finalizeTestFramework(sqlTestFramework);
+    baseComponentSupplier.finalizeTestFramework(sqlTestFramework);
   }
 
   @Override
