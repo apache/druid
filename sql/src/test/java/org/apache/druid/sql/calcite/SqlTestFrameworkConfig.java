@@ -133,21 +133,24 @@ public @interface SqlTestFrameworkConfig
       }
       return new Statement()
       {
-
         @Override
         public void evaluate() throws Throwable
         {
           SqlTestFramework framework = get();
-          base.evaluate();
 
+          base.evaluate();
         }
       };
-
     }
 
     public SqlTestFramework get()
     {
-      return classRule.configMap.computeIfAbsent(config, ConfigurationInstance::new).framework;
+      return getConfigurationInstance().framework;
+    }
+
+    private ConfigurationInstance getConfigurationInstance()
+    {
+      return classRule.configMap.computeIfAbsent(config, ConfigurationInstance::new);
     }
 
     class ConfigurationInstance {
@@ -156,11 +159,15 @@ public @interface SqlTestFrameworkConfig
 
       ConfigurationInstance(SqlTestFrameworkConfig config)
       {
-        SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
-            .minTopNThreshold(config.minTopNThreshold())
-            .mergeBufferCount(config.numMergeBuffers())
-            .withExtraModule(config.resultCache().makeModule());
-        framework = builder.build();
+        try {
+          SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+              .minTopNThreshold(config.minTopNThreshold())
+              .mergeBufferCount(config.numMergeBuffers())
+              .withExtraModule(config.resultCache().makeModule());
+          framework = builder.build();
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
       }
 
       public void close()

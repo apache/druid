@@ -119,8 +119,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestRule;
-import org.junit.runners.model.Statement;
 
 import javax.annotation.Nullable;
 
@@ -631,25 +629,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryLogHook = new QueryLogHook(() -> queryFramework().queryJsonMapper());
   }
 
-  @Rule(order = 3)
-  public TestRule setupBaseComponentSupplierRule = (base, description) -> {
-    return new Statement()
-    {
-      @Override
-      public void evaluate() throws Throwable
-      {
-        baseComponentSupplier = new StandardComponentSupplier(
-            temporaryFolder.newFolder()
-        );
-        base.evaluate();
-      }
-    };
-  };
-
   @ClassRule
   public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
-  @Rule(order=4)
+  @Rule(order = 3)
   public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
@@ -657,6 +640,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryFrameworkRule.get();
   }
 
+  @Override
+  public void beforeNewFrameworkCreateHook() throws Exception
+  {
+    baseComponentSupplier = new StandardComponentSupplier(
+        temporaryFolder.newFolder()
+    );
+  }
 
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(

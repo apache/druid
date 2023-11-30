@@ -168,6 +168,8 @@ public class SqlTestFramework
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
+
+    void beforeNewFrameworkCreateHook() throws Exception;
   }
 
   public interface PlannerComponentSupplier
@@ -278,6 +280,13 @@ public class SqlTestFramework
     @Override
     public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
     {
+    }
+
+    @Override
+    public void beforeNewFrameworkCreateHook() throws Exception
+    {
+      throw new RuntimeException("Unimplemented!");
+
     }
   }
 
@@ -396,7 +405,7 @@ public class SqlTestFramework
       return this;
     }
 
-    public SqlTestFramework build()
+    public SqlTestFramework build() throws Exception
     {
       return new SqlTestFramework(this);
     }
@@ -554,10 +563,11 @@ public class SqlTestFramework
   private final AuthorizerMapper authorizerMapper = CalciteTests.TEST_AUTHORIZER_MAPPER;
   private final SqlEngine engine;
 
-  private SqlTestFramework(Builder builder)
+  private SqlTestFramework(Builder builder) throws Exception
   {
     this.builder = builder;
     this.componentSupplier = builder.componentSupplier;
+    builder.componentSupplier.beforeNewFrameworkCreateHook();
     Properties properties = new Properties();
     this.componentSupplier.gatherProperties(properties);
     Injector startupInjector = new StartupInjectorBuilder()
