@@ -20,13 +20,10 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ObjectColumnSelector;
-
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
@@ -57,9 +54,6 @@ public final class NullableNumericBufferAggregator implements BufferAggregator
   {
     this.delegate = delegate;
     this.nullSelector = nullSelector;
-    if (nullSelector instanceof ObjectColumnSelector) {
-      throw DruidException.defensive("invalid selector passed");
-    }
   }
 
   @Override
