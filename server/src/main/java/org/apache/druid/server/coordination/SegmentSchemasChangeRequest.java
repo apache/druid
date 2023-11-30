@@ -21,29 +21,29 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 
 import javax.annotation.Nullable;
 
 /**
  * Implementation of {@link DataSegmentChangeRequest}, which encapsulates segment schema changes.
  */
-public class SegmentsSchemaChangeRequest implements DataSegmentChangeRequest
+public class SegmentSchemasChangeRequest implements DataSegmentChangeRequest
 {
-  private final SegmentsSchema segmentsSchema;
+  private final SegmentSchemas segmentSchemas;
 
   @JsonCreator
-  public SegmentsSchemaChangeRequest(
-      @JsonProperty("segmentsSchema") SegmentsSchema segmentsSchema
+  public SegmentSchemasChangeRequest(
+      @JsonProperty("segmentSchemas") SegmentSchemas segmentSchemas
   )
   {
-    this.segmentsSchema = segmentsSchema;
+    this.segmentSchemas = segmentSchemas;
   }
 
   @JsonProperty
-  public SegmentsSchema getSegmentsSchemaChange()
+  public SegmentSchemas getSegmentSchemas()
   {
-    return segmentsSchema;
+    return segmentSchemas;
   }
 
   @Override

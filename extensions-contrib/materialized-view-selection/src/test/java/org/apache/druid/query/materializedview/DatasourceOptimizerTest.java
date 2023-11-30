@@ -52,7 +52,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -294,7 +294,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               }
 
               @Override
-              public CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+              public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
               {
                 return CallbackAction.CONTINUE;
               }

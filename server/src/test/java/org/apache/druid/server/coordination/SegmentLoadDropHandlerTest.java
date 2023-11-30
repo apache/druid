@@ -37,7 +37,7 @@ import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler.Status.STATE;
@@ -179,7 +179,7 @@ public class SegmentLoadDropHandlerTest
       }
 
       @Override
-      public void announceSinkSchemaForTask(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange)
+      public void announceSinkSchemaForTask(String taskId, SegmentSchemas segmentSchemas, SegmentSchemas segmentSchemasChange)
       {
       }
 

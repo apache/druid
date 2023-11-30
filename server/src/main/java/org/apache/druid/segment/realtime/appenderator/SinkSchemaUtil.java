@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,17 +39,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class SinkSchemaUtil
 {
-
   /**
-   * Compute {@link SegmentsSchema} for the sinks.
+   * Compute {@link SegmentSchemas} for the sinks.
    */
   @VisibleForTesting
-  static Optional<SegmentsSchema> computeAbsoluteSchema(
+  static Optional<SegmentSchemas> computeAbsoluteSchema(
       Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema
   )
   {
-    Map<Integer, SegmentsSchema.ColumnInformation> columnMapping = new HashMap<>();
-    Map<SegmentId, SegmentsSchema.SegmentSchema> sinksSchemaChangeMap = new HashMap<>();
+    Map<Integer, SegmentSchemas.ColumnInformation> columnMapping = new HashMap<>();
+    List<SegmentSchemas.SegmentSchema> sinkSchemas = new ArrayList<>();
 
     Map<String, Integer> columnReverseMapping = new HashMap<>();
     AtomicInteger columnCount = new AtomicInteger();
@@ -65,30 +65,39 @@ class SinkSchemaUtil
         String column = entry.getKey();
         ColumnType columnType = entry.getValue();
         Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-        columnMapping.computeIfAbsent(columnNumber, v -> new SegmentsSchema.ColumnInformation(column, columnType));
+        columnMapping.computeIfAbsent(columnNumber, v -> new SegmentSchemas.ColumnInformation(column, columnType));
         newColumns.add(columnNumber);
       }
 
       if (newColumns.size() > 0) {
-        SegmentsSchema.SegmentSchema segmentSchema = new SegmentsSchema.SegmentSchema(false, numRows, newColumns, Collections.emptyList());
-        sinksSchemaChangeMap.put(segmentIdWithShardSpec.asSegmentId(), segmentSchema);
+        SegmentId segmentId = segmentIdWithShardSpec.asSegmentId();
+        SegmentSchemas.SegmentSchema segmentSchema =
+            new SegmentSchemas.SegmentSchema(
+                segmentId.getDataSource(),
+                segmentId.toString(),
+                false,
+                numRows,
+                newColumns,
+                Collections.emptyList()
+            );
+        sinkSchemas.add(segmentSchema);
       }
     }
 
-    return Optional.ofNullable(sinksSchemaChangeMap.isEmpty() ? null : new SegmentsSchema(columnMapping, sinksSchemaChangeMap));
+    return Optional.ofNullable(sinkSchemas.isEmpty() ? null : new SegmentSchemas(columnMapping, sinkSchemas));
   }
 
   /**
    * Compute schema change for the sinks.
    */
   @VisibleForTesting
-  static Optional<SegmentsSchema> computeSchemaChange(
+  static Optional<SegmentSchemas> computeSchemaChange(
       Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> previousSinkSchema,
       Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema
   )
   {
-    Map<Integer, SegmentsSchema.ColumnInformation> columnMapping = new HashMap<>();
-    Map<SegmentId, SegmentsSchema.SegmentSchema> sinksSchemaChangeMap = new HashMap<>();
+    Map<Integer, SegmentSchemas.ColumnInformation> columnMapping = new HashMap<>();
+    List<SegmentSchemas.SegmentSchema> sinkSchemas = new ArrayList<>();
 
     Map<String, Integer> columnReverseMapping = new HashMap<>();
     AtomicInteger columnCount = new AtomicInteger();
@@ -110,7 +119,7 @@ class SinkSchemaUtil
           String column = entry.getKey();
           ColumnType columnType = entry.getValue();
           Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-          columnMapping.computeIfAbsent(columnNumber, v -> new SegmentsSchema.ColumnInformation(column, columnType));
+          columnMapping.computeIfAbsent(columnNumber, v -> new SegmentSchemas.ColumnInformation(column, columnType));
           newColumns.add(columnNumber);
         }
         if (newColumns.size() > 0 || numRows > 0) {
@@ -125,11 +134,11 @@ class SinkSchemaUtil
 
           if (!prevSinkDimensions.containsKey(column)) {
             Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-            columnMapping.computeIfAbsent(columnNumber, v -> new SegmentsSchema.ColumnInformation(column, columnType));
+            columnMapping.computeIfAbsent(columnNumber, v -> new SegmentSchemas.ColumnInformation(column, columnType));
             newColumns.add(columnNumber);
           } else if (!prevSinkDimensions.get(column).equals(columnType)) {
             Integer columnNumber = columnReverseMapping.computeIfAbsent(column, v -> columnCount.getAndIncrement());
-            columnMapping.computeIfAbsent(columnNumber, v -> new SegmentsSchema.ColumnInformation(column, columnType));
+            columnMapping.computeIfAbsent(columnNumber, v -> new SegmentSchemas.ColumnInformation(column, columnType));
             updatedColumns.add(columnNumber);
           }
         }
@@ -140,11 +149,20 @@ class SinkSchemaUtil
       }
 
       if (changed) {
-        SegmentsSchema.SegmentSchema segmentSchema = new SegmentsSchema.SegmentSchema(delta, numRows, newColumns, updatedColumns);
-        sinksSchemaChangeMap.put(segmentIdWithShardSpec.asSegmentId(), segmentSchema);
+        SegmentId segmentId = segmentIdWithShardSpec.asSegmentId();
+        SegmentSchemas.SegmentSchema segmentSchema =
+            new SegmentSchemas.SegmentSchema(
+                segmentId.getDataSource(),
+                segmentId.toString(),
+                delta,
+                numRows,
+                newColumns,
+                updatedColumns
+            );
+        sinkSchemas.add(segmentSchema);
       }
     }
 
-    return Optional.ofNullable(sinksSchemaChangeMap.isEmpty() ? null : new SegmentsSchema(columnMapping, sinksSchemaChangeMap));
+    return Optional.ofNullable(sinkSchemas.isEmpty() ? null : new SegmentSchemas(columnMapping, sinkSchemas));
   }
 }

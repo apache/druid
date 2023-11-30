@@ -42,7 +42,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -144,7 +144,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
           }
 
           @Override
-          public CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+          public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }
@@ -238,7 +238,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
           }
 
           @Override
-          public CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+          public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }
@@ -350,7 +350,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
           }
 
           @Override
-          public CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+          public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }

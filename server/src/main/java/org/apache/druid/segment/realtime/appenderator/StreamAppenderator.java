@@ -1633,6 +1633,7 @@ public class StreamAppenderator implements Appenderator
 
     void computeAndAnnounce()
     {
+      log.info("Announcing sink schemas");
       Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema = new HashMap<>();
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
@@ -1641,15 +1642,19 @@ public class StreamAppenderator implements Appenderator
         currentSinkSchema.put(segmentIdWithShardSpec, Pair.of(sink.getSchema(), sink.getNumRows()));
       }
 
-      Optional<SegmentsSchema> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSchema);
-      Optional<SegmentsSchema> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSchema, currentSinkSchema);
+      Optional<SegmentSchemas> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSchema);
+      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSchema, currentSinkSchema);
 
+      sinksSchema.ifPresent(v -> log.info("absolute schema is %s", v));
+      sinksSchemaChange.ifPresent(v -> log.info("delta schema is %s", v));
       previousSinkSchema = currentSinkSchema;
 
       // announce the change
-      if (sinksSchema.isPresent() || sinksSchemaChange.isPresent()) {
-        announcer.announceSinkSchemaForTask(taskId, sinksSchema.orElse(null), sinksSchemaChange.orElse(null));
-      }
+      sinksSchema.ifPresent(segmentsSchema -> announcer.announceSinkSchemaForTask(
+          taskId,
+          segmentsSchema,
+          sinksSchemaChange.orElse(null)
+      ));
     }
   }
 }

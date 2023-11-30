@@ -19,7 +19,7 @@
 
 package org.apache.druid.client;
 
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
@@ -95,7 +95,7 @@ public interface ServerView
 
     CallbackAction segmentViewInitialized();
 
-    CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema);
+    CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas);
   }
 
   abstract class BaseSegmentCallback implements SegmentCallback
@@ -113,7 +113,7 @@ public interface ServerView
     }
 
     @Override
-    public CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+    public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
     {
       return CallbackAction.CONTINUE;
     }

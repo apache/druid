@@ -34,22 +34,22 @@ import java.util.Map;
  * Primarily used to announce schema changes for all {@link org.apache.druid.segment.realtime.plumber.Sink}
  * created by a task in {@link StreamAppenderator}.
  */
-public class SegmentsSchema
+public class SegmentSchemas
 {
   // integer value to column information mapping
   private final Map<Integer, ColumnInformation> columnMapping;
 
   // segmentId to schema mapping
-  private final Map<SegmentId, SegmentSchema> segmentSchemaMap;
+  private final List<SegmentSchema> segmentSchemaList;
 
   @JsonCreator
-  public SegmentsSchema(
+  public SegmentSchemas(
       @JsonProperty("columnMapping") Map<Integer, ColumnInformation> columnMapping,
-      @JsonProperty("segmentSchemaChangeMap") Map<SegmentId, SegmentSchema> segmentSchemaMap
+      @JsonProperty("segmentSchemaList") List<SegmentSchema> segmentSchemaList
   )
   {
     this.columnMapping = columnMapping;
-    this.segmentSchemaMap = segmentSchemaMap;
+    this.segmentSchemaList = segmentSchemaList;
   }
 
   @JsonProperty
@@ -59,9 +59,9 @@ public class SegmentsSchema
   }
 
   @JsonProperty
-  public Map<SegmentId, SegmentSchema> getSegmentSchemaMap()
+  public List<SegmentSchema> getSegmentSchemaList()
   {
-    return segmentSchemaMap;
+    return segmentSchemaList;
   }
 
   /**
@@ -69,6 +69,8 @@ public class SegmentsSchema
    */
   public static class SegmentSchema
   {
+    String dataSource;
+    String segmentId;
     // represents whether it is a schema change or absolute schema
     boolean delta;
     // absolute number of rows in the segment
@@ -80,16 +82,32 @@ public class SegmentsSchema
 
     @JsonCreator
     public SegmentSchema(
+        @JsonProperty("dataSource") String dataSource,
+        @JsonProperty("segmentId") String segmentId,
         @JsonProperty("delta") boolean delta,
         @JsonProperty("numRows") Integer numRows,
         @JsonProperty("newColumns") List<Integer> newColumns,
         @JsonProperty("updatedColumns") List<Integer> updatedColumns
     )
     {
+      this.dataSource = dataSource;
+      this.segmentId = segmentId;
+      this.delta = delta;
+      this.numRows = numRows;
       this.newColumns = newColumns;
       this.updatedColumns = updatedColumns;
-      this.numRows = numRows;
-      this.delta = delta;
+    }
+
+    @JsonProperty
+    public String getDataSource()
+    {
+      return dataSource;
+    }
+
+    @JsonProperty
+    public String getSegmentId()
+    {
+      return segmentId;
     }
 
     @JsonProperty
@@ -120,7 +138,8 @@ public class SegmentsSchema
     public String toString()
     {
       return "SegmentSchema{" +
-             "delta=" + delta +
+             "segmentId=" + segmentId +
+             ", delta=" + delta +
              ", numRows=" + numRows +
              ", newColumns=" + newColumns +
              ", updatedColumns=" + updatedColumns +
@@ -139,7 +158,7 @@ public class SegmentsSchema
     @JsonCreator
     public ColumnInformation(
         @JsonProperty("columnName") String columnName,
-        @JsonProperty("columnName") ColumnType columnType)
+        @JsonProperty("columnType") ColumnType columnType)
     {
       this.columnName = columnName;
       this.columnType = columnType;
@@ -172,7 +191,7 @@ public class SegmentsSchema
   {
     return "SegmentsSchema{" +
            "columnMapping=" + columnMapping +
-           ", segmentSchemaChangeMap=" + segmentSchemaMap +
+           ", segmentSchemas=" + segmentSchemaList +
            '}';
   }
 }

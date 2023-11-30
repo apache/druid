@@ -19,9 +19,10 @@
 
 package org.apache.druid.server.coordination;
 
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public interface DataSegmentAnnouncer
@@ -38,10 +39,14 @@ public interface DataSegmentAnnouncer
    * Announce schema for all sinks for a given task.
    *
    * @param taskId taskId
-   * @param segmentsSchema absolute schema for all sinks, in case the client requests full sync.
-   * @param segmentsSchemaChange schema change for all sinks
+   * @param segmentSchemas absolute schema for all sinks, in case the client requests full sync.
+   * @param segmentSchemasChange schema change for all sinks
    */
-  void announceSinkSchemaForTask(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange);
+  void announceSinkSchemaForTask(
+      String taskId,
+      SegmentSchemas segmentSchemas,
+      @Nullable SegmentSchemas segmentSchemasChange
+  );
 
   /**
    * Unnannounce task.

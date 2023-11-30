@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -79,7 +79,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
   private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory<>();
 
-  private final ConcurrentMap<String, SegmentsSchema> taskSinkSchema = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, SegmentSchemas> taskSinkSchema = new ConcurrentHashMap<>();
 
   @Nullable
   private final SegmentZNode dummyZnode;
@@ -315,15 +315,30 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void announceSinkSchemaForTask(String taskId, SegmentsSchema segmentsSchema, SegmentsSchema segmentsSchemaChange)
+  public void announceSinkSchemaForTask(
+      String taskId,
+      SegmentSchemas segmentSchemas,
+      SegmentSchemas segmentSchemasChange
+  )
   {
-    changes.addChangeRequest(new SegmentsSchemaChangeRequest(segmentsSchemaChange));
-    taskSinkSchema.put(taskId, segmentsSchema);
+    log.info(
+        "Announcing sink schema for task [%s], absolute schema [%s], change [%s]",
+        taskId,
+        segmentSchemas,
+        segmentSchemasChange
+    );
+
+    taskSinkSchema.put(taskId, segmentSchemas);
+
+    if (segmentSchemasChange != null) {
+      changes.addChangeRequest(new SegmentSchemasChangeRequest(segmentSchemasChange));
+    }
   }
 
   @Override
   public void unannouceTask(String taskId)
   {
+    log.info("Unannouncing task [%s]", taskId);
     taskSinkSchema.remove(taskId);
   }
 
@@ -349,12 +364,12 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
         Iterable<DataSegmentChangeRequest> sinkSchema = Iterables.transform(
             taskSinkSchema.values(),
-            new Function<SegmentsSchema, DataSegmentChangeRequest>()
+            new Function<SegmentSchemas, DataSegmentChangeRequest>()
             {
               @Override
-              public SegmentsSchemaChangeRequest apply(SegmentsSchema input)
+              public SegmentSchemasChangeRequest apply(SegmentSchemas input)
               {
-                return new SegmentsSchemaChangeRequest(input);
+                return new SegmentSchemasChangeRequest(input);
               }
             }
         );

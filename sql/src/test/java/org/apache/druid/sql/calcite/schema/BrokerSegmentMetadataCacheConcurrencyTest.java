@@ -51,7 +51,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -193,7 +193,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -309,7 +309,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

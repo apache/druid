@@ -56,7 +56,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordination.SegmentsSchemaChangeRequest;
+import org.apache.druid.server.coordination.SegmentSchemasChangeRequest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Duration;
@@ -590,8 +590,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               DataSegment segment = ((SegmentChangeRequestLoad) request).getSegment();
               toRemove.remove(segment.getId());
               addSegment(segment, true);
-            } else if (request instanceof SegmentsSchemaChangeRequest) {
-              runSegmentCallbacks(input -> input.segmentSchemaUpdate(((SegmentsSchemaChangeRequest) request).getSegmentsSchemaChange()));
+            } else if (request instanceof SegmentSchemasChangeRequest) {
+              runSegmentCallbacks(input -> input.segmentSchemaUpdate(((SegmentSchemasChangeRequest) request).getSegmentSchemas()));
             } else {
               log.error(
                   "Server[%s] gave a non-load dataSegmentChangeRequest[%s]., Ignored.",
@@ -614,8 +614,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               addSegment(((SegmentChangeRequestLoad) request).getSegment(), false);
             } else if (request instanceof SegmentChangeRequestDrop) {
               removeSegment(((SegmentChangeRequestDrop) request).getSegment(), false);
-            } else if (request instanceof SegmentsSchemaChangeRequest) {
-              runSegmentCallbacks(input -> input.segmentSchemaUpdate(((SegmentsSchemaChangeRequest) request).getSegmentsSchemaChange()));
+            } else if (request instanceof SegmentSchemasChangeRequest) {
+              log.info("Received segment schema updates %s", ((SegmentSchemasChangeRequest) request).getSegmentSchemas());
+              runSegmentCallbacks(input -> input.segmentSchemaUpdate(((SegmentSchemasChangeRequest) request).getSegmentSchemas()));
             } else {
               log.error(
                   "Server[%s] gave a non load/drop dataSegmentChangeRequest[%s], Ignored.",

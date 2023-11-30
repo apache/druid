@@ -40,7 +40,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
@@ -398,7 +398,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
               }
 
               @Override
-              public CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+              public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
               {
                 return CallbackAction.CONTINUE;
               }

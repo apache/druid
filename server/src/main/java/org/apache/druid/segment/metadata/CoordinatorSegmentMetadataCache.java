@@ -32,7 +32,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.realtime.appenderator.SegmentsSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Escalator;
@@ -42,6 +42,7 @@ import org.apache.druid.timeline.SegmentId;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -93,6 +94,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           @Override
           public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
           {
+            log.info("Received segment update event %s", segment.getId());
             addSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -115,9 +117,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentsSchema segmentsSchema)
+          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
           {
-            updateSchemaForSegments(segmentsSchema);
+            log.info("Received segment schema update event %s", segmentSchemas);
+            updateSchemaForSegments(segmentSchemas);
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -170,15 +173,16 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   /**
    * Update schema for segments.
    */
-  private void updateSchemaForSegments(SegmentsSchema segmentsSchema)
+  private void updateSchemaForSegments(SegmentSchemas segmentSchemas)
   {
-    Map<Integer, SegmentsSchema.ColumnInformation> columnInformationMap = segmentsSchema.getColumnMapping();
-    Map<SegmentId, SegmentsSchema.SegmentSchema> segmentSchemaMap = segmentsSchema.getSegmentSchemaMap();
+    Map<Integer, SegmentSchemas.ColumnInformation> columnInformationMap = segmentSchemas.getColumnMapping();
+    List<SegmentSchemas.SegmentSchema> segmentSchemaList = segmentSchemas.getSegmentSchemaList();
 
-    for (Map.Entry<SegmentId, SegmentsSchema.SegmentSchema> entry : segmentSchemaMap.entrySet()) {
-      SegmentId segmentId = entry.getKey();
-      SegmentsSchema.SegmentSchema segmentSchema = entry.getValue();
-      String dataSource = segmentId.getDataSource();
+    for (SegmentSchemas.SegmentSchema segmentSchema : segmentSchemaList) {
+      String dataSource = segmentSchema.getDataSource();
+      SegmentId segmentId = SegmentId.tryParse(dataSource, segmentSchema.getSegmentId());
+
+      log.info("Applying schema update for segmentId %s datasource %s", segmentId, dataSource);
 
       segmentMetadataInfo.compute(
           dataSource,
@@ -201,7 +205,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                             columnInformationMap,
                             segmentSchema
                         );
+                    if (!rowSignature.isPresent()) {
+                      log.info("Oh rowsignature is empty?? ");
+                    }
                     if (rowSignature.isPresent()) {
+                      log.info("Build rowSignature is %s", rowSignature);
                       segmentMetadata = AvailableSegmentMetadata
                           .from(segmentMetadata)
                           .withRowSignature(rowSignature.get())
@@ -224,15 +232,15 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   Optional<RowSignature> mergeOrCreateRowSignature(
       SegmentId segmentId,
       @Nullable RowSignature previousSignature,
-      Map<Integer, SegmentsSchema.ColumnInformation> columnMapping,
-      SegmentsSchema.SegmentSchema segmentSchema
+      Map<Integer, SegmentSchemas.ColumnInformation> columnMapping,
+      SegmentSchemas.SegmentSchema segmentSchema
   )
   {
     if (!segmentSchema.isDelta()) {
       // create new, doesn't matter if we already have a previous signature
       RowSignature.Builder builder = RowSignature.builder();
       for (Integer columnInt : segmentSchema.getNewColumns()) {
-        SegmentsSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
+        SegmentSchemas.ColumnInformation columnInformation = columnMapping.get(columnInt);
         builder.add(columnInformation.getColumnName(), columnInformation.getColumnType());
       }
       return Optional.of(builder.build());
@@ -250,7 +258,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       }
 
       for (Integer columnInt : segmentSchema.getUpdatedColumns()) {
-        SegmentsSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
+        SegmentSchemas.ColumnInformation columnInformation = columnMapping.get(columnInt);
         String columnName = columnInformation.getColumnName();
         if (!columnTypes.containsKey(columnName)) {
           log.debug("Column send in delta is not present ");
@@ -261,7 +269,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       }
 
       for (Integer columnInt : segmentSchema.getNewColumns()) {
-        SegmentsSchema.ColumnInformation columnInformation = columnMapping.get(columnInt);
+        SegmentSchemas.ColumnInformation columnInformation = columnMapping.get(columnInt);
         String columnName = columnInformation.getColumnName();
         if (columnTypes.containsKey(columnName)) {
           log.debug("How come new column is already present?");
