@@ -26,7 +26,7 @@ import org.apache.druid.error.DruidException;
  *
  * This abstract class provides a {@link ColumnValueSelector} based on the methods of {@link BaseObjectColumnValueSelector}.
  */
-public abstract class ObjectColumnSelector2<T> implements ColumnValueSelector<T>
+public abstract class ObjectBasedColumnSelector<T> implements ColumnValueSelector<T>
 {
   private static final String COLUMN_IS_NULL_ERROR_MESSAGE = "Invalid usage pattern: method returning primitive called - but the column is null";
 

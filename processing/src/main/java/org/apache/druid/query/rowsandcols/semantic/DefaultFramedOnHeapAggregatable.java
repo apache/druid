@@ -31,7 +31,7 @@ import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.ObjectColumnSelector2;
+import org.apache.druid.segment.ObjectBasedColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 
@@ -551,7 +551,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     @Nonnull
     public ColumnValueSelector makeColumnValueSelector(@Nonnull String columnName)
     {
-      return new ObjectColumnSelector2()
+      return new ObjectBasedColumnSelector()
       {
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
