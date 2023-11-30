@@ -30,6 +30,7 @@ import com.google.inject.Module;
 import com.google.inject.ProvisionException;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
+import org.apache.druid.data.input.azure.AzureInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
@@ -209,8 +210,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
 
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureEntityFactory factory = injector.getInstance(AzureEntityFactory.class);
-    Object object1 = factory.create(cloudObjectLocation1, azureStorage);
-    Object object2 = factory.create(cloudObjectLocation2, azureStorage);
+    Object object1 = factory.create(cloudObjectLocation1, azureStorage, AzureInputSource.SCHEME);
+    Object object2 = factory.create(cloudObjectLocation2, azureStorage, AzureInputSource.SCHEME);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);

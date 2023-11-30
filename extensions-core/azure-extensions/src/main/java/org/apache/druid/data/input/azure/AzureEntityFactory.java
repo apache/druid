@@ -30,6 +30,7 @@ public interface AzureEntityFactory
 {
   AzureEntity create(
       @Assisted("location") CloudObjectLocation location,
-      @Assisted("azureStorage") AzureStorage azureStorage
+      @Assisted("azureStorage") AzureStorage azureStorage,
+      @Assisted("scheme") String scheme
   );
 }

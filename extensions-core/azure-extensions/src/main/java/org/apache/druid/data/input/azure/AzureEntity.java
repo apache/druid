@@ -41,26 +41,32 @@ public class AzureEntity extends RetryingInputEntity
 {
   private final CloudObjectLocation location;
   private final AzureByteSource byteSource;
+  private final String scheme;
 
   @AssistedInject
   AzureEntity(
       @Nonnull @Assisted("location") CloudObjectLocation location,
       @Nonnull @Assisted("azureStorage") AzureStorage azureStorage,
+      @Nonnull @Assisted("scheme") String scheme,
       @Nonnull AzureByteSourceFactory byteSourceFactory
 
   )
   {
     this.location = location;
-
-    // Storage account and container cannot have / in them
-    String[] bucketParts = location.getBucket().split("/");
-    this.byteSource = byteSourceFactory.create(bucketParts[bucketParts.length - 1], location.getPath(), azureStorage);
+    this.scheme = scheme;
+    // If scheme is azureStorage, containerName is the first prefix in the path, otherwise containerName is the bucket
+    if (AzureStorageAccountInputSource.SCHEME.equals(this.scheme)) {
+      String[] bucketParts = location.getPath().split("/", 2);
+      this.byteSource = byteSourceFactory.create(bucketParts[0], bucketParts[1], azureStorage);
+    } else {
+      this.byteSource = byteSourceFactory.create(location.getBucket(), location.getPath(), azureStorage);
+    }
   }
 
   @Override
   public URI getUri()
   {
-    return location.toUri(AzureInputSource.SCHEME);
+    return location.toUri(this.scheme);
   }
 
   @Override
