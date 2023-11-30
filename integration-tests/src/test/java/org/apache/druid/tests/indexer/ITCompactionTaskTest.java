@@ -208,7 +208,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       if (newSegmentGranularity != null) {
         List<String> newIntervals = new ArrayList<>();
         for (String interval : expectedIntervalAfterCompaction) {
-          for (Interval newinterval : newSegmentGranularity.getDefaultGranularity().getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+          for (Interval newinterval : newSegmentGranularity.getDefaultGranularity().getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
             newIntervals.add(newinterval.toString());
           }
         }
