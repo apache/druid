@@ -27,6 +27,7 @@ import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.ISE;
@@ -398,11 +399,21 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             SystemFields.none(),
             new HttpInputSourceConfig(null)
         ),
-        new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+        new JsonInputFormat(
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
         RowSignature.builder()
                     .add("x", ColumnType.STRING)
                     .add("y", ColumnType.STRING)
                     .add("z", ColumnType.NESTED_DATA)
+                    .add("a", ColumnType.STRING_ARRAY)
+                    .add("b", ColumnType.LONG_ARRAY)
+                    .add("c", ColumnType.FLOAT_ARRAY)
+                    .add("d", ColumnType.DOUBLE_ARRAY)
                     .build()
         );
     testIngestionQuery()
@@ -410,8 +421,8 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "FROM TABLE(http(userName => 'bob',\n" +
             "                 password => 'secret',\n" +
              "                uris => ARRAY['http://foo.com/bar.json'],\n" +
-             "                format => 'csv'))\n" +
-             "     EXTEND (x VARCHAR, y VARCHAR, z TYPE('COMPLEX<json>'))\n" +
+             "                format => 'json'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z TYPE('COMPLEX<json>'), a VARCHAR ARRAY, b BIGINT ARRAY, c FLOAT ARRAY, d DOUBLE ARRAY)\n" +
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
@@ -420,7 +431,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("x", "y", "z")
+                .columns("a", "b", "c", "d", "x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
