@@ -38,6 +38,8 @@
   </suppress>
 
   <suppress>
+    <!-- Pulled in by io.kubernetes:client-java and kafka_2.13 but not fixed in either place yet -->
+    <!-- jose4j before v0.9.3 allows attackers to set a low iteration count of 1000 or less -->
     <notes><![CDATA[
       file name: commons-compress-1.23.0.jar
     ]]></notes>

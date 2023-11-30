@@ -46,6 +46,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -722,265 +723,264 @@ public class EqualityFilterTests
     @Test
     public void testArrays()
     {
-      if (isAutoSchema()) {
-        // only auto schema supports array columns... skip other segment types
-        /*
-            dim0 .. arrayString               arrayLong             arrayDouble
-            "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
-            "1", .. [],                       [],                   [1.1, 2.2, 3.3]
-            "2", .. null,                     [1L, 2L, 3L],         [null]
-            "3", .. ["a", "b", "c"],          null,                 []
-            "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
-            "5", .. [null],                   [123L, 345L],         null
-         */
+      // only auto schema supports array columns... skip other segment types
+      Assume.assumeTrue(isAutoSchema());
+      /*
+          dim0 .. arrayString               arrayLong             arrayDouble
+          "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
+          "1", .. [],                       [],                   [1.1, 2.2, 3.3]
+          "2", .. null,                     [1L, 2L, 3L],         [null]
+          "3", .. ["a", "b", "c"],          null,                 []
+          "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
+          "5", .. [null],                   [123L, 345L],         null
+       */
 
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayString",
-                ColumnType.STRING_ARRAY,
-                ImmutableList.of("a", "b", "c"),
-                null
-            ),
-            ImmutableList.of("0", "3")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(
-                new EqualityFilter(
-                    "arrayString",
-                    ColumnType.STRING_ARRAY,
-                    ImmutableList.of("a", "b", "c"),
-                    null
-                )
-            ),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "4", "5")
-            : ImmutableList.of("1", "2", "4", "5")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayString",
-                ColumnType.STRING_ARRAY,
-                new Object[]{"a", "b", "c"},
-                null
-            ),
-            ImmutableList.of("0", "3")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayString",
-                ColumnType.STRING_ARRAY,
-                ImmutableList.of(),
-                null
-            ),
-            ImmutableList.of("1")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayString",
-                ColumnType.STRING_ARRAY,
-                new Object[]{null},
-                null
-            ),
-            ImmutableList.of("5")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayString",
-                ColumnType.STRING_ARRAY,
-                new Object[]{null, null},
-                null
-            ),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(
-                new EqualityFilter(
-                    "arrayString",
-                    ColumnType.STRING_ARRAY,
-                    new Object[]{null, null},
-                    null
-                )
-            ),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("0", "1", "3", "4", "5")
-            : ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-
-
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.LONG_ARRAY,
-                ImmutableList.of(1L, 2L, 3L),
-                null
-            ),
-            ImmutableList.of("0", "2")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(
-                new EqualityFilter(
-                    "arrayLong",
-                    ColumnType.LONG_ARRAY,
-                    ImmutableList.of(1L, 2L, 3L),
-                    null
-                )
-            ),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "4", "5")
-            : ImmutableList.of("1", "3", "4", "5")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.LONG_ARRAY,
-                new Object[]{1L, 2L, 3L},
-                null
-            ),
-            ImmutableList.of("0", "2")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.LONG_ARRAY,
-                ImmutableList.of(),
-                null
-            ),
-            ImmutableList.of("1")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.LONG_ARRAY,
-                new Object[]{null},
-                null
-            ),
-            ImmutableList.of("4")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.LONG_ARRAY,
-                new Object[]{null, null},
-                null
-            ),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(
-                new EqualityFilter(
-                    "arrayLong",
-                    ColumnType.LONG_ARRAY,
-                    new Object[]{null, null},
-                    null
-                )
-            ),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("0", "1", "2", "4", "5")
-            : ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-
-        // test loss of precision matching long arrays with double array match values
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.DOUBLE_ARRAY,
-                new Object[]{1.0, 2.0, 3.0},
-                null
-            ),
-            ImmutableList.of("0", "2")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.DOUBLE_ARRAY,
-                new Object[]{1.1, 2.2, 3.3},
-                null
-            ),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayLong",
-                ColumnType.DOUBLE_ARRAY,
-                new Object[]{null},
-                null
-            ),
-            ImmutableList.of("4")
-        );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              ImmutableList.of("a", "b", "c"),
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayString",
+                  ColumnType.STRING_ARRAY,
+                  ImmutableList.of("a", "b", "c"),
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "4", "5")
+          : ImmutableList.of("1", "2", "4", "5")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{"a", "b", "c"},
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              ImmutableList.of(),
+              null
+          ),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{null},
+              null
+          ),
+          ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{null, null},
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayString",
+                  ColumnType.STRING_ARRAY,
+                  new Object[]{null, null},
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "3", "4", "5")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
 
 
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayDouble",
-                ColumnType.DOUBLE_ARRAY,
-                ImmutableList.of(1.1, 2.2, 3.3),
-                null
-            ),
-            ImmutableList.of("0", "1")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(
-                new EqualityFilter(
-                    "arrayDouble",
-                    ColumnType.DOUBLE_ARRAY,
-                    ImmutableList.of(1.1, 2.2, 3.3),
-                    null
-                )
-            ),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("2", "3", "4")
-            : ImmutableList.of("2", "3", "4", "5")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayDouble",
-                ColumnType.DOUBLE_ARRAY,
-                new Object[]{1.1, 2.2, 3.3},
-                null
-            ),
-            ImmutableList.of("0", "1")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayDouble",
-                ColumnType.DOUBLE_ARRAY,
-                ImmutableList.of(),
-                null
-            ),
-            ImmutableList.of("3")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayDouble",
-                ColumnType.DOUBLE_ARRAY,
-                new Object[]{null},
-                null
-            ),
-            ImmutableList.of("2")
-        );
-        assertFilterMatches(
-            new EqualityFilter(
-                "arrayDouble",
-                ColumnType.DOUBLE_ARRAY,
-                ImmutableList.of(1.1, 2.2, 3.4),
-                null
-            ),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(
-                new EqualityFilter(
-                    "arrayDouble",
-                    ColumnType.DOUBLE_ARRAY,
-                    ImmutableList.of(1.1, 2.2, 3.4),
-                    null
-                )
-            ),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("0", "1", "2", "3", "4")
-            : ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
-      }
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              ImmutableList.of(1L, 2L, 3L),
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayLong",
+                  ColumnType.LONG_ARRAY,
+                  ImmutableList.of(1L, 2L, 3L),
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "4", "5")
+          : ImmutableList.of("1", "3", "4", "5")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{1L, 2L, 3L},
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              ImmutableList.of(),
+              null
+          ),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{null},
+              null
+          ),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{null, null},
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayLong",
+                  ColumnType.LONG_ARRAY,
+                  new Object[]{null, null},
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "2", "4", "5")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+
+      // test loss of precision matching long arrays with double array match values
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.0, 2.0, 3.0},
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.1, 2.2, 3.3},
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{null},
+              null
+          ),
+          ImmutableList.of("4")
+      );
+
+
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              ImmutableList.of(1.1, 2.2, 3.3),
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayDouble",
+                  ColumnType.DOUBLE_ARRAY,
+                  ImmutableList.of(1.1, 2.2, 3.3),
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("2", "3", "4")
+          : ImmutableList.of("2", "3", "4", "5")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.1, 2.2, 3.3},
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              ImmutableList.of(),
+              null
+          ),
+          ImmutableList.of("3")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{null},
+              null
+          ),
+          ImmutableList.of("2")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              ImmutableList.of(1.1, 2.2, 3.4),
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayDouble",
+                  ColumnType.DOUBLE_ARRAY,
+                  ImmutableList.of(1.1, 2.2, 3.4),
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "2", "3", "4")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
     }
 
     @Test
@@ -996,68 +996,67 @@ public class EqualityFilterTests
       "5", .. [100, 200, 300]
       
        */
-      if (isAutoSchema()) {
-        assertFilterMatches(
-            new EqualityFilter(
-                "variant",
-                ColumnType.STRING_ARRAY,
-                ImmutableList.of("a", "b", "c"),
-                null
-            ),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(
-                new EqualityFilter(
-                    "variant",
-                    ColumnType.STRING_ARRAY,
-                    ImmutableList.of("a", "b", "c"),
-                    null
-                )
-            ),
-            ImmutableList.of("0", "1", "2", "3", "4", "5")
-        );
+      Assume.assumeTrue(isAutoSchema());
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.STRING_ARRAY,
+              ImmutableList.of("a", "b", "c"),
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "variant",
+                  ColumnType.STRING_ARRAY,
+                  ImmutableList.of("a", "b", "c"),
+                  null
+              )
+          ),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
 
-        assertFilterMatches(
-            new EqualityFilter(
-                "variant",
-                ColumnType.STRING,
-                "abc",
-                null
-            ),
-            ImmutableList.of("0")
-        );
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.STRING,
+              "abc",
+              null
+          ),
+          ImmutableList.of("0")
+      );
 
-        assertFilterMatches(
-            new EqualityFilter(
-                "variant",
-                ColumnType.LONG,
-                100L,
-                null
-            ),
-            ImmutableList.of("1", "2")
-        );
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.LONG,
+              100L,
+              null
+          ),
+          ImmutableList.of("1", "2")
+      );
 
-        assertFilterMatches(
-            new EqualityFilter(
-                "variant",
-                ColumnType.STRING,
-                "100",
-                null
-            ),
-            ImmutableList.of("1", "2")
-        );
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.STRING,
+              "100",
+              null
+          ),
+          ImmutableList.of("1", "2")
+      );
 
-        assertFilterMatches(
-            new EqualityFilter(
-                "variant",
-                ColumnType.LONG_ARRAY,
-                Arrays.asList(100, 200, 300),
-                null
-            ),
-            ImmutableList.of("5")
-        );
-      }
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.LONG_ARRAY,
+              Arrays.asList(100, 200, 300),
+              null
+          ),
+          ImmutableList.of("5")
+      );
     }
   }
 

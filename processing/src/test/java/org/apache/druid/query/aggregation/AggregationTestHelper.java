@@ -480,7 +480,6 @@ public class AggregationTestHelper implements Closeable
           outDir,
           minTimestamp,
           gran,
-          true,
           maxRowCount,
           rollup
       );
@@ -498,7 +497,6 @@ public class AggregationTestHelper implements Closeable
       File outDir,
       long minTimestamp,
       Granularity gran,
-      boolean deserializeComplexMetrics,
       int maxRowCount,
       boolean rollup
   ) throws Exception
@@ -517,7 +515,6 @@ public class AggregationTestHelper implements Closeable
                   .withRollup(rollup)
                   .build()
           )
-          .setDeserializeComplexMetrics(deserializeComplexMetrics)
           .setMaxRowCount(maxRowCount)
           .build();
 
@@ -538,7 +535,6 @@ public class AggregationTestHelper implements Closeable
                       .withRollup(rollup)
                       .build()
               )
-              .setDeserializeComplexMetrics(deserializeComplexMetrics)
               .setMaxRowCount(maxRowCount)
               .build();
         }
@@ -594,7 +590,6 @@ public class AggregationTestHelper implements Closeable
       final AggregatorFactory[] metrics,
       long minTimestamp,
       Granularity gran,
-      boolean deserializeComplexMetrics,
       int maxRowCount,
       boolean rollup
   ) throws Exception
@@ -609,7 +604,6 @@ public class AggregationTestHelper implements Closeable
                 .withRollup(rollup)
                 .build()
         )
-        .setDeserializeComplexMetrics(deserializeComplexMetrics)
         .setMaxRowCount(maxRowCount)
         .build();
 
@@ -636,7 +630,6 @@ public class AggregationTestHelper implements Closeable
       final AggregatorFactory[] metrics,
       long minTimestamp,
       Granularity gran,
-      boolean deserializeComplexMetrics,
       int maxRowCount,
       boolean rollup
   ) throws Exception
@@ -648,7 +641,6 @@ public class AggregationTestHelper implements Closeable
         metrics,
         minTimestamp,
         gran,
-        deserializeComplexMetrics,
         maxRowCount,
         rollup
     );
