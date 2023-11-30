@@ -288,7 +288,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                     }
 
                     // Wait some more, we'll wake up when it might be time to do another refresh.
-                    lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
+                    long waitMillis = Math.max(1, nextRefresh - System.currentTimeMillis());
+                    lock.wait(waitMillis);
                   }
 
                   segmentsToRefresh.addAll(segmentsNeedingRefresh);
