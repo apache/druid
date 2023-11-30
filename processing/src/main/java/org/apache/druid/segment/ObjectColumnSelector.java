@@ -22,62 +22,33 @@ package org.apache.druid.segment;
 import org.apache.druid.error.DruidException;
 
 /**
- * This class is convenient for implementation of "object-sourcing" {@link ColumnValueSelector}s, it provides default
- * implementations for all {@link ColumnValueSelector}'s methods except {@link #getObject()} and {@link
- * #classOfObject()}.
- *
- * This class should appear ONLY in "extends" clause or anonymous class creation, but NOT in "user" code, where
- * {@link BaseObjectColumnValueSelector} must be used instead.
- *
- * This is a class rather than an interface unlike {@link LongColumnSelector}, {@link FloatColumnSelector} and {@link
- * DoubleColumnSelector} solely in order to make {@link #isNull()} method final.
+ * Restricts selector usage to only allow {@link #getObject()}.
  */
 public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
-  /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
-   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
-   * objects.
-   */
-  @Deprecated
+  private static final String EXCEPTION_MESSAGE = "use getObject() instead";
+
   @Override
-  public float getFloat()
+  public final float getFloat()
   {
-    throw DruidException.defensive("use getObject() instead");
+    throw DruidException.defensive(EXCEPTION_MESSAGE);
   }
 
-  /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
-   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
-   * objects.
-   */
-  @Deprecated
   @Override
-  public double getDouble()
+  public final double getDouble()
   {
-    throw DruidException.defensive("use getObject() instead");
+    throw DruidException.defensive(EXCEPTION_MESSAGE);
   }
 
-  /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
-   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
-   * objects.
-   */
-  @Deprecated
   @Override
-  public long getLong()
+  public final long getLong()
   {
-    throw DruidException.defensive("use getObject() instead");
+    throw DruidException.defensive(EXCEPTION_MESSAGE);
   }
 
-  /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector since it always returns false.
-   * There is no need to call this method.
-   */
-  @Deprecated
   @Override
   public final boolean isNull()
   {
-    throw DruidException.defensive("use getObject() instead");
+    throw DruidException.defensive(EXCEPTION_MESSAGE);
   }
 }
