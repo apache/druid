@@ -860,7 +860,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(expressionFilter("array_overlap(\"arrayStringNulls\",array('a','b'))"))
+                .filters(
+                    or(
+                        new ArrayContainsElementFilter("arrayStringNulls", ColumnType.STRING, "a", null),
+                        new ArrayContainsElementFilter("arrayStringNulls", ColumnType.STRING, "b", null)
+                    )
+                )
                 .columns("arrayStringNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -886,7 +891,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(expressionFilter("array_overlap(\"arrayLongNulls\",array(1,2))"))
+                .filters(
+                    or(
+                        new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 1L, null),
+                        new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 2L, null)
+                    )
+                )
                 .columns("arrayLongNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -912,7 +922,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(expressionFilter("array_overlap(\"arrayDoubleNulls\",array(1.1,2.2))"))
+                .filters(
+                    or(
+                        new ArrayContainsElementFilter("arrayDoubleNulls", ColumnType.DOUBLE, 1.1, null),
+                        new ArrayContainsElementFilter("arrayDoubleNulls", ColumnType.DOUBLE, 2.2, null)
+                    )
+                )
                 .columns("arrayDoubleNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
