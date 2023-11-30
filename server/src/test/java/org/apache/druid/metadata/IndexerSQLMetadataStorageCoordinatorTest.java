@@ -1967,7 +1967,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
    * - verify that the id for segment5 is correct
    * - Later, after the above was dropped, another segment on same interval was created by the stream but this
    * time there was an integrity violation in the pending segments table because the
-   * {@link IndexerSQLMetadataStorageCoordinator#createNewSegment(Handle, String, Interval, PartialShardSpec, String)}
    * method returned a segment id that already existed in the pending segments table
    */
   @Test
@@ -2067,7 +2066,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_2", identifier4.toString());
     // Since all core partitions have been dropped
     Assert.assertEquals(0, identifier4.getShardSpec().getNumCorePartitions());
-
   }
 
   /**
