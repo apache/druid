@@ -27,6 +27,11 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -388,6 +393,15 @@ public class QueryStackTests
 
   public static Injector injector()
   {
-    throw new RuntimeException("Unimplemented111!");
+    Injector startupInjector = new StartupInjectorBuilder()
+        .build();
+    DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
+        .ignoreLoadScopes()
+        .addModule(new SegmentWranglerModule())
+        .addModule(new ExpressionModule());
+
+    // injectorBuilder.addModules(builder.extraModules.toArray(new Module[0]));
+    // injectorBuilder.addModules(new testcac);
+    return injectorBuilder.build();
   }
 }
