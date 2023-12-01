@@ -44,7 +44,7 @@ import java.util.List;
 public class CompatParquetReaderTest extends BaseParquetReaderTest
 {
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-
+  
   @Test
   public void testBinaryAsString() throws IOException
   {
@@ -97,15 +97,13 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"field\" : \"hey this is &é(-è_çà)=^$ù*! Ω^^\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertTrue(JSON_MAPPER.readTree(expectedJson).equals(JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()))));
-    
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
     final String expectedJsonBinary = "{\n"
                                 + "  \"field\" : \"aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}"; 
-    Assert.assertTrue(JSON_MAPPER.readTree(expectedJsonBinary).equals(JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues()))));
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJsonBinary), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues())));
   }
-
 
   @Test
   public void testParquet1217() throws IOException
@@ -143,7 +141,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"col\" : -1\n"
                                 + "}";
-    Assert.assertTrue(JSON_MAPPER.readTree(expectedJson).equals(JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()))));
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -305,7 +303,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    } ]\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertTrue(JSON_MAPPER.readTree(expectedJson).equals(JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()))));
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -342,9 +340,8 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"repeatedInt\" : [ 1, 2, 3 ]\n"
                                 + "}";
-    Assert.assertTrue(JSON_MAPPER.readTree(expectedJson).equals(JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()))));
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
-
 
   @Test
   public void testReadNestedArrayStruct() throws IOException
@@ -385,7 +382,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"repeatedMessage\" : [ 3 ]\n"
                                 + "  } ]\n"
                                 + "}";
-    Assert.assertTrue(JSON_MAPPER.readTree(expectedJson).equals(JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()))));
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -435,6 +432,6 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"someId\" : 9\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertTrue(JSON_MAPPER.readTree(expectedJson).equals(JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()))));
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 }
