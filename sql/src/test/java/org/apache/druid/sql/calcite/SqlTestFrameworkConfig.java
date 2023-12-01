@@ -33,7 +33,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -98,7 +97,6 @@ public @interface SqlTestFrameworkConfig
         SqlTestFrameworkConfig annotation = getClass()
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
-        Method m = annotation.getClass().getMethods()[0];
         return annotation;
       }
       catch (NoSuchMethodException | SecurityException e) {
