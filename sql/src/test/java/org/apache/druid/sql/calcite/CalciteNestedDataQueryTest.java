@@ -1563,7 +1563,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setDimFilter(
                                 or(
                                     new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 1L, null),
-                                    expressionFilter("array_overlap(\"arrayLongNulls\",array(2,3))")
+                                    new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 2L, null),
+                                    new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 3L, null)
                                 )
                             )
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
