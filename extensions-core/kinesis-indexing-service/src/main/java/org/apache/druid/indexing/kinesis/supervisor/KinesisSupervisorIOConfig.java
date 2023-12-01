@@ -48,10 +48,12 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   // throw ProvisionedThroughputExceededException. Note that GetRecords won't return any data when it throws an
   // exception. For this reason, we recommend that you wait one second between calls to GetRecords; however, it's
   // possible that the application will get exceptions for longer than 1 second.
+  private final Integer recordsPerFetch;
   private final int fetchDelayMillis;
 
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
+  private final boolean deaggregate;
 
   @JsonCreator
   public KinesisSupervisorIOConfig(
@@ -69,10 +71,12 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
+      @JsonProperty("recordsPerFetch") @Deprecated Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
-      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig
+      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
+      @JsonProperty("deaggregate") @Deprecated boolean deaggregate
   )
   {
     super(
@@ -96,17 +100,27 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());
+    this.recordsPerFetch = recordsPerFetch;
     this.fetchDelayMillis = fetchDelayMillis != null
                             ? fetchDelayMillis
                             : KinesisIndexTaskIOConfig.DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
+    this.deaggregate = deaggregate;
   }
 
   @JsonProperty
   public String getEndpoint()
   {
     return endpoint;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getRecordsPerFetch()
+  {
+    return recordsPerFetch;
   }
 
   @JsonProperty
@@ -130,6 +144,13 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return awsExternalId;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean isDeaggregate()
+  {
+    return deaggregate;
+  }
+
   @Override
   public String toString()
   {
@@ -147,9 +168,11 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
            ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
+           ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
+           ", deaggregate=" + deaggregate +
            '}';
   }
 }

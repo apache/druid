@@ -461,10 +461,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        100,
         1000,
         null,
         null,
-        null
+        null,
+        false
     );
     KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
     KinesisSupervisor supervisor = new KinesisSupervisor(
@@ -509,24 +511,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     // create KinesisSupervisorIOConfig with autoScalerConfig null
     KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithNullAutoScalerConfig = new KinesisSupervisorIOConfig(
-            STREAM,
-            INPUT_FORMAT,
-            "awsEndpoint",
-            null,
-            1,
-            1,
-            new Period("PT30M"),
-            new Period("P1D"),
-            new Period("PT30S"),
-            false,
-            new Period("PT30M"),
-            null,
-            null,
-            null,
-            1000,
-            null,
-            null,
-            null
+        STREAM,
+        INPUT_FORMAT,
+        "awsEndpoint",
+        null,
+        1,
+        1,
+        new Period("PT30M"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        100,
+        1000,
+        null,
+        null,
+        null,
+        false
     );
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
@@ -534,24 +538,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     // create KinesisSupervisorIOConfig with autoScalerConfig Empty
     KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithEmptyAutoScalerConfig = new KinesisSupervisorIOConfig(
-            STREAM,
-            INPUT_FORMAT,
-            "awsEndpoint",
-            null,
-            1,
-            1,
-            new Period("PT30M"),
-            new Period("P1D"),
-            new Period("PT30S"),
-            false,
-            new Period("PT30M"),
-            null,
-            null,
-            null,
-            1000,
-            null,
-            null,
-             OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class)
+        STREAM,
+        INPUT_FORMAT,
+        "awsEndpoint",
+        null,
+        1,
+        1,
+        new Period("PT30M"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        100,
+        1000,
+        null,
+        null,
+        OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
+        false
     );
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
@@ -4165,7 +4171,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            null
+            null,
+            null,
+            false
         ),
         null,
         null,
@@ -5088,7 +5096,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        null,
+        null,
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5224,10 +5234,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
+        null,
         fetchDelayMillis,
         null,
         null,
-         autoScalerConfig
+         autoScalerConfig,
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5311,10 +5323,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
+        null,
         fetchDelayMillis,
         null,
         null,
-        null
+        null,
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
@@ -5397,10 +5411,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
+        null,
         fetchDelayMillis,
         null,
         null,
-        null
+        null,
+        false
     );
 
     KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(

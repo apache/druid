@@ -82,20 +82,20 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
     );
     this.useListShards = useListShards;
     this.awsCredentialsConfig = awsCredentialsConfig;
-    if (tuningConfig.getRecordBufferSizeConfigured() != null) {
-      log.warn("The 'recordBufferSize' config property of the kinesis tuning config has been deprecated. "
-               + "Please use 'recordBufferSizeBytes'.");
-    }
-    if (tuningConfig.getMaxRecordsPerPollConfigured() != null) {
-      log.warn("The 'maxRecordsPerPoll' config property of the kinesis tuning config has been deprecated. "
-               + "Please use 'maxBytesPerPoll'.");
-    }
   }
 
   @Override
   public TaskStatus runTask(TaskToolbox toolbox)
   {
     this.runtimeInfo = toolbox.getAdjustedRuntimeInfo();
+    if (getTuningConfig().getRecordBufferSizeConfigured() != null) {
+      log.warn("The 'recordBufferSize' config property of the kinesis tuning config has been deprecated. "
+               + "Please use 'recordBufferSizeBytes'.");
+    }
+    if (getTuningConfig().getMaxRecordsPerPollConfigured() != null) {
+      log.warn("The 'maxRecordsPerPoll' config property of the kinesis tuning config has been deprecated. "
+               + "Please use 'maxBytesPerPoll'.");
+    }
     return super.runTask(toolbox);
   }
 
@@ -147,6 +147,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
         false,
         useListShards
     );
+  }
+
+  @Override
+  @JsonProperty
+  public KinesisIndexTaskTuningConfig getTuningConfig()
+  {
+    return (KinesisIndexTaskTuningConfig) super.getTuningConfig();
   }
 
   @Override
@@ -212,7 +219,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
         (int) (memoryToUse / GET_RECORDS_MAX_BYTES_PER_CALL)
     );
     if (fetchThreads > maxFetchThreads) {
-      log.warn("fetchThreads [%d] being lowered to [%d]", fetchThreads, maxFetchThreads);
+      if (configuredFetchThreads != null) {
+        log.warn("fetchThreads [%d] being lowered to [%d]", configuredFetchThreads, maxFetchThreads);
+      }
       fetchThreads = maxFetchThreads;
     }
 

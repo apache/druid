@@ -97,6 +97,18 @@ public class MemoryBoundLinkedBlockingQueue<T>
     return queue.stream();
   }
 
+  /**
+   * Drain up to specified bytes worth of items from the queue into the provided buffer. At least one record is
+   * drained from the queue, regardless of the value of bytes specified.
+   *
+   * @param buffer       The buffer to drain queue items into.
+   * @param bytesToDrain The amount of bytes to drain from the queue
+   * @param timeout      The maximum time allowed to drain the queue
+   * @param unit         The time unit of the timeout.
+   *
+   * @return The number of items drained from the queue.
+   * @throws InterruptedException
+   */
   public int drain(Collection<? super ObjectContainer<T>> buffer, int bytesToDrain, long timeout, TimeUnit unit)
       throws InterruptedException
   {
