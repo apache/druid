@@ -374,7 +374,7 @@ public class SqlTestFramework
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
-    private List<Module> extraModules= new ArrayList<>();
+    private List<Module> extraModules = new ArrayList<>();
 
     public Builder(QueryComponentSupplier componentSupplier)
     {

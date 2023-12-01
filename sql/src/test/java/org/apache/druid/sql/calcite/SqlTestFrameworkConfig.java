@@ -40,8 +40,8 @@ import java.util.Map;
 /**
  * Annotation to specify desired framework settings.
  *
- * This class provides junit rule facilities to build the framework accordingly to the annotation.
- * These rules also cache the previously created frameworks.
+ * This class provides junit rule facilities to build the framework accordingly
+ * to the annotation. These rules also cache the previously created frameworks.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.TYPE})
@@ -135,7 +135,8 @@ public @interface SqlTestFrameworkConfig
       return classRule.configMap.computeIfAbsent(config, ConfigurationInstance::new);
     }
 
-    class ConfigurationInstance {
+    class ConfigurationInstance
+    {
 
       public SqlTestFramework framework;
 
@@ -147,7 +148,8 @@ public @interface SqlTestFrameworkConfig
               .mergeBufferCount(config.numMergeBuffers())
               .withExtraModule(config.resultCache().makeModule());
           framework = builder.build();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           throw new RuntimeException(e);
         }
       }
