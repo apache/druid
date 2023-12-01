@@ -31,7 +31,8 @@ import org.apache.druid.server.QueryStackTests.Testrelated;
 public class CacheTestHelperModule extends AbstractModule
 {
 
-  public enum ResultCacheMode {
+  public enum ResultCacheMode
+  {
     DISABLED,
     ENABLE_ISOLATED;
 
