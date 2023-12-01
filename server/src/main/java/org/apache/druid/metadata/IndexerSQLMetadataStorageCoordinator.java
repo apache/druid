@@ -174,21 +174,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
   {
     StringBuilder queryBuilder = new StringBuilder(
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
-    final List<Interval> intervals = new ArrayList<>();
-    // Do not need an interval condition if the interval is ETERNITY
-    if (!Intervals.isEternity(interval)) {
-      intervals.add(interval);
+    boolean hasEternityInterval = false;
+    for (Interval interval : intervals) {
+      if (Intervals.isEternity(interval)) {
+        hasEternityInterval = true;
+        break;
+      }
     }
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
-        intervals,
+        hasEternityInterval ? Collections.emptyList() : intervals,
         SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
         connector
     );

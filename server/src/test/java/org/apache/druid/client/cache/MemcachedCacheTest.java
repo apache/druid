@@ -54,11 +54,10 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.easymock.EasyMock;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +66,6 @@ import java.net.SocketAddress;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -206,25 +204,16 @@ public class MemcachedCacheTest
   public void testMonitor() throws Exception
   {
     final MemcachedCache cache = MemcachedCache.create(memcachedCacheConfig);
-    final Emitter emitter = EasyMock.createNiceMock(Emitter.class);
-    final Collection<Event> events = new ArrayList<>();
-    final ServiceEmitter serviceEmitter = new ServiceEmitter("service", "host", emitter)
-    {
-      @Override
-      public void emit(Event event)
-      {
-        events.add(event);
-      }
-    };
+    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
 
-    while (events.isEmpty()) {
+    while (serviceEmitter.getEvents().isEmpty()) {
       Thread.sleep(memcachedCacheConfig.getTimeout());
       cache.doMonitor(serviceEmitter);
     }
 
-    Assert.assertFalse(events.isEmpty());
+    Assert.assertFalse(serviceEmitter.getEvents().isEmpty());
     ObjectMapper mapper = new DefaultObjectMapper();
-    for (Event event : events) {
+    for (Event event : serviceEmitter.getEvents()) {
       log.debug("Found event `%s`", mapper.writeValueAsString(event.toMap()));
     }
   }

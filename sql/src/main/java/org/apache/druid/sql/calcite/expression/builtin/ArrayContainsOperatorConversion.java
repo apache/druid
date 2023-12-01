@@ -31,8 +31,10 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -98,7 +100,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
     // if the input column is not actually an ARRAY type, but rather an MVD, we can optimize this into
     // selector/equality filters on the individual array elements
     if (leftExpr.isSimpleExtraction()
-        && !isArray(leftExpr)
+        && !leftExpr.isArray()
         && (plannerContext.isUseBoundsAndSelectors() || leftExpr.isDirectColumnAccess())) {
       Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
@@ -139,11 +141,48 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
         }
       }
     }
-    return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
-  }
+    // if the input is a direct array column, we can use sweet array filter
+    if (leftExpr.isDirectColumnAccess() && leftExpr.isArray()) {
+      Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
+      // To convert this expression filter into an AND of ArrayContainsElement filters, we need to extract all array
+      // elements. For now, we can optimize only when rightExpr is a literal because there is no way to extract the
+      // array elements by traversing the Expr. Note that all implementations of Expr are defined as package-private
+      // classes in a different package.
+      if (expr.isLiteral()) {
+        // Evaluate the expression to get out the array elements.
+        // We can safely pass a nil ObjectBinding if the expression is literal.
+        ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
+        if (exprEval.isArray()) {
+          final Object[] arrayElements = exprEval.asArray();
+          if (arrayElements.length == 0) {
+            // this isn't likely possible today because array constructor function does not accept empty argument list
+            // but just in case, return null
+            return null;
+          }
+          final List<DimFilter> filters = new ArrayList<>(arrayElements.length);
+          final ColumnType elementType = ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type()));
+          for (final Object val : arrayElements) {
+            filters.add(
+                new ArrayContainsElementFilter(
+                    leftExpr.getSimpleExtraction().getColumn(),
+                    elementType,
+                    val,
+                    null
+                )
+            );
+          }
 
-  private static boolean isArray(final DruidExpression expr)
-  {
-    return expr.getDruidType() != null && expr.getDruidType().isArray();
+          return filters.size() == 1 ? filters.get(0) : new AndDimFilter(filters);
+        } else {
+          return new ArrayContainsElementFilter(
+              leftExpr.getSimpleExtraction().getColumn(),
+              ExpressionType.toColumnType(exprEval.type()),
+              exprEval.valueOrDefault(),
+              null
+          );
+        }
+      }
+    }
+    return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
   }
 }
