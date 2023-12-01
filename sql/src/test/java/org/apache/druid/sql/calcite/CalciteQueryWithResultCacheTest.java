@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCacheMode;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 
 /**
  * This test enable ResultCache behind all the testcases. As a result failing

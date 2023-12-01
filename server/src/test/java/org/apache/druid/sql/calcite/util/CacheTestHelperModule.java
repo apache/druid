@@ -20,16 +20,36 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.server.EtagProvider;
 import org.apache.druid.server.QueryStackTests.Testrelated;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCacheMode;
 
 public class CacheTestHelperModule extends AbstractModule
 {
+
+  public enum ResultCacheMode {
+    DISABLED,
+    ENABLE_ISOLATED;
+
+    public Module makeModule()
+    {
+      return new CacheTestHelperModule(this);
+    }
+
+    public boolean isPopulateResultLevelCache()
+    {
+      return this != DISABLED;
+    }
+
+    public boolean isUseResultLevelCache()
+    {
+      return this != DISABLED;
+    }
+  }
 
   protected final Cache cache;
   private CacheConfig cacheConfig;

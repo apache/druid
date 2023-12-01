@@ -19,10 +19,9 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.inject.Module;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MethodRule.ConfigurationInstance;
-import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.junit.rules.ExternalResource;
@@ -53,26 +52,6 @@ public @interface SqlTestFrameworkConfig
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
   ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
-
-  static enum ResultCacheMode {
-    DISABLED,
-    ENABLE_ISOLATED;
-
-    Module makeModule()
-    {
-      return new CacheTestHelperModule(this);
-    }
-
-    public boolean isPopulateResultLevelCache()
-    {
-      return this != DISABLED;
-    }
-
-    public boolean isUseResultLevelCache()
-    {
-      return this != DISABLED;
-    }
-  }
 
   /**
    * @see {@link SqlTestFrameworkConfig}
