@@ -612,6 +612,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         .setDefaultRowFlushBoundary(50000)
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .setTmpStorageBytesPerTask(-1L)
+        .enableConcurrentAppendAndReplace()
         .build();
 
     return new TaskToolboxFactory(

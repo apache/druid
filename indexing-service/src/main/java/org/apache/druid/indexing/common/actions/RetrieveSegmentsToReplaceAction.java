@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
@@ -38,6 +37,7 @@ import org.joda.time.Interval;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -63,20 +63,18 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
 {
   private static final Logger log = new Logger(RetrieveSegmentsToReplaceAction.class);
 
-  @JsonIgnore
   private final String dataSource;
 
-  @JsonIgnore
-  private final Interval interval;
+  private final List<Interval> intervals;
 
   @JsonCreator
   public RetrieveSegmentsToReplaceAction(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("intervals") List<Interval> intervals
   )
   {
     this.dataSource = dataSource;
-    this.interval = interval;
+    this.intervals = intervals;
   }
 
   @JsonProperty
@@ -86,9 +84,9 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
   }
 
   @JsonProperty
-  public Interval getInterval()
+  public List<Interval> getIntervals()
   {
-    return interval;
+    return intervals;
   }
 
   @Override
@@ -128,7 +126,7 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
 
     Map<Interval, Map<String, Set<DataSegment>>> intervalToCreatedToSegments = new HashMap<>();
     for (Pair<DataSegment, String> segmentAndCreatedDate :
-        toolbox.getIndexerMetadataStorageCoordinator().retrieveUsedSegmentsAndCreatedDates(dataSource, interval)) {
+        toolbox.getIndexerMetadataStorageCoordinator().retrieveUsedSegmentsAndCreatedDates(dataSource, intervals)) {
       final DataSegment segment = segmentAndCreatedDate.lhs;
       final String created = segmentAndCreatedDate.rhs;
       intervalToCreatedToSegments.computeIfAbsent(segment.getInterval(), s -> new HashMap<>())
@@ -165,7 +163,7 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
   private Collection<DataSegment> retrieveAllVisibleSegments(TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .retrieveUsedSegmentsForInterval(dataSource, interval, Segments.ONLY_VISIBLE);
+                  .retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
   }
 
   @Override
@@ -185,25 +183,20 @@ public class RetrieveSegmentsToReplaceAction implements TaskAction<Collection<Da
     }
 
     RetrieveSegmentsToReplaceAction that = (RetrieveSegmentsToReplaceAction) o;
-
-    if (!dataSource.equals(that.dataSource)) {
-      return false;
-    }
-    return interval.equals(that.interval);
+    return Objects.equals(dataSource, that.dataSource) && Objects.equals(intervals, that.intervals);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, interval);
+    return Objects.hash(dataSource, intervals);
   }
-
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + "{" +
+    return "RetrieveSegmentsToReplaceAction{" +
            "dataSource='" + dataSource + '\'' +
-           ", interval=" + interval +
+           ", intervals=" + intervals +
            '}';
   }
 }

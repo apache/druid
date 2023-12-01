@@ -543,7 +543,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     Preconditions.checkNotNull(interval);
 
     final Collection<DataSegment> usedSegments;
-    if (toolbox == null) {
+    if (toolbox == null || !toolbox.getConfig().isConcurrentAppendAndReplaceEnabled()) {
       usedSegments = FutureUtils.getUnchecked(
           coordinatorClient.fetchUsedSegments(dataSource, Collections.singletonList(interval)),
           true
@@ -551,7 +551,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     } else {
       try {
         usedSegments = toolbox.getTaskActionClient()
-                              .submit(new RetrieveSegmentsToReplaceAction(dataSource, interval));
+                              .submit(new RetrieveSegmentsToReplaceAction(dataSource, Collections.singletonList(interval)));
       }
       catch (IOException e) {
         LOG.error(e, "Error retrieving the used segments for interval[%s].", interval);
