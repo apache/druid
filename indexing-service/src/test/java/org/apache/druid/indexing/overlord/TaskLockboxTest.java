@@ -82,6 +82,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1193,11 +1194,11 @@ public class TaskLockboxTest
     Assert.assertEquals(2, lockedIntervals.size());
 
     Assert.assertEquals(
-        Arrays.asList(
+        new HashSet<>(Arrays.asList(
             Intervals.of("2017-01-01/2017-02-01"),
             Intervals.of("2017-04-01/2017-05-01")
-        ),
-        lockedIntervals.get(task1.getDataSource())
+        )),
+        new HashSet<>(lockedIntervals.get(task1.getDataSource()))
     );
 
     Assert.assertEquals(

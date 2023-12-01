@@ -55,6 +55,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -367,18 +368,18 @@ public class TieredBrokerHostSelectorTest
   {
     Assert.assertEquals(
         ImmutableMap.of(
-            "mediumBroker", ImmutableList.of(),
-            "coldBroker", ImmutableList.of("coldHost1:8080", "coldHost2:8080"),
-            "hotBroker", ImmutableList.of("hotHost:8080")
+            "mediumBroker", ImmutableSet.of(),
+            "coldBroker", ImmutableSet.of("coldHost1:8080", "coldHost2:8080"),
+            "hotBroker", ImmutableSet.of("hotHost:8080")
         ),
         Maps.transformValues(
             brokerSelector.getAllBrokers(),
-            new Function<List<Server>, List<String>>()
+            new Function<List<Server>, HashSet<String>>()
             {
               @Override
-              public List<String> apply(@Nullable List<Server> servers)
+              public HashSet<String> apply(@Nullable List<Server> servers)
               {
-                return Lists.transform(servers, server -> server.getHost());
+                return new HashSet<>(Lists.transform(servers, server -> server.getHost()));
               }
             }
         )
