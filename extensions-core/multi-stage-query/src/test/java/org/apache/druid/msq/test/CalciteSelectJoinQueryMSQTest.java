@@ -43,7 +43,7 @@ import org.junit.runner.RunWith;
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
  */
 @RunWith(Enclosed.class)
-public class CalciteSelectJoinQueryMSQTest
+public abstract class CalciteSelectJoinQueryMSQTest
 {
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
