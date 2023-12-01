@@ -33,16 +33,22 @@ public class FloatLastVectorAggregator extends NumericLastVectorAggregator
 {
   float lastValue;
 
-  public FloatLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector)
+  public FloatLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
   {
-    super(timeSelector, valueSelector, SerializablePairLongFloat.class);
+    super(timeSelector, null, objectSelector);
+    lastValue = 0;
+  }
+
+  public FloatLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  {
+    super(timeSelector, valueSelector, null);
     lastValue = 0;
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, Number number)
+  void putValue(ByteBuffer buf, int position, int index)
   {
-    lastValue = number.floatValue();
+    lastValue = valueSelector != null ? valueSelector.getFloatVector()[index] : ((SerializablePairLongFloat) objectSelector.getObjectVector()[index]).getRhs();
     buf.putFloat(position, lastValue);
   }
 

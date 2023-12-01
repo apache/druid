@@ -29,9 +29,14 @@ import java.nio.ByteBuffer;
 public class FloatFirstVectorAggregator extends NumericFirstVectorAggregator
 {
 
-  public FloatFirstVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector)
+  public FloatFirstVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
   {
-    super(timeSelector, valueSelector, SerializablePairLongFloat.class);
+    super(timeSelector, null, objectSelector);
+  }
+
+  public FloatFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  {
+    super(timeSelector, valueSelector, null);
   }
 
   @Override
@@ -41,9 +46,9 @@ public class FloatFirstVectorAggregator extends NumericFirstVectorAggregator
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, Number number)
+  void putValue(ByteBuffer buf, int position, int index)
   {
-    float firstValue = number.floatValue();
+    float firstValue = valueSelector != null ? valueSelector.getFloatVector()[index] : ((SerializablePairLongFloat) objectSelector.getObjectVector()[index]).getRhs();
     buf.putFloat(position, firstValue);
   }
 

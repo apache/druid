@@ -29,9 +29,14 @@ import java.nio.ByteBuffer;
 public class DoubleFirstVectorAggregator extends NumericFirstVectorAggregator
 {
 
-  public DoubleFirstVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector)
+  public DoubleFirstVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
   {
-    super(timeSelector, valueSelector, SerializablePairLongDouble.class);
+    super(timeSelector, null, objectSelector);
+  }
+
+  public DoubleFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  {
+    super(timeSelector, valueSelector, null);
   }
 
   @Override
@@ -42,9 +47,9 @@ public class DoubleFirstVectorAggregator extends NumericFirstVectorAggregator
 
 
   @Override
-  void putValue(ByteBuffer buf, int position, Number number)
+  void putValue(ByteBuffer buf, int position, int index)
   {
-    double firstValue = number.doubleValue();
+    double firstValue = valueSelector != null ? valueSelector.getDoubleVector()[index] : ((SerializablePairLongDouble) (objectSelector.getObjectVector()[index])).getRhs();
     buf.putDouble(position, firstValue);
   }
 

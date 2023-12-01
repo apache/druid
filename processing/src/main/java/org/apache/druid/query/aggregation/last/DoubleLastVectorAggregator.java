@@ -33,16 +33,22 @@ public class DoubleLastVectorAggregator extends NumericLastVectorAggregator
 {
   double lastValue;
 
-  public DoubleLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector)
+  public DoubleLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
   {
-    super(timeSelector, valueSelector, SerializablePairLongDouble.class);
+    super(timeSelector, null, objectSelector);
+    lastValue = 0;
+  }
+
+  public DoubleLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  {
+    super(timeSelector, valueSelector, null);
     lastValue = 0;
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, Number number)
+  void putValue(ByteBuffer buf, int position, int index)
   {
-    lastValue = number.doubleValue();
+    lastValue = valueSelector != null ? valueSelector.getDoubleVector()[index] : ((SerializablePairLongDouble) objectSelector.getObjectVector()[index]).getRhs();
     buf.putDouble(position, lastValue);
   }
 

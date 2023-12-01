@@ -33,9 +33,15 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
 {
   long lastValue;
 
-  public LongLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector valueSelector)
+  public LongLastVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
   {
-    super(timeSelector, valueSelector, SerializablePairLongLong.class);
+    super(timeSelector, null, objectSelector);
+    lastValue = 0;
+  }
+
+  public LongLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  {
+    super(timeSelector, valueSelector, null);
     lastValue = 0;
   }
 
@@ -46,9 +52,9 @@ public class LongLastVectorAggregator extends NumericLastVectorAggregator
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, Number number)
+  void putValue(ByteBuffer buf, int position, int index)
   {
-    lastValue = number.longValue();
+    lastValue = valueSelector != null ? valueSelector.getLongVector()[index] : ((SerializablePairLongLong) objectSelector.getObjectVector()[index]).getRhs();
     buf.putLong(position, lastValue);
   }
 

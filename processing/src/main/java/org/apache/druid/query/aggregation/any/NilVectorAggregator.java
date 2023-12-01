@@ -20,9 +20,6 @@
 package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.aggregation.SerializablePairLongDouble;
-import org.apache.druid.query.aggregation.SerializablePairLongFloat;
-import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.VectorAggregator;
 
 import javax.annotation.Nullable;
@@ -44,10 +41,6 @@ public class NilVectorAggregator implements VectorAggregator
   private static final NilVectorAggregator LONG_NIL_VECTOR_AGGREGATOR = new NilVectorAggregator(
       NullHandling.defaultLongValue()
   );
-
-  public static final SerializablePairLongDouble DOUBLE_NIL_PAIR = new SerializablePairLongDouble(0L, NullHandling.defaultDoubleValue());
-  public static final SerializablePairLongLong LONG_NIL_PAIR = new SerializablePairLongLong(0L, NullHandling.defaultLongValue());
-  public static final SerializablePairLongFloat FLOAT_NIL_PAIR = new SerializablePairLongFloat(0L, NullHandling.defaultFloatValue());
 
   /**
    * @return A vectorized aggregator that returns the default double value.

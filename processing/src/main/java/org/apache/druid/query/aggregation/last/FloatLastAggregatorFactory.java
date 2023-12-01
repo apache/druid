@@ -39,8 +39,10 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -151,8 +153,13 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   )
   {
     VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
-    VectorObjectSelector vSelector = columnSelectorFactory.makeObjectSelector(fieldName);
-    return new FloatLastVectorAggregator(timeSelector, vSelector);
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+      return new FloatLastVectorAggregator(timeSelector, valueSelector);
+    }
+    VectorObjectSelector objectSelector = columnSelectorFactory.makeObjectSelector(fieldName);
+    return new FloatLastVectorAggregator(timeSelector, objectSelector);
   }
 
   @Override
