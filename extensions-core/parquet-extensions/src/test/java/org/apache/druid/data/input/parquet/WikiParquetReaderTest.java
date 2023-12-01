@@ -62,7 +62,7 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
     reader = createReader("example/wiki/wiki.parquet", schema, JSONPathSpec.DEFAULT);
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
 
-    final String expectedJsonString = "{\n"
+    final String expectedJson = "{\n"
                                 + "  \"continent\" : \"North America\",\n"
                                 + "  \"country\" : \"United States\",\n"
                                 + "  \"added\" : 57,\n"
@@ -80,7 +80,7 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"user\" : \"nuclear\",\n"
                                 + "  \"timestamp\" : \"2013-08-31T01:02:33Z\"\n"
                                 + "}";
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJsonString), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
+    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
