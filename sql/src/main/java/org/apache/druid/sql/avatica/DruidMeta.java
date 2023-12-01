@@ -62,6 +62,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -95,11 +96,15 @@ public class DruidMeta extends MetaImpl
    * @param <T>   any type that extends throwable
    * @return the original Throwable
    */
-  public static <T extends Throwable> T logFailure(T error)
+  public static <T extends Throwable> T logFailure(T error, Optional<String> sql)
   {
     if (error instanceof NoSuchConnectionException) {
       NoSuchConnectionException ex = (NoSuchConnectionException) error;
-      logFailure(error, "No such connection: %s", ex.getConnectionId());
+      if (sql.isPresent()) {
+        logFailure(error, "No such connection: %s, sql: [%s]", ex.getConnectionId(), sql.get());
+      } else {
+        logFailure(error, "No such connection: %s", ex.getConnectionId());
+      }
     } else if (error instanceof NoSuchStatementException) {
       NoSuchStatementException ex = (NoSuchStatementException) error;
       logFailure(
@@ -232,7 +237,7 @@ public class DruidMeta extends MetaImpl
   {
     try {
       // getDruidConnection re-syncs it.
-      getDruidConnection(ch.id);
+      getDruidConnection(ch.id, Optional.empty());
       return connProps;
     }
     catch (Throwable t) {
@@ -249,7 +254,7 @@ public class DruidMeta extends MetaImpl
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
     try {
-      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id)
+      final DruidJdbcStatement druidStatement = getDruidConnection(ch.id, Optional.empty())
           .createStatement(sqlStatementFactory, fetcherFactory);
       return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
     }
@@ -271,14 +276,14 @@ public class DruidMeta extends MetaImpl
   )
   {
     try {
-      final DruidConnection druidConnection = getDruidConnection(ch.id);
+      final DruidConnection druidConnection = getDruidConnection(ch.id, Optional.of(sql));
       final SqlQueryPlus sqlReq = new SqlQueryPlus(
           sql,
           druidConnection.sessionContext(),
           null, // No parameters in this path
           doAuthenticate(druidConnection)
       );
-      final DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id).createPreparedStatement(
+      final DruidJdbcPreparedStatement stmt = getDruidConnection(ch.id, Optional.of(sql)).createPreparedStatement(
           sqlStatementFactory,
           sqlReq,
           maxRowCount,
@@ -344,7 +349,7 @@ public class DruidMeta extends MetaImpl
     try {
       // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
       final DruidJdbcStatement druidStatement = getDruidStatement(statement, DruidJdbcStatement.class);
-      final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
+      final DruidConnection druidConnection = getDruidConnection(statement.connectionId, Optional.of(sql));
 
       // This method is called directly from the Avatica server: it does not go
       // through the connection first. We must lock the connection here to prevent race conditions.
@@ -532,7 +537,7 @@ public class DruidMeta extends MetaImpl
             "Requested offset %,d does not match currentOffset %,d",
             offset,
             currentOffset
-        ));
+        ), Optional.empty());
       }
       return !isDone;
     }
@@ -820,29 +825,29 @@ public class DruidMeta extends MetaImpl
     if (putResult != null) {
       // Didn't actually insert the connection.
       connectionCount.decrementAndGet();
-      throw logFailure(new ISE("Connection [%s] already open.", connectionId));
+      throw logFailure(new ISE("Connection [%s] already open.", connectionId), Optional.empty());
     }
 
     LOG.debug("Connection [%s] opened.", connectionId);
 
     // Call getDruidConnection to start the timeout timer.
-    return getDruidConnection(connectionId);
+    return getDruidConnection(connectionId, Optional.empty());
   }
 
   /**
    * Get a connection, or throw an exception if it doesn't exist. Also refreshes the timeout timer.
    *
-   * @param connectionId connection id
+   * @param connectionId connection id, Optional<String> sql (used only for logging purpose)
    * @return the connection
    * @throws NoSuchConnectionException if the connection id doesn't exist
    */
   @Nonnull
-  private DruidConnection getDruidConnection(final String connectionId)
+  private DruidConnection getDruidConnection(final String connectionId, Optional<String> sql)
   {
     final DruidConnection connection = connections.get(connectionId);
 
     if (connection == null) {
-      throw logFailure(new NoSuchConnectionException(connectionId));
+      throw logFailure(new NoSuchConnectionException(connectionId), sql);
     }
 
     return connection.sync(
@@ -863,16 +868,16 @@ public class DruidMeta extends MetaImpl
       final Class<T> stmtClass
   ) throws NoSuchStatementException
   {
-    final DruidConnection connection = getDruidConnection(statement.connectionId);
+    final DruidConnection connection = getDruidConnection(statement.connectionId, Optional.empty());
     final AbstractDruidJdbcStatement druidStatement = connection.getStatement(statement.id);
     if (druidStatement == null) {
-      throw logFailure(new NoSuchStatementException(statement));
+      throw logFailure(new NoSuchStatementException(statement), Optional.empty());
     }
     try {
       return stmtClass.cast(druidStatement);
     }
     catch (ClassCastException e) {
-      throw logFailure(new NoSuchStatementException(statement));
+      throw logFailure(new NoSuchStatementException(statement), Optional.empty());
     }
   }
 
@@ -888,7 +893,7 @@ public class DruidMeta extends MetaImpl
       return metaResultSet;
     }
     catch (Exception e) {
-      throw logFailure(new RuntimeException(e));
+      throw logFailure(new RuntimeException(e), Optional.of(sql));
     }
     finally {
       closeStatement(statement);
