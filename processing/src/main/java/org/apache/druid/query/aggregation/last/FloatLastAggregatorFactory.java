@@ -32,7 +32,6 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongFloat;
 import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -40,14 +39,11 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
-import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -154,27 +150,9 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
       VectorColumnSelectorFactory columnSelectorFactory
   )
   {
-    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
     VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
-
-    if (Types.isNumeric(capabilities)) {
-      VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-      VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
-          columnSelectorFactory.getReadableVectorInspector(),
-          fieldName,
-          valueSelector,
-          capabilities.toColumnType(),
-          ColumnType.FLOAT
-      );
-      return new FloatLastVectorAggregator(timeSelector, objectSelector);
-    }
-
     VectorObjectSelector vSelector = columnSelectorFactory.makeObjectSelector(fieldName);
-    if (capabilities != null) {
-      return new FloatLastVectorAggregator(timeSelector, vSelector);
-    } else {
-      return NilVectorAggregator.of(NilVectorAggregator.FLOAT_NIL_PAIR);
-    }
+    return new FloatLastVectorAggregator(timeSelector, vSelector);
   }
 
   @Override

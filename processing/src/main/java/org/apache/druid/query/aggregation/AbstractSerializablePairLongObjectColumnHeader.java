@@ -32,7 +32,6 @@ import java.util.Locale;
 
 public abstract class AbstractSerializablePairLongObjectColumnHeader<T extends SerializablePair<Long, ?>>
 {
-  public static final int EXPECTED_VERSION = 3;
   private static final int HEADER_SIZE_BYTES = 4;
   private static final int USE_INTEGER_MASK = 0x80;
   private static final int VERSION_INDEX = 0;

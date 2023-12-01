@@ -210,7 +210,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new StringLastAggregateCombiner();
+    return new GenericLastAggregateCombiner(SerializablePairLongString.class);
   }
 
   @Override

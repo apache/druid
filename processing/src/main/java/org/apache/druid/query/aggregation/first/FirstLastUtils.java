@@ -30,7 +30,7 @@ public class FirstLastUtils
 {
 
   /**
-   * Returns whether a given value selector *might* contain SerializablePairLongString objects.
+   * Returns whether a given value selector *might* contain object assignable from pairClass (SerializablePairLong*).
    */
   public static boolean selectorNeedsFoldCheck(
       final BaseObjectColumnValueSelector<?> valueSelector,
@@ -48,7 +48,7 @@ public class FirstLastUtils
       return false;
     }
 
-    // Check if the selector class could possibly be a SerializablePairLongString (either a superclass or subclass).
+    // Check if the selector class could possibly be of pairClass* (either a superclass or subclass).
     final Class<?> clazz = valueSelector.classOfObject();
     return clazz.isAssignableFrom(pairClass)
            || pairClass.isAssignableFrom(clazz);
@@ -68,6 +68,11 @@ public class FirstLastUtils
   }
 
 
+  /**
+   * Returns boolean array indicating null values for the given objectVector.
+   * Returns null is no null objects are found in objectVector
+   */
+  @Nullable
   public static boolean[] getNullVector(Object[] objectVector)
   {
     boolean containsNullValues = false;

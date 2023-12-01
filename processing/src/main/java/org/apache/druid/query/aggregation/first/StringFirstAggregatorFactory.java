@@ -245,7 +245,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new StringFirstAggregateCombiner();
+    return new GenericFirstAggregateCombiner(SerializablePairLongString.class);
   }
 
   @Override

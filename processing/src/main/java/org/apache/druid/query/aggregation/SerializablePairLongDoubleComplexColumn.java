@@ -101,9 +101,9 @@ public class SerializablePairLongDoubleComplexColumn implements ComplexColumn
           AbstractSerializablePairLongObjectColumnHeader.fromBuffer(masterByteBuffer, SerializablePairLongDouble.class);
 
       Preconditions.checkArgument(
-          columnHeader.getVersion() == AbstractSerializablePairLongObjectColumnHeader.EXPECTED_VERSION,
+          columnHeader.getVersion() == SerializablePairLongDoubleComplexMetricSerde.EXPECTED_VERSION,
           "version %s expected, got %s",
-          AbstractSerializablePairLongObjectColumnHeader.EXPECTED_VERSION,
+          SerializablePairLongDoubleComplexMetricSerde.EXPECTED_VERSION,
           columnHeader.getVersion()
       );
 

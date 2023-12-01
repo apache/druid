@@ -32,6 +32,7 @@ import java.util.Comparator;
 
 public class SerializablePairLongDoubleComplexMetricSerde extends AbstractSerializableLongObjectPairSerde<SerializablePairLongDouble>
 {
+  public static final int EXPECTED_VERSION = 1;
   public static final String TYPE_NAME = "serializablePairLongDouble";
 
   private static final SerializablePairLongDoubleSimpleStagedSerde SERDE = new SerializablePairLongDoubleSimpleStagedSerde();

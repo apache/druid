@@ -46,13 +46,13 @@ public class SerializablePairLongDoubleBufferStore extends AbstractSerializableP
 
     if (maxDelta <= Integer.MAX_VALUE) {
       columnHeader = new SerializablePairLongDoubleColumnHeader(
-          AbstractSerializablePairLongObjectColumnHeader.EXPECTED_VERSION,
+          SerializablePairLongDoubleComplexMetricSerde.EXPECTED_VERSION,
           true,
           minValue
       );
     } else {
       columnHeader = new SerializablePairLongDoubleColumnHeader(
-          AbstractSerializablePairLongObjectColumnHeader.EXPECTED_VERSION,
+          SerializablePairLongDoubleComplexMetricSerde.EXPECTED_VERSION,
           false,
           minValue
       );
