@@ -26,7 +26,7 @@ import org.apache.druid.error.DruidException;
  */
 public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
-  private static final String EXCEPTION_MESSAGE = "use getObject() instead";
+  private static final String EXCEPTION_MESSAGE = "This class has restricted API; use getObject() instead";
 
   @Override
   public final float getFloat()
