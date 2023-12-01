@@ -622,7 +622,7 @@ public class MSQSelectTest extends MSQTestBase
                                             .build();
 
     testSelectQuery()
-        .setSql("select m1,SUM(m1) OVER() cc from foo group by m1")
+        .setSql("select m1,SUM(m1) OVER(PARTITION BY m1) cc from foo group by m1")
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(GroupByQuery.builder()
                                                       .setDataSource(CalciteTests.DATASOURCE1)

@@ -152,7 +152,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
        public Operator.Signal push(RowsAndColumns rac)
        {
          //outputFrameChannel.output(rac.toFrame());
-         return null;
+         return Operator.Signal.GO;
        }
 
        @Override
@@ -162,7 +162,11 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
        }
      });
 
+   } else if (inputChannel.isFinished()) {
+     return ReturnOrAwait.returnObject(Unit.instance());
+   } else {
+     return ReturnOrAwait.awaitAll(inputChannels().size());
    }
-    return null;
+    return ReturnOrAwait.runAgain();
   }
 }
