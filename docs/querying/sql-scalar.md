@@ -280,35 +280,35 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 
 ### Complex type names
 
-The `DECODE_BASE64_COMPLEX` function accepts the following complex type names:
+The `DECODE_BASE64_COMPLEX` function accepts the following complex type names as arguments for the `dataType` parameter:
 
 Built-in:
-  * hyperUnique
-  * serializablePairLongString
+  * `hyperUnique`
+  * `serializablePairLongString`
 
 Bloom filter:
-  * bloom
+  * `bloom`
 
 DataSketches:
-  * arrayOfDoublesSketch
-  * HLLSketch
-  * KllDoublesSketch
-  * KllFloatsSketch
-  * quantilesDoublesSketch
-  * thetaSketch
+  * `arrayOfDoublesSketch`
+  * `HLLSketch`
+  * `KllDoublesSketch`
+  * `KllFloatsSketch`
+  * `quantilesDoublesSketch`
+  * `thetaSketch`
 
 Histogram:
-  * approximateHistogram
-  * fixedBucketsHistogram
+  * `approximateHistogram`
+  * `fixedBucketsHistogram`
 
 Stats:
-  * variance
+  * `variance`
 
 Compressed big decimal:
-  * compressedBigDecimal
+  * `compressedBigDecimal`
 
 Moment sketch:
-  * momentSketch
+  * `momentSketch`
 
 T-digest sketch:
-  * tDigestSketch
+  * `tDigestSketch`
