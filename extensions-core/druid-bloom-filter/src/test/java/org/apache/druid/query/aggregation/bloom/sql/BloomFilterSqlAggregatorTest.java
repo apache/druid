@@ -96,7 +96,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                     .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
                     .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return new SpecificSegmentsQuerySegmentWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
