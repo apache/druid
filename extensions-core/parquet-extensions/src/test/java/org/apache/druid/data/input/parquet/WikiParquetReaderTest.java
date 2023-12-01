@@ -62,7 +62,7 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
     reader = createReader("example/wiki/wiki.parquet", schema, JSONPathSpec.DEFAULT);
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
 
-    final String expectedJsonString = "{\n"
+    final String expectedJson = "{\n"
                                 + "  \"continent\" : \"North America\",\n"
                                 + "  \"country\" : \"United States\",\n"
                                 + "  \"added\" : 57,\n"
