@@ -95,7 +95,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`TEXTCAT(expr, expr)`|Two argument version of `CONCAT`.|
 |`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
-|`DECODE_BASE64_UTF8(expr)`|Decodes base64-encoded strings into UTF-8 encoded strings.|
+|`DECODE_BASE64_UTF8(expr)`|Decodes a Base64-encoded string into a UTF-8 encoded string.|
 |`LEFT(expr, [length])`|Returns the leftmost length characters from `expr`.|
 |`RIGHT(expr, [length])`|Returns the rightmost length characters from `expr`.|
 |`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
@@ -274,13 +274,13 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`CAST(value AS TYPE)`|Cast value to another type. See [Data types](sql-data-types.md) for details about how Druid SQL handles CAST.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`DECODE_BASE64_COMPLEX(expr1, expr2)`| Decodes complex expressions represented as literals, where `expr1` is a string literal with a valid [complex type name](#complex-type-expressions) and `expr2` is a base64-encoded string that contains a serialized value of the type defined in `expr1`.|
+|`DECODE_BASE64_COMPLEX(dataType, expr)`| Decodes a Base64-encoded string into a [complex type](sql-scalar.md#complex-type-names), where `dataType` represents the complex type and `expr` is the Base64-encoded string to decode.|
 |`NULLIF(value1, value2)`|Returns NULL if `value1` and `value2` match, else returns `value1`.|
 |`NVL(value1, value2)`|Returns `value1` if `value1` is not null, otherwise `value2`.|
 
-### Complex type expressions
+### Complex type names
 
-The following is a non-exhaustive list of complex type expressions supported by Druid SQL:
+The `DECODE_BASE64_COMPLEX` function accepts the following complex type names:
 
 Built-in:
   * hyperUnique

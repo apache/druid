@@ -506,11 +506,11 @@ Rounds down a timestamp by a given time unit.
 
 ## DECODE_BASE64_COMPLEX
 
-`DECODE_BASE64_COMPLEX(expr1, expr2)`
+`DECODE_BASE64_COMPLEX(dataType, expr)`
 
 **Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
 
-Decodes complex expressions represented as literals, where `expr1` is a string literal with a valid [complex type name](sql-scalar.md#complex-type-expressions) and `expr2` is a base64-encoded string that contains a serialized value of the type defined in `expr1`.
+Decodes a Base64-encoded string into a [complex type](sql-scalar.md#complex-type-names), where `dataType` represents the complex type and `expr` is the Base64-encoded string to decode.
 
 ## DECODE_BASE64_UTF8
 
@@ -518,7 +518,8 @@ Decodes complex expressions represented as literals, where `expr1` is a string l
 
 **Function type:** [Scalar, string](sql-scalar.md#string-functions)
 
-Decodes base64-encoded strings into UTF-8 encoded strings.
+
+Decodes a Base64-encoded string into a UTF-8 encoded string.
 
 ## DEGREES
 
