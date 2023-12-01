@@ -388,20 +388,28 @@
                 <artifactId>bcutil-jdk15on</artifactId>
                 <version>1.70</version>
             </dependency>
+            <!-- transitive dependency of testng
+            this would be resolved by updating
+            testng to 7.8.0 -->
             <dependency>
                 <groupId>org.apache.ant</groupId>
                 <artifactId>ant</artifactId>
                 <version>1.10.14</version>
             </dependency>
+            <!-- transitive dependency of kafka-clients and kubernetes client
+            this should get resolved with the update of above depdendencies -->
             <dependency>
                 <groupId>org.bitbucket.b_c</groupId>
                 <artifactId>jose4j</artifactId>
                 <version>0.9.3</version>
             </dependency>
+            <!-- transitive dependency of kafka-clientorg.apache.calcite:calcite-testkit
+            and kafka-protobuf-provider
+            this should get resolved with the update of above depdendencies -->
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib</artifactId>
-                <version>1.4.32</version>
+                <version>1.6.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
