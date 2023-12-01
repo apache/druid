@@ -141,7 +141,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"col\" : -1\n"
                                 + "}";
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -340,7 +340,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"repeatedInt\" : [ 1, 2, 3 ]\n"
                                 + "}";
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
+    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
