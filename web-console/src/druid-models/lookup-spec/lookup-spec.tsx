@@ -466,11 +466,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     type: 'number',
     placeholder: '30 (optional), default is 0',
     defined: l =>
-      oneOfKnown(
-        deepGet(l, 'extractionNamespace.type'),
-        KNOWN_EXTRACTION_NAMESPACE_TYPES,
-        'jdbc',
-      ),
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'How much jitter to add (in seconds) up to maximum as a delay (actual value will be used as random from 0 to jitterSeconds), used to distribute db load more evenly',
     required: false,
     suggestions: [],
@@ -480,11 +476,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     type: 'number',
     placeholder: '60 (optional), default is 60 sec',
     defined: l =>
-      oneOfKnown(
-        deepGet(l, 'extractionNamespace.type'),
-        KNOWN_EXTRACTION_NAMESPACE_TYPES,
-        'jdbc',
-      ),
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'How much time (in seconds) it can take to query and populate lookup values. It will be helpful in lookup updates. On lookup update, it will wait maximum of `loadTimeoutSeconds` for new lookup to come up and continue serving from old lookup until new lookup successfully loads.',
     required: false,
     suggestions: [],
@@ -494,11 +486,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     type: 'number',
     placeholder: '10, (optional), default is 10',
     defined: l =>
-      oneOfKnown(
-        deepGet(l, 'extractionNamespace.type'),
-        KNOWN_EXTRACTION_NAMESPACE_TYPES,
-        'jdbc',
-      ),
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs.',
     required: false,
     suggestions: [],
