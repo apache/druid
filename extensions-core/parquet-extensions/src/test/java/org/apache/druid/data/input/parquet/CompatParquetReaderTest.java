@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.parquet;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
@@ -43,8 +42,6 @@ import java.util.List;
  */
 public class CompatParquetReaderTest extends BaseParquetReaderTest
 {
-  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
-  
   @Test
   public void testBinaryAsString() throws IOException
   {
@@ -97,12 +94,14 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"field\" : \"hey this is &é(-è_çà)=^$ù*! Ω^^\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
+    Assert.assertEquals(objectMapper.readTree(expectedJson), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
     final String expectedJsonBinary = "{\n"
                                 + "  \"field\" : \"aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==\",\n"
                                 + "  \"ts\" : 1471800234\n"
-                                + "}"; 
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJsonBinary), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues())));
+                                + "}";
+    Assert.assertEquals(
+        objectMapper.readTree(expectedJsonBinary), 
+        objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues())));
   }
 
   @Test
@@ -303,7 +302,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    } ]\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
+    Assert.assertEquals(objectMapper.readTree(expectedJson), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -382,7 +381,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"repeatedMessage\" : [ 3 ]\n"
                                 + "  } ]\n"
                                 + "}";
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
+    Assert.assertEquals(objectMapper.readTree(expectedJson), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 
   @Test
@@ -432,6 +431,6 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"someId\" : 9\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(JSON_MAPPER.readTree(expectedJson), JSON_MAPPER.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
+    Assert.assertEquals(objectMapper.readTree(expectedJson), objectMapper.readTree(DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues())));
   }
 }
