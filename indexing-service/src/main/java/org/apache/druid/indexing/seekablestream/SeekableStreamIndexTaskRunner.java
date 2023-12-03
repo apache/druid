@@ -1849,6 +1849,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
+    // trigger reading `status` from memory, see: https://github.com/apache/druid/issues/15468
+    log.info("Check TaskRunner status before pause(): %s", status);
+
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
