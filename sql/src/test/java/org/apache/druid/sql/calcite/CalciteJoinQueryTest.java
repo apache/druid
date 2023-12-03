@@ -125,10 +125,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     this.sortBasedJoin = sortBasedJoin;
   }
 
+  @SqlTestFrameworkConfig(minTopNThreshold = 1)
   @Test
   public void testInnerJoinWithLimitAndAlias()
   {
-    minTopNThreshold = 1;
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     testQuery(
@@ -183,12 +184,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
 
+  // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
+  // to compute the query with limit 1.
+  @SqlTestFrameworkConfig(minTopNThreshold = 1)
   @Test
   public void testExactTopNOnInnerJoinWithLimit()
   {
-    // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
-    // to compute the query with limit 1.
-    minTopNThreshold = 1;
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     testQuery(
@@ -5803,10 +5804,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(minTopNThreshold = 1)
   @Test
   public void testJoinWithAliasAndOrderByNoGroupBy()
   {
-    minTopNThreshold = 1;
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     testQuery(
