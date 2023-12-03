@@ -148,7 +148,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                   // string aggregators
                   new StringFirstAggregatorFactory("stringFirst", "col", null, 1024),
                   new StringLastAggregatorFactory("stringLast", "col", null, 1024),
-                  new StringAnyAggregatorFactory("stringAny", "col", 1024),
+                  new StringAnyAggregatorFactory("stringAny", "col", 1024, true),
                   // sketch aggs
                   new CardinalityAggregatorFactory("cardinality", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
                   new HyperUniquesAggregatorFactory("hyperUnique", "hyperunique"),
@@ -307,7 +307,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
         // string aggregators
         new StringFirstAggregatorFactory("col", "col", null, 1024),
         new StringLastAggregatorFactory("col", "col", null, 1024),
-        new StringAnyAggregatorFactory("col", "col", 1024),
+        new StringAnyAggregatorFactory("col", "col", 1024, true),
+        new StringAnyAggregatorFactory("col", "col", 1024, false),
         // sketch aggs
         new CardinalityAggregatorFactory("col", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
         new HyperUniquesAggregatorFactory("col", "hyperunique"),

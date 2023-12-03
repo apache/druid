@@ -29,9 +29,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
@@ -127,7 +128,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                                 .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
                                                 .setAggregatorSpecs(
-                                                    new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                                    new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                                     useDefault
                                                     ? new CountAggregatorFactory("_a0:count")
                                                     : new FilteredAggregatorFactory(
@@ -158,15 +159,15 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                         )
                         .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                         .setDimensions(new DefaultDimensionSpec("country", "d0"))
-                        .setAggregatorSpecs(new LongAnyAggregatorFactory("a0", "j0._a0"))
+                        .setAggregatorSpecs(new DoubleAnyAggregatorFactory("a0", "j0._a0"))
                         .setGranularity(new AllGranularity())
                         .setContext(queryContext)
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"India", 2L},
-            new Object[]{"USA", 1L},
-            new Object[]{"canada", 3L}
+            new Object[]{"India", 2.0},
+            new Object[]{"USA", 1.0},
+            new Object[]{"canada", 3.0}
         )
     );
   }

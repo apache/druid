@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>28.0.0-SNAPSHOT</version>
+    <version>29.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -76,17 +76,18 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.5.0</apache.curator.version>
-        <apache.kafka.version>3.5.1</apache.kafka.version>
-        <apache.ranger.version>2.0.0</apache.ranger.version>
-        <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
+        <apache.kafka.version>3.6.0</apache.kafka.version>
+        <apache.ranger.version>2.4.0</apache.ranger.version>
+        <apache.ranger.gson.version>2.10.1</apache.ranger.gson.version>
         <scala.library.version>2.13.11</scala.library.version>
         <avatica.version>1.23.0</avatica.version>
-        <avro.version>1.11.1</avro.version>
+        <avro.version>1.11.3</avro.version>
         <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
              default_config.fmpp
           -->
         <calcite.version>1.35.0</calcite.version>
-        <datasketches.version>4.1.0</datasketches.version>
+        <confluent.version>6.2.12</confluent.version>
+        <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
@@ -95,15 +96,15 @@
         <guava.version>31.1-jre</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.51.v20230217</jetty.version>
+        <jetty.version>9.4.53.v20231009</jetty.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.12.7</jackson.version>
+        <jackson.version>2.12.7.20221012</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.18.0</log4j.version>
         <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.94.Final</netty4.version>
+        <netty4.version>4.1.100.Final</netty4.version>
         <postgresql.version>42.6.0</postgresql.version>
         <protobuf.version>3.24.0</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -111,7 +112,11 @@
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
-        <mockito.version>4.3.1</mockito.version>
+        <mockito.version>5.5.0</mockito.version>
+        <!-- mockito-inline artifact was removed in mockito 5.3 (mockito 5.x is required for Java >17),
+             however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11.
+             We use the following property to pick the proper artifact based on Java version (see pre-java-11 profile) -->
+        <mockito.inline.artifact>core</mockito.inline.artifact>
         <aws.sdk.version>1.12.497</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
@@ -120,10 +125,12 @@
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
-        <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
+        <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
+        <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
+        <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
+        <com.google.apis.storage.version>v1-rev20230301-2.0.0</com.google.apis.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
+        <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
         <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
@@ -247,6 +254,14 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
+
+        <repository>
+            <id>cflt-public</id>
+            <url>https://packages.confluent.io/maven/</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
     <pluginRepositories>
@@ -265,7 +280,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.13</version>
+                <version>1.16.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -772,9 +787,9 @@
                 <version>3.3.6</version>
             </dependency>
             <dependency>
-                <groupId>net.spy</groupId>
-                <artifactId>spymemcached</artifactId>
-                <version>2.12.3</version>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>elasticache-java-cluster-client</artifactId>
+                <version>1.2.0</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
@@ -804,7 +819,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.10.3</version>
+                <version>1.1.10.4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -911,7 +926,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.9.0</version>
+                <version>0.9.49</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
@@ -1038,7 +1053,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>4.3</version>
+                <version>5.2.0</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1048,11 +1063,11 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-              <groupId>org.mockito</groupId>
-              <artifactId>mockito-bom</artifactId>
-              <version>${mockito.version}</version>
-              <scope>import</scope>
-              <type>pom</type>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-bom</artifactId>
+                <version>${mockito.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>com.github.docker-java</groupId>
@@ -1102,6 +1117,13 @@
                 <artifactId>assertj-core</artifactId>
                 <version>3.24.2</version>
                 <scope>test</scope>
+                <exclusions>
+                  <!-- exclude older byte-buddy until assertj-core depends on 1.14+ for Java 21 -->
+                  <exclusion>
+                    <groupId>net.bytebuddy</groupId>
+                    <artifactId>byte-buddy</artifactId>
+                  </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.ircclouds.irc</groupId>
@@ -1170,12 +1192,12 @@
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client</artifactId>
-                <version>${com.google.apis.client.version}</version>
+                <version>${com.google.http.client.apis.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
                 <artifactId>google-http-client-jackson2</artifactId>
-                <version>${com.google.apis.client.version}</version>
+                <version>${com.google.http.client.apis.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>com.fasterxml.jackson.core</groupId>
@@ -1239,7 +1261,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.10.1</version>
+                <version>3.15.1</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1479,7 +1501,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.17</version>
+                <version>1.23</version>
                 <executions>
                     <execution>
                         <id>check-java-api</id>
@@ -1662,6 +1684,7 @@
                         <argLine>
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
+                            ${jdk.security.manager.allow.argLine}
                             -Xmx1500m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -1729,7 +1752,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.2.4</version>
+                    <version>3.5.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1759,7 +1782,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>1.6.0</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -1795,13 +1818,38 @@
               <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.11.3</version>
+                <version>1.14.2</version>
               </plugin>
             </plugins>
         </pluginManagement>
     </build>
 
     <profiles>
+        <!-- mockito 5.x dropped support for Java 8, but is necessary to test against Java >17 -->
+        <profile>
+          <id>pre-java-11</id>
+          <activation>
+            <jdk>(,11)</jdk>
+          </activation>
+          <properties>
+            <!-- mockito-inline was removed in mockito 5.3, but is necessary when running against mockito 4.x for Java 8 -->
+            <mockito.version>4.11.0</mockito.version>
+            <mockito.inline.artifact>inline</mockito.inline.artifact>
+          </properties>
+        </profile>
+        <profile>
+            <id>java-12+</id>
+            <activation>
+                <jdk>[12,)</jdk>
+            </activation>
+            <properties>
+                <jdk.security.manager.allow.argLine>
+                  <!-- required for system-rules with Java >= 18 https://github.com/stefanbirkner/system-rules/issues/85 -->
+                  <!-- this option is only available starting in Java 12 -->
+                    -Djava.security.manager=allow
+                </jdk.security.manager.allow.argLine>
+            </properties>
+        </profile>
         <profile>
             <id>java-9+</id>
             <activation>
@@ -2102,6 +2150,7 @@
             <maven.javadoc.skip>true</maven.javadoc.skip>
             <pmd.skip>true</pmd.skip>
             <spotbugs.skip>true</spotbugs.skip>
+            <maven.gitcommitid.skip>true</maven.gitcommitid.skip>
           </properties>
         </profile>
         <profile>

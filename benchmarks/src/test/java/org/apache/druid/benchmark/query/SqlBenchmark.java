@@ -46,6 +46,7 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
@@ -63,7 +64,6 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -413,7 +413,24 @@ public class SqlBenchmark
       "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dimZipf) FROM foo",
       "SELECT APPROX_COUNT_DISTINCT_DS_HLL(dimZipf) FROM foo",
       "SELECT APPROX_COUNT_DISTINCT_DS_HLL_UTF8(dimZipf) FROM foo",
-      "SELECT APPROX_COUNT_DISTINCT_DS_THETA(dimZipf) FROM foo"
+      "SELECT APPROX_COUNT_DISTINCT_DS_THETA(dimZipf) FROM foo",
+      // 32: LATEST aggregator long
+      "SELECT LATEST(long1) FROM foo",
+      // 33: LATEST aggregator double
+      "SELECT LATEST(double4) FROM foo",
+      // 34: LATEST aggregator double
+      "SELECT LATEST(float3) FROM foo",
+      // 35: LATEST aggregator double
+      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
+      // 36,37: filter numeric nulls
+      "SELECT SUM(long5) FROM foo WHERE long5 IS NOT NULL",
+      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1",
+      // 38: EARLIEST aggregator long
+      "SELECT EARLIEST(long1) FROM foo",
+      // 39: EARLIEST aggregator double
+      "SELECT EARLIEST(double4) FROM foo",
+      // 40: EARLIEST aggregator float
+      "SELECT EARLIEST(float3) FROM foo"
   );
 
   @Param({"5000000"})

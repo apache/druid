@@ -64,6 +64,7 @@ import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -172,7 +173,7 @@ public class TestDataBuilder
   );
 
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),
@@ -222,7 +223,7 @@ public class TestDataBuilder
       .withRollup(false)
       .build();
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("count")
       )

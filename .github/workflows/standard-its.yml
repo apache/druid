@@ -77,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [query, query-retry, query-error, security, high-availability]
+        testing_group: [query, query-retry, query-error, security, high-availability, centralized-table-schema]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -93,7 +93,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [8, 17]
+        jdk: [8, 17, 21]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -150,15 +150,21 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Setup java
-        run: export JAVA_HOME=$JAVA_HOME_8_X64
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'zulu'
 
+      # the build step produces SNAPSHOT artifacts into the local maven repository,
+      # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Restore Maven repository
         id: maven-restore
         uses: actions/cache/restore@v3
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-8-${{ github.sha }}
+          restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
 
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true'
@@ -189,6 +195,6 @@ jobs:
     with:
       build_jdk: 8
       runtime_jdk: 8
-      testing_groups: -DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties
+      testing_groups: -DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties,centralized-table-schema
       use_indexer: ${{ matrix.indexer }}
       group: other

@@ -30,7 +30,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.any.NumericNilVectorAggregator;
+import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -138,7 +138,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
           timeColumn);
       return new LongFirstVectorAggregator(timeSelector, valueSelector);
     }
-    return NumericNilVectorAggregator.longNilVectorAggregator();
+    return NilVectorAggregator.of(NilVectorAggregator.LONG_NIL_PAIR);
   }
 
   @Override

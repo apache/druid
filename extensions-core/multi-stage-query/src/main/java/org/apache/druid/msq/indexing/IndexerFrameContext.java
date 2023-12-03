@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -38,17 +39,20 @@ public class IndexerFrameContext implements FrameContext
   private final IndexIO indexIO;
   private final DataSegmentProvider dataSegmentProvider;
   private final WorkerMemoryParameters memoryParameters;
+  private final LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory;
 
   public IndexerFrameContext(
       IndexerWorkerContext context,
       IndexIO indexIO,
       DataSegmentProvider dataSegmentProvider,
+      LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory,
       WorkerMemoryParameters memoryParameters
   )
   {
     this.context = context;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
+    this.loadedSegmentDataProviderFactory = loadedSegmentDataProviderFactory;
     this.memoryParameters = memoryParameters;
   }
 
@@ -75,6 +79,13 @@ public class IndexerFrameContext implements FrameContext
   {
     return dataSegmentProvider;
   }
+
+  @Override
+  public LoadedSegmentDataProviderFactory loadedSegmentDataProviderFactory()
+  {
+    return loadedSegmentDataProviderFactory;
+  }
+
 
   @Override
   public File tempDir()

@@ -1,1 +1,1 @@
-SELECT col_vchar_52, col_int, DENSE_RANK () OVER (PARTITION BY col_vchar_52 order by col_int) dense_rnk FROM "smlTbl.parquet" WHERE col_vchar_52 = "DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF"
+SELECT col_vchar_52, col_int, DENSE_RANK () OVER (PARTITION BY col_vchar_52 order by col_int) dense_rnk FROM "smlTbl.parquet" WHERE col_vchar_52 = 'DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF'

@@ -21,6 +21,7 @@ package org.apache.druid.segment.join.filter;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.query.filter.InDimFilter;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -43,7 +44,7 @@ public class JoinFilterColumnCorrelationAnalysis
   private final String joinColumn;
   @Nonnull private final List<String> baseColumns;
   @Nonnull private final List<Expr> baseExpressions;
-  private final Map<Pair<String, String>, Optional<Set<String>>> correlatedValuesMap;
+  private final Map<Pair<String, String>, Optional<InDimFilter.ValuesSet>> correlatedValuesMap;
 
   public JoinFilterColumnCorrelationAnalysis(
       String joinColumn,
@@ -75,7 +76,7 @@ public class JoinFilterColumnCorrelationAnalysis
     return baseExpressions;
   }
 
-  public Map<Pair<String, String>, Optional<Set<String>>> getCorrelatedValuesMap()
+  public Map<Pair<String, String>, Optional<InDimFilter.ValuesSet>> getCorrelatedValuesMap()
   {
     return correlatedValuesMap;
   }

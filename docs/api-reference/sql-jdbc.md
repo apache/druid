@@ -30,7 +30,8 @@ sidebar_label: SQL JDBC driver
 
 
 You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/).
-We recommend using Avatica JDBC driver version 1.22.0 or later.
+We recommend using Avatica JDBC driver version 1.23.0 or later. Note that starting with Avatica 1.21.0, you may need to set the [`transparent_reconnection`](https://calcite.apache.org/avatica/docs/client_reference.html#transparent_reconnection) property to `true` if you notice intermittent query failures.
+
 Once you've downloaded the Avatica client jar, add it to your classpath.
 
 Example connection string:
@@ -67,6 +68,10 @@ String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica
 // Any property from https://druid.apache.org/docs/latest/querying/sql-query-context.html can go here.
 Properties connectionProperties = new Properties();
 connectionProperties.setProperty("sqlTimeZone", "Etc/UTC");
+//To connect to a Druid deployment protected by basic authentication,
+//you can incorporate authentication details from https://druid.apache.org/docs/latest/operations/security-overview   
+connectionProperties.setProperty("user", "admin");                
+connectionProperties.setProperty("password", "password1");     
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   try (

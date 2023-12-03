@@ -21,13 +21,12 @@ package org.apache.druid.compressedbigdecimal;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.CastedLiteralOperandTypeCheckers;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -36,12 +35,12 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -71,12 +70,10 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
@@ -88,13 +85,8 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
     // fetch sum column expression
     DruidExpression sumColumn = Expressions.toDruidExpression(
         plannerContext,
-        rowSignature,
-        Expressions.fromFieldAccess(
-            rexBuilder.getTypeFactory(),
-            rowSignature,
-            project,
-            aggregateCall.getArgList().get(0)
-        )
+        inputAccessor.getInputRowSignature(),
+        inputAccessor.getField(aggregateCall.getArgList().get(0))
     );
 
     if (sumColumn == null) {
@@ -114,12 +106,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
     Integer size = null;
 
     if (aggregateCall.getArgList().size() >= 2) {
-      RexNode sizeArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(1)
-      );
+      RexNode sizeArg = inputAccessor.getField(aggregateCall.getArgList().get(1));
 
       size = ((Number) RexLiteral.value(sizeArg)).intValue();
     }
@@ -128,12 +115,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
     Integer scale = null;
 
     if (aggregateCall.getArgList().size() >= 3) {
-      RexNode scaleArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(2)
-      );
+      RexNode scaleArg = inputAccessor.getField(aggregateCall.getArgList().get(2));
 
       scale = ((Number) RexLiteral.value(scaleArg)).intValue();
     }
@@ -141,12 +123,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
     Boolean useStrictNumberParsing = null;
 
     if (aggregateCall.getArgList().size() >= 4) {
-      RexNode useStrictNumberParsingArg = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(3)
-      );
+      RexNode useStrictNumberParsingArg = inputAccessor.getField(aggregateCall.getArgList().get(3));
 
       useStrictNumberParsing = RexLiteral.booleanValue(useStrictNumberParsingArg);
     }
@@ -180,7 +157,7 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
                   OperandTypes.sequence(
                       "'" + name + "(column, size)'",
                       OperandTypes.ANY,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
               ),
@@ -188,8 +165,8 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
                   OperandTypes.sequence(
                       "'" + name + "(column, size, scale)'",
                       OperandTypes.ANY,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
               ),
@@ -197,8 +174,8 @@ public abstract class CompressedBigDecimalSqlAggregatorBase implements SqlAggreg
                   OperandTypes.sequence(
                       "'" + name + "(column, size, scale, strictNumberParsing)'",
                       OperandTypes.ANY,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL,
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL,
                       OperandTypes.BOOLEAN
                   ),
                   OperandTypes.family(

@@ -32,6 +32,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.BuiltInExprMacros;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArrayConcatSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
@@ -54,7 +55,6 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
-import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.WindowSqlAggregate;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayAppendOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConcatOperatorConversion;
@@ -79,6 +79,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64Operat
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.DecodeBase64UTFOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
@@ -227,11 +228,17 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(ContainsOperatorConversion.caseInsensitive())
                    .build();
 
+  private static final SqlOperatorConversion COMPLEX_DECODE_OPERATOR_CONVERSIONS = new ComplexDecodeBase64OperatorConversion();
   private static final List<SqlOperatorConversion> VALUE_COERCION_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new CastOperatorConversion())
                    .add(new ReinterpretOperatorConversion())
-                   .add(new ComplexDecodeBase64OperatorConversion())
+                   .add(COMPLEX_DECODE_OPERATOR_CONVERSIONS)
+                   .add(new AliasedOperatorConversion(
+                       COMPLEX_DECODE_OPERATOR_CONVERSIONS,
+                       BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS
+                   ))
+                   .add(new DecodeBase64UTFOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> ARRAY_OPERATOR_CONVERSIONS =
@@ -372,22 +379,12 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.UNARY_MINUS, "-"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NULL, "isnull"))
                    .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NOT_NULL, "notnull"))
-                   .add(new UnarySuffixOperatorConversion(
-                       SqlStdOperatorTable.IS_FALSE,
-                       "<= 0"
-                   )) // Matches Evals.asBoolean
-                   .add(new UnarySuffixOperatorConversion(
-                       SqlStdOperatorTable.IS_NOT_TRUE,
-                       "<= 0"
-                   )) // Matches Evals.asBoolean
-                   .add(new UnarySuffixOperatorConversion(
-                       SqlStdOperatorTable.IS_TRUE,
-                       "> 0"
-                   )) // Matches Evals.asBoolean
-                   .add(new UnarySuffixOperatorConversion(
-                       SqlStdOperatorTable.IS_NOT_FALSE,
-                       "> 0"
-                   )) // Matches Evals.asBoolean
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_DISTINCT_FROM, "isdistinctfrom"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "notdistinctfrom"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_FALSE, "isfalse"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_TRUE, "istrue"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_FALSE, "notfalse"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_TRUE, "nottrue"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MULTIPLY, "*"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MOD, "%"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.DIVIDE, "/"))

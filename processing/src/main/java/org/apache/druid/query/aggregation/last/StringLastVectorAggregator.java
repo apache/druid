@@ -64,8 +64,9 @@ public class StringLastVectorAggregator implements VectorAggregator
     if (timeSelector == null) {
       return;
     }
-    long[] times = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    final long[] times = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
     lastTime = buf.getLong(position);
     int index;
@@ -74,6 +75,9 @@ public class StringLastVectorAggregator implements VectorAggregator
         continue;
       }
       if (times[i] <= lastTime) {
+        continue;
+      }
+      if (nullTimeVector != null && nullTimeVector[i]) {
         continue;
       }
       index = i;
@@ -127,22 +131,24 @@ public class StringLastVectorAggregator implements VectorAggregator
     if (timeSelector == null) {
       return;
     }
-    long[] timeVector = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    final long[] timeVector = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
     // iterate once over the object vector to find first non null element and
     // determine if the type is Pair or not
     boolean foldNeeded = false;
     for (Object obj : objectsWhichMightBeStrings) {
-      if (obj == null) {
-        continue;
-      } else {
+      if (obj != null) {
         foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(obj);
         break;
       }
     }
 
     for (int i = 0; i < numRows; i++) {
+      if (nullTimeVector != null && nullTimeVector[i]) {
+        continue;
+      }
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long lastTime = buf.getLong(position);

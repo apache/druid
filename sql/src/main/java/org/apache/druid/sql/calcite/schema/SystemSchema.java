@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
@@ -69,6 +68,7 @@ import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHo
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -276,7 +276,7 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      //get available segments from druidSchema
+      // get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
           druidSchema.cache().getSegmentMetadataSnapshot();
       final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
@@ -291,9 +291,9 @@ public class SystemSchema extends AbstractSchema
         partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
       }
 
-      // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
-      // Coordinator.
-      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getPublishedSegments();
+      // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
+      // Coordinator. This may include both published and realtime segments.
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
 
@@ -303,13 +303,30 @@ public class SystemSchema extends AbstractSchema
             final DataSegment segment = val.getDataSegment();
             segmentsAlreadySeen.add(segment.getId());
             final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
-            long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
+            long numReplicas = 0L, numRows = 0L, isRealtime, isAvailable = 0L;
+
             if (partialSegmentData != null) {
               numReplicas = partialSegmentData.getNumReplicas();
-              numRows = partialSegmentData.getNumRows();
               isAvailable = partialSegmentData.isAvailable();
-              isRealtime = partialSegmentData.isRealtime();
+              numRows = partialSegmentData.getNumRows();
             }
+
+            // If druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
+            // broker might have outdated or no information regarding numRows and rowSignature for a segment.
+            // In that case, we should use {@code numRows} from the segment polled from the coordinator.
+            if (null != val.getNumRows()) {
+              numRows = val.getNumRows();
+            }
+
+            isRealtime = val.isRealtime() ? 1 : 0;
+
+            // set of segments returned from Coordinator include published and realtime segments
+            // so realtime segments are not published and vice versa
+            boolean isPublished = !val.isRealtime();
+
+            // is_active is true for published segments that are not overshadowed or else they should be realtime
+            boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
+
             try {
               return new Object[]{
                   segment.getId(),
@@ -321,10 +338,8 @@ public class SystemSchema extends AbstractSchema
                   (long) segment.getShardSpec().getPartitionNum(),
                   numReplicas,
                   numRows,
-                  //is_active is true for published segments that are not overshadowed
-                  val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
-                  //is_published is true for published segments
-                  IS_PUBLISHED_TRUE,
+                  isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
+                  isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
@@ -332,8 +347,9 @@ public class SystemSchema extends AbstractSchema
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
                   segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
+                  // If the segment is unpublished, we won't have this information yet.
                   // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
-                  // This should be automatically updated in the next refesh with Coordinator.
+                  // This should be automatically updated in the next Coordinator poll.
                   val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
               };
             }
@@ -342,6 +358,8 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
+      // If druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator, all the segments in this loop
+      // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
           .from(() -> getAuthorizedAvailableSegments(
               availableSegmentEntries,
@@ -390,7 +408,6 @@ public class SystemSchema extends AbstractSchema
       );
 
       return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
-
     }
 
     private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
@@ -822,21 +839,7 @@ public class SystemSchema extends AbstractSchema
             public Object[] current()
             {
               final TaskStatusPlus task = it.next();
-              @Nullable final String host = task.getLocation().getHost();
-              @Nullable final String hostAndPort;
 
-              if (host == null) {
-                hostAndPort = null;
-              } else {
-                final int port;
-                if (task.getLocation().getTlsPort() >= 0) {
-                  port = task.getLocation().getTlsPort();
-                } else {
-                  port = task.getLocation().getPort();
-                }
-
-                hostAndPort = HostAndPort.fromParts(host, port).toString();
-              }
               return new Object[]{
                   task.getId(),
                   task.getGroupId(),
@@ -847,8 +850,8 @@ public class SystemSchema extends AbstractSchema
                   toStringOrNull(task.getStatusCode()),
                   toStringOrNull(task.getRunnerStatusCode()),
                   task.getDuration() == null ? 0L : task.getDuration(),
-                  hostAndPort,
-                  host,
+                  task.getLocation().getLocation(),
+                  task.getLocation().getHost(),
                   (long) task.getLocation().getPort(),
                   (long) task.getLocation().getTlsPort(),
                   task.getErrorMsg()

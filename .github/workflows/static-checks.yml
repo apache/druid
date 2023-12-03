@@ -41,20 +41,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ 'jdk8', 'jdk11', 'jdk17' ]
+        java: [ '8', '11', '17', '21' ]
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
 
-      - name: set java version
-        run: |
-          export jdk=${{ matrix.java }}
-          echo "java_version=${jdk:3}" >> $GITHUB_ENV
-
-      - name: setup ${{ matrix.java }}
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64" >> $GITHUB_ENV
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ matrix.java }}
+          cache: 'maven'
 
       - name: packaging check
         run: |
@@ -66,53 +63,53 @@ jobs:
 
       - name: script checks
         # who watches the watchers?
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ./check_test_suite_test.py
 
       - name: (openjdk17) strict compilation
-        if: ${{ matrix.java == 'jdk17' }}
+        if: ${{ matrix.java == '17' }}
         # errorprone requires JDK 11+
         # Strict compilation requires more than 2 GB
         run: ${MVN} clean -DstrictCompile compile test-compile --fail-at-end ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: maven install
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: |
           echo 'Running Maven install...' &&
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: checkstyle
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: license checks
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ./.github/scripts/license_checks_script.sh
 
       - name: analyze dependencies
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
       - name: animal sniffer checks
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
 
       - name: enforcer checks
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ${MVN} enforcer:enforce --fail-at-end
 
       - name: forbidden api checks
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ${MVN} forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
       - name: pmd checks
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ${MVN} pmd:check --fail-at-end  # TODO: consider adding pmd:cpd-check
 
       - name: spotbugs checks
-        if: ${{ matrix.java == 'jdk8' }}
+        if: ${{ matrix.java == '8' }}
         run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
   intellij-inspections:
@@ -123,9 +120,11 @@ jobs:
       - name: checkout branch
         uses: actions/checkout@v3
 
-      - name: setup JDK8
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_8_X64" >> $GITHUB_ENV
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+          cache: 'maven'
 
       - name: maven install
         run: |
@@ -153,9 +152,11 @@ jobs:
       - name: checkout branch
         uses: actions/checkout@v3
 
-      - name: setup JDK17
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'maven'
 
       - name: setup node
         uses: actions/setup-node@v3

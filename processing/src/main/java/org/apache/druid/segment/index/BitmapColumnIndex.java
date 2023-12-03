@@ -22,11 +22,27 @@ package org.apache.druid.segment.index;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 
+/**
+ * Common interface for bitmap indexes for use by {@link org.apache.druid.query.filter.Filter} for cursor creation, to
+ * allow fast row skipping during query processing.
+ */
 public interface BitmapColumnIndex
 {
   ColumnIndexCapabilities getIndexCapabilities();
 
   double estimateSelectivity(int totalRows);
 
-  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory);
+  /**
+   * Compute a bitmap result wrapped with the {@link BitmapResultFactory} representing the rows matched by this index.
+   *
+   * @param bitmapResultFactory helper to format the {@link org.apache.druid.collections.bitmap.ImmutableBitmap} in a
+   *                            form ready for consumption by callers
+   * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If set
+   *                            to true, this method should also return true if the result is 'unknown' to be a match,
+   *                            such  as from the input being null valued. Used primarily to allow
+   *                            {@link org.apache.druid.segment.filter.NotFilter} to invert a match in an SQL compliant
+   *                            manner
+   * @return bitmap result representing rows matched by this index
+   */
+  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown);
 }

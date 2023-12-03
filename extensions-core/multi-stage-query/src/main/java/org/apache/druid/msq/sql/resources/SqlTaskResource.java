@@ -170,7 +170,7 @@ public class SqlTaskResource
           sqlQueryId,
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build(e.getMessage())
+                        .build("%s", e.getMessage())
       );
     }
     finally {

@@ -31,6 +31,7 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -44,6 +45,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -70,6 +73,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -118,7 +122,15 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
     final GoogleCloudStorageInputSource withUris =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
+        new GoogleCloudStorageInputSource(
+            STORAGE,
+            INPUT_DATA_CONFIG,
+            EXPECTED_URIS,
+            ImmutableList.of(),
+            null,
+            null,
+            null
+        );
     final GoogleCloudStorageInputSource serdeWithUris =
         mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
@@ -129,7 +141,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
     final GoogleCloudStorageInputSource withPrefixes =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, ImmutableList.of(), PREFIXES, null, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, ImmutableList.of(), PREFIXES, null, null, null);
     final GoogleCloudStorageInputSource serdeWithPrefixes =
         mapper.readValue(mapper.writeValueAsString(withPrefixes), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
@@ -146,18 +158,51 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
             null,
             null,
             ImmutableList.of(new CloudObjectLocation("foo", "bar/file.gz")),
+            null,
             null
         );
     final GoogleCloudStorageInputSource serdeWithObjects =
         mapper.readValue(mapper.writeValueAsString(withObjects), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withObjects, serdeWithObjects);
+    Assert.assertEquals(Collections.emptySet(), serdeWithObjects.getConfiguredSystemFields());
+  }
+
+  @Test
+  public void testSerdeObjectsAndSystemFields() throws Exception
+  {
+    final ObjectMapper mapper = createGoogleObjectMapper();
+    final GoogleCloudStorageInputSource withObjects =
+        (GoogleCloudStorageInputSource) new GoogleCloudStorageInputSource(
+            STORAGE,
+            INPUT_DATA_CONFIG,
+            null,
+            null,
+            ImmutableList.of(new CloudObjectLocation("foo", "bar/file.gz")),
+            null,
+            new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
+        );
+    final GoogleCloudStorageInputSource serdeWithObjects =
+        mapper.readValue(mapper.writeValueAsString(withObjects), GoogleCloudStorageInputSource.class);
+    Assert.assertEquals(withObjects, serdeWithObjects);
+    Assert.assertEquals(
+        EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
+        serdeWithObjects.getConfiguredSystemFields()
+    );
   }
 
   @Test
   public void testGetTypes()
   {
     final GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
+        new GoogleCloudStorageInputSource(
+            STORAGE,
+            INPUT_DATA_CONFIG,
+            EXPECTED_URIS,
+            ImmutableList.of(),
+            null,
+            null,
+            null
+        );
     Assert.assertEquals(Collections.singleton(GoogleCloudStorageInputSource.TYPE_KEY), inputSource.getTypes());
   }
 
@@ -179,7 +224,15 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
     EasyMock.replay(STORAGE);
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
+        new GoogleCloudStorageInputSource(
+            STORAGE,
+            INPUT_DATA_CONFIG,
+            EXPECTED_URIS,
+            ImmutableList.of(),
+            null,
+            null,
+            null
+        );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         null,
@@ -212,7 +265,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         URIS_BEFORE_GLOB,
         null,
         null,
-        "**.csv"
+        "**.csv",
+        null
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
@@ -234,7 +288,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         null,
         PREFIXES,
         EXPECTED_OBJECTS.get(0),
-        "**.csv"
+        "**.csv",
+        null
     );
   }
 
@@ -249,7 +304,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         URIS_BEFORE_GLOB,
         PREFIXES,
         null,
-        "**.csv"
+        "**.csv",
+        null
     );
   }
 
@@ -265,7 +321,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null, null, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
@@ -287,7 +343,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null, null, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
@@ -318,6 +374,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null,
         null
     );
@@ -365,6 +422,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         null,
         PREFIXES,
         null,
+        null,
         null
     );
 
@@ -390,6 +448,40 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
     Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
+  }
+
+  @Test
+  public void testSystemFields()
+  {
+    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
+        STORAGE,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        null,
+        null,
+        new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
+    );
+
+    Assert.assertEquals(
+        EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
+        inputSource.getConfiguredSystemFields()
+    );
+
+    final GoogleCloudStorageEntity entity = new GoogleCloudStorageEntity(null, new CloudObjectLocation("foo", "bar"));
+
+    Assert.assertEquals("gs://foo/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
+    Assert.assertEquals("foo", inputSource.getSystemFieldValue(entity, SystemField.BUCKET));
+    Assert.assertEquals("bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(GoogleCloudStorageInputSource.class)
+                  .withIgnoredFields("storage", "inputDataConfig")
+                  .usingGetClass()
+                  .verify();
   }
 
   private static void addExpectedPrefixObjects(URI prefix, List<URI> uris) throws IOException

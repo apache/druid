@@ -106,6 +106,16 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
           }
         };
       }
+
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          return bitmaps.get(0);
+        }
+        return null;
+      }
     };
   }
 
@@ -119,13 +129,16 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       Predicate<String> matcher
   )
   {
+    final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+    final int start = range.leftInt(), end = range.rightInt();
+    if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
+      return null;
+    }
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
-        final int start = range.leftInt(), end = range.rightInt();
         return () -> new Iterator<ImmutableBitmap>()
         {
           int currIndex = start;
@@ -167,6 +180,16 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
             return getBitmap(cur);
           }
         };
+      }
+
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          return bitmaps.get(0);
+        }
+        return null;
       }
 
       private boolean applyMatcher(@Nullable final ByteBuffer valueUtf8)
