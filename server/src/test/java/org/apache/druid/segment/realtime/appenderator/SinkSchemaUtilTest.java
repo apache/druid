@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -90,7 +90,7 @@ public class SinkSchemaUtilTest
     Assert.assertEquals(segment1.toString(), segmentSchema1.getSegmentId());
     Assert.assertEquals("foo", segmentSchema1.getDataSource());
     Assert.assertFalse(segmentSchema1.isDelta());
-    Assert.assertEquals(Lists.newArrayList("dim1", "dim2", "dim3"), segmentSchema1.getNewColumns());
+    Assert.assertEquals(ImmutableList.of("dim1", "dim2", "dim3"), segmentSchema1.getNewColumns());
     Assert.assertEquals(columnTypeMap1, segmentSchema1.getColumnTypeMap());
     Assert.assertEquals(Collections.emptyList(), segmentSchema1.getUpdatedColumns());
 
@@ -99,7 +99,7 @@ public class SinkSchemaUtilTest
     Assert.assertEquals(segment2.toString(), segmentSchema2.getSegmentId());
     Assert.assertEquals("foo", segmentSchema2.getDataSource());
     Assert.assertFalse(segmentSchema2.isDelta());
-    Assert.assertEquals(Lists.newArrayList("dim1", "dim2", "dim3", "dim4"), segmentSchema2.getNewColumns());
+    Assert.assertEquals(ImmutableList.of("dim1", "dim2", "dim3", "dim4"), segmentSchema2.getNewColumns());
     Assert.assertEquals(columnTypeMap2, segmentSchema2.getColumnTypeMap());
     Assert.assertEquals(Collections.emptyList(), segmentSchema2.getUpdatedColumns());
   }
@@ -248,8 +248,8 @@ public class SinkSchemaUtilTest
     Assert.assertEquals("foo", segmentSchema1.getDataSource());
     Assert.assertTrue(segmentSchema1.isDelta());
     Assert.assertEquals(50, segmentSchema1.getNumRows().intValue());
-    Assert.assertEquals(Lists.newArrayList("dim4", "dim5"), segmentSchema1.getNewColumns());
-    Assert.assertEquals(Lists.newArrayList("dim1", "dim2"), segmentSchema1.getUpdatedColumns());
+    Assert.assertEquals(ImmutableList.of("dim4", "dim5"), segmentSchema1.getNewColumns());
+    Assert.assertEquals(ImmutableList.of("dim1", "dim2"), segmentSchema1.getUpdatedColumns());
     Assert.assertEquals(currColumnTypeMap1, segmentSchema1.getColumnTypeMap());
 
     SegmentSchema segmentSchema2 = segmentSchemaMap.get(segment3.toString());
@@ -257,8 +257,8 @@ public class SinkSchemaUtilTest
     Assert.assertEquals("foo", segmentSchema2.getDataSource());
     Assert.assertTrue(segmentSchema2.isDelta());
     Assert.assertEquals(100, segmentSchema2.getNumRows().intValue());
-    Assert.assertEquals(Lists.newArrayList(), segmentSchema2.getNewColumns());
-    Assert.assertEquals(Lists.newArrayList(), segmentSchema2.getUpdatedColumns());
+    Assert.assertEquals(Collections.emptyList(), segmentSchema2.getNewColumns());
+    Assert.assertEquals(Collections.emptyList(), segmentSchema2.getUpdatedColumns());
     Assert.assertEquals(new HashMap<>(), segmentSchema2.getColumnTypeMap());
 
     SegmentSchema segmentSchema3 = segmentSchemaMap.get(segment4.toString());
@@ -266,8 +266,8 @@ public class SinkSchemaUtilTest
     Assert.assertEquals("foo", segmentSchema3.getDataSource());
     Assert.assertFalse(segmentSchema3.isDelta());
     Assert.assertEquals(40, segmentSchema3.getNumRows().intValue());
-    Assert.assertEquals(Lists.newArrayList("dim1", "dim2", "dim3", "dim4"), segmentSchema3.getNewColumns());
-    Assert.assertEquals(Lists.newArrayList(), segmentSchema3.getUpdatedColumns());
+    Assert.assertEquals(ImmutableList.of("dim1", "dim2", "dim3", "dim4"), segmentSchema3.getNewColumns());
+    Assert.assertEquals(Collections.emptyList(), segmentSchema3.getUpdatedColumns());
     Assert.assertEquals(columnTypeMap4, segmentSchema3.getColumnTypeMap());
   }
 }
