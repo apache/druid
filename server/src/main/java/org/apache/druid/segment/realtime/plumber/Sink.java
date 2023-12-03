@@ -48,7 +48,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -83,6 +82,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final long maxBytesInMemory;
   private final boolean useMaxMemoryEstimates;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
+  // stores all the columns accross hydrants (includes custom dimensions)
   private final Map<String, ColumnFormat> dimColumnFormat = Maps.newLinkedHashMap();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
   private final String dedupColumn;
@@ -383,23 +383,24 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         if (numHydrants > 0) {
           FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
           newCount = lastHydrant.getCount() + 1;
-          if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
-            if (lastHydrant.hasSwapped()) {
-              ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
-              try {
-                QueryableIndex oldIndex = segment.asQueryableIndex();
-                for (String dim : oldIndex.getAvailableDimensions()) {
-                  dimColumnFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
-                }
-              }
-              finally {
-                segment.decrement();
-              }
-            } else {
-              IncrementalIndex oldIndex = lastHydrant.getIndex();
-              dimColumnFormat.putAll(oldIndex.getColumnFormats());
 
+          if (lastHydrant.hasSwapped()) {
+            ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
+            try {
+              QueryableIndex oldIndex = segment.asQueryableIndex();
+              for (String dim : oldIndex.getAvailableDimensions()) {
+                dimColumnFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
+              }
             }
+            finally {
+              segment.decrement();
+            }
+          } else {
+            IncrementalIndex oldIndex = lastHydrant.getIndex();
+            dimColumnFormat.putAll(oldIndex.getColumnFormats());
+          }
+
+          if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
             newIndex.loadDimensionIterable(dimColumnFormat);
           }
         }
@@ -419,7 +420,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   }
 
   /**
-   * Get column information for all the {@link FireHydrant}.
+   * Get column information for all the {@link FireHydrant}'s.
    */
   public Map<String, ColumnType> getSchema()
   {
@@ -429,9 +430,21 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       com.google.common.base.Function<ColumnFormat, ColumnType> columnMapper =
           columnFormat -> columnFormat.toColumnCapabilities().toColumnType();
 
-      columnMap.putAll(CollectionUtils.mapValues(dimColumnFormat, columnMapper));
-      columnMap.putAll(CollectionUtils.mapValues(currHydrant.getIndex().getColumnFormats(), columnMapper));
+      log.debug("Persisted hydrants dimensions are [%s], current hydrant dimensions are [%s].",
+                dimColumnFormat, currHydrant.getIndex().getColumnFormats());
 
+      // explicitly add time column
+      columnMap.put("__time", ColumnType.LONG);
+
+      for (Map.Entry<String, ColumnFormat> dimColumnFormantEntry : dimColumnFormat.entrySet()) {
+        columnMap.put(dimColumnFormantEntry.getKey(), columnMapper.apply(dimColumnFormantEntry.getValue()));
+      }
+
+      for (Map.Entry<String, ColumnFormat> dimColumnFormantEntry : currHydrant.getIndex().getColumnFormats().entrySet()) {
+        columnMap.put(dimColumnFormantEntry.getKey(), columnMapper.apply(dimColumnFormantEntry.getValue()));
+      }
+
+      log.debug("Sink dimensions are [%s].", columnMap);
       return columnMap;
     }
   }

@@ -117,9 +117,9 @@ public class CoordinatorServerView implements InventoryView
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
-            runTimelineCallbacks(callback -> callback.segmentSchemaUpdate(segmentSchemas));
+            runTimelineCallbacks(callback -> callback.segmentSchemasAnnounced(segmentSchemas));
             return ServerView.CallbackAction.CONTINUE;
           }
         }

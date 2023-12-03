@@ -62,6 +62,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -167,7 +168,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedTableSchemaConfig centralizedTableSchemaConfig
   )
   {
     synchronized (this) {
@@ -190,7 +192,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           cache,
           rowIngestionMeters,
           parseExceptionHandler,
-          useMaxMemoryEstimates
+          useMaxMemoryEstimates,
+          centralizedTableSchemaConfig
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);

@@ -103,6 +103,11 @@ public interface TimelineServerView extends ServerView
      */
     CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment);
 
-    CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas);
+    /**
+     * Called when segment schema is announced.
+     * @param segmentSchemas segment schema
+     * @return continue or unregister
+     */
+    CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas);
   }
 }

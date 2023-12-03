@@ -99,7 +99,7 @@ public class CachingCostBalancerStrategyFactory extends BalancerStrategyFactory
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

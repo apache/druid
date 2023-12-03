@@ -131,10 +131,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   // For awaitInitialization.
   private final CountDownLatch initialized = new CountDownLatch(1);
 
-  // All mutable segments.
-  @GuardedBy("lock")
-  private final TreeSet<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
-
   // Configured context to attach to internally generated queries.
   private final InternalQueryConfig internalQueryConfig;
 
@@ -217,6 +213,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   protected final Object lock = new Object();
 
+  // All mutable segments.
+  @GuardedBy("lock")
+  protected final TreeSet<SegmentId> mutableSegments = new TreeSet<>(SEGMENT_ORDER);
+
   // All datasources that need tables regenerated.
   @GuardedBy("lock")
   protected final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
@@ -253,7 +253,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
           try {
             while (!Thread.currentThread().isInterrupted()) {
-              final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
+              final Set<SegmentId> segmentsToRefresh = new TreeSet<>(SEGMENT_ORDER);
               final Set<String> dataSourcesToRebuild = new TreeSet<>();
 
               try {

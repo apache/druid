@@ -144,7 +144,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
           }
 
           @Override
-          public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }
@@ -186,7 +186,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedTableSchemaConfig.create()
     )
     {
       @Override
@@ -238,7 +239,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
           }
 
           @Override
-          public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }
@@ -298,7 +299,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedTableSchemaConfig.create()
     )
     {
       @Override
@@ -350,7 +352,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
           }
 
           @Override
-          public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }

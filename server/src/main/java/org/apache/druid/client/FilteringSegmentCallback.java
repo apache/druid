@@ -76,7 +76,7 @@ public class FilteringSegmentCallback implements SegmentCallback
   }
 
   @Override
-  public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+  public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
   {
     return CallbackAction.CONTINUE;
   }

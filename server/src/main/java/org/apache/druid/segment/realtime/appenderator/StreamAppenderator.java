@@ -69,6 +69,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -163,6 +164,7 @@ public class StreamAppenderator implements Appenderator
       baseSegmentToUpgradedVersions = new ConcurrentHashMap<>();
 
   private final SinkSchemaAnnouncer sinkSchemaAnnouncer;
+  private final CentralizedTableSchemaConfig centralizedTableSchemaConfig;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -199,9 +201,11 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedTableSchemaConfig centralizedTableSchemaConfig
   )
   {
+    log.info("Initialising stream appenderator. logging dataschema %s", schema);
     this.myId = id;
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -227,7 +231,8 @@ public class StreamAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer(segmentAnnouncer, myId);
+    this.centralizedTableSchemaConfig = centralizedTableSchemaConfig;
+    this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
   }
 
   @Override
@@ -1043,6 +1048,12 @@ public class StreamAppenderator implements Appenderator
     sinkSchemaAnnouncer.stop();
   }
 
+  @VisibleForTesting
+  SinkSchemaAnnouncer getSinkSchemaAnnouncer()
+  {
+    return sinkSchemaAnnouncer;
+  }
+
   /**
    * Unannounces the given base segment and all its upgraded versions.
    */
@@ -1595,10 +1606,11 @@ public class StreamAppenderator implements Appenderator
   }
 
   /**
-   * This inner class periodically computes the absolute and change in schema for all the {@link StreamAppenderator#sinks}
+   * This inner class periodically computes absolute and delta schema for all the {@link StreamAppenderator#sinks}
    * and announces them.
    */
-  private class SinkSchemaAnnouncer
+  @VisibleForTesting
+  class SinkSchemaAnnouncer
   {
     private static final long SCHEMA_PUBLISH_DELAY_MILLIS = 0;
     private static final long SCHEMA_PUBLISH_PERIOD_MILLIS = 60_000;
@@ -1606,55 +1618,64 @@ public class StreamAppenderator implements Appenderator
     private final DataSegmentAnnouncer announcer;
     private final ScheduledExecutorService scheduledExecutorService;
     private final String taskId;
-    private Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> previousSinkSchema = new HashMap<>();
+    private final boolean enabled;
+    private Map<SegmentId, Pair<Map<String, ColumnType>, Integer>> previousSinkSchemaMap = new HashMap<>();
 
-    SinkSchemaAnnouncer(DataSegmentAnnouncer announcer, String taskId)
+    SinkSchemaAnnouncer()
     {
-      this.announcer = announcer;
+      this.announcer = StreamAppenderator.this.segmentAnnouncer;
+      this.taskId = StreamAppenderator.this.myId;
+      this.enabled = centralizedTableSchemaConfig.isEnabled()
+                     && centralizedTableSchemaConfig.announceRealtimeSegmentSchema();
       this.scheduledExecutorService = ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d");
-      this.taskId = taskId;
     }
 
-    void start()
+    private void start()
     {
-      scheduledExecutorService.scheduleAtFixedRate(
-          this::computeAndAnnounce,
-          SCHEMA_PUBLISH_DELAY_MILLIS,
-          SCHEMA_PUBLISH_PERIOD_MILLIS,
-          TimeUnit.MILLISECONDS
-      );
+      if (enabled) {
+        scheduledExecutorService.scheduleAtFixedRate(
+            this::computeAndAnnounce,
+            SCHEMA_PUBLISH_DELAY_MILLIS,
+            SCHEMA_PUBLISH_PERIOD_MILLIS,
+            TimeUnit.MILLISECONDS
+        );
+      }
     }
 
-    void stop()
+    private void stop()
     {
-      announcer.unannouceTask(taskId);
-      scheduledExecutorService.shutdown();
+      if (enabled) {
+        announcer.unannouceTask(taskId);
+        scheduledExecutorService.shutdown();
+      }
     }
 
+    @VisibleForTesting
     void computeAndAnnounce()
     {
-      log.info("Announcing sink schemas");
-      Map<SegmentIdWithShardSpec, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema = new HashMap<>();
+      Map<SegmentId, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema = new HashMap<>();
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
         Sink sink = sinkEntry.getValue();
 
-        currentSinkSchema.put(segmentIdWithShardSpec, Pair.of(sink.getSchema(), sink.getNumRows()));
+        currentSinkSchema.put(segmentIdWithShardSpec.asSegmentId(), Pair.of(sink.getSchema(), sink.getNumRows()));
       }
 
       Optional<SegmentSchemas> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSchema);
-      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSchema, currentSinkSchema);
+      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSchemaMap, currentSinkSchema);
 
-      sinksSchema.ifPresent(v -> log.info("absolute schema is %s", v));
-      sinksSchemaChange.ifPresent(v -> log.info("delta schema is %s", v));
-      previousSinkSchema = currentSinkSchema;
+      // store currentSinkSchema
+      previousSinkSchemaMap = currentSinkSchema;
 
-      // announce the change
-      sinksSchema.ifPresent(segmentsSchema -> announcer.announceSinkSchemaForTask(
-          taskId,
-          segmentsSchema,
-          sinksSchemaChange.orElse(null)
-      ));
+      // announce schema
+      sinksSchema.ifPresent(
+          segmentsSchema -> {
+            announcer.announceSinkSchemaForTask(
+                taskId,
+                segmentsSchema,
+                sinksSchemaChange.orElse(null)
+            );
+          });
     }
   }
 }

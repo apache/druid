@@ -95,7 +95,12 @@ public interface ServerView
 
     CallbackAction segmentViewInitialized();
 
-    CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas);
+    /**
+     * Called when segment schema is announced.
+     * @param segmentSchemas segment schema
+     * @return continue or unregister
+     */
+    CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas);
   }
 
   abstract class BaseSegmentCallback implements SegmentCallback
@@ -113,7 +118,7 @@ public interface ServerView
     }
 
     @Override
-    public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+    public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
     {
       return CallbackAction.CONTINUE;
     }

@@ -55,6 +55,7 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -128,6 +129,7 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
+  private final CentralizedTableSchemaConfig centralizedTableSchemaConfig;
 
   public TaskToolbox(
       TaskConfig config,
@@ -168,7 +170,8 @@ public class TaskToolbox
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      String attemptId
+      String attemptId,
+      CentralizedTableSchemaConfig centralizedTableSchemaConfig
   )
   {
     this.config = config;
@@ -211,6 +214,7 @@ public class TaskToolbox
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.centralizedTableSchemaConfig = centralizedTableSchemaConfig;
   }
 
   public TaskConfig getConfig()
@@ -478,6 +482,11 @@ public class TaskToolbox
     return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
   }
 
+  public CentralizedTableSchemaConfig getCentralizedTableSchemaConfig()
+  {
+    return centralizedTableSchemaConfig;
+  }
+
   /**
    * Create {@link AdjustedRuntimeInfo} based on the given {@link RuntimeInfo} and {@link AppenderatorsManager}. This
    * is a way to allow code to properly apportion the amount of processors and heap available to the entire JVM.
@@ -543,6 +552,7 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private CentralizedTableSchemaConfig centralizedTableSchemaConfig;
 
     public Builder()
     {
@@ -587,6 +597,7 @@ public class TaskToolbox
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
+      this.centralizedTableSchemaConfig = other.centralizedTableSchemaConfig;
     }
 
     public Builder config(final TaskConfig config)
@@ -823,6 +834,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder centralizedTableSchemaConfig(final CentralizedTableSchemaConfig centralizedTableSchemaConfig)
+    {
+      this.centralizedTableSchemaConfig = centralizedTableSchemaConfig;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -864,7 +881,8 @@ public class TaskToolbox
           supervisorTaskClientProvider,
           shuffleClient,
           taskLogPusher,
-          attemptId
+          attemptId,
+          centralizedTableSchemaConfig
       );
     }
   }

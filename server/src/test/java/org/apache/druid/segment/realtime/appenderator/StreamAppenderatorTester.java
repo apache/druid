@@ -63,8 +63,10 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -98,7 +100,9 @@ public class StreamAppenderatorTester implements AutoCloseable
       final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
-      final boolean skipBytesInMemoryOverheadCheck
+      final boolean skipBytesInMemoryOverheadCheck,
+      final DataSegmentAnnouncer announcer,
+      final CentralizedTableSchemaConfig centralizedTableSchemaConfig
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -235,7 +239,7 @@ public class StreamAppenderatorTester implements AutoCloseable
                 )
             )
         ),
-        new NoopDataSegmentAnnouncer(),
+        announcer,
         emitter,
         new ForwardingQueryProcessingPool(queryExecutor),
         NoopJoinableFactory.INSTANCE,
@@ -244,7 +248,8 @@ public class StreamAppenderatorTester implements AutoCloseable
         new CachePopulatorStats(),
         rowIngestionMeters,
         new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        true
+        true,
+        centralizedTableSchemaConfig
     );
   }
 
@@ -350,7 +355,26 @@ public class StreamAppenderatorTester implements AutoCloseable
           Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),
           enablePushFailure,
           rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
-          skipBytesInMemoryOverheadCheck
+          skipBytesInMemoryOverheadCheck,
+          new NoopDataSegmentAnnouncer(),
+          CentralizedTableSchemaConfig.create()
+      );
+    }
+
+    public StreamAppenderatorTester build(
+        DataSegmentAnnouncer dataSegmentAnnouncer,
+        CentralizedTableSchemaConfig config
+    )
+    {
+      return new StreamAppenderatorTester(
+          maxRowsInMemory,
+          maxSizeInBytes,
+          Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),
+          enablePushFailure,
+          rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
+          skipBytesInMemoryOverheadCheck,
+          dataSegmentAnnouncer,
+          config
       );
     }
   }

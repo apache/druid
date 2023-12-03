@@ -481,7 +481,7 @@ public class HttpServerInventoryViewTest
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

@@ -635,7 +635,7 @@ public class BrokerServerViewTest extends CuratorTestBase
               }
 
               @Override
-              public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
               {
                 return CallbackAction.CONTINUE;
               }

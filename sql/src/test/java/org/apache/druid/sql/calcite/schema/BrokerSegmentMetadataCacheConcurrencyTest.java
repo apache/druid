@@ -193,7 +193,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -309,7 +309,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

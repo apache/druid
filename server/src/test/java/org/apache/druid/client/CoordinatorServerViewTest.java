@@ -390,7 +390,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
               }
 
               @Override
-              public CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
               {
                 return CallbackAction.CONTINUE;
               }
@@ -461,7 +461,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
           }
 
           @Override
-          public ServerView.CallbackAction segmentSchemaUpdate(SegmentSchemas segmentSchemas)
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

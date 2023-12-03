@@ -321,11 +321,8 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       SegmentSchemas segmentSchemasChange
   )
   {
-    log.info(
-        "Announcing sink schema for task [%s], absolute schema [%s], change [%s]",
-        taskId,
-        segmentSchemas,
-        segmentSchemasChange
+    log.info("Announcing sink schema for task [%s], absolute schema [%s], delta schema [%s].",
+             taskId, segmentSchemas, segmentSchemasChange
     );
 
     taskSinkSchema.put(taskId, segmentSchemas);
@@ -338,7 +335,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   @Override
   public void unannouceTask(String taskId)
   {
-    log.info("Unannouncing task [%s]", taskId);
+    log.info("Unannouncing task [%s].", taskId);
     taskSinkSchema.remove(taskId);
   }
 
