@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas.SegmentSchema;
@@ -53,7 +52,7 @@ class SinkSchemaUtil
       SegmentId segmentId = entry.getKey();
       Map<String, ColumnType> sinkColumnMap = entry.getValue().lhs;
 
-      List<String> newColumns = Lists.newLinkedList();
+      List<String> newColumns = new ArrayList<>();
 
       Map<String, ColumnType> columnMapping = new HashMap<>();
 
@@ -101,8 +100,8 @@ class SinkSchemaUtil
 
       Integer numRows = entry.getValue().rhs;
 
-      List<String> newColumns = Lists.newLinkedList();
-      List<String> updatedColumns = Lists.newLinkedList();
+      List<String> newColumns = new ArrayList<>();
+      List<String> updatedColumns = new ArrayList<>();
       Map<String, ColumnType> columnMapping = new HashMap<>();
 
       boolean update = false;
