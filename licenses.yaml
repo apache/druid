@@ -4608,6 +4608,16 @@ libraries:
 
 ---
 
+name: gson
+license_category: binary
+module: druid-ranger-security
+license_name: Apache License version 2.0
+version: 2.10.1
+libraries:
+  - com.google.code.gson: gson
+
+---
+
 name: com.kstruct gethostname4j
 license_category: binary
 version: 1.0.0
@@ -4620,7 +4630,7 @@ libraries:
 
 name: com.amazonaws aws-java-sdk-bundle
 license_category: binary
-version: 1.12.125
+version: 1.12.497
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -4699,16 +4709,6 @@ libraries:
 
 ---
 
-name: org.elasticsearch securesm
-license_category: binary
-version: 2.1.9
-module: druid-ranger-security
-license_name: Creative Commons CC0
-libraries:
-  - org.hdrhistogram: HdrHistogram
-
----
-
 name: Apache Lucene
 license_category: binary
 version: 8.4.0
@@ -4730,38 +4730,6 @@ libraries:
   - org.apache.lucene: lucene-spatial-extras
   - org.apache.lucene: lucene-spatial3d
   - org.apache.lucene: lucene-suggest
-
----
-
-name: org.elasticsearch securesm
-license_category: binary
-version: 1.2
-module: druid-ranger-security
-license_name: Apache License version 2.0
-libraries:
-  - org.elasticsearch: securesm
-
----
-
-name: Elastic Search
-license_category: binary
-version: 7.10.2
-module: druid-ranger-security
-license_name: Apache License version 2.0
-libraries:
-  - org.elasticsearch: elasticsearch
-  - org.elasticsearch: elasticsearch-cli
-  - org.elasticsearch: elasticsearch-core
-  - org.elasticsearch: elasticsearch-geo
-  - org.elasticsearch: elasticsearch-secure-sm
-  - org.elasticsearch: elasticsearch-x-content
-  - org.elasticsearch.client: elasticsearch-rest-client
-  - org.elasticsearch.client: elasticsearch-rest-high-level-client
-  - org.elasticsearch.plugin: aggs-matrix-stats-client
-  - org.elasticsearch.plugin: lang-mustache-client
-  - org.elasticsearch.plugin: mapper-extras-client
-  - org.elasticsearch.plugin: parent-join-client
-  - org.elasticsearch.plugin: rank-eval-client
 
 ---
 
@@ -4803,7 +4771,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 6.2.4
+version: 6.4.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
