@@ -268,7 +268,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       for (String column : segmentSchema.getNewColumns()) {
         builder.add(column, columnMapping.get(column));
       }
-      return Optional.of(builder.build());
+      return Optional.of(ROW_SIGNATURE_INTERNER.intern(builder.build()));
     } else if (existingSignature != null) {
       // delta update
       // merge with the existing signature
@@ -321,14 +321,17 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       }
 
       columnTypes.forEach(builder::add);
-      return Optional.of(builder.build());
+      return Optional.of(ROW_SIGNATURE_INTERNER.intern(builder.build()));
     } else {
       // delta update
       // we don't have the previous signature, but we received delta update, raise alert
       // this case shouldn't arise by design
-      // this can happen if a new segment is added and this is the very first schema update, implying we lost the absolute schema update
+      // this can happen if a new segment is added and this is the very first schema update,
+      // implying we lost the absolute schema update
       // which implies either the absolute schema update was never computed or lost in polling
-      log.makeAlert("Received delta schema update [%s] for a segment [%s] with no previous schema. ", segmentSchema, segmentId).emit();
+      log.makeAlert("Received delta schema update [%s] for a segment [%s] with no previous schema. ",
+                    segmentSchema, segmentId
+      ).emit();
       return Optional.empty();
     }
   }

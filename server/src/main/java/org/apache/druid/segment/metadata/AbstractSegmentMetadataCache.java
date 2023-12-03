@@ -110,7 +110,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   private static final EmittingLogger log = new EmittingLogger(AbstractSegmentMetadataCache.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
-  private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   // Newest segments first, so they override older ones.
   protected static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
@@ -191,6 +190,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       = new ConcurrentHashMap<>();
 
   protected final ExecutorService callbackExec;
+  protected static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   @GuardedBy("lock")
   protected boolean isServerViewInitialized = false;

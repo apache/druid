@@ -55,6 +55,7 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
@@ -114,7 +115,8 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.supervisorTaskClientProvider,
         bob.shuffleClient,
         bob.taskLogPusher,
-        bob.attemptId
+        bob.attemptId,
+        bob.centralizedTableSchemaConfig
     );
   }
 
@@ -158,6 +160,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private CentralizedTableSchemaConfig centralizedTableSchemaConfig;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -385,6 +388,11 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     {
       this.attemptId = attemptId;
       return this;
+    }
+
+    public void setCentralizedTableSchemaConfig(CentralizedTableSchemaConfig centralizedTableSchemaConfig)
+    {
+      this.centralizedTableSchemaConfig = centralizedTableSchemaConfig;
     }
   }
 }

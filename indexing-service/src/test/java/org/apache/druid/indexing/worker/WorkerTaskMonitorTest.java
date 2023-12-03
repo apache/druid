@@ -53,6 +53,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -207,7 +208,8 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                "1"
+                "1",
+                CentralizedTableSchemaConfig.create()
             ),
             taskConfig,
             new NoopServiceEmitter(),
