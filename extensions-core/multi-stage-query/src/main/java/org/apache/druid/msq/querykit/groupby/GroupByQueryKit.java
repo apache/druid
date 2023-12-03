@@ -99,15 +99,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final RowSignature intermediateSignature = computeIntermediateSignature(queryToRun);
     final ClusterBy resultClusterByWithoutGranularity = computeClusterByForResults(queryToRun);
-    final ClusterBy resultClusterBy =
+    final ClusterBy resultClusterByWithoutPartitionBoost =
         QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
-    final RowSignature resultSignature =
-        QueryKitUtils.sortableSignature(
-            QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(queryToRun), segmentGranularity),
-            resultClusterBy.getColumns()
-        );
     final ClusterBy intermediateClusterBy = computeIntermediateClusterBy(queryToRun);
-    final boolean doOrderBy = !resultClusterBy.equals(intermediateClusterBy);
+    final boolean doOrderBy = !resultClusterByWithoutPartitionBoost.equals(intermediateClusterBy);
     final boolean doLimitOrOffset =
         queryToRun.getLimitSpec() instanceof DefaultLimitSpec
         && (((DefaultLimitSpec) queryToRun.getLimitSpec()).isLimited()
@@ -115,23 +110,26 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
+    boolean partitionBoosted;
 
-    // There can be a situation where intermediateClusterBy is empty, while the result is non-empty
-    // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
-    // (i.e. no GROUP BY clause)
-    // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
-    // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
-    if (intermediateClusterBy.isEmpty() && resultClusterBy.isEmpty()) {
+    if (intermediateClusterBy.isEmpty() && resultClusterByWithoutPartitionBoost.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
       shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
+      partitionBoosted = false;
     } else if (doOrderBy) {
+      // There can be a situation where intermediateClusterBy is empty, while the result is non-empty
+      // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
+      // (i.e. no GROUP BY clause)
+      // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
+      // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
       shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
                                          ? ShuffleSpecFactories.singlePartition()
                                          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
       shuffleSpecFactoryPostAggregation = doLimitOrOffset
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;
+      partitionBoosted = true;
     } else {
       shuffleSpecFactoryPreAggregation = doLimitOrOffset
                                          ? ShuffleSpecFactories.singlePartition()
@@ -139,6 +137,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       // null: retain partitions from input (i.e. from preAggregation).
       shuffleSpecFactoryPostAggregation = null;
+      partitionBoosted = false;
     }
 
     queryDefBuilder.add(
@@ -151,17 +150,37 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
     );
 
+    List<KeyColumn> resultClusterByWithPartitionBoostColumns = new ArrayList<>(resultClusterByWithoutPartitionBoost.getColumns());
+    resultClusterByWithPartitionBoostColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+    ClusterBy resultClusterByWithPartitionBoost = new ClusterBy(
+        resultClusterByWithPartitionBoostColumns,
+        resultClusterByWithoutPartitionBoost.getBucketByCount()
+    );
+    ClusterBy resultClusterBy = partitionBoosted ? resultClusterByWithPartitionBoost : resultClusterByWithoutPartitionBoost;
+
+    final RowSignature resultSignatureWithoutPartitionBoost =
+        QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(queryToRun), segmentGranularity);
+    final RowSignature resultSignatureWithPartitionBoost =
+        RowSignature.builder().addAll(resultSignatureWithoutPartitionBoost)
+                    .add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG)
+                    .build();
+
+    final RowSignature sortableResultSignature = QueryKitUtils.sortableSignature(
+        partitionBoosted ? resultSignatureWithPartitionBoost : resultSignatureWithoutPartitionBoost,
+        resultClusterBy.getColumns()
+    );
+
     queryDefBuilder.add(
         StageDefinition.builder(firstStageNumber + 1)
                        .inputs(new StageInputSpec(firstStageNumber))
-                       .signature(resultSignature)
+                       .signature(sortableResultSignature)
                        .maxWorkerCount(maxWorkerCount)
                        .shuffleSpec(
                            shuffleSpecFactoryPostAggregation != null
                            ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
                            : null
                        )
-                       .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+                       .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun, partitionBoosted))
     );
 
     if (doLimitOrOffset) {
@@ -169,7 +188,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 2)
                          .inputs(new StageInputSpec(firstStageNumber + 1))
-                         .signature(resultSignature)
+                         .signature(sortableResultSignature)
                          .maxWorkerCount(1)
                          .shuffleSpec(null) // no shuffling should be required after a limit processor.
                          .processorFactory(
