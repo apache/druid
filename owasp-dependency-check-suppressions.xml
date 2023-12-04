@@ -179,16 +179,6 @@
 
 
   <suppress>
-    <!-- These are for elasticsearch in ranger soon to be fixed. -->
-    <notes><![CDATA[
-    file name: elasticsearch plugins
-    ]]></notes>
-    <cve>CVE-2023-31417</cve>
-    <cve>CVE-2023-31418</cve>
-    <cve>CVE-2023-31419</cve>
-  </suppress>
-
-  <suppress>
     <notes><![CDATA[
     file name: kafka-clients-3.2.0.jar
     ]]></notes>
