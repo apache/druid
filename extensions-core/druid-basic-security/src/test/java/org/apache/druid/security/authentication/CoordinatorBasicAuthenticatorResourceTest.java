@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
@@ -68,6 +69,9 @@ public class CoordinatorBasicAuthenticatorResourceTest
 
   @Mock
   private AuthValidator authValidator;
+
+  @Mock
+  private AuditManager auditManager;
   private BasicAuthenticatorResource resource;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private HttpServletRequest req;
@@ -145,7 +149,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
             authenticatorMapper,
             objectMapper
         ),
-        authValidator
+        authValidator,
+        auditManager
     );
 
     storageUpdater.start();
@@ -175,9 +180,9 @@ public class CoordinatorBasicAuthenticatorResourceTest
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
 
-    resource.createUser(req, AUTHENTICATOR_NAME, "druid");
-    resource.createUser(req, AUTHENTICATOR_NAME, "druid2");
-    resource.createUser(req, AUTHENTICATOR_NAME, "druid3");
+    resource.createUser(req, AUTHENTICATOR_NAME, "druid", null, null);
+    resource.createUser(req, AUTHENTICATOR_NAME, "druid2", null, null);
+    resource.createUser(req, AUTHENTICATOR_NAME, "druid3", null, null);
 
     Set<String> expectedUsers = ImmutableSet.of(
         BasicAuthUtils.ADMIN_NAME,
@@ -215,13 +220,13 @@ public class CoordinatorBasicAuthenticatorResourceTest
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
 
-    resource.createUser(req, AUTHENTICATOR_NAME, "druid");
-    resource.createUser(req, AUTHENTICATOR_NAME, "druid2");
-    resource.createUser(req, AUTHENTICATOR_NAME, "druid3");
+    resource.createUser(req, AUTHENTICATOR_NAME, "druid", null, null);
+    resource.createUser(req, AUTHENTICATOR_NAME, "druid2", null, null);
+    resource.createUser(req, AUTHENTICATOR_NAME, "druid3", null, null);
 
-    resource.createUser(req, AUTHENTICATOR_NAME2, "druid4");
-    resource.createUser(req, AUTHENTICATOR_NAME2, "druid5");
-    resource.createUser(req, AUTHENTICATOR_NAME2, "druid6");
+    resource.createUser(req, AUTHENTICATOR_NAME2, "druid4", null, null);
+    resource.createUser(req, AUTHENTICATOR_NAME2, "druid5", null, null);
+    resource.createUser(req, AUTHENTICATOR_NAME2, "druid6", null, null);
 
     Set<String> expectedUsers = ImmutableSet.of(
         BasicAuthUtils.ADMIN_NAME,
@@ -285,7 +290,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
   @Test
   public void testCreateDeleteUser()
   {
-    Response response = resource.createUser(req, AUTHENTICATOR_NAME, "druid");
+    Response response = resource.createUser(req, AUTHENTICATOR_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
 
     response = resource.getUser(req, AUTHENTICATOR_NAME, "druid");
@@ -293,7 +298,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     BasicAuthenticatorUser expectedUser = new BasicAuthenticatorUser("druid", null);
     Assert.assertEquals(expectedUser, response.getEntity());
 
-    response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid");
+    response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
 
     response = resource.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME);
@@ -303,7 +308,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     Assert.assertNotNull(cachedUserMap);
     Assert.assertNull(cachedUserMap.get("druid"));
 
-    response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid");
+    response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid", null, null);
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
 
@@ -315,14 +320,15 @@ public class CoordinatorBasicAuthenticatorResourceTest
   @Test
   public void testUserCredentials()
   {
-    Response response = resource.createUser(req, AUTHENTICATOR_NAME, "druid");
+    Response response = resource.createUser(req, AUTHENTICATOR_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
 
     response = resource.updateUserCredentials(
         req,
         AUTHENTICATOR_NAME,
         "druid",
-        new BasicAuthenticatorCredentialUpdate("helloworld", null)
+        new BasicAuthenticatorCredentialUpdate("helloworld", null),
+        null, null
     );
     Assert.assertEquals(200, response.getStatus());
 
@@ -369,7 +375,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     );
     Assert.assertArrayEquals(recalculatedHash, hash);
 
-    response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid");
+    response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid", null, null);
     Assert.assertEquals(200, response.getStatus());
 
     response = resource.getUser(req, AUTHENTICATOR_NAME, "druid");
@@ -380,7 +386,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
         req,
         AUTHENTICATOR_NAME,
         "druid",
-        new BasicAuthenticatorCredentialUpdate("helloworld", null)
+        new BasicAuthenticatorCredentialUpdate("helloworld", null),
+        null, null
     );
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());

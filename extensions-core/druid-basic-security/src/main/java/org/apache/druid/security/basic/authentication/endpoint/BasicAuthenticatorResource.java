@@ -22,6 +22,9 @@ package org.apache.druid.security.basic.authentication.endpoint;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
@@ -30,7 +33,9 @@ import org.apache.druid.server.security.AuthValidator;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -38,6 +43,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 
 @Path("/druid-ext/basic-security/authentication")
 @LazySingleton
@@ -45,15 +51,18 @@ public class BasicAuthenticatorResource
 {
   private final BasicAuthenticatorResourceHandler handler;
   private final AuthValidator authValidator;
+  private final AuditManager auditManager;
 
   @Inject
   public BasicAuthenticatorResource(
       BasicAuthenticatorResourceHandler handler,
-      AuthValidator authValidator
+      AuthValidator authValidator,
+      AuditManager auditManager
   )
   {
     this.handler = handler;
     this.authValidator = authValidator;
+    this.auditManager = auditManager;
   }
 
   /**
@@ -137,6 +146,8 @@ public class BasicAuthenticatorResource
    * @param req      HTTP request
    * @param userName Name to assign the new user
    *
+   * @param author
+   * @param comment
    * @return OK response, or 400 error response if user already exists
    */
   @POST
@@ -147,11 +158,21 @@ public class BasicAuthenticatorResource
   public Response createUser(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") String userName
+      @PathParam("userName") String userName,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
-    return handler.createUser(authenticatorName, userName);
+
+    final Response response = handler.createUser(authenticatorName, userName);
+
+    if (isSuccess(response)) {
+      final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
+      performAudit(authenticatorName, "users.create", Collections.singletonMap("username", userName), auditInfo);
+    }
+
+    return response;
   }
 
   /**
@@ -160,6 +181,8 @@ public class BasicAuthenticatorResource
    * @param req      HTTP request
    * @param userName Name of user to delete
    *
+   * @param author
+   * @param comment
    * @return OK response, or 400 error response if user doesn't exist
    */
   @DELETE
@@ -170,11 +193,20 @@ public class BasicAuthenticatorResource
   public Response deleteUser(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") String userName
+      @PathParam("userName") String userName,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
-    return handler.deleteUser(authenticatorName, userName);
+    final Response response = handler.deleteUser(authenticatorName, userName);
+
+    if (isSuccess(response)) {
+      final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
+      performAudit(authenticatorName, "users.delete", Collections.singletonMap("username", userName), auditInfo);
+    }
+
+    return response;
   }
 
   /**
@@ -183,6 +215,8 @@ public class BasicAuthenticatorResource
    * @param req      HTTP request
    * @param userName Name of user
    *
+   * @param author
+   * @param comment
    * @return OK response, 400 error if user doesn't exist
    */
   @POST
@@ -194,11 +228,20 @@ public class BasicAuthenticatorResource
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
       @PathParam("userName") String userName,
-      BasicAuthenticatorCredentialUpdate update
+      BasicAuthenticatorCredentialUpdate update,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
-    return handler.updateUserCredentials(authenticatorName, userName, update);
+    final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
+
+    if (isSuccess(response)) {
+      final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
+      performAudit(authenticatorName, "users.update", Collections.singletonMap("username", userName), auditInfo);
+    }
+
+    return response;
   }
 
   /**
@@ -236,5 +279,26 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     return handler.authenticatorUserUpdateListener(authenticatorName, serializedUserMap);
+  }
+
+  private boolean isSuccess(Response response) {
+    if (response == null) {
+      return false;
+    }
+
+    int responseCode = response.getStatus();
+    return responseCode >= 200 && responseCode < 300;
+  }
+
+  private void performAudit(String authenticatorName, String action, Object payload, AuditInfo auditInfo)
+  {
+    auditManager.doAudit(
+        AuditEvent.builder()
+                  .key(authenticatorName)
+                  .type(action)
+                  .auditInfo(auditInfo)
+                  .payload(payload)
+                  .build()
+    );
   }
 }

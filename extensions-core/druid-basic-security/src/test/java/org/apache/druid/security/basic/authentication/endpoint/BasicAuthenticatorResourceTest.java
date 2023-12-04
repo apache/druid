@@ -58,7 +58,7 @@ public class BasicAuthenticatorResourceTest
            .when(authValidator)
            .validateAuthenticatorName(INVALID_AUTHENTICATOR_NAME);
 
-    target = new BasicAuthenticatorResource(handler, authValidator);
+    target = new BasicAuthenticatorResource(handler, authValidator, null);
   }
 
   @Test
@@ -88,37 +88,37 @@ public class BasicAuthenticatorResourceTest
   @Test
   public void updateUserCredentialsShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.updateUserCredentials(req, AUTHENTICATOR_NAME, USER_NAME, update));
+    Assert.assertNotNull(target.updateUserCredentials(req, AUTHENTICATOR_NAME, USER_NAME, update, null, null));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void updateUserCredentialsWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.updateUserCredentials(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, update);
+    target.updateUserCredentials(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, update, null, null);
   }
 
   @Test
   public void deleteUserShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.deleteUser(req, AUTHENTICATOR_NAME, USER_NAME));
+    Assert.assertNotNull(target.deleteUser(req, AUTHENTICATOR_NAME, USER_NAME, null, null));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void deleteUserWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.deleteUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME);
+    target.deleteUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, null, null);
   }
 
   @Test
   public void createUserShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.createUser(req, AUTHENTICATOR_NAME, USER_NAME));
+    Assert.assertNotNull(target.createUser(req, AUTHENTICATOR_NAME, USER_NAME, null, null));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void createUserWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.createUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME);
+    target.createUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, null, null);
   }
 
   @Test

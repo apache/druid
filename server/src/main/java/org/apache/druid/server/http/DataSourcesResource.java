@@ -257,7 +257,7 @@ public class DataSourcesResource
         );
         auditPayload = Collections.singletonMap("segmentIds", segmentIds);
       }
-      if (author != null && !author.isEmpty()) {
+      if (auditManager != null && author != null && !author.isEmpty()) {
         auditManager.doAudit(
             AuditEvent.builder()
                       .key(dataSourceName)
@@ -379,14 +379,16 @@ public class DataSourcesResource
           overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null),
           true
       );
-      auditManager.doAudit(
-          AuditEvent.builder()
-                    .key(dataSourceName)
-                    .type("segments.killTask")
-                    .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
-                    .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
-                    .build()
-      );
+      if (auditManager != null && author != null && !author.isEmpty()) {
+        auditManager.doAudit(
+            AuditEvent.builder()
+                      .key(dataSourceName)
+                      .type("segments.killTask")
+                      .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
+                      .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+                      .build()
+        );
+      }
       return Response.ok().build();
     }
     catch (Exception e) {
