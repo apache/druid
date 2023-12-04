@@ -10,7 +10,7 @@ exports[`ExecutionErrorPane matches snapshot 1`] = `
   >
     <React.Fragment>
       <Memo(ExternalLink)
-        href="https://druid.apache.org/docs/28.0.0/multi-stage-query/reference.html#error_TooManyWarnings"
+        href="https://druid.apache.org/docs/28.0.1/multi-stage-query/reference.html#error_TooManyWarnings"
       >
         TooManyWarnings
       </Memo(ExternalLink)>

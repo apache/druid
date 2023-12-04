@@ -19,7 +19,7 @@
 import hasOwnProp from 'has-own-prop';
 
 // This is set to the latest available version and should be updated to the next version before release
-const DRUID_DOCS_VERSION = '28.0.0';
+const DRUID_DOCS_VERSION = '28.0.1';
 
 function fillVersion(str: string): string {
   return str.replace(/\{\{VERSION}}/g, DRUID_DOCS_VERSION);
