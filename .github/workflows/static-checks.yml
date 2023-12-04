@@ -188,7 +188,9 @@ jobs:
 
       # restore maven dependencies only. 'depsonly' keys are safe to restore
       # since they don't contain any artifacts created by mvn install
-      - uses: actions/cache@v3
+      # do not save cache since this step only runs web-console and as such
+      # does not populate most dependencies in the maven repository.
+      - uses: actions/cache/restore@v3
         with:
           key: maven-${{ runner.os }}-depsonly-${{ hashFiles('**/pom.xml') }}
           path: ~/.m2/repository
