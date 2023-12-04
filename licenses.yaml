@@ -6082,6 +6082,31 @@ license_file_path: licenses/bin/lodash.MIT
 
 ---
 
+name: "logback"
+license_category: binary
+module: core
+license_name: GNU Lesser General Public License
+copyright: QOS.ch
+version: 1.2.10
+libraries:
+  - ch.qos.logback: logback-classic
+  - ch.qos.logback: logback-core
+
+---
+
+name: "audience-annotations"
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 0.12.0
+libraries:
+  - org.apache.yetus: audience-annotations
+notices:
+  - audience-annotations: |
+      Apache Yetus
+      Copyright 2008-2022 The Apache Software Foundation
+---
+
 name: "loose-envify"
 license_category: binary
 module: web-console
