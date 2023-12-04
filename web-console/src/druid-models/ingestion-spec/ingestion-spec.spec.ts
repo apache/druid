@@ -709,25 +709,93 @@ describe('spec utils', () => {
     });
 
     it('works for long', () => {
-      expect(guessColumnTypeFromInput([1, 2, 3], false)).toEqual('long');
-      expect(guessColumnTypeFromInput([1, 2, 3], true)).toEqual('long');
-      expect(guessColumnTypeFromInput(['1', '2', '3'], false)).toEqual('string');
-      expect(guessColumnTypeFromInput(['1', '2', '3'], true)).toEqual('long');
+      expect(guessColumnTypeFromInput([null, 1, 2, 3], false)).toEqual('long');
+      expect(guessColumnTypeFromInput([null, 1, 2, 3], true)).toEqual('long');
+      expect(guessColumnTypeFromInput([null, '1', '2', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([null, '1', '2', '3'], true)).toEqual('long');
     });
 
     it('works for double', () => {
-      expect(guessColumnTypeFromInput([1, 2.1, 3], false)).toEqual('double');
-      expect(guessColumnTypeFromInput([1, 2.1, 3], true)).toEqual('double');
-      expect(guessColumnTypeFromInput(['1', '2.1', '3'], false)).toEqual('string');
-      expect(guessColumnTypeFromInput(['1', '2.1', '3'], true)).toEqual('double');
+      expect(guessColumnTypeFromInput([null, 1, 2.1, 3], false)).toEqual('double');
+      expect(guessColumnTypeFromInput([null, 1, 2.1, 3], true)).toEqual('double');
+      expect(guessColumnTypeFromInput([null, '1', '2.1', '3'], false)).toEqual('string');
+      expect(guessColumnTypeFromInput([null, '1', '2.1', '3'], true)).toEqual('double');
     });
 
-    it('works for multi-value', () => {
-      expect(guessColumnTypeFromInput(['a', ['b'], 'c'], false)).toEqual('string');
-      expect(guessColumnTypeFromInput([1, [2], 3], false)).toEqual('string');
-      expect(guessColumnTypeFromInput([true, [true, 7, false], false, 'x'], false)).toEqual(
-        'string',
-      );
+    it('works for ARRAY<string>', () => {
+      expect(
+        guessColumnTypeFromInput(
+          [
+            ['A', 'B'],
+            ['A', 'C'],
+          ],
+          false,
+        ),
+      ).toEqual('ARRAY<string>');
+    });
+
+    it('works for ARRAY<long>', () => {
+      expect(
+        guessColumnTypeFromInput(
+          [
+            [1, 2],
+            [3, 4],
+          ],
+          false,
+        ),
+      ).toEqual('ARRAY<long>');
+
+      expect(
+        guessColumnTypeFromInput(
+          [
+            ['1', '2'],
+            ['3', '4'],
+          ],
+          false,
+        ),
+      ).toEqual('ARRAY<string>');
+
+      expect(
+        guessColumnTypeFromInput(
+          [
+            ['1', '2'],
+            ['3', '4'],
+          ],
+          true,
+        ),
+      ).toEqual('ARRAY<long>');
+    });
+
+    it('works for ARRAY<double>', () => {
+      expect(
+        guessColumnTypeFromInput(
+          [
+            [1.1, 2.2],
+            [3.3, 4.4],
+          ],
+          false,
+        ),
+      ).toEqual('ARRAY<double>');
+
+      expect(
+        guessColumnTypeFromInput(
+          [
+            ['1.1', '2.2'],
+            ['3.3', '4.4'],
+          ],
+          false,
+        ),
+      ).toEqual('ARRAY<string>');
+
+      expect(
+        guessColumnTypeFromInput(
+          [
+            ['1.1', '2.2'],
+            ['3.3', '4.4'],
+          ],
+          true,
+        ),
+      ).toEqual('ARRAY<double>');
     });
 
     it('works for complex arrays', () => {
@@ -751,8 +819,8 @@ describe('spec utils', () => {
       expect(guessColumnTypeFromSampleResponse(CSV_SAMPLE, 'followers', false)).toEqual('string');
       expect(guessColumnTypeFromSampleResponse(CSV_SAMPLE, 'followers', true)).toEqual('long');
       expect(guessColumnTypeFromSampleResponse(CSV_SAMPLE, 'spend', true)).toEqual('double');
-      expect(guessColumnTypeFromSampleResponse(CSV_SAMPLE, 'nums', false)).toEqual('string');
-      expect(guessColumnTypeFromSampleResponse(CSV_SAMPLE, 'nums', true)).toEqual('string');
+      expect(guessColumnTypeFromSampleResponse(CSV_SAMPLE, 'nums', false)).toEqual('ARRAY<string>');
+      expect(guessColumnTypeFromSampleResponse(CSV_SAMPLE, 'nums', true)).toEqual('ARRAY<long>');
     });
   });
 
@@ -768,8 +836,16 @@ describe('spec utils', () => {
               "dimensions": Array [
                 "user",
                 "id",
-                "tags",
-                "nums",
+                Object {
+                  "castToType": "ARRAY<STRING>",
+                  "name": "tags",
+                  "type": "auto",
+                },
+                Object {
+                  "castToType": "ARRAY<LONG>",
+                  "name": "nums",
+                  "type": "auto",
+                },
               ],
             },
             "granularitySpec": Object {
@@ -841,8 +917,16 @@ describe('spec utils', () => {
                   "type": "double",
                 },
                 "id",
-                "tags",
-                "nums",
+                Object {
+                  "castToType": "ARRAY<STRING>",
+                  "name": "tags",
+                  "type": "auto",
+                },
+                Object {
+                  "castToType": "ARRAY<LONG>",
+                  "name": "nums",
+                  "type": "auto",
+                },
               ],
             },
             "granularitySpec": Object {

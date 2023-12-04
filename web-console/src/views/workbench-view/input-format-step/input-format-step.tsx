@@ -29,7 +29,6 @@ import {
   chooseByBestTimestamp,
   DETECTION_TIMESTAMP_SPEC,
   guessColumnTypeFromSampleResponse,
-  guessIsArrayFromSampleResponse,
   inputFormatOutputsNumericStrings,
   possibleDruidFormatForValues,
   TIME_COLUMN,
@@ -52,7 +51,6 @@ import './input-format-step.scss';
 export interface InputFormatAndMore {
   inputFormat: InputFormat;
   signature: SqlColumnDeclaration[];
-  isArrays: boolean[];
   timeExpression: SqlExpression | undefined;
 }
 
@@ -165,9 +163,6 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
                 ),
               ),
             ),
-          ),
-          isArrays: headerNames.map(name =>
-            guessIsArrayFromSampleResponse(previewSampleResponse, name),
           ),
           timeExpression: selectTimestamp ? possibleTimeExpression?.timeExpression : undefined,
         }

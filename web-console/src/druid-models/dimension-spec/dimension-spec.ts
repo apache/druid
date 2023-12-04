@@ -35,9 +35,10 @@ export interface DimensionSpec {
   readonly name: string;
   readonly createBitmapIndex?: boolean;
   readonly multiValueHandling?: string;
+  readonly castToType?: string;
 }
 
-const KNOWN_TYPES = ['string', 'long', 'float', 'double', 'json'];
+const KNOWN_TYPES = ['auto', 'string', 'long', 'float', 'double', 'json'];
 export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
   {
     name: 'name',
@@ -63,6 +64,12 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
     defined: typeIsKnown(KNOWN_TYPES, 'string'),
     defaultValue: 'SORTED_ARRAY',
     suggestions: ['SORTED_ARRAY', 'SORTED_SET', 'ARRAY'],
+  },
+  {
+    name: 'castToType',
+    type: 'string',
+    defined: typeIsKnown(KNOWN_TYPES, 'auto'),
+    suggestions: [undefined, 'ARRAY<STRING>', 'ARRAY<LONG>', 'ARRAY<DOUBLE>'],
   },
 ];
 
@@ -91,6 +98,14 @@ export function getDimensionSpecs(
       typeHints[h] ||
       guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
     if (dimensionType === 'string') return h;
+    if (dimensionType.startsWith('ARRAY')) {
+      return {
+        type: 'auto',
+        name: h,
+        castToType: dimensionType.toUpperCase(),
+      };
+    }
+
     if (hasRollup) return;
     return {
       type: dimensionType === 'COMPLEX<json>' ? 'json' : dimensionType,

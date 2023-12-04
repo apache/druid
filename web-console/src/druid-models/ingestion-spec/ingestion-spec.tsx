@@ -73,6 +73,7 @@ export interface IngestionSpec {
   readonly type: IngestionType;
   readonly spec: IngestionSpecInner;
   readonly context?: { taskLockType?: 'APPEND' | 'REPLACE' };
+  readonly suspended?: boolean;
 }
 
 export interface IngestionSpecInner {
@@ -364,7 +365,7 @@ export function cleanSpec(
 ): Partial<IngestionSpec> {
   return allowKeys(
     spec,
-    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
+    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []) as any,
   ) as IngestionSpec;
 }
 
@@ -2393,11 +2394,30 @@ function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
 
 // ------------------------
 
-export function guessIsArrayFromSampleResponse(
-  sampleResponse: SampleResponse,
-  column: string,
-): boolean {
-  return sampleResponse.data.some(r => isSimpleArray(r.input?.[column]));
+function checkArray(array: any[], checkFn: (x: any) => boolean): boolean {
+  return array.every(as => checkFn(as) || (Array.isArray(as) && as.every(checkFn)));
+}
+
+function isStringOrNull(x: any): boolean {
+  return x == null || typeof x === 'string';
+}
+
+function isIntegerOrNull(x: any): boolean {
+  return x == null || (typeof x === 'number' && Number.isInteger(x));
+}
+
+function isIntegerOrNullAcceptString(x: any): boolean {
+  return (
+    x == null || ((typeof x === 'number' || typeof x === 'string') && Number.isInteger(Number(x)))
+  );
+}
+
+function isNumberOrNull(x: any): boolean {
+  return x == null || (typeof x === 'number' && !isNaN(x));
+}
+
+function isNumberOrNullAcceptString(x: any): boolean {
+  return x == null || ((typeof x === 'number' || typeof x === 'string') && !isNaN(Number(x)));
 }
 
 export function guessColumnTypeFromInput(
@@ -2410,23 +2430,54 @@ export function guessColumnTypeFromInput(
   if (!definedValues.length) return 'string';
 
   // If we see any arrays in the input this is a multi-value dimension that must be a string
-  if (definedValues.some(v => isSimpleArray(v))) return 'string';
+  if (definedValues.some(v => isSimpleArray(v))) {
+    if (guessNumericStringsAsNumbers) {
+      if (checkArray(definedValues, isIntegerOrNullAcceptString)) {
+        return 'ARRAY<long>';
+      }
+
+      if (checkArray(definedValues, isNumberOrNullAcceptString)) {
+        return 'ARRAY<double>';
+      }
+    } else {
+      if (checkArray(definedValues, isIntegerOrNull)) {
+        return 'ARRAY<long>';
+      }
+
+      if (checkArray(definedValues, isNumberOrNull)) {
+        return 'ARRAY<double>';
+      }
+    }
+
+    if (checkArray(definedValues, isStringOrNull)) {
+      return 'ARRAY<string>';
+    }
+
+    return 'string';
+  }
 
   // If we see any JSON objects in the input assume COMPLEX<json>
   if (definedValues.some(v => v && typeof v === 'object')) return 'COMPLEX<json>';
 
-  if (
-    definedValues.every(v => {
-      return (
-        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')) &&
-        !isNaN(Number(v))
-      );
-    })
-  ) {
-    return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
+  if (guessNumericStringsAsNumbers) {
+    if (definedValues.every(isIntegerOrNullAcceptString)) {
+      return 'long';
+    }
+
+    if (definedValues.every(isNumberOrNullAcceptString)) {
+      return 'double';
+    }
   } else {
-    return 'string';
+    if (definedValues.every(isIntegerOrNull)) {
+      return 'long';
+    }
+
+    if (definedValues.every(isNumberOrNull)) {
+      return 'double';
+    }
   }
+
+  return 'string';
 }
 
 export function guessColumnTypeFromSampleResponse(

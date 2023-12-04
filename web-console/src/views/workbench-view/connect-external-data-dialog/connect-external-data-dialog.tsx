@@ -30,7 +30,6 @@ export interface ConnectExternalDataDialogProps {
   initExternalConfig?: Partial<ExternalConfig>;
   onSetExternalConfig(
     config: ExternalConfig,
-    isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
   ): void;
@@ -67,10 +66,9 @@ export const ConnectExternalDataDialog = React.memo(function ConnectExternalData
             inputSource={inputSource}
             initInputFormat={inputFormat}
             doneButton
-            onSet={({ inputFormat, signature, isArrays, timeExpression }) => {
+            onSet={({ inputFormat, signature, timeExpression }) => {
               onSetExternalConfig(
                 { inputSource, inputFormat, signature },
-                isArrays,
                 timeExpression,
                 partitionedByHint,
               );

@@ -32,6 +32,7 @@ export interface QueryContext {
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
+  arrayIngestMode?: 'array' | 'mvd';
 
   [key: string]: any;
 }

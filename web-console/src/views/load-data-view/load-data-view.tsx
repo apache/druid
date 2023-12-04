@@ -1632,6 +1632,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (selectedFlattenField) {
       return (
         <FormEditor
+          key={selectedFlattenField.index}
           fields={FLATTEN_FIELD_FIELDS}
           initValue={selectedFlattenField.value}
           onClose={this.resetSelected}
@@ -2024,6 +2025,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (selectedTransform) {
       return (
         <FormEditor
+          key={selectedTransform.index}
           fields={TRANSFORM_FIELDS}
           initValue={selectedTransform.value}
           onClose={this.resetSelected}
@@ -2224,6 +2226,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <FormEditor
+        key={selectedFilter.index}
         fields={FILTER_FIELDS}
         initValue={selectedFilter.value}
         showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type || '')}
@@ -2789,6 +2792,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <FormEditor
+        key={selectedDimensionSpec.index}
         fields={DIMENSION_SPEC_FIELDS}
         initValue={selectedDimensionSpec.value}
         onClose={this.resetSelected}
@@ -2877,6 +2881,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <FormEditor
+        key={selectedMetricSpec.index}
         fields={METRIC_SPEC_FIELDS}
         initValue={selectedMetricSpec.value}
         onClose={this.resetSelected}
