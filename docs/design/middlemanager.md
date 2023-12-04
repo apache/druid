@@ -26,7 +26,7 @@ sidebar_label: "MiddleManager"
 
 ### Configuration
 
-For Apache Druid MiddleManager service configuration, see [Indexing Service Configuration](../configuration/index.md#middlemanager-and-peons).
+For Apache Druid MiddleManager service configuration, see [MiddleManager and Peons](../configuration/index.md#middlemanager-and-peons).
 
 For basic tuning guidance for the MiddleManager service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middlemanager).
 

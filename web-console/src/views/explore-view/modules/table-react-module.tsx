@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { SqlColumn, SqlOrderByExpression } from '@druid-toolkit/query';
+import type { SqlOrderByExpression } from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -38,6 +38,7 @@ import { useQueryManager } from '../../../hooks';
 import { getInitQuery } from '../utils';
 
 import { GenericOutputTable } from './components';
+import { shiftTimeInWhere } from './utils/utils';
 
 import './table-react-module.scss';
 
@@ -71,20 +72,6 @@ const KNOWN_AGGREGATIONS = [
   'LATEST',
   'ANY_VALUE',
 ];
-
-const NULL_REPLACEMENT = SqlLiteral.create('__VIS_NULL__');
-
-function nullableColumn(column: ExpressionMeta) {
-  return column.sqlType !== 'TIMESTAMP';
-}
-
-function nvl(ex: SqlExpression): SqlExpression {
-  return SqlFunction.simple('NVL', [ex.cast('VARCHAR'), NULL_REPLACEMENT]);
-}
-
-function joinEquals(c1: SqlColumn, c2: SqlColumn, nullable: boolean): SqlExpression {
-  return c1.applyIf(nullable, nvl).equal(c2.applyIf(nullable, nvl));
-}
 
 function toGroupByExpression(
   splitColumn: ExpressionMeta,
@@ -370,7 +357,7 @@ function TableModule(props: TableModuleProps) {
             compares.map((comparePeriod, i) =>
               SqlWithPart.simple(
                 `compare${i}`,
-                getInitQuery(table, where)
+                getInitQuery(table, shiftTimeInWhere(where, comparePeriod))
                   .applyForEach(splitColumns, (q, splitColumn) =>
                     q.addSelect(toGroupByExpression(splitColumn, timeBucket, comparePeriod), {
                       addToGroupBy: 'end',
@@ -417,11 +404,9 @@ function TableModule(props: TableModuleProps) {
             T(`compare${i}`),
             SqlExpression.and(
               ...splitColumns.map(splitColumn =>
-                joinEquals(
-                  main.column(splitColumn.name),
-                  T(`compare${i}`).column(splitColumn.name),
-                  nullableColumn(splitColumn),
-                ),
+                main
+                  .column(splitColumn.name)
+                  .isNotDistinctFrom(T(`compare${i}`).column(splitColumn.name)),
               ),
             ),
           ),

@@ -75,6 +75,17 @@ Casts between two SQL types that have different Druid runtime types generate a r
 If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid a substitutes [NULL](#null-values).
 When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid instead substitutes a default value, including when NULL values cast to non-nullable types. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
 
+## Arrays
+
+Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql-array-functions.md#unn) can be used to perform operations on individual array elements, translating each element into a separate row. 
+
+`ARRAY` typed columns can be stored in segments with JSON-based ingestion using the 'auto' typed dimension schema shared with [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns. For [SQL based ingestion](../multi-stage-query/index.md), the query context parameter `arrayIngestMode` must be specified as `"array"` to ingest ARRAY types. In Druid 28, the default mode for this parameter is `"mvd"` for backwards compatibility, which instead can only handle `ARRAY<STRING>` which it stores in [multi-value string columns](#multi-value-strings). 
+
+You can convert multi-value dimensions to standard SQL arrays explicitly with `MV_TO_ARRAY` or implicitly using [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
+
+Druid serializes `ARRAY` results as a JSON string of the array by default, which can be controlled by the context parameter
+[`sqlStringifyArrays`](sql-query-context.md). When set to `false` and using JSON [result formats](../api-reference/sql-api.md#responses), the arrays will instead be returned as regular JSON arrays instead of in stringified form.
+
 ## Multi-value strings
 
 Druid's native type system allows strings to have multiple values. These [multi-value string dimensions](multi-value-dimensions.md) are reported in SQL as type VARCHAR and can be
@@ -86,19 +97,11 @@ You can treat multi-value string dimensions as arrays using special
 Grouping by multi-value dimensions observes the native Druid multi-value aggregation behavior, which is similar to an implicit SQL UNNEST. See [Grouping](multi-value-dimensions.md#grouping) for more information.
 
 :::info
- Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
+Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
 `false`, even though it is possible for a single row to have both `'a'` and `'b'` as values for `multi_val_dim`.
 
- The SQL behavior of multi-value dimensions may change in a future release to more closely align with their behavior in native queries, but the [multi-value string functions](./sql-multivalue-string-functions.md) should be able to provide nearly all possible native functionality.
+The SQL behavior of multi-value dimensions may change in a future release to more closely align with their behavior in native queries, but the [multi-value string functions](./sql-multivalue-string-functions.md) should be able to provide nearly all possible native functionality.
 :::
-
-## Arrays
-
-Druid supports ARRAY types constructed at query time. ARRAY types behave as standard SQL arrays, where results are grouped by matching entire arrays. This is in contrast to the implicit UNNEST that occurs when grouping on multi-value dimensions directly or when used with multi-value functions.
-
-You can convert multi-value dimensions to standard SQL arrays explicitly with `MV_TO_ARRAY` or implicitly using [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
-
-You can use [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns.
 
 ## Multi-value strings behavior
 
@@ -125,10 +128,11 @@ separately while processing.
 When converted to ARRAY or used with [array functions](./sql-array-functions.md), multi-value strings behave as standard SQL arrays and can no longer
 be manipulated with non-array functions.
 
-Druid serializes multi-value VARCHAR results as a JSON string of the array, if grouping was not applied on the value.
+By default Druid serializes multi-value VARCHAR results as a JSON string of the array, if grouping was not applied on the value.
 If the value was grouped, due to the implicit UNNEST behavior, all results will always be standard single value
-VARCHAR. ARRAY typed results will be serialized into stringified JSON arrays if the context parameter
-`sqlStringifyArrays` is set, otherwise they remain in their array format.
+VARCHAR. ARRAY typed results serialization is controlled with the context parameter [`sqlStringifyArrays`](sql-query-context.md). When set
+to `false` and using JSON [result formats](../api-reference/sql-api.md#responses), the arrays will instead be returned
+as regular JSON arrays instead of in stringified form.
 
 
 ## NULL values
@@ -170,7 +174,7 @@ You can interact with nested data using [JSON functions](./sql-json-functions.md
 COMPLEX types have limited functionality outside the specialized functions that use them, so their behavior is undefined when:
 
 * Grouping on complex values.
-* Filtering directly on complex values, such as `WHERE json is NULL`.
+* Filtering directly on complex values.
 * Used as inputs to aggregators without specialized handling for a specific complex type.
 
 In many cases, functions are provided to translate COMPLEX value types to STRING, which serves as a workaround solution until COMPLEX type functionality can be improved.

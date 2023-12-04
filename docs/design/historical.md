@@ -26,7 +26,7 @@ sidebar_label: "Historical"
 
 ### Configuration
 
-For Apache Druid Historical service configuration, see [Historical Configuration](../configuration/index.md#historical).
+For Apache Druid Historical service configuration, see [Historical configuration](../configuration/index.md#historical).
 
 For basic tuning guidance for the Historical service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#historical).
 

@@ -487,6 +487,18 @@ describe('WorkbenchQuery', () => {
       expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
     });
 
+    it('works with INSERT (unparsable with paren)', () => {
+      const sql = sane`
+        -- Some comment
+        INSERT into trips2
+        (SELECT TIME_PARSE(pickup_datetime) AS __time,
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
+      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
+    });
+
     it('works with REPLACE', () => {
       const sql = sane`
         REPLACE INTO trips2 OVERWRITE ALL

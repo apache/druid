@@ -1112,7 +1112,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setPostAggregatorSpecs(ImmutableList.of(expressionPostAgg("p0", "string_to_array('a,b',',')")))
+                        .setPostAggregatorSpecs(expressionPostAgg("p0", "string_to_array('a,b',',')", ColumnType.STRING))
                         .setDimensions(dimensions(new DefaultDimensionSpec("m1", "_d0", ColumnType.FLOAT)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -1214,7 +1214,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                       ),
                       new CountAggregatorFactory("a1")
                   )
-                  .postAggregators(expressionPostAgg("p0", "string_to_array(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "string_to_array(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         )

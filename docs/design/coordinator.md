@@ -26,7 +26,7 @@ sidebar_label: "Coordinator"
 
 ### Configuration
 
-For Apache Druid Coordinator service configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
+For Apache Druid Coordinator service configuration, see [Coordinator configuration](../configuration/index.md#coordinator).
 
 For basic tuning guidance for the Coordinator service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
 

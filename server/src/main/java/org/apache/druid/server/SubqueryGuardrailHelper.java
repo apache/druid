@@ -48,11 +48,11 @@ public class SubqueryGuardrailHelper
   public SubqueryGuardrailHelper(
       final LookupExtractorFactoryContainerProvider lookupManager,
       final long maxMemoryInJvm,
-      final int brokerNumHttpConnections
+      final int maxConcurrentQueries
   )
   {
     final DateTime start = DateTimes.nowUtc();
-    autoLimitBytes = computeLimitBytesForAuto(lookupManager, maxMemoryInJvm, brokerNumHttpConnections);
+    autoLimitBytes = computeLimitBytesForAuto(lookupManager, maxMemoryInJvm, maxConcurrentQueries);
     final long startupTimeMs = new Interval(start, DateTimes.nowUtc()).toDurationMillis();
 
     log.info("Took [%d] ms to initialize the SubqueryGuardrailHelper.", startupTimeMs);
@@ -114,13 +114,13 @@ public class SubqueryGuardrailHelper
   private static long computeLimitBytesForAuto(
       final LookupExtractorFactoryContainerProvider lookupManager,
       final long maxMemoryInJvm,
-      final int brokerNumHttpConnections
+      final int maxConcurrentQueries
   )
   {
     long memoryInJvmWithoutLookups = maxMemoryInJvm - computeLookupFootprint(lookupManager);
     long memoryInJvmForSubqueryResultsInlining = (long) (memoryInJvmWithoutLookups * SUBQUERY_MEMORY_BYTES_FRACTION);
-    long memoryInJvmForSubqueryResultsInliningPerQuery = memoryInJvmForSubqueryResultsInlining
-                                                         / brokerNumHttpConnections;
+    long memoryInJvmForSubqueryResultsInliningPerQuery =
+        memoryInJvmForSubqueryResultsInlining / maxConcurrentQueries;
     return Math.max(memoryInJvmForSubqueryResultsInliningPerQuery, 1L);
   }
 

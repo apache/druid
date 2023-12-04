@@ -283,6 +283,16 @@ public class RegisteredLookupExtractionFnTest
                   }
 
                   @Override
+                  public void awaitInitialization()
+                  {
+                  }
+
+                  @Override
+                  public boolean isInitialized()
+                  {
+                    return true;
+                  }
+                  @Override
                   public LookupExtractor get()
                   {
                     return LOOKUP_EXTRACTOR;

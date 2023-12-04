@@ -25,11 +25,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.UpdateLocationAction;
 import org.apache.druid.indexing.common.actions.UpdateStatusAction;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -40,12 +42,14 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.BatchIOConfig;
+import org.apache.druid.server.DruidNode;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -151,6 +155,11 @@ public abstract class AbstractTask implements Task
       FileUtils.mkdirp(attemptDir);
       reportsFile = new File(attemptDir, "report.json");
       statusFile = new File(attemptDir, "status.json");
+      InetAddress hostName = InetAddress.getLocalHost();
+      DruidNode node = toolbox.getTaskExecutorNode();
+      toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.create(
+          hostName.getHostAddress(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort()
+      )));
     }
     log.debug("Task setup complete");
     return null;
@@ -159,12 +168,13 @@ public abstract class AbstractTask implements Task
   @Override
   public final TaskStatus run(TaskToolbox taskToolbox) throws Exception
   {
-    TaskStatus taskStatus = TaskStatus.running(getId());
+    TaskStatus taskStatus = null;
     try {
       cleanupCompletionLatch = new CountDownLatch(1);
       String errorMessage = setup(taskToolbox);
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
-        return TaskStatus.failure(getId(), errorMessage);
+        taskStatus = TaskStatus.failure(getId(), errorMessage);
+        return taskStatus;
       }
       taskStatus = runTask(taskToolbox);
       return taskStatus;
@@ -186,7 +196,7 @@ public abstract class AbstractTask implements Task
   public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
 
   @Override
-  public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
     // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
     Thread.interrupted();
@@ -196,12 +206,13 @@ public abstract class AbstractTask implements Task
       return;
     }
 
+    TaskStatus taskStatusToReport = taskStatus == null
+        ? TaskStatus.failure(id, "Task failed to run")
+        : taskStatus;
     // report back to the overlord
-    UpdateStatusAction status = new UpdateStatusAction("successful");
-    if (taskStatus.isFailure()) {
-      status = new UpdateStatusAction("failure");
-    }
+    UpdateStatusAction status = new UpdateStatusAction("", taskStatusToReport);
     toolbox.getTaskActionClient().submit(status);
+    toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
 
     if (reportsFile != null && reportsFile.exists()) {
       toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
@@ -211,7 +222,7 @@ public abstract class AbstractTask implements Task
     }
 
     if (statusFile != null) {
-      toolbox.getJsonMapper().writeValue(statusFile, taskStatus);
+      toolbox.getJsonMapper().writeValue(statusFile, taskStatusToReport);
       toolbox.getTaskLogPusher().pushTaskStatus(id, statusFile);
       Files.deleteIfExists(statusFile.toPath());
       log.debug("Pushed task status");

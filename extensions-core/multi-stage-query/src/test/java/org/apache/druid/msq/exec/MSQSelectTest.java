@@ -25,6 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
@@ -34,7 +35,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -58,7 +58,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -773,7 +772,7 @@ public class MSQSelectTest extends MSQTestBase
                                                DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
                                                DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
                                            ),
-                                           JoinType.LEFT
+                                           NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -1272,7 +1271,12 @@ public class MSQSelectTest extends MSQTestBase
         GroupByQuery.builder()
                     .setDataSource(
                         new ExternalDataSource(
-                            new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile())),
+                            new LocalInputSource(
+                                null,
+                                null,
+                                ImmutableList.of(toRead.getAbsoluteFile()),
+                                SystemFields.none()
+                            ),
                             new JsonInputFormat(null, null, null, null, null),
                             RowSignature.builder()
                                         .add("timestamp", ColumnType.STRING)
@@ -1362,7 +1366,15 @@ public class MSQSelectTest extends MSQTestBase
     final ScanQuery expectedQuery =
         newScanQueryBuilder().dataSource(
                                  new ExternalDataSource(
-                                     new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile(), toRead.getAbsoluteFile())),
+                                     new LocalInputSource(
+                                         null,
+                                         null,
+                                         ImmutableList.of(
+                                             toRead.getAbsoluteFile(),
+                                             toRead.getAbsoluteFile()
+                                         ),
+                                         SystemFields.none()
+                                     ),
                                      new JsonInputFormat(null, null, null, null, null),
                                      RowSignature.builder()
                                                  .add("timestamp", ColumnType.STRING)
@@ -1825,14 +1837,14 @@ public class MSQSelectTest extends MSQTestBase
                                                               )
                                                           )
                                                       )
-                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
-                                                          "a0")))
+                                                      .setAggregatorSpecs(
+                                                          aggregators(new CountAggregatorFactory("a0"))
+                                                      )
                                                       .setPostAggregatorSpecs(
-                                                          ImmutableList.of(new ExpressionPostAggregator(
-                                                                               "p0",
-                                                                               "mv_to_array(\"d0\")",
-                                                                               null, ExprMacroTable.nil()
-                                                                           )
+                                                          expressionPostAgg(
+                                                              "p0",
+                                                              "mv_to_array(\"d0\")",
+                                                              ColumnType.STRING_ARRAY
                                                           )
                                                       )
                                                       .setContext(localContext)
@@ -2143,7 +2155,12 @@ public class MSQSelectTest extends MSQTestBase
                 .builder()
                 .query(newScanQueryBuilder()
                            .dataSource(new ExternalDataSource(
-                               new LocalInputSource(null, null, Collections.nCopies(numFiles, toRead)),
+                               new LocalInputSource(
+                                   null,
+                                   null,
+                                   Collections.nCopies(numFiles, toRead),
+                                   SystemFields.none()
+                               ),
                                new CsvInputFormat(null, null, null, true, 0),
                                RowSignature.builder().add("timestamp", ColumnType.STRING).build()
                            ))
@@ -2216,11 +2233,10 @@ public class MSQSelectTest extends MSQTestBase
                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                 .setGranularity(Granularities.ALL)
                                 .setPostAggregatorSpecs(
-                                    ImmutableList.of(new ExpressionPostAggregator(
-                                                         "a0",
-                                                         "1",
-                                                         null, ExprMacroTable.nil()
-                                                     )
+                                    expressionPostAgg(
+                                        "a0",
+                                        "1",
+                                        ColumnType.LONG
                                     )
                                 )
                                 .build()

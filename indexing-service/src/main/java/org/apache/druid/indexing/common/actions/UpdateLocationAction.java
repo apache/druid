@@ -23,15 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Optional;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.TaskRunner;
 
-/* This class was added for mm-less ingestion in order to let the peon manage its own location lifecycle by submitting
-actions to the overlord. https://github.com/apache/druid/pull/15133 moved this location logic to the overlord itself
-so this Action is no longer needed. For backwards compatibility with old peons, this class was left in but can be deprecated
-for a later druid release.
-*/
-@Deprecated
 public class UpdateLocationAction implements TaskAction<Void>
 {
   @JsonIgnore
@@ -62,6 +58,10 @@ public class UpdateLocationAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox)
   {
+    Optional<TaskRunner> taskRunner = toolbox.getTaskRunner();
+    if (taskRunner.isPresent()) {
+      taskRunner.get().updateLocation(task, taskLocation);
+    }
     return null;
   }
 
