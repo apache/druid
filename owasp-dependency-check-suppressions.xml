@@ -825,4 +825,12 @@
     ]]></notes>
     <cve>CVE-2023-4586</cve>
   </suppress>
+
+  <!--
+    ~ CVE-2022-46337 applies to configurations using authentication for Derby and is not applicable to Druid. Also, Derby isn't a suggested
+    ~ metadata store for production clusters.
+    -->
+  <suppress>
+    <cve>CVE-2022-46337</cve>
+  </suppress>
 </suppressions>
