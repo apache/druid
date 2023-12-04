@@ -811,7 +811,7 @@
     -->
   <suppress>
     <notes><![CDATA[
-      file name: zookeeper-3.5.10.jar
+      file name: zookeeper-3.8.3.jar
     ]]></notes>
     <cve>CVE-2023-44981</cve>
   </suppress>
