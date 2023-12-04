@@ -118,7 +118,7 @@ Returns a list of all segments for each datasource with the full segment metadat
 
 `GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments`
 
-Returns a list of all published and realtime segments for each datasource with the full segment metadata and extra fields `overshadowed`,`realtime` & `numRows`. Realtime segments are returned only when `druid.coordinator.centralizedTableSchema.enabled` is set on the Coordinator. 
+Returns a list of all published and realtime segments for each datasource with the full segment metadata and extra fields `overshadowed`,`realtime` & `numRows`. Realtime segments are returned only when `druid.centralizedTableSchema.enabled` is set on the Coordinator. 
 
 `GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName1}&datasources={dataSourceName2}`
 
@@ -126,7 +126,7 @@ Returns a list of all segments for one or more specific datasources with the ful
 
 `GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources={dataSourceName1}&datasources={dataSourceName2}`
 
-Returns a list of all published and realtime segments for the specified datasources with the full segment metadata and extra fields `overshadwed`,`realtime` & `numRows`. Realtime segments are returned only when `druid.coordinator.centralizedTableSchema.enabled` is set on the Coordinator.
+Returns a list of all published and realtime segments for the specified datasources with the full segment metadata and extra fields `overshadwed`,`realtime` & `numRows`. Realtime segments are returned only when `druid.centralizedTableSchema.enabled` is set on the Coordinator.
 
 `GET /druid/coordinator/v1/metadata/datasources`
 
