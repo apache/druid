@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.DruidServer;
@@ -336,10 +336,10 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     final String ruleString;
     try {
       ruleString = jsonMapper.writeValueAsString(newRules);
-      log.info("Updating [%s] with rules [%s] as per [%s]", dataSource, ruleString, auditInfo);
+      log.info("Updating datasource[%s] with rules[%s] as per [%s]", dataSource, ruleString, auditInfo);
     }
     catch (JsonProcessingException e) {
-      log.error(e, "Unable to write rules as string for [%s]", dataSource);
+      log.error(e, "Unable to write rules as string for datasource[%s]", dataSource);
       return false;
     }
     synchronized (lock) {
@@ -348,11 +348,11 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
             (handle, transactionStatus) -> {
               final DateTime auditTime = DateTimes.nowUtc();
               auditManager.doAudit(
-                  AuditEntry.builder()
+                  AuditEvent.builder()
                             .key(dataSource)
                             .type("rules")
                             .auditInfo(auditInfo)
-                            .payload(ruleString)
+                            .payloadAsString(ruleString)
                             .auditTime(auditTime)
                             .build(),
                   handle

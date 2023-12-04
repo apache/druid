@@ -282,12 +282,12 @@ public class OverlordTest
     taskCompletionCountDownLatches.get(goodTaskId).countDown();
     waitForTaskStatus(goodTaskId, TaskState.SUCCESS);
 
-    response = overlordResource.taskPost(task0, req);
+    response = overlordResource.taskPost(task0, "", "", req);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("task", taskId0), response.getEntity());
 
     // Duplicate task - should fail
-    response = overlordResource.taskPost(task0, req);
+    response = overlordResource.taskPost(task0, "", "", req);
     Assert.assertEquals(400, response.getStatus());
 
     // Task payload for task_0 should be present in taskStorage

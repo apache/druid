@@ -20,44 +20,47 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.audit.AuditManagerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 
 /**
  */
-public class SQLAuditManagerConfig
+public class SQLAuditManagerConfig implements AuditManagerConfig
 {
   @JsonProperty
-  private long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
+  private final long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
 
   @JsonProperty
-  private boolean includePayloadAsDimensionInMetric = false;
+  private final boolean includePayloadAsDimensionInMetric = false;
 
   @JsonProperty
   @HumanReadableBytesRange(
       min = -1,
       message = "maxPayloadSizeBytes must either be -1 (for disabling the check) or a non negative number"
   )
-  private HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
+  private final HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
 
   @JsonProperty
-  private boolean skipNullField = false;
+  private final boolean skipNullField = false;
 
   public long getAuditHistoryMillis()
   {
     return auditHistoryMillis;
   }
 
-  public boolean getIncludePayloadAsDimensionInMetric()
+  public boolean isIncludePayloadAsDimensionInMetric()
   {
     return includePayloadAsDimensionInMetric;
   }
 
+  @Override
   public long getMaxPayloadSizeBytes()
   {
     return maxPayloadSizeBytes.getBytes();
   }
 
+  @Override
   public boolean isSkipNullField()
   {
     return skipNullField;

@@ -60,7 +60,7 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
 
   let content: JSX.Element;
   if (historyRecords.length === 0) {
-    content = <div className="no-record">No history records available</div>;
+    content = <div className="no-record">No history records available. Try setting 'druid.audit.destiation=sql' to record config changes in metadata store.</div>;
   } else {
     content = (
       <Tabs animate renderActiveTabPanelOnly vertical defaultSelectedTabId={0}>

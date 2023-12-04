@@ -28,7 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
@@ -37,6 +37,7 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -193,7 +194,12 @@ public class OverlordResource
   @Path("/task")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response taskPost(final Task task, @Context final HttpServletRequest req)
+  public Response taskPost(
+      final Task task,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context final HttpServletRequest req
+  )
   {
     final Set<ResourceAction> resourceActions;
     try {
@@ -201,13 +207,8 @@ public class OverlordResource
     }
     catch (UOE e) {
       return Response.status(Response.Status.BAD_REQUEST)
-          .entity(
-              ImmutableMap.of(
-                  "error",
-                  e.getMessage()
-              )
-          )
-          .build();
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
     }
 
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
@@ -225,18 +226,30 @@ public class OverlordResource
         taskQueue -> {
           try {
             taskQueue.add(task);
+
+            // Do an audit only if this API was called by a user and not by internal services
+            if (author != null && !author.isEmpty()) {
+              auditManager.doAudit(
+                  AuditEvent.builder()
+                            .key(task.getDataSource())
+                            .type("submit.ingestion.task")
+                            .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
+                            .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+              );
+            }
+
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
           catch (DruidException e) {
             return Response
-                    .status(e.getStatusCode())
-                    .entity(new ErrorResponse(e))
-                    .build();
+                .status(e.getStatusCode())
+                .entity(new ErrorResponse(e))
+                .build();
           }
           catch (org.apache.druid.common.exception.DruidException e) {
             return Response.status(e.getResponseCode())
-                    .entity(ImmutableMap.of("error", e.getMessage()))
-                    .build();
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
           }
         }
     );
@@ -572,7 +585,7 @@ public class OverlordResource
     Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
-        List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
+        List<AuditEvent> workerEntryList = auditManager.fetchAuditHistory(
             WorkerBehaviorConfig.CONFIG_KEY,
             WorkerBehaviorConfig.CONFIG_KEY,
             count
@@ -585,7 +598,7 @@ public class OverlordResource
                        .build();
       }
     }
-    List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
+    List<AuditEvent> workerEntryList = auditManager.fetchAuditHistory(
         WorkerBehaviorConfig.CONFIG_KEY,
         WorkerBehaviorConfig.CONFIG_KEY,
         theInterval

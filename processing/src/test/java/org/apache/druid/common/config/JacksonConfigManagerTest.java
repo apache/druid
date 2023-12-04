@@ -20,20 +20,17 @@
 package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -51,66 +48,14 @@ public class JacksonConfigManagerTest
 
   private JacksonConfigManager jacksonConfigManager;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   @Before
   public void setUp()
   {
     jacksonConfigManager = new JacksonConfigManager(
         mockConfigManager,
         new ObjectMapper(),
-        new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL),
         mockAuditManager
     );
-  }
-
-  @Test
-  public void testSerializeToStringWithSkipNullTrue()
-  {
-    ConfigSerde<TestConfig> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
-    {
-    }, null);
-    ConfigSerde<TestConfig> configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
-    TestConfig config = new TestConfig("version", null, 3);
-    String actual = configConfigSerdeFromTypeReference.serializeToString(config, true);
-    Assert.assertEquals("{\"version\":\"version\",\"settingInt\":3}", actual);
-    actual = configConfigSerdeFromClass.serializeToString(config, true);
-    Assert.assertEquals("{\"version\":\"version\",\"settingInt\":3}", actual);
-  }
-
-  @Test
-  public void testSerializeToStringWithSkipNullFalse()
-  {
-    ConfigSerde<TestConfig> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<TestConfig>()
-    {
-    }, null);
-    ConfigSerde<TestConfig> configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
-    TestConfig config = new TestConfig("version", null, 3);
-    String actual = configConfigSerdeFromTypeReference.serializeToString(config, false);
-    Assert.assertEquals("{\"version\":\"version\",\"settingString\":null,\"settingInt\":3}", actual);
-    actual = configConfigSerdeFromClass.serializeToString(config, false);
-    Assert.assertEquals("{\"version\":\"version\",\"settingString\":null,\"settingInt\":3}", actual);
-  }
-
-  @Test
-  public void testSerializeToStringWithInvalidConfigForConfigSerdeFromTypeReference()
-  {
-    ConfigSerde<ClassThatJacksonCannotSerialize> configConfigSerdeFromTypeReference = jacksonConfigManager.create(new TypeReference<ClassThatJacksonCannotSerialize>()
-    {
-    }, null);
-    exception.expect(RuntimeException.class);
-    exception.expectMessage("InvalidDefinitionException");
-    configConfigSerdeFromTypeReference.serializeToString(new ClassThatJacksonCannotSerialize(), false);
-  }
-
-  @Test
-  public void testSerializeToStringWithInvalidConfigForConfigSerdeFromClass()
-  {
-    ConfigSerde<ClassThatJacksonCannotSerialize> configConfigSerdeFromClass = jacksonConfigManager.create(ClassThatJacksonCannotSerialize.class, null);
-    exception.expect(RuntimeException.class);
-    exception.expectMessage("InvalidDefinitionException");
-    configConfigSerdeFromClass.serializeToString(new ClassThatJacksonCannotSerialize(), false);
   }
 
   @Test
@@ -126,16 +71,9 @@ public class JacksonConfigManagerTest
 
     jacksonConfigManager.set(key, val, auditInfo);
 
-    ArgumentCaptor<ConfigSerde> configSerdeCapture = ArgumentCaptor.forClass(
-        ConfigSerde.class);
-    Mockito.verify(mockAuditManager).doAudit(
-        ArgumentMatchers.eq(key),
-        ArgumentMatchers.eq(key),
-        ArgumentMatchers.eq(auditInfo),
-        ArgumentMatchers.eq(val),
-        configSerdeCapture.capture()
-    );
-    Assert.assertNotNull(configSerdeCapture.getValue());
+    ArgumentCaptor<AuditEvent.Builder> auditCapture = ArgumentCaptor.forClass(AuditEvent.Builder.class);
+    Mockito.verify(mockAuditManager).doAudit(auditCapture.capture());
+    Assert.assertNotNull(auditCapture.getValue());
   }
 
   @Test
@@ -213,10 +151,5 @@ public class JacksonConfigManagerTest
     {
       return Objects.hash(version, settingString, settingInt);
     }
-  }
-
-  static class ClassThatJacksonCannotSerialize
-  {
-
   }
 }

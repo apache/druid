@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.DruidServer;
@@ -74,11 +74,10 @@ public class SQLMetadataRuleManagerTest
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createAuditTable();
     auditManager = new SQLAuditManager(
-        connector,
+        new SQLAuditManagerConfig(), null, connector,
         Suppliers.ofInstance(tablesConfig),
         new NoopServiceEmitter(),
-        mapper,
-        new SQLAuditManagerConfig()
+        mapper
     );
 
     connector.createRulesTable();
@@ -184,13 +183,13 @@ public class SQLMetadataRuleManagerTest
     Assert.assertEquals(rules, ruleManager.getRules(DATASOURCE));
 
     // verify audit entry is created
-    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(DATASOURCE, "rules", null);
+    List<AuditEvent> auditEntries = auditManager.fetchAuditHistory(DATASOURCE, "rules", null);
     Assert.assertEquals(1, auditEntries.size());
-    AuditEntry entry = auditEntries.get(0);
+    AuditEvent entry = auditEntries.get(0);
 
     Assert.assertEquals(
         rules,
-        mapper.readValue(entry.getPayload(), new TypeReference<List<Rule>>() {})
+        mapper.readValue(entry.getPayloadAsString(), new TypeReference<List<Rule>>() {})
     );
     Assert.assertEquals(auditInfo, entry.getAuditInfo());
     Assert.assertEquals(DATASOURCE, entry.getKey());
@@ -218,12 +217,12 @@ public class SQLMetadataRuleManagerTest
     Assert.assertEquals(rules, ruleManager.getRules("test_dataSource2"));
 
     // test fetch audit entries
-    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("rules", null);
+    List<AuditEvent> auditEntries = auditManager.fetchAuditHistory("rules", null);
     Assert.assertEquals(2, auditEntries.size());
-    for (AuditEntry entry : auditEntries) {
+    for (AuditEvent entry : auditEntries) {
       Assert.assertEquals(
           rules,
-          mapper.readValue(entry.getPayload(), new TypeReference<List<Rule>>() {})
+          mapper.readValue(entry.getPayloadAsString(), new TypeReference<List<Rule>>() {})
       );
       Assert.assertEquals(auditInfo, entry.getAuditInfo());
     }

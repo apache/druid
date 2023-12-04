@@ -22,7 +22,7 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.Intervals;
@@ -161,7 +161,7 @@ public class RulesResource
     }
   }
 
-  private List<AuditEntry> getRuleHistory(
+  private List<AuditEvent> getRuleHistory(
       final String dataSourceName,
       final String interval,
       final Integer count

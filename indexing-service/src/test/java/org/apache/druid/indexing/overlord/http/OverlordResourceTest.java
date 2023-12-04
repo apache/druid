@@ -877,7 +877,7 @@ public class OverlordResourceTest
         authConfig
     );
     Task task = NoopTask.create();
-    overlordResource.taskPost(task, req);
+    overlordResource.taskPost(task, "", "", req);
   }
 
   @Test
@@ -900,7 +900,7 @@ public class OverlordResourceTest
     Task task = NoopTask.forDatasource(Datasources.WIKIPEDIA);
     expectedException.expect(ForbiddenException.class);
     expectedException.expect(ForbiddenException.class);
-    overlordResource.taskPost(task, req);
+    overlordResource.taskPost(task, "", "", req);
   }
 
   @Test

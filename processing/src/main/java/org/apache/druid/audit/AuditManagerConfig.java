@@ -17,13 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.server.audit;
+package org.apache.druid.audit;
 
-import com.google.inject.Provider;
-import org.apache.druid.audit.AuditManager;
-
-public interface AuditManagerProvider extends Provider<AuditManager>
+public interface AuditManagerConfig
 {
-  @Override
-  AuditManager get();
+  boolean isSkipNullField();
+
+  long getMaxPayloadSizeBytes();
 }

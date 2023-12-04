@@ -41,7 +41,7 @@ public class AuditInfoTest
   @Test(timeout = 60_000L)
   public void testAuditEntrySerde() throws IOException
   {
-    AuditEntry entry = new AuditEntry(
+    AuditEvent entry = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -53,7 +53,7 @@ public class AuditInfoTest
         DateTimes.of("2013-01-01T00:00:00Z")
     );
     ObjectMapper mapper = new DefaultObjectMapper();
-    AuditEntry serde = mapper.readValue(mapper.writeValueAsString(entry), AuditEntry.class);
+    AuditEvent serde = mapper.readValue(mapper.writeValueAsString(entry), AuditEvent.class);
     Assert.assertEquals(entry, serde);
   }
 

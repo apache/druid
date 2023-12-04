@@ -20,7 +20,6 @@
 package org.apache.druid.audit;
 
 
-import org.apache.druid.common.config.ConfigSerde;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 
@@ -29,68 +28,65 @@ import java.util.List;
 
 public interface AuditManager
 {
-  /**
-   * This String is the default message stored instead of the actual audit payload if the audit payload size
-   * exceeded the maximum size limit configuration
-   */
-  String PAYLOAD_SKIP_MSG_FORMAT = "Payload was not stored as its size exceeds the limit [%d] configured by druid.audit.manager.maxPayloadSizeBytes";
 
   String X_DRUID_AUTHOR = "X-Druid-Author";
 
   String X_DRUID_COMMENT = "X-Druid-Comment";
 
-  /**
-   * inserts an audit entry in the Audit Table
-   * @param key of the audit entry
-   * @param type of the audit entry
-   * @param auditInfo of the audit entry
-   * @param payload of the audit entry
-   * @param configSerde of the payload of the audit entry
-   */
-  <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde);
+  void doAudit(AuditEvent event);
 
   /**
-   * inserts an audit Entry in audit table using the handler provided
-   * used to do the audit in same transaction as the config changes
-   * @param auditEntry
-   * @param handler
-   * @throws IOException
+   * Inserts an audit entry in audit table using the provided JDBI handle.
+   * This method can be used to perform the audit in the same transaction as the
+   * audited changes. Only SQL-based implementations need to implement this method,
+   * other implementations call {@link #doAudit} by default.
+   *
+   * @param AuditEvent
+   * @param handle     JDBI Handle representing connection to the database
    */
-  void doAudit(AuditEntry auditEntry, Handle handler) throws IOException;
+  default void doAudit(AuditEvent event, Handle handle) throws IOException
+  {
+    doAudit(event);
+  }
 
   /**
-   * provides audit history for given key, type and interval
+   * Fetches audit entries made for the given key, type and interval. Implementations
+   * that do not maintain an audit history should return an empty list.
+   *
    * @param key
    * @param type
    * @param interval
    * @return list of AuditEntries satisfying the passed parameters
    */
-  List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval);
+  List<AuditEvent> fetchAuditHistory(String key, String type, Interval interval);
 
   /**
-   * provides audit history for given type and interval
-   * @param type type of auditEntry
-   * @param interval interval for which to fetch auditHistory
-   * @return list of AuditEntries satisfying the passed parameters
+   * Fetches audit entries of a type whose audit time lies in the given interval.
+   *
+   * @param type     Type of audit entry
+   * @param interval Eligible interval for audit time
+   * @return List of audit entries satisfying the passed parameters.
    */
-  List<AuditEntry> fetchAuditHistory(String type, Interval interval);
+  List<AuditEvent> fetchAuditHistory(String type, Interval interval);
 
   /**
    * Provides last N entries of audit history for given key, type
+   *
    * @param key
    * @param type
    * @param limit
    * @return list of AuditEntries satisfying the passed parameters
    */
-  List<AuditEntry> fetchAuditHistory(String key, String type, int limit);
+  List<AuditEvent> fetchAuditHistory(String key, String type, int limit);
 
   /**
    * Provides last N entries of audit history for given type
-   * @param type type of auditEntry
+   *
+   * @param type  type of AuditEvent
    * @param limit
    * @return list of AuditEntries satisfying the passed parameters
    */
-  List<AuditEntry> fetchAuditHistory(String type, int limit);
+  List<AuditEvent> fetchAuditHistory(String type, int limit);
 
   /**
    * Remove audit logs created older than the given timestamp.

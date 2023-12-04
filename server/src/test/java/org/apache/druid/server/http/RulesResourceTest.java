@@ -20,7 +20,7 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.DateTimes;
@@ -51,7 +51,7 @@ public class RulesResourceTest
   @Test
   public void testGetDatasourceRuleHistoryWithCount()
   {
-    AuditEntry entry1 = new AuditEntry(
+    AuditEvent entry1 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -62,7 +62,7 @@ public class RulesResourceTest
         "testPayload",
         DateTimes.of("2013-01-02T00:00:00Z")
     );
-    AuditEntry entry2 = new AuditEntry(
+    AuditEvent entry2 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -81,7 +81,7 @@ public class RulesResourceTest
     RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", null, 2);
-    List<AuditEntry> rulesHistory = (List) response.getEntity();
+    List<AuditEvent> rulesHistory = (List) response.getEntity();
     Assert.assertEquals(2, rulesHistory.size());
     Assert.assertEquals(entry1, rulesHistory.get(0));
     Assert.assertEquals(entry2, rulesHistory.get(1));
@@ -94,7 +94,7 @@ public class RulesResourceTest
   {
     String interval = "P2D/2013-01-02T00:00:00Z";
     Interval theInterval = Intervals.of(interval);
-    AuditEntry entry1 = new AuditEntry(
+    AuditEvent entry1 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -105,7 +105,7 @@ public class RulesResourceTest
         "testPayload",
         DateTimes.of("2013-01-02T00:00:00Z")
     );
-    AuditEntry entry2 = new AuditEntry(
+    AuditEvent entry2 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -124,7 +124,7 @@ public class RulesResourceTest
     RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", interval, null);
-    List<AuditEntry> rulesHistory = (List) response.getEntity();
+    List<AuditEvent> rulesHistory = (List) response.getEntity();
     Assert.assertEquals(2, rulesHistory.size());
     Assert.assertEquals(entry1, rulesHistory.get(0));
     Assert.assertEquals(entry2, rulesHistory.get(1));
@@ -154,7 +154,7 @@ public class RulesResourceTest
   @Test
   public void testGetAllDatasourcesRuleHistoryWithCount()
   {
-    AuditEntry entry1 = new AuditEntry(
+    AuditEvent entry1 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -165,7 +165,7 @@ public class RulesResourceTest
         "testPayload",
         DateTimes.of("2013-01-02T00:00:00Z")
     );
-    AuditEntry entry2 = new AuditEntry(
+    AuditEvent entry2 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -184,7 +184,7 @@ public class RulesResourceTest
     RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
 
     Response response = rulesResource.getDatasourceRuleHistory(null, 2);
-    List<AuditEntry> rulesHistory = (List) response.getEntity();
+    List<AuditEvent> rulesHistory = (List) response.getEntity();
     Assert.assertEquals(2, rulesHistory.size());
     Assert.assertEquals(entry1, rulesHistory.get(0));
     Assert.assertEquals(entry2, rulesHistory.get(1));
@@ -197,7 +197,7 @@ public class RulesResourceTest
   {
     String interval = "P2D/2013-01-02T00:00:00Z";
     Interval theInterval = Intervals.of(interval);
-    AuditEntry entry1 = new AuditEntry(
+    AuditEvent entry1 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -208,7 +208,7 @@ public class RulesResourceTest
         "testPayload",
         DateTimes.of("2013-01-02T00:00:00Z")
     );
-    AuditEntry entry2 = new AuditEntry(
+    AuditEvent entry2 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -227,7 +227,7 @@ public class RulesResourceTest
     RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
 
     Response response = rulesResource.getDatasourceRuleHistory(interval, null);
-    List<AuditEntry> rulesHistory = (List) response.getEntity();
+    List<AuditEvent> rulesHistory = (List) response.getEntity();
     Assert.assertEquals(2, rulesHistory.size());
     Assert.assertEquals(entry1, rulesHistory.get(0));
     Assert.assertEquals(entry2, rulesHistory.get(1));
