@@ -20,7 +20,6 @@ import os
 import sys
 from html.parser import HTMLParser
 import argparse
-#import json
 
 class DependencyReportParser(HTMLParser):
     # This class parses the given html file to find all dependency reports under "Project dependencies"
