@@ -122,6 +122,7 @@ public class JacksonConfigManager
                   .type(key)
                   .auditInfo(auditInfo)
                   .payload(newValue)
+                  .build()
     );
     return configManager.set(key, configSerde, oldValue, newValue);
   }

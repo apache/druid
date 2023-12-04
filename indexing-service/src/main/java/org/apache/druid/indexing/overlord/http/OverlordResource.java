@@ -235,6 +235,7 @@ public class OverlordResource
                             .type("submit.ingestion.task")
                             .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
                             .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+                            .build()
               );
             }
 
