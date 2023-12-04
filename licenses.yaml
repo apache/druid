@@ -1990,7 +1990,7 @@ libraries:
 notices:
   - zookeeper: |
       Apache ZooKeeper
-      Copyright 2009-2019 The Apache Software Foundation
+      Copyright 2009-2023 The Apache Software Foundation
 
 ---
 
