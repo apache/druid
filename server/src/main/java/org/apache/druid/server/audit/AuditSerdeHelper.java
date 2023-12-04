@@ -20,7 +20,6 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditManagerConfig;
@@ -30,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class AuditSerdeHelper
 {
@@ -103,7 +103,7 @@ public class AuditSerdeHelper
       return serializedPayload;
     }
 
-    int payloadSize = serializedPayload.getBytes(Charsets.UTF_8).length;
+    int payloadSize = serializedPayload.getBytes(StandardCharsets.UTF_8).length;
     if (payloadSize > config.getMaxPayloadSizeBytes()) {
       return PAYLOAD_TRUNCATED_MSG + StringUtils.format("[%s].", config.getMaxPayloadSizeBytes());
     } else {

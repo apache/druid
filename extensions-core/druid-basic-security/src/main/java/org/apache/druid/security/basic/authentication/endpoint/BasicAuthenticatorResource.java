@@ -146,8 +146,6 @@ public class BasicAuthenticatorResource
    * @param req      HTTP request
    * @param userName Name to assign the new user
    *
-   * @param author
-   * @param comment
    * @return OK response, or 400 error response if user already exists
    */
   @POST
@@ -181,8 +179,6 @@ public class BasicAuthenticatorResource
    * @param req      HTTP request
    * @param userName Name of user to delete
    *
-   * @param author
-   * @param comment
    * @return OK response, or 400 error response if user doesn't exist
    */
   @DELETE
@@ -215,8 +211,6 @@ public class BasicAuthenticatorResource
    * @param req      HTTP request
    * @param userName Name of user
    *
-   * @param author
-   * @param comment
    * @return OK response, 400 error if user doesn't exist
    */
   @POST
@@ -281,7 +275,8 @@ public class BasicAuthenticatorResource
     return handler.authenticatorUserUpdateListener(authenticatorName, serializedUserMap);
   }
 
-  private boolean isSuccess(Response response) {
+  private boolean isSuccess(Response response)
+  {
     if (response == null) {
       return false;
     }
