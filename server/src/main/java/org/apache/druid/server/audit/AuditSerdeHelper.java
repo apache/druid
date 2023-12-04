@@ -20,10 +20,10 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditManagerConfig;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.java.util.common.StringUtils;
@@ -75,26 +75,6 @@ public class AuditSerdeHelper
     );
   }
 
-  public <T> T deserializePayloadFromString(String serializedPayload, Class<T> clazz)
-  {
-    if (serializedPayload == null || serializedPayload.isEmpty()) {
-      return null;
-    } else if (serializedPayload.contains(PAYLOAD_TRUNCATED_MSG)) {
-      throw InvalidInput.exception("Cannot deserialize audit payload[%s].", serializedPayload);
-    }
-
-    try {
-      return jsonMapper.readValue(serializedPayload, clazz);
-    }
-    catch (IOException e) {
-      throw InvalidInput.exception(
-          e,
-          "Could not deserialize audit payload[%s] into class[%s]",
-          serializedPayload, clazz
-      );
-    }
-  }
-
   private String serializePayloadToString(Object payload)
   {
     if (payload == null) {
@@ -123,7 +103,7 @@ public class AuditSerdeHelper
       return serializedPayload;
     }
 
-    int payloadSize = serializedPayload.getBytes().length;
+    int payloadSize = serializedPayload.getBytes(Charsets.UTF_8).length;
     if (payloadSize > config.getMaxPayloadSizeBytes()) {
       return PAYLOAD_TRUNCATED_MSG + StringUtils.format("[%s].", config.getMaxPayloadSizeBytes());
     } else {
