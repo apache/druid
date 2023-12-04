@@ -26,12 +26,12 @@ import org.apache.druid.audit.AuditManagerConfig;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 
-public class AuditSerdeHelper implements AuditEvent.PayloadDeserializer
+public class AuditSerdeHelper
 {
   /**
    * Default message stored instead of the actual audit payload if the audit
@@ -39,6 +39,9 @@ public class AuditSerdeHelper implements AuditEvent.PayloadDeserializer
    */
   private static final String PAYLOAD_TRUNCATED_MSG =
       "Payload truncated as it exceeds 'druid.audit.manager.maxPayloadSizeBytes'";
+  private static final String SERIALIZE_ERROR_MSG =
+      "Error serializing payload";
+  private static final Logger log = new Logger(AuditSerdeHelper.class);
 
   private final ObjectMapper jsonMapper;
   private final ObjectMapper jsonMapperSkipNulls;
@@ -72,7 +75,6 @@ public class AuditSerdeHelper implements AuditEvent.PayloadDeserializer
     );
   }
 
-  @Override
   public <T> T deserializePayloadFromString(String serializedPayload, Class<T> clazz)
   {
     if (serializedPayload == null || serializedPayload.isEmpty()) {
@@ -105,7 +107,9 @@ public class AuditSerdeHelper implements AuditEvent.PayloadDeserializer
              : jsonMapper.writeValueAsString(payload);
     }
     catch (IOException e) {
-      throw new ISE(e, "Could not serialize audit payload[%s]", payload);
+      // Do not throw exception, only log error
+      log.error(e, "Could not serialize audit payload[%s]", payload);
+      return SERIALIZE_ERROR_MSG;
     }
   }
 

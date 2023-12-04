@@ -41,8 +41,8 @@ public interface AuditManager
    * audited changes. Only SQL-based implementations need to implement this method,
    * other implementations call {@link #doAudit} by default.
    *
-   * @param AuditEvent
-   * @param handle     JDBI Handle representing connection to the database
+   * @param event  Event to audit
+   * @param handle JDBI Handle representing connection to the database
    */
   default void doAudit(AuditEvent event, Handle handle) throws IOException
   {
@@ -53,10 +53,7 @@ public interface AuditManager
    * Fetches audit entries made for the given key, type and interval. Implementations
    * that do not maintain an audit history should return an empty list.
    *
-   * @param key
-   * @param type
-   * @param interval
-   * @return list of AuditEntries satisfying the passed parameters
+   * @return List of recorded audit events satisfying the passed parameters.
    */
   List<AuditEvent> fetchAuditHistory(String key, String type, Interval interval);
 
@@ -65,26 +62,21 @@ public interface AuditManager
    *
    * @param type     Type of audit entry
    * @param interval Eligible interval for audit time
-   * @return List of audit entries satisfying the passed parameters.
+   * @return List of recorded audit events satisfying the passed parameters.
    */
   List<AuditEvent> fetchAuditHistory(String type, Interval interval);
 
   /**
    * Provides last N entries of audit history for given key, type
    *
-   * @param key
-   * @param type
-   * @param limit
-   * @return list of AuditEntries satisfying the passed parameters
+   * @return list of recorded audit events satisfying the passed parameters
    */
   List<AuditEvent> fetchAuditHistory(String key, String type, int limit);
 
   /**
    * Provides last N entries of audit history for given type
    *
-   * @param type  type of AuditEvent
-   * @param limit
-   * @return list of AuditEntries satisfying the passed parameters
+   * @return List of recorded audit events satisfying the passed parameters.
    */
   List<AuditEvent> fetchAuditHistory(String type, int limit);
 
@@ -92,7 +84,7 @@ public interface AuditManager
    * Remove audit logs created older than the given timestamp.
    *
    * @param timestamp timestamp in milliseconds
-   * @return number of audit logs removed
+   * @return Number of audit logs removed
    */
   int removeAuditLogsOlderThan(long timestamp);
 }

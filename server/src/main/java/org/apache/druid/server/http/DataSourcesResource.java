@@ -30,6 +30,9 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
+import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -70,7 +73,9 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -110,6 +115,7 @@ public class DataSourcesResource
   private final OverlordClient overlordClient;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
+  private final AuditManager auditManager;
 
   @Inject
   public DataSourcesResource(
@@ -118,7 +124,8 @@ public class DataSourcesResource
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
-      DruidCoordinator coordinator
+      DruidCoordinator coordinator,
+      AuditManager auditManager
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -127,6 +134,7 @@ public class DataSourcesResource
     this.overlordClient = overlordClient;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
+    this.auditManager = auditManager;
   }
 
   @GET
@@ -220,13 +228,19 @@ public class DataSourcesResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response markSegmentsAsUnused(
       @PathParam("dataSourceName") final String dataSourceName,
-      final MarkDataSourceSegmentsPayload payload
+      final MarkDataSourceSegmentsPayload payload,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context final HttpServletRequest req
   )
   {
     MarkSegments markSegments = () -> {
       final Interval interval = payload.getInterval();
+      final int numUpdatedSegments;
+      final Object auditPayload;
       if (interval != null) {
-        return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        auditPayload = Collections.singletonMap("interval", interval);
       } else {
         final Set<SegmentId> segmentIds =
             payload.getSegmentIds()
@@ -236,12 +250,24 @@ public class DataSourcesResource
                    .collect(Collectors.toSet());
 
         // Note: segments for the "wrong" datasource are ignored.
-        return segmentsMetadataManager.markSegmentsAsUnused(
+        numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
             segmentIds.stream()
                       .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
                       .collect(Collectors.toSet())
         );
+        auditPayload = Collections.singletonMap("segmentIds", segmentIds);
       }
+      if (author != null && !author.isEmpty()) {
+        auditManager.doAudit(
+            AuditEvent.builder()
+                      .key(dataSourceName)
+                      .type("segments.markUnused")
+                      .payload(auditPayload)
+                      .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+                      .build()
+        );
+      }
+      return numUpdatedSegments;
     };
     return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
   }
@@ -312,7 +338,8 @@ public class DataSourcesResource
   public Response markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
-      @QueryParam("interval") final String interval
+      @QueryParam("interval") final String interval,
+      @Context HttpServletRequest req
   )
   {
     if (overlordClient == null) {
@@ -321,7 +348,7 @@ public class DataSourcesResource
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
-      return killUnusedSegmentsInInterval(dataSourceName, interval);
+      return killUnusedSegmentsInInterval(dataSourceName, interval, null, null, req);
     } else {
       MarkSegments markSegments = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
       return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
@@ -334,7 +361,10 @@ public class DataSourcesResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response killUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
-      @PathParam("interval") final String interval
+      @PathParam("interval") final String interval,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context final HttpServletRequest req
   )
   {
     if (overlordClient == null) {
@@ -345,7 +375,18 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      FutureUtils.getUnchecked(overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null), true);
+      final String killTaskId = FutureUtils.getUnchecked(
+          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null),
+          true
+      );
+      auditManager.doAudit(
+          AuditEvent.builder()
+                    .key(dataSourceName)
+                    .type("segments.killTask")
+                    .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
+                    .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+                    .build()
+      );
       return Response.ok().build();
     }
     catch (Exception e) {

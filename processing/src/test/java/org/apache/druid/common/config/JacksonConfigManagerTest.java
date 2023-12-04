@@ -71,7 +71,7 @@ public class JacksonConfigManagerTest
 
     jacksonConfigManager.set(key, val, auditInfo);
 
-    ArgumentCaptor<AuditEvent.Builder> auditCapture = ArgumentCaptor.forClass(AuditEvent.Builder.class);
+    ArgumentCaptor<AuditEvent> auditCapture = ArgumentCaptor.forClass(AuditEvent.class);
     Mockito.verify(mockAuditManager).doAudit(auditCapture.capture());
     Assert.assertNotNull(auditCapture.getValue());
   }
