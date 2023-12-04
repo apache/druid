@@ -59,20 +59,18 @@ public class DDSketchAggregator implements Aggregator
     if (obj == null) {
       return;
     }
-    if (obj instanceof Number) {
-      synchronized (this) {
-        this.histogram.accept(((Number) obj).doubleValue());
+    synchronized(this) {
+      if (obj instanceof Number) {
+          this.histogram.accept(((Number) obj).doubleValue());
+      } else if (obj instanceof DDSketch) {
+          this.histogram.mergeWith((DDSketch) obj);
+      } else {
+        throw new IAE(
+            "Expected a number or an instance of DDSketch, but received [%s] of type [%s]",
+            obj,
+            obj.getClass()
+        );
       }
-    } else if (obj instanceof DDSketch) {
-      synchronized (this) {
-        this.histogram.mergeWith((DDSketch) obj);
-      }
-    } else {
-      throw new IAE(
-          "Expected a number or an instance of DDSketch, but received [%s] of type [%s]",
-          obj,
-          obj.getClass()
-      );
     }
   }
 

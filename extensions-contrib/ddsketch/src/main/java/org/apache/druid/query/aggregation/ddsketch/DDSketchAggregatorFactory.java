@@ -239,7 +239,7 @@ public class DDSketchAggregatorFactory extends AggregatorFactory
    * Each bounded lower collapsing store yields a max size of numBins * 8 bytes (size Of Double) in terms of size.
    * Since the sketch contains a store for positive values and negative values, a fully filled sketch at maximum would contain:
    * 2 * numBins * 8Bytes for storage. Other tracked members of the serialized sketch are constant,
-   * so we add 1k as buffer for these members. These members include mapping reconstruction, and zero counts.
+   * so we add 12 to account for these members. These members include mapping reconstruction, and zero counts.
    * These are tracked through doubles and integers and do not increase in size as the sketch accepts new values and merged.
    *
    */
@@ -281,9 +281,6 @@ public class DDSketchAggregatorFactory extends AggregatorFactory
         DDSketch other = (DDSketch) selector.getObject();
         if (other == null) {
           return;
-        }
-        if (combined == null) {
-          combined = DDSketches.collapsingLowestDense(relativeError, numBins);
         }
         combined.mergeWith(other);
       }

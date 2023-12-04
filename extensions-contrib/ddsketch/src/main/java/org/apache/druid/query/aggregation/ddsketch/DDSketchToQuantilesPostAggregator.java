@@ -92,7 +92,7 @@ public class DDSketchToQuantilesPostAggregator implements PostAggregator
   {
     final DDSketch sketch = (DDSketch) field.compute(combinedAggregators);
 
-    if (sketch.getCount() == 0) {
+    if (sketch == null || sketch.getCount() == 0) {
       return Double.NaN;
     }
 

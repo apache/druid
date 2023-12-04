@@ -92,6 +92,10 @@ public class DDSketchToQuantilePostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DDSketch sketch = (DDSketch) field.compute(combinedAggregators);
+
+    if (sketch == null || sketch.getCount() == 0) {
+      return Double.NaN;
+    }
     return sketch.getValueAtQuantile(fraction);
   }
 
