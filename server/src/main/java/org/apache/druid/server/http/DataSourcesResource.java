@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -39,6 +38,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -418,55 +418,52 @@ public class DataSourcesResource
   }
 
   @GET
-  @Path("/{dataSourceName}/unused/intervals")
+  @Path("/{dataSourceName}/unusedSegments/ids")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getIntervalsWithUnusedSegmentsOrAllUnusedSegmentsPerIntervals(
+  public Response getUnusedSegmentIdsInInterval(
       @PathParam("dataSourceName") String dataSourceName,
-      @QueryParam("simple") String simple,
-      @QueryParam("full") String full,
+      @QueryParam("interval") @Nullable String interval,
       @QueryParam("limit") @Nullable Integer limit,
       @QueryParam("offset") @Nullable Integer offset
   )
   {
-    Preconditions.checkArgument(limit == null || limit > 0, "limit must be > 0");
-    Preconditions.checkArgument(offset == null || offset > 0, "offset must be > 0");
-    Iterator<DataSegment> segments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+    if (limit != null && limit < 0) {
+      throw InvalidInput.exception("limit must be > 0");
+    }
+    if (offset != null && offset < 0) {
+      throw InvalidInput.exception("offset must be > 0");
+    }
+    final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
+    Iterator<DataSegment> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
         dataSourceName,
-        null,
+        theInterval,
         limit,
         offset
     ).iterator();
-    // return segments by earliest start and end times
-    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd();
-    if (simple == null && full == null) {
-      if (!segments.hasNext()) {
-        return Response.noContent().build();
-      }
-      Set<Interval> intervals = new TreeSet<>(comparator);
-      segments.forEachRemaining(segment -> intervals.add(segment.getInterval()));
-      return Response.ok(intervals).build();
-    } else {
-      return getUnusedSegmentsInInterval(segments, full != null, interval -> true, comparator);
-    }
+    final Set<SegmentId> segmentIds = new TreeSet<>();
+    unusedSegments.forEachRemaining(segment -> segmentIds.add(segment.getId()));
+    return Response.ok(segmentIds).build();
   }
 
   @GET
-  @Path("/{dataSourceName}/unused/intervals/{interval}")
+  @Path("/{dataSourceName}/unusedSegments/intervals/stats")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getUnusedSegmentsInInterval(
+  public Response getUnusedSegmentsStatsInInterval(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("interval") String interval,
-      @QueryParam("simple") String simple,
-      @QueryParam("full") String full,
+      @QueryParam("interval") @Nullable String interval,
       @QueryParam("limit") @Nullable Integer limit,
       @QueryParam("offset") @Nullable Integer offset
   )
   {
-    Preconditions.checkArgument(limit == null || limit > 0, "limit must be > 0");
-    Preconditions.checkArgument(offset == null || offset > 0, "offset must be > 0");
-    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
+    if (limit != null && limit < 0) {
+      throw InvalidInput.exception("limit must be > 0");
+    }
+    if (offset != null && offset < 0) {
+      throw InvalidInput.exception("offset must be > 0");
+    }
+    final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
     Iterator<DataSegment> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
         dataSourceName,
         theInterval,
@@ -475,13 +472,36 @@ public class DataSourcesResource
     ).iterator();
     // return segments by earliest start and end times
     final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd();
-    if (simple == null && full == null) {
-      final Set<SegmentId> segmentIds = new TreeSet<>();
-      unusedSegments.forEachRemaining(segment -> segmentIds.add(segment.getId()));
-      return Response.ok(segmentIds).build();
-    } else {
-      return getUnusedSegmentsInInterval(unusedSegments, full != null, theInterval::contains, comparator);
+    return getUnusedSegmentsStatsInIntervalSorted(unusedSegments, comparator);
+  }
+
+  @GET
+  @Path("/{dataSourceName}/unusedSegments/intervals/metadata")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getUnusedSegmentsMetadataInInterval(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("interval") @Nullable String interval,
+      @QueryParam("limit") @Nullable Integer limit,
+      @QueryParam("offset") @Nullable Integer offset
+  )
+  {
+    if (limit != null && limit < 0) {
+      throw InvalidInput.exception("limit must be > 0");
     }
+    if (offset != null && offset < 0) {
+      throw InvalidInput.exception("offset must be > 0");
+    }
+    final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
+    Iterator<DataSegment> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+        dataSourceName,
+        theInterval,
+        limit,
+        offset
+    ).iterator();
+    // return segments by earliest start and end times
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd();
+    return getUnusedSegmentsMetadataInIntervalSorted(unusedSegments, comparator);
   }
 
   @GET
@@ -661,42 +681,40 @@ public class DataSourcesResource
     }
   }
 
-  private Response getUnusedSegmentsInInterval(
-      Iterator<DataSegment> unusedDataSegments,
-      boolean full,
-      Predicate<Interval> intervalFilter,
+  private Response getUnusedSegmentsMetadataInIntervalSorted(
+      final Iterator<DataSegment> unusedDataSegments,
       final Comparator<Interval> comparator
   )
   {
-    if (full) {
-      final Map<Interval, Map<SegmentId, Object>> retVal = new TreeMap<>(comparator);
-      while (unusedDataSegments.hasNext()) {
-        DataSegment dataSegment = unusedDataSegments.next();
-        if (intervalFilter.test(dataSegment.getInterval())) {
-          Map<SegmentId, Object> segments = retVal.computeIfAbsent(dataSegment.getInterval(), i -> new HashMap<>());
+    final Map<Interval, Map<SegmentId, Object>> retVal = new TreeMap<>(comparator);
+    while (unusedDataSegments.hasNext()) {
+      DataSegment dataSegment = unusedDataSegments.next();
+      Map<SegmentId, Object> segments = retVal.computeIfAbsent(dataSegment.getInterval(), i -> new HashMap<>());
 
-          segments.put(
-              dataSegment.getId(),
-              ImmutableMap.of("metadata", dataSegment, "servers", ImmutableSet.of())
-          );
-        }
-      }
-
-      return Response.ok(retVal).build();
-    } else {
-      final Map<Interval, Map<SimpleProperties, Object>> statsPerInterval = new TreeMap<>(comparator);
-      while (unusedDataSegments.hasNext()) {
-        DataSegment dataSegment = unusedDataSegments.next();
-        if (intervalFilter.test(dataSegment.getInterval())) {
-          Map<SimpleProperties, Object> properties =
-              statsPerInterval.computeIfAbsent(dataSegment.getInterval(), i -> new EnumMap<>(SimpleProperties.class));
-          properties.merge(SimpleProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
-          properties.merge(SimpleProperties.count, 1, (a, b) -> (Integer) a + (Integer) b);
-        }
-      }
-
-      return Response.ok(statsPerInterval).build();
+      segments.put(
+          dataSegment.getId(),
+          ImmutableMap.of("metadata", dataSegment, "servers", ImmutableSet.of())
+      );
     }
+
+    return Response.ok(retVal).build();
+  }
+
+  private Response getUnusedSegmentsStatsInIntervalSorted(
+      final Iterator<DataSegment> unusedDataSegments,
+      final Comparator<Interval> comparator
+  )
+  {
+    final Map<Interval, Map<SimpleProperties, Object>> statsPerInterval = new TreeMap<>(comparator);
+    while (unusedDataSegments.hasNext()) {
+      DataSegment dataSegment = unusedDataSegments.next();
+      Map<SimpleProperties, Object> properties =
+          statsPerInterval.computeIfAbsent(dataSegment.getInterval(), i -> new EnumMap<>(SimpleProperties.class));
+      properties.merge(SimpleProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
+      properties.merge(SimpleProperties.count, 1, (a, b) -> (Integer) a + (Integer) b);
+    }
+
+    return Response.ok(statsPerInterval).build();
   }
 
   @GET

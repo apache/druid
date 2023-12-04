@@ -232,6 +232,18 @@ Returns a map of segment intervals contained within the specified interval to a 
 
 Returns a map of segment intervals contained within the specified interval to information about the servers that contain the segment for an interval.
 
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments/ids?interval={interval}&limit={limit}&offset={offset}`
+
+Returns a list of the ids of segments belonging to a particular datasource, filtered to be within an optional interval if provided. Optional parameters for limit, and offset can be given as well.
+
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments/intervals/stats?interval={interval}&limit={limit}&offset={offset}`
+
+Returns a map of segment intervals contained within an optionally specified interval to a JSON object containing the total byte size of unused segments and number of unused segments for an interval. Optional parameters for limit, and offset can be given as well.
+
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments/intervals/metadata?interval={interval}&limit={limit}&offset={offset}`
+
+Returns a map of segment intervals contained within an optionally specified interval to a list of segment metadata for unused segments within that interval. Optional parameters for limit, and offset can be given as well.
+
 `GET /druid/coordinator/v1/datasources/{dataSourceName}/segments`
 
 Returns a list of all segments for a datasource in the cluster.
