@@ -44,10 +44,18 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   page.on('response', async response => {
     if (response.status() < 400) return;
+
     const request = response.request();
+    let bodyText: string;
+    try {
+      bodyText = await response.text();
+    } catch (e) {
+      bodyText = `Could not get the body of the error message due to: ${e.message}`;
+    }
+
     console.log(`==============================================`);
     console.log(`Request failed on ${request.url()} (with status ${response.status()})`);
-    console.log(`Body: ${await response.text()}`);
+    console.log(`Body: ${bodyText}`);
     console.log(`==============================================`);
   });
 
