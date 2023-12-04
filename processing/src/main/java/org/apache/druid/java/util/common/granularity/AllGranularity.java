@@ -90,7 +90,7 @@ public class AllGranularity extends Granularity
   }
 
   @Override
-  public Iterable<Interval> getIterable(Interval input)
+  public Iterable<Interval> getIterable(Interval input, int limit)
   {
     return ImmutableList.of(input);
   }

@@ -672,7 +672,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -698,7 +698,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           coordinator.getSegmentIntervals(fullDatasourceName);
       expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsAfterYEARCompactionButBeforeMONTHCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -781,7 +781,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -807,7 +807,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           coordinator.getSegmentIntervals(fullDatasourceName);
       expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsAfterYEARCompactionButBeforeMONTHCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -866,7 +866,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -888,7 +888,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Hence, all three segments are available and the expected intervals are combined from the DAY and YEAR segment granularities
       // (which are 2013-08-31 to 2013-09-01, 2013-09-01 to 2013-09-02 and 2013-01-01 to 2014-01-01)
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -923,7 +923,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -1021,7 +1021,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // We will still have one visible segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
       // and four overshadowed segments
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -1054,7 +1054,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // and one segment with interval of 2013-09-01/2013-10-01 (compacted with MONTH)
       // plus ten tombstones for the remaining months, thus expecting 12 intervals...
       for (String interval : intervalsAfterYEARButBeforeMONTHCompaction) {
-        for (Interval newinterval : Granularities.MONTH.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : Granularities.MONTH.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -1084,7 +1084,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : newGranularity.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
@@ -1112,14 +1112,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Since dropExisting is set to false...
       // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR) from before the compaction
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : Granularities.YEAR.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : Granularities.YEAR.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }
       // one segments with interval of 2013-09-01/2013-10-01 (compacted with MONTH)
       // and one segments with interval of 2013-10-01/2013-11-01 (compacted with MONTH)
       for (String interval : intervalsBeforeCompaction) {
-        for (Interval newinterval : Granularities.MONTH.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()))) {
+        for (Interval newinterval : Granularities.MONTH.getIterable(new Interval(interval, ISOChronology.getInstanceUTC()), 365)) {
           expectedIntervalAfterCompaction.add(newinterval.toString());
         }
       }

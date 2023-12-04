@@ -69,7 +69,7 @@ public class ClientCompactionIntervalSpec
       // If the compaction task's interval is 2015-02-01/2015-03-01, then the compacted segment would cause existing data
       // from 2015-01-26 to 2015-02-01 and 2015-03-01 to 2015-03-02 to be lost. Hence, in this case,
       // we must adjust the compaction task interval to 2015-01-26/2015-03-02
-      interval = JodaUtils.umbrellaInterval(segmentGranularity.getIterable(interval));
+      interval = JodaUtils.umbrellaInterval(segmentGranularity.getIterable(interval, 365));
       LOGGER.info(
           "Interval adjusted to %s in compaction task for datasource %s with configured segmentGranularity %s",
           interval,

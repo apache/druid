@@ -279,7 +279,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return Sequences.empty();
     }
     final Interval actualInterval = interval.overlap(dataInterval);
-    Iterable<Interval> intervals = gran.getIterable(actualInterval);
+    Iterable<Interval> intervals = gran.getIterable(actualInterval, 10_000);
     if (descending) {
       intervals = Lists.reverse(ImmutableList.copyOf(intervals));
     }

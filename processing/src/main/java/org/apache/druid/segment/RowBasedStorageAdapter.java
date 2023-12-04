@@ -197,7 +197,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
         rowAdapter
     );
 
-    final Iterable<Interval> bucketIntervals = gran.getIterable(actualInterval);
+    final Iterable<Interval> bucketIntervals = gran.getIterable(actualInterval, 10_000);
 
     return Sequences.simple(
         Iterables.transform(

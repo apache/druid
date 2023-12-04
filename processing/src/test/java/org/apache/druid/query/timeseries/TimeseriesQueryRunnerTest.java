@@ -925,7 +925,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 
     List<Result<TimeseriesResultValue>> lotsOfZeroes = new ArrayList<>();
     final Iterable<Interval> iterable = Granularities.HOUR.getIterable(
-        new Interval(DateTimes.of("2011-04-14T01"), DateTimes.of("2011-04-15"))
+        new Interval(DateTimes.of("2011-04-14T01"), DateTimes.of("2011-04-15")),
+        Integer.MAX_VALUE
     );
     Map noRowsResult = new HashMap<>();
     noRowsResult.put("rows", 0L);

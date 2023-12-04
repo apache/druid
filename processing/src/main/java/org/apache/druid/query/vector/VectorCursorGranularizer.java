@@ -86,7 +86,7 @@ public class VectorCursorGranularizer
       return null;
     }
 
-    final Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval);
+    final Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval, 10_000);
     final Interval firstBucket = granularity.bucket(clippedQueryInterval.getStart());
 
     final VectorValueSelector timeSelector;

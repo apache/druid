@@ -228,19 +228,13 @@ public abstract class Granularity implements Cacheable
   /**
    * Return an iterable of granular buckets that overlap a particular interval.
    *
-   * In cases where the number of granular buckets is very large, the Iterable returned by this method will take
-   * an excessive amount of time to compute, and materializing it into a collection will take an excessive amount
-   * of memory. For example, this happens in the extreme case of an input interval of
-   * {@link org.apache.druid.java.util.common.Intervals#ETERNITY} and any granularity other than
-   * {@link Granularities#ALL}, as well as cases like an input interval of ten years with {@link Granularities#SECOND}.
-   *
-   * To avoid issues stemming from large numbers of buckets, this method should be avoided, and code that uses
-   * this method should be rewritten to use some other approach. For example: rather than computing all possible
-   * buckets in a wide time range, only process buckets related to actual data points that appear.
+   * A limit is passed as an argument to limit the number of intervals returned. An {@link IllegalStateException} is
+   * thrown during iteration if the number of intervals returned exceeds the limit. There is no default limit, and it
+   * is up to the caller to decide what that limit should be based on the use case.
    */
-  public Iterable<Interval> getIterable(final Interval input)
+  public Iterable<Interval> getIterable(final Interval input, int limit)
   {
-    return new IntervalIterable(input);
+    return new IntervalIterable(input, limit);
   }
 
   public enum Formatter
@@ -253,29 +247,33 @@ public abstract class Granularity implements Cacheable
   private class IntervalIterable implements Iterable<Interval>
   {
     private final Interval inputInterval;
+    private final int limit;
 
-    private IntervalIterable(Interval inputInterval)
+    private IntervalIterable(Interval inputInterval, int limit)
     {
       this.inputInterval = inputInterval;
+      this.limit = limit;
     }
 
     @Override
     public Iterator<Interval> iterator()
     {
-      return new IntervalIterator(inputInterval);
+      return new IntervalIterator(inputInterval, limit);
     }
   }
 
   private class IntervalIterator implements Iterator<Interval>
   {
     private final Interval inputInterval;
+    private int limit;
 
     private long currStart;
     private long currEnd;
 
-    private IntervalIterator(Interval inputInterval)
+    private IntervalIterator(Interval inputInterval, int limit)
     {
       this.inputInterval = inputInterval;
+      this.limit = limit;
 
       currStart = bucketStart(inputInterval.getStartMillis());
       currEnd = increment(currStart);
@@ -290,6 +288,14 @@ public abstract class Granularity implements Cacheable
     @Override
     public Interval next()
     {
+      if (limit <= 0) {
+        throw new IAE(
+            "Limit [%s] exceeded while iterating intervals for granularity [%s] and input interval [%s]",
+            limit,
+            Granularity.this.toString(),
+            inputInterval
+        );
+      }
       if (!hasNext()) {
         throw new NoSuchElementException("There are no more intervals");
       }
@@ -297,6 +303,7 @@ public abstract class Granularity implements Cacheable
 
       currStart = currEnd;
       currEnd = increment(currStart);
+      limit--;
 
       return retVal;
     }

@@ -69,7 +69,7 @@ public class IntervalsByGranularity
       // Thus dups can be created given the right conditions....
       final SettableSupplier<Interval> previous = new SettableSupplier<>();
       return FluentIterable.from(sortedNonOverlappingIntervals)
-                           .transformAndConcat(granularity::getIterable)
+                           .transformAndConcat(input -> granularity.getIterable(input, 1))
                            .filter(interval -> {
                              if (previous.get() != null && previous.get().equals(interval)) {
                                return false;

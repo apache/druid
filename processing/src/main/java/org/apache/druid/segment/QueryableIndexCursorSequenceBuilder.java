@@ -119,7 +119,7 @@ public class QueryableIndexCursorSequenceBuilder
 
     final NumericColumn timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
 
-    Iterable<Interval> iterable = gran.getIterable(interval);
+    Iterable<Interval> iterable = gran.getIterable(interval, 10_000);
     if (descending) {
       iterable = Lists.reverse(ImmutableList.copyOf(iterable));
     }
