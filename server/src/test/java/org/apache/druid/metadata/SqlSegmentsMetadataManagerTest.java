@@ -286,7 +286,7 @@ public class SqlSegmentsMetadataManagerTest
         ImmutableSet.of("wikipedia2", "wikipedia3", "wikipedia"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
                            .stream()
-                           .map(ImmutableDruidDataSource::getName)
+                           .map(ImmutableDruidDataSource::getName).collect(Collectors.toSet())
                            .collect(Collectors.toList())
     );
   }
