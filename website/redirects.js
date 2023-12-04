@@ -309,6 +309,10 @@ const Redirects=[
   {
     "from":  "/docs/latest/operations/api-reference.html",
     "to": "/docs/latest/api-reference/"
+  },
+  {
+    "from": "/docs/latest/design/processes.html",
+    "to": "/docs/latest/design/architecture"
   }
 ]
 

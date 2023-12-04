@@ -1,6 +1,7 @@
 ---
 id: router
-title: "Router Process"
+title: "Router service"
+sidebar_label: "Router"
 ---
 
 <!--
@@ -22,17 +23,17 @@ title: "Router Process"
   ~ under the License.
   -->
 
-The Apache Druid Router process can be used to route queries to different Broker processes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.md) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data.
+The Apache Druid Router service can be used to route queries to different Broker services. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.md) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data.
 
-For query routing purposes, you should only ever need the Router process if you have a Druid cluster well into the terabyte range.
+For query routing purposes, you should only ever need the Router service if you have a Druid cluster well into the terabyte range.
 
-In addition to query routing, the Router also runs the [web console](../operations/web-console.md), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
+In addition to query routing, the Router also runs the [web console](../operations/web-console.md), a management UI for datasources, segments, tasks, data services (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
 ### Configuration
 
-For Apache Druid Router Process Configuration, see [Router Configuration](../configuration/index.md#router).
+For Apache Druid Router service configuration, see [Router Configuration](../configuration/index.md#router).
 
-For basic tuning guidance for the Router process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#router).
+For basic tuning guidance for the Router service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#router).
 
 ### HTTP endpoints
 
@@ -46,7 +47,7 @@ org.apache.druid.cli.Main server router
 
 ### Router as management proxy
 
-The Router can be configured to forward requests to the active Coordinator or Overlord process. This may be useful for
+The Router can be configured to forward requests to the active Coordinator or Overlord service. This may be useful for
 setting up a highly available cluster in situations where the HTTP redirect mechanism of the inactive -> active
 Coordinator/Overlord does not function correctly (servers are behind a load balancer, the hostname used in the redirect
 is only resolvable internally, etc.).
@@ -67,10 +68,10 @@ determined from the original request path based on Druid API path conventions. F
 that using the management proxy does not require modifying the API request other than issuing the request to the Router
 instead of the Coordinator or Overlord. Most Druid API requests can be routed implicitly.
 
-Explicit routes are those where the request to the Router contains a path prefix indicating which process the request
+Explicit routes are those where the request to the Router contains a path prefix indicating which service the request
 should be routed to. For the Coordinator this prefix is `/proxy/coordinator` and for the Overlord it is `/proxy/overlord`.
 This is required for API calls with an ambiguous destination. For example, the `/status` API is present on all Druid
-processes, so explicit routing needs to be used to indicate the proxy destination.
+services, so explicit routing needs to be used to indicate the proxy destination.
 
 This is summarized in the table below:
 

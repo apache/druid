@@ -1,6 +1,7 @@
 ---
 id: middlemanager
-title: "MiddleManager Process"
+title: "MiddleManager service"
+sidebar_label: "MiddleManager"
 ---
 
 <!--
@@ -25,9 +26,9 @@ title: "MiddleManager Process"
 
 ### Configuration
 
-For Apache Druid MiddleManager Process Configuration, see [Indexing Service Configuration](../configuration/index.md#middlemanager-and-peons).
+For Apache Druid MiddleManager service configuration, see [Indexing Service Configuration](../configuration/index.md#middlemanager-and-peons).
 
-For basic tuning guidance for the MiddleManager process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middlemanager).
+For basic tuning guidance for the MiddleManager service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middlemanager).
 
 ### HTTP endpoints
 
@@ -35,7 +36,7 @@ For a list of API endpoints supported by the MiddleManager, please see the [Serv
 
 ### Overview
 
-The MiddleManager process is a worker process that executes submitted tasks. Middle Managers forward tasks to Peons that run in separate JVMs.
+The MiddleManager service is a worker service that executes submitted tasks. Middle Managers forward tasks to Peons that run in separate JVMs.
 The reason we have separate JVMs for tasks is for resource and log isolation. Each [Peon](../design/peons.md) is capable of running only one task at a time, however, a MiddleManager may have multiple Peons.
 
 ### Running

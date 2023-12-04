@@ -1,6 +1,7 @@
 ---
 id: coordinator
-title: "Coordinator Process"
+title: "Coordinator service"
+sidebar_label: "Coordinator"
 ---
 
 <!--
@@ -25,9 +26,9 @@ title: "Coordinator Process"
 
 ### Configuration
 
-For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
+For Apache Druid Coordinator service configuration, see [Coordinator Configuration](../configuration/index.md#coordinator).
 
-For basic tuning guidance for the Coordinator process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
+For basic tuning guidance for the Coordinator service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
 
 ### HTTP endpoints
 
@@ -35,24 +36,24 @@ For a list of API endpoints supported by the Coordinator, see [Service status AP
 
 ### Overview
 
-The Druid Coordinator process is primarily responsible for segment management and distribution. More specifically, the
-Druid Coordinator process communicates to Historical processes to load or drop segments based on configurations. The
+The Druid Coordinator service is primarily responsible for segment management and distribution. More specifically, the
+Druid Coordinator service communicates to Historical services to load or drop segments based on configurations. The
 Druid Coordinator is responsible for loading new segments, dropping outdated segments, ensuring that segments are
 "replicated" (that is, loaded on multiple different Historical nodes) proper (configured) number of times, and moving
 ("balancing") segments between Historical nodes to keep the latter evenly loaded.
 
 The Druid Coordinator runs its duties periodically and the time between each run is a configurable parameter. On each
 run, the Coordinator assesses the current state of the cluster before deciding on the appropriate actions to take.
-Similar to the Broker and Historical processes, the Druid Coordinator maintains a connection to a Zookeeper cluster for
+Similar to the Broker and Historical services, the Druid Coordinator maintains a connection to a Zookeeper cluster for
 current cluster information. The Coordinator also maintains a connection to a database containing information about
 "used" segments (that is, the segments that *should* be loaded in the cluster) and the loading rules.
 
-Before any unassigned segments are serviced by Historical processes, the Historical processes for each tier are first
+Before any unassigned segments are serviced by Historical services, the Historical services for each tier are first
 sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always
-assigned to the processes with least capacity to maintain a level of balance between processes. The Coordinator does not
-directly communicate with a historical process when assigning it a new segment; instead the Coordinator creates some
-temporary information about the new segment under load queue path of the historical process. Once this request is seen,
-the historical process will load the segment and begin servicing it.
+assigned to the services with least capacity to maintain a level of balance between services. The Coordinator does not
+directly communicate with a Historical service when assigning it a new segment; instead the Coordinator creates some
+temporary information about the new segment under load queue path of the Historical service. Once this request is seen,
+the Historical service will load the segment and begin servicing it.
 
 ### Running
 
@@ -75,11 +76,11 @@ marked as unused. During the next Coordinator's run, they will be unloaded from 
 
 ### Segment availability
 
-If a Historical process restarts or becomes unavailable for any reason, the Druid Coordinator will notice a process has gone missing and treat all segments served by that process as being dropped. Given a sufficient period of time, the segments may be reassigned to other Historical processes in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a historical process becomes unavailable and available again within a short period of time, the historical process will start up and serve segments from its cache without any those segments being reassigned across the cluster.
+If a Historical service restarts or becomes unavailable for any reason, the Druid Coordinator will notice a service has gone missing and treat all segments served by that service as being dropped. Given a sufficient period of time, the segments may be reassigned to other Historical services in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a Historical service becomes unavailable and available again within a short period of time, the Historical service will start up and serve segments from its cache without any those segments being reassigned across the cluster.
 
 ### Balancing segment load
 
-To ensure an even distribution of segments across Historical processes in the cluster, the Coordinator process will find the total size of all segments being served by every Historical process each time the Coordinator runs. For every Historical process tier in the cluster, the Coordinator process will determine the Historical process with the highest utilization and the Historical process with the lowest utilization. The percent difference in utilization between the two processes is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized process to the lowest utilized process. There is a configurable limit on the number of segments that can be moved from one process to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
+To ensure an even distribution of segments across Historical servicees in the cluster, the Coordinator service will find the total size of all segments being served by every Historical service each time the Coordinator runs. For every Historical service tier in the cluster, the Coordinator service will determine the Historical service with the highest utilization and the Historical service with the lowest utilization. The percent difference in utilization between the two services is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized service to the lowest utilized service. There is a configurable limit on the number of segments that can be moved from one service to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
 
 ### Automatic compaction
 
@@ -114,8 +115,8 @@ At every Coordinator run, this policy looks up time chunks from newest to oldest
 need compaction.
 A set of segments needs compaction if all conditions below are satisfied:
 
-1) Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
-2) Segments have never been compacted yet or compaction spec has been updated since the last compaction: `maxTotalRows` or `indexSpec`.
+* Total size of segments in the time chunk is smaller than or equal to the configured `inputSegmentSizeBytes`.
+* Segments have never been compacted yet or compaction spec has been updated since the last compaction: `maxTotalRows` or `indexSpec`.
 
 Here are some details with an example. Suppose we have two dataSources (`foo`, `bar`) as seen below:
 
@@ -149,16 +150,16 @@ For more information, see [Avoid conflicts with ingestion](../data-management/au
 
 ### FAQ
 
-1. **Do clients ever contact the Coordinator process?**
+1. **Do clients ever contact the Coordinator service?**
 
     The Coordinator is not involved in a query.
 
-    Historical processes never directly contact the Coordinator process. The Druid Coordinator tells the Historical processes to load/drop data via Zookeeper, but the Historical processes are completely unaware of the Coordinator.
+    Historical services never directly contact the Coordinator service. The Druid Coordinator tells the Historical services to load/drop data via Zookeeper, but the Historical services are completely unaware of the Coordinator.
 
-    Brokers also never contact the Coordinator. Brokers base their understanding of the data topology on metadata exposed by the Historical processes via ZK and are completely unaware of the Coordinator.
+    Brokers also never contact the Coordinator. Brokers base their understanding of the data topology on metadata exposed by the Historical services via ZooKeeper and are completely unaware of the Coordinator.
 
-2. **Does it matter if the Coordinator process starts up before or after other processes?**
+2. **Does it matter if the Coordinator service starts up before or after other services?**
 
-    No. If the Druid Coordinator is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the Coordinator process can be started up at any time, and after a configurable delay, will start running Coordinator tasks.
+    No. If the Druid Coordinator is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the Coordinator service can be started up at any time, and after a configurable delay, will start running Coordinator tasks.
 
     This also means that if you have a working cluster and all of your Coordinators die, the cluster will continue to function, it just won’t experience any changes to its data topology.

@@ -1,6 +1,7 @@
 ---
 layout: doc_page
-title: "Indexer Process"
+title: "Indexer service"
+sidebar_label: "Indexer"
 ---
 
 <!--
@@ -27,17 +28,17 @@ title: "Indexer Process"
  Its memory management system is still under development and will be significantly enhanced in later releases.
 :::
 
-The Apache Druid Indexer process is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
+The Apache Druid Indexer service is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
 
 The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system and to better enable resource sharing across tasks.
 
 ### Configuration
 
-For Apache Druid Indexer Process Configuration, see [Indexer Configuration](../configuration/index.md#indexer).
+For Apache Druid Indexer service configuration, see [Indexer Configuration](../configuration/index.md#indexer).
 
 ### HTTP endpoints
 
-The Indexer process shares the same HTTP endpoints as the [MiddleManager](../api-reference/service-status-api.md#middlemanager).
+The Indexer service shares the same HTTP endpoints as the [MiddleManager](../api-reference/service-status-api.md#middlemanager).
 
 ### Running
 
@@ -47,7 +48,7 @@ org.apache.druid.cli.Main server indexer
 
 ### Task resource sharing
 
-The following resources are shared across all tasks running inside an Indexer process.
+The following resources are shared across all tasks running inside an Indexer service.
 
 #### Query resources
 
@@ -57,7 +58,7 @@ If [query caching](../configuration/index.md#indexer-caching) is enabled, the qu
 
 #### Server HTTP threads
 
-The Indexer maintains two equally sized pools of HTTP threads. 
+The Indexer maintains two equally sized pools of HTTP threads.
 
 One pool is exclusively used for task control messages between the Overlord and the Indexer ("chat handler threads"). The other pool is used for handling all other HTTP requests.
 
@@ -67,7 +68,7 @@ In addition to these two pools, 2 separate threads are allocated for lookup hand
 
 #### Memory sharing
 
-The Indexer uses the `druid.worker.globalIngestionHeapLimitBytes` configuration to impose a global heap limit across all of the tasks it is running. 
+The Indexer uses the `druid.worker.globalIngestionHeapLimitBytes` configuration to impose a global heap limit across all of the tasks it is running.
 
 This global limit is evenly divided across the number of task slots configured by `druid.worker.capacity`.
 
@@ -89,7 +90,7 @@ By default, the number of concurrent persist/merge operations is limited to (`dr
 
 ### Current limitations
 
-Separate task logs are not currently supported when using the Indexer; all task log messages will instead be logged in the Indexer process log.
+Separate task logs are not currently supported when using the Indexer; all task log messages will instead be logged in the Indexer service log.
 
 The Indexer currently imposes an identical memory limit on each task. In later releases, the per-task memory limit will be removed and only the global limit will apply. The limit on concurrent merges will also be removed.
 
