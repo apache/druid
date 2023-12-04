@@ -20,6 +20,7 @@
 package org.apache.druid.segment.transform;
 
 import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.Rows;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,7 +34,6 @@ public interface RowFunction
 
   default List<String> evalDimension(Row row)
   {
-    Object value = eval(row);
-    return Collections.singletonList(value == null ? null : String.valueOf(value));
+    return Rows.objectToStrings(eval(row));
   }
 }
