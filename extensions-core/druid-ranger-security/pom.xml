@@ -160,6 +160,10 @@
                     <groupId>org.elasticsearch.plugin</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.codehus.jackson</groupId>
+                    <artifactId>jackson-jaxrs</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
