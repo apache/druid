@@ -220,7 +220,6 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    GoogleStorageObjectPage objectPage = null;
     try {
       GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 

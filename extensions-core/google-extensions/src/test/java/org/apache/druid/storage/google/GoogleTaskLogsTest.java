@@ -277,7 +277,6 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    GoogleStorageObjectPage objectsPage = null;
     try {
       GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 
@@ -353,7 +352,6 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   public void test_killOlderThan_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs()
   {
     boolean ioExceptionThrown = false;
-    GoogleStorageObjectPage objectsPage = null;
     try {
       GoogleStorageObjectMetadata object1 = GoogleTestUtils.newStorageObject(BUCKET, KEY_1, TIME_0);
 

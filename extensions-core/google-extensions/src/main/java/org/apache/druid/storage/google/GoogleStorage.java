@@ -112,6 +112,17 @@ public class GoogleStorage
     storage.get().delete(bucket, path);
   }
 
+  /**
+   * Deletes a list of objects in a bucket
+   *
+   * @param bucket GCS bucket
+   * @param paths  Iterable for absolute paths of objects to be deleted inside the bucket
+   */
+  public void batchDelete(final String bucket, final Iterable<String> paths)
+  {
+    storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
+  }
+
   public boolean exists(final String bucket, final String path)
   {
 
@@ -131,6 +142,16 @@ public class GoogleStorage
     return blob.getGeneratedId();
   }
 
+  /***
+   * Provides a paged listing of objects for a given bucket and prefix
+   * @param bucket GCS bucket
+   * @param prefix Path prefix
+   * @param pageSize Number of objects per page
+   * @param pageToken Continuation token for the next page; use null for the first page
+   *                  or the nextPageToken from the previous {@link GoogleStorageObjectPage}
+   * @return
+   * @throws IOException
+   */
   public GoogleStorageObjectPage list(
       final String bucket,
       @Nullable final String prefix,
@@ -169,10 +190,6 @@ public class GoogleStorage
 
   }
 
-  public void batchDelete(final String bucket, final Iterable<String> paths)
-  {
-    storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
-  }
 
   private BlobInfo getBlobInfo(final String bucket, final String path)
   {
