@@ -29,7 +29,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_TABLE_SCHEMA})
+@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_DATASOURCE_SCHEMA})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITSystemTableQueryTest
 {
