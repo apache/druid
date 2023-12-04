@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.audit.AuditEvent;
 import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.common.config.ConfigSerde;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -38,7 +37,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;
@@ -290,7 +288,6 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testCreateAuditEntryWithSkipNullsInPayload() throws IOException
   {
-    final ConfigSerde<Map<String, String>> mockConfigSerde = Mockito.mock(ConfigSerde.class);
     final SQLAuditManager auditManagerSkipNull = createAuditManager(
         new SQLAuditManagerConfig()
         {
