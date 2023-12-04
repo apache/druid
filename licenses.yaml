@@ -655,7 +655,7 @@ name: Apache Commons Compress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.23.0
+version: 1.24.0
 libraries:
   - org.apache.commons: commons-compress
 notices:
@@ -791,7 +791,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.19
+version: 4.2.22
 libraries:
   - io.dropwizard.metrics: metrics-core
 
@@ -1001,7 +1001,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.7.3
+version: 0.9.3
 libraries:
   - org.bitbucket.b_c: jose4j
 

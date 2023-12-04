@@ -91,7 +91,7 @@
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
-        <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
+        <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
         <errorprone.version>2.20.0</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>31.1-jre</guava.version>
@@ -389,6 +389,29 @@
                 <artifactId>bcutil-jdk15on</artifactId>
                 <version>1.70</version>
             </dependency>
+            <!-- transitive dependency of testng
+            this would be resolved by updating
+            testng to 7.8.0 -->
+            <dependency>
+                <groupId>org.apache.ant</groupId>
+                <artifactId>ant</artifactId>
+                <version>1.10.14</version>
+            </dependency>
+            <!-- transitive dependency of kafka-clients and kubernetes client
+            this should get resolved with the update of above depdendencies -->
+            <dependency>
+                <groupId>org.bitbucket.b_c</groupId>
+                <artifactId>jose4j</artifactId>
+                <version>0.9.3</version>
+            </dependency>
+            <!-- transitive dependency of kafka-clientorg.apache.calcite:calcite-testkit
+            and kafka-protobuf-provider
+            this should get resolved with the update of above depdendencies -->
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>1.6.10</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
@@ -551,7 +574,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.23.0</version>
+                <version>1.24.0</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
