@@ -282,8 +282,6 @@ def build_compatible_license_names():
     compatible_licenses['Eclipse Distribution License v. 1.0'] = 'Eclipse Distribution License 1.0'
     compatible_licenses['EDL 1.0'] = 'Eclipse Distribution License 1.0'
 
-    compatible_licenses['GNU Lesser General Public License'] = 'GNU Lesser General Public License'
-
     compatible_licenses['Mozilla Public License Version 2.0'] = 'Mozilla Public License Version 2.0'
     compatible_licenses['Mozilla Public License, Version 2.0'] = 'Mozilla Public License Version 2.0'
 
