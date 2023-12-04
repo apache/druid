@@ -130,13 +130,14 @@ public class AuditEvent
            && Objects.equals(this.key, that.key)
            && Objects.equals(this.type, that.type)
            && Objects.equals(this.auditInfo, that.auditInfo)
+           && Objects.equals(this.payload, that.payload)
            && Objects.equals(this.serializedPayload, that.serializedPayload);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(key, type, auditInfo, serializedPayload, auditTime);
+    return Objects.hash(key, type, auditInfo, payload, serializedPayload, auditTime);
   }
 
   public static class Builder

@@ -19,13 +19,9 @@
 
 package org.apache.druid.audit;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.IOException;
 
 public class AuditInfoTest
 {
@@ -39,9 +35,9 @@ public class AuditInfoTest
   }
 
   @Test(timeout = 60_000L)
-  public void testAuditEntrySerde() throws IOException
+  public void testAuditEventEquality()
   {
-    AuditEvent entry = new AuditEvent(
+    final AuditEvent event1 = new AuditEvent(
         "testKey",
         "testType",
         new AuditInfo(
@@ -52,9 +48,18 @@ public class AuditInfoTest
         "testPayload",
         DateTimes.of("2013-01-01T00:00:00Z")
     );
-    ObjectMapper mapper = new DefaultObjectMapper();
-    AuditEvent serde = mapper.readValue(mapper.writeValueAsString(entry), AuditEvent.class);
-    Assert.assertEquals(entry, serde);
+    final AuditEvent event2 = new AuditEvent(
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        DateTimes.of("2013-01-01T00:00:00Z")
+    );
+    Assert.assertEquals(event1, event2);
   }
 
 }

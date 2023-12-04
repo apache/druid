@@ -81,6 +81,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
   public void setUp()
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").anyTimes();
+    EasyMock.replay(req);
 
     objectMapper = new ObjectMapper(new SmileFactory());
     TestDerbyConnector connector = derbyConnectorRule.getConnector();

@@ -348,7 +348,14 @@ public class SQLAuditManagerTest
     if (payload == null) {
       return null;
     } else {
-      return mapper.readValue(payload, AuditEvent.class);
+      AuditRecord record = mapper.readValue(payload, AuditRecord.class);
+      return new AuditEvent(
+          record.getKey(),
+          record.getType(),
+          record.getAuditInfo(),
+          record.getPayload(),
+          record.getAuditTime()
+      );
     }
   }
 
