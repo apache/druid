@@ -6671,6 +6671,16 @@ license_file_path: licenses/bin/use-sync-external-store.MIT
 
 ---
 
+name: "uuid"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Robert Kieffer and other contributors
+version: 7.0.2
+license_file_path: licenses/bin/uuid.MIT
+
+---
+
 name: "value-equal"
 license_category: binary
 module: web-console

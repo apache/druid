@@ -103,14 +103,13 @@
     "react-table": "~6.10.3",
     "regenerator-runtime": "^0.13.7",
     "tslib": "^2.3.1",
+    "uuid": "^7.0.2",
     "zustand": "^4.3.2"
   },
   "devDependencies": {
     "@awesome-code-style/eslint-config": "^4.1.0",
     "@awesome-code-style/prettier-config": "^4.0.0",
     "@awesome-code-style/stylelint-config": "^4.0.0",
-    "@babel/core": "^7.18.6",
-    "@babel/preset-env": "^7.14.4",
     "@testing-library/react": "^14.0.0",
     "@types/classnames": "^2.2.9",
     "@types/d3-array": "^2.12.3",
@@ -171,7 +170,6 @@
     "ts-loader": "^9.4.2",
     "ts-node": "^10.9.1",
     "typescript": "^4.9.5",
-    "uuid": "^7.0.2",
     "webpack": "^5.76.0",
     "webpack-bundle-analyzer": "^4.4.1",
     "webpack-cli": "^4.6.0",
