@@ -207,9 +207,9 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByTypeWithLimit()
   {
-    final AuditEvent entry1 = createAuditEvent("testKey", "testType", DateTimes.nowUtc());
-    final AuditEvent entry2 = createAuditEvent("testKey", "testType", DateTimes.nowUtc());
-    final AuditEvent entry3 = createAuditEvent("testKey", "testType", DateTimes.nowUtc());
+    final AuditEvent entry1 = createAuditEvent("testKey", "testType", DateTimes.of("2022-01"));
+    final AuditEvent entry2 = createAuditEvent("testKey", "testType", DateTimes.of("2022-03"));
+    final AuditEvent entry3 = createAuditEvent("testKey", "testType", DateTimes.of("2022-02"));
 
     auditManager.doAudit(entry1);
     auditManager.doAudit(entry2);
@@ -217,8 +217,8 @@ public class SQLAuditManagerTest
 
     List<AuditEvent> auditEntries = auditManager.fetchAuditHistory("testType", 2);
     Assert.assertEquals(2, auditEntries.size());
-    Assert.assertEquals(entry1, auditEntries.get(0));
-    Assert.assertEquals(entry2, auditEntries.get(1));
+    Assert.assertEquals(entry2, auditEntries.get(0));
+    Assert.assertEquals(entry3, auditEntries.get(1));
   }
 
   @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
