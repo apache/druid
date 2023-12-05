@@ -35,17 +35,27 @@ public class AzureInputSourceConfig
   private final String sharedAccessStorageToken;
   private final String key;
   private final Boolean useAzureCredentialsChain;
+  private final String appRegistrationClientId;
+  private final String appRegistrationClientSecret;
+  private final String tenantId;
 
   @JsonCreator
   public AzureInputSourceConfig(
       @JsonProperty("sharedAccessStorageToken") @Nullable String sharedAccessStorageToken,
       @JsonProperty("key") @Nullable String key,
-      @JsonProperty("useAzureCredentialsChain") @Nullable Boolean useAzureCredentialsChain
+      @JsonProperty("useAzureCredentialsChain") @Nullable Boolean useAzureCredentialsChain,
+      @JsonProperty("appRegistrationClientId") @Nullable String appRegistrationClientId,
+      @JsonProperty("appRegistrationClientSecret") @Nullable String appRegistrationClientSecret,
+      @JsonProperty("tenantId") @Nullable String tenantId
+
   )
   {
     this.sharedAccessStorageToken = sharedAccessStorageToken;
     this.key = key;
     this.useAzureCredentialsChain = useAzureCredentialsChain;
+    this.appRegistrationClientId = appRegistrationClientId;
+    this.appRegistrationClientSecret = appRegistrationClientSecret;
+    this.tenantId = tenantId;
   }
 
   @Nullable
@@ -54,6 +64,30 @@ public class AzureInputSourceConfig
   public String getSharedAccessStorageToken()
   {
     return sharedAccessStorageToken;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getAppRegistrationClientId()
+  {
+    return appRegistrationClientId;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getAppRegistrationClientSecret()
+  {
+    return appRegistrationClientSecret;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getTenantId()
+  {
+    return tenantId;
   }
 
   @Nullable
@@ -79,6 +113,9 @@ public class AzureInputSourceConfig
         "sharedAccessStorageToken=" + sharedAccessStorageToken +
         ", key=" + key +
         ", useAzureCredentialsChain=" + useAzureCredentialsChain +
+        ", appRegistrationClientId=" + appRegistrationClientId +
+        ", appRegistrationClientSecret=" + appRegistrationClientSecret +
+        ", tenantId=" + tenantId +
         '}';
   }
 
@@ -94,12 +131,22 @@ public class AzureInputSourceConfig
     AzureInputSourceConfig that = (AzureInputSourceConfig) o;
     return Objects.equals(key, that.key)
         && Objects.equals(sharedAccessStorageToken, that.sharedAccessStorageToken)
-        && Objects.equals(useAzureCredentialsChain, that.useAzureCredentialsChain);
+        && Objects.equals(useAzureCredentialsChain, that.useAzureCredentialsChain)
+        && Objects.equals(appRegistrationClientId, that.appRegistrationClientId)
+        && Objects.equals(appRegistrationClientSecret, that.appRegistrationClientSecret)
+        && Objects.equals(tenantId, that.tenantId);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sharedAccessStorageToken, key, useAzureCredentialsChain);
+    return Objects.hash(
+        sharedAccessStorageToken,
+        key,
+        useAzureCredentialsChain,
+        appRegistrationClientId,
+        appRegistrationClientSecret,
+        tenantId
+    );
   }
 }

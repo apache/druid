@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.identity.ClientSecretCredentialBuilder;
+import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
@@ -46,6 +48,17 @@ public class AzureIngestClientFactory extends AzureClientFactory
       clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
     } else if (azureInputSourceConfig.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(azureInputSourceConfig.getSharedAccessStorageToken());
+    } else if (azureInputSourceConfig.shouldUseAzureCredentialsChain() != null) {
+      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
+          .managedIdentityClientId(config.getManagedIdentityClientId());
+      clientBuilder.credential(defaultAzureCredentialBuilder.build());
+    } else if (azureInputSourceConfig.getAppRegistrationClientId() != null && azureInputSourceConfig.getAppRegistrationClientSecret() != null) {
+      clientBuilder.credential(new ClientSecretCredentialBuilder()
+          .clientSecret(azureInputSourceConfig.getAppRegistrationClientSecret())
+          .clientId(azureInputSourceConfig.getAppRegistrationClientId())
+          .tenantId(azureInputSourceConfig.getTenantId())
+          .build()
+      );
     } else {
       // If no additional auth method is passed, fallback to default factory method
       return super.getBlobServiceClient(storageAccount);
@@ -62,7 +75,19 @@ public class AzureIngestClientFactory extends AzureClientFactory
       clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
     } else if (azureInputSourceConfig.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(azureInputSourceConfig.getSharedAccessStorageToken());
+    } else if (azureInputSourceConfig.shouldUseAzureCredentialsChain() != null) {
+      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
+          .managedIdentityClientId(config.getManagedIdentityClientId());
+      clientBuilder.credential(defaultAzureCredentialBuilder.build());
+    } else if (azureInputSourceConfig.getAppRegistrationClientId() != null && azureInputSourceConfig.getAppRegistrationClientSecret() != null) {
+      clientBuilder.credential(new ClientSecretCredentialBuilder()
+          .clientSecret(azureInputSourceConfig.getAppRegistrationClientSecret())
+          .clientId(azureInputSourceConfig.getAppRegistrationClientId())
+          .tenantId(azureInputSourceConfig.getTenantId())
+          .build()
+      );
     } else {
+      // If no additional auth method is passed, fallback to default factory method
       return super.getBlobContainerClient(storageAccount, containerName, maxRetries);
     }
     return clientBuilder.buildClient();
