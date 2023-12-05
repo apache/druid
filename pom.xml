@@ -413,6 +413,7 @@
             </dependency>
             <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
             schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
+            and direct dependency of druid-ranger
               -->
             <dependency>
                 <groupId>com.google.code.gson</groupId>
