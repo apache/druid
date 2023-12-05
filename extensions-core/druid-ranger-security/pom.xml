@@ -160,6 +160,8 @@
                     <groupId>org.elasticsearch.plugin</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
+                <!-- jackson-jaxrs is used by ranger-plugins accessing
+                RangerRESTClient class. This should not be needed in an authorizer -->
                 <exclusion>
                     <groupId>org.codehus.jackson</groupId>
                     <artifactId>jackson-jaxrs</artifactId>
