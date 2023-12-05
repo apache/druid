@@ -348,7 +348,7 @@ public class MetadataResource
   )
   {
     if (dataSource == null || dataSource.isEmpty()) {
-      throw InvalidInput.exception("dataSource name must be non-empty");
+      throw InvalidInput.exception("dataSourceName must be non-empty");
     }
     if (limit != null && limit < 0) {
       throw InvalidInput.exception("limit must be > 0");

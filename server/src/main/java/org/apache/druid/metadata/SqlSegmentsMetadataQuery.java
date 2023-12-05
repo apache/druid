@@ -130,8 +130,10 @@ public class SqlSegmentsMetadataQuery
    * @param dataSource The name of the datasource
    * @param intervals  The intervals to search over
    * @param limit      The limit of segments to return
-   * @param offset     The offset to use when retreiving matching segments. Note: This is only applied if the size of
-   *                   intervals is less than {@link #MAX_INTERVALS_PER_BATCH}
+   * @param offset     The offset to use when retrieving matching segments. Note that offset is only applied to a 
+   *                   single batch - i.e., when the number of intervals is less than {@link #MAX_INTERVALS_PER_BATCH}.
+   *                   For multiple batches, the offset parameter is ignored.
+
    * Returns a closeable iterator. You should close it when you are done.
    */
   public CloseableIterator<DataSegment> retrieveUnusedSegments(

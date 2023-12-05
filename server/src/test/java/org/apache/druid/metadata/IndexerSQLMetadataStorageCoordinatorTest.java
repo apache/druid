@@ -1216,7 +1216,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingNoIntervalsAndNoLimit() throws IOException
+  public void testRetrieveUnusedSegmentsUsingNoIntervalsNoLimitNoOffset() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -1237,7 +1237,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     markAllSegmentsUnused(new HashSet<>(segments));
 
     int offset = 10;
-    List<DataSegment> expectedSegments = segments.stream().sorted((Comparator<DataSegment>) (o1, o2) -> {
+    final List<DataSegment> expectedSegments = segments.stream().sorted((o1, o2) -> {
       long o1Start = o1.getInterval().getStartMillis();
       long o2Start = o2.getInterval().getStartMillis();
       if (o1Start < o2Start) {

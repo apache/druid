@@ -106,7 +106,7 @@ public class DerbyConnector extends SQLMetadataConnector
   @Override
   public String getOffsetClause(int offset)
   {
-    return StringUtils.format(" OFFSET %s ROWS", offset);
+    return StringUtils.format(" OFFSET %d ROWS", offset);
   }
 
   @Override
