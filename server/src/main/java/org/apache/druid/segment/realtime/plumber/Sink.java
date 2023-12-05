@@ -455,32 +455,32 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   }
 
   /**
-   * Get dimension information for all the {@link FireHydrant}'s.
-   * This method explicitly adds '__time' column.
+   * Get column information from all the {@link FireHydrant}'s.
    */
   public RowSignature getSignature()
   {
     synchronized (hydrantLock) {
       RowSignature.Builder builder = RowSignature.builder();
 
-      if (columnsExcludingCurrIndex.isEmpty()) {
-        builder.addTimeColumn();
-      }
+      builder.addTimeColumn();
 
       for (String dim : columnsExcludingCurrIndex) {
-        builder.add(dim, columnTypeExcludingCurrIndex.get(dim));
+        if (!ColumnHolder.TIME_COLUMN_NAME.equals(dim)) {
+          builder.add(dim, columnTypeExcludingCurrIndex.get(dim));
+        }
       }
 
       IncrementalIndexStorageAdapter incrementalIndexStorageAdapter = new IncrementalIndexStorageAdapter(currHydrant.getIndex());
       RowSignature incrementalIndexSignature = incrementalIndexStorageAdapter.getRowSignature();
 
       for (String dim : incrementalIndexSignature.getColumnNames()) {
-        if (!columnsExcludingCurrIndex.contains(dim) && !dim.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+        if (!columnsExcludingCurrIndex.contains(dim) && !ColumnHolder.TIME_COLUMN_NAME.equals(dim)) {
           builder.add(dim, incrementalIndexSignature.getColumnType(dim).orElse(null));
         }
       }
 
       RowSignature rowSignature = builder.build();
+
       log.debug("Sink signature is [%s].", rowSignature);
 
       return rowSignature;
