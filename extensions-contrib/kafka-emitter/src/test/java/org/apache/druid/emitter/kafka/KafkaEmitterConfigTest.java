@@ -60,7 +60,7 @@ public class KafkaEmitterConfigTest
         "clusterNameTest",
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
-       DEFAULT_PRODUCER_SECRETS
+        DEFAULT_PRODUCER_SECRETS
     );
     String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
     KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
