@@ -163,7 +163,7 @@
                 <!-- jackson-jaxrs is used by ranger-plugins accessing
                 RangerRESTClient class. This should not be needed in an authorizer -->
                 <exclusion>
-                    <groupId>org.codehus.jackson</groupId>
+                    <groupId>org.codehaus.jackson</groupId>
                     <artifactId>jackson-jaxrs</artifactId>
                 </exclusion>
             </exclusions>
