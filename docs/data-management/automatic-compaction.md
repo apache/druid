@@ -233,6 +233,10 @@ When using concurrent append and replace, keep the following in mind:
 
 ### Configure concurrent append and replace
 
+##### Update the compaction settings with the UI
+
+In the **Compaction config** for a datasource, set  **Allow concurrent compactions (experimental)** to **True**.
+
 ##### Update the compaction settings with the API
  
  Prepare your datasource for concurrent append and replace by setting its task lock type to `REPLACE`.
@@ -249,9 +253,6 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 }'
 ```
 
-##### Update the compaction settings with the UI
-
-In the **Compaction config** for a datasource, set  **Allow concurrent compactions (experimental)** to **True**.
 
 #### Add a task lock type to your ingestion job
 
@@ -261,6 +262,13 @@ Next, you need to configure the task lock type for your ingestion job:
 - For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec, and the lock type can be either `APPEND` or `REPLACE`. 
  
 You can provide the context parameter through the API like any other parameter for ingestion job or through the UI.
+
+##### Add a task lock using the Druid console
+
+As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, you can configure the task lock type for the ingestion during the **Publish** step:
+
+- If you set **Append to existing** to **True**, you can then set **Allow concurrent append tasks (experimental)** to **True**.
+- If you set **Append to existing** to **False**, you can then set **Allow concurrent replace tasks (experimental)** to **True**.
 
 ##### Add the task lock type through the API
 
@@ -293,14 +301,6 @@ Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you u
 - hash partitioning 
 - range partitioning
 - dynamic partitioning with append to existing set to `false`
-
-
-##### Add a task lock using the Druid console
-
-As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, you can configure the task lock type for the ingestion during the **Publish** step:
-
-- If you set **Append to existing** to **True**, you can then set **Allow concurrent append tasks (experimental)** to **True**.
-- If you set **Append to existing** to **False**, you can then set **Allow concurrent replace tasks (experimental)** to **True**.
 
 
 ## Learn more
