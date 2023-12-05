@@ -503,7 +503,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
-    testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper));
+    testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper, injector));
     indexingServiceClient = new MSQTestOverlordServiceClient(
         objectMapper,
         injector,

@@ -129,11 +129,27 @@ public @interface NotYetSupported
         public void evaluate()
         {
           Modes ignoreMode = annotation.value();
-          Throwable e = assertThrows(
+          Throwable e = null;
+          try {
+            base.evaluate();
+          }
+          catch (Throwable t) {
+            e = t;
+          }
+          // If the base test case is supposed to be ignored already, just skip the further evaluation
+          if (e instanceof AssumptionViolatedException) {
+            throw (AssumptionViolatedException) e;
+          }
+          Throwable finalE = e;
+          assertThrows(
               "Expected that this testcase will fail - it might got fixed; or failure have changed?",
               ignoreMode.throwableClass,
-              base::evaluate
-              );
+              () -> {
+                if (finalE != null) {
+                  throw finalE;
+                }
+              }
+          );
 
           String trace = Throwables.getStackTraceAsString(e);
           Matcher m = annotation.value().getPattern().matcher(trace);

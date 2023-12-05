@@ -173,6 +173,14 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
     Assert.assertEquals(0, VarianceAggregatorCollector.COMPARATOR.compare(v1, v2));
   }
 
+  @Test
+  public void testNullCollectors()
+  {
+    VarianceAggregatorCollector collector =
+        (VarianceAggregatorCollector) VarianceAggregatorCollector.combineValues(null, null);
+    Assert.assertNull(collector);
+  }
+
   private static class FloatHandOver extends TestFloatColumnSelector
   {
     float v;
