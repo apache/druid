@@ -464,7 +464,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.jitterSeconds',
     type: 'number',
-    placeholder: '30 (optional) ',
+    defaultValue: 0,
     defined: l =>
       oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'How much jitter to add (in seconds) up to maximum as a delay (actual value will be used as random from 0 to jitterSeconds), used to distribute db load more evenly. Default is 0.',
@@ -474,7 +474,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.loadTimeoutSeconds',
     type: 'number',
-    placeholder: '60 (optional) ',
+    defaultValue: 60,
     defined: l =>
       oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'How much time (in seconds) it can take to query and populate lookup values. It will be helpful in lookup updates. On lookup update, it will wait maximum of `loadTimeoutSeconds` for new lookup to come up and continue serving from old lookup until new lookup successfully loads. Default is 60 Sec.',
@@ -484,7 +484,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.maxHeapPercentage',
     type: 'number',
-    placeholder: '10 (optional) ',
+    defaultValue: 10,
     defined: l =>
       oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs. Default is 10 % of jvm size.',
