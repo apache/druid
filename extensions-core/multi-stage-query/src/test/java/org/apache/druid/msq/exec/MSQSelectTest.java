@@ -772,7 +772,7 @@ public class MSQSelectTest extends MSQTestBase
                                                DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
                                                DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
                                            ),
-                                           JoinType.LEFT
+                                           NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))

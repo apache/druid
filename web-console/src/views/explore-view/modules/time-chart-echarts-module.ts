@@ -20,7 +20,8 @@ import { C, F, L, SqlCase, SqlExpression } from '@druid-toolkit/query';
 import { typedVisualModule } from '@druid-toolkit/visuals-core';
 import * as echarts from 'echarts';
 
-import { getInitQuery } from '../utils';
+import { highlightStore } from '../highlight-store/highlight-store';
+import { DATE_FORMAT, getAutoGranularity, getInitQuery, snapToGranularity } from '../utils';
 
 const TIME_NAME = '__t__';
 const METRIC_NAME = '__met__';
@@ -50,10 +51,11 @@ export default typedVisualModule({
   parameters: {
     timeGranularity: {
       type: 'option',
-      options: ['PT1M', 'PT5M', 'PT30M', 'PT1H', 'P1D'],
-      default: 'PT1H',
+      options: ['auto', 'PT1M', 'PT5M', 'PT30M', 'PT1H', 'P1D'],
+      default: 'auto',
       control: {
         optionLabels: {
+          auto: 'Auto',
           PT1M: 'Minute',
           PT5M: '5 minutes',
           PT30M: '30 minutes',
@@ -94,6 +96,13 @@ export default typedVisualModule({
         label: 'Metric to show',
         required: true,
         // transferGroup: 'show-agg',
+      },
+    },
+    snappyHighlight: {
+      type: 'boolean',
+      default: true,
+      control: {
+        label: 'Snap highlight to nearest dates',
       },
     },
   },
@@ -147,16 +156,28 @@ export default typedVisualModule({
       series: [],
     });
 
-    const resizeHandler = () => {
-      myChart.resize();
-    };
-
-    window.addEventListener('resize', resizeHandler);
+    // auto-enables the brush tool on load
+    myChart.dispatchAction({
+      type: 'takeGlobalCursor',
+      key: 'brush',
+      brushOption: {
+        brushType: 'lineX',
+      },
+    });
 
     return {
-      async update({ table, where, parameterValues }) {
-        const { splitColumn, metric, numberToStack, showOthers, timeGranularity } = parameterValues;
+      async update({ table, where, parameterValues, context }) {
+        const { splitColumn, metric, numberToStack, showOthers, snappyHighlight } = parameterValues;
 
+        // this should probably be a parameter
+        const timeColumnName = '__time';
+
+        const timeGranularity =
+          parameterValues.timeGranularity === 'auto'
+            ? getAutoGranularity(where, timeColumnName)
+            : parameterValues.timeGranularity;
+
+        myChart.off('brush');
         myChart.off('brushend');
 
         const vs = splitColumn
@@ -176,7 +197,7 @@ export default typedVisualModule({
               table,
               splitColumn && vs && !showOthers ? where.and(splitColumn.expression.in(vs)) : where,
             )
-              .addSelect(F.timeFloor(C('__time'), L(timeGranularity)).as(TIME_NAME), {
+              .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
                 addToGroupBy: 'end',
                 addToOrderBy: 'end',
                 direction: 'ASC',
@@ -198,25 +219,84 @@ export default typedVisualModule({
         const effectiveVs = vs && showOthers ? vs.concat(OTHERS_VALUE) : vs;
         const sourceData = effectiveVs ? transformData(dataset, effectiveVs) : dataset;
 
-        myChart.on('brushend', (params: any) => {
+        myChart.on('brush', (params: any) => {
           if (!params.areas.length) return;
 
-          const [start, end] = params.areas[0].coordRange;
+          // this is only used for the label and the data saved in the highlight
+          // the positioning is done with the true coordinates until the user
+          // releases the mouse button (in the `brushend` event)
+          const { start, end } = snappyHighlight
+            ? snapToGranularity(
+                params.areas[0].coordRange[0],
+                params.areas[0].coordRange[1],
+                timeGranularity,
+                context.timezone,
+              )
+            : { start: params.areas[0].coordRange[0], end: params.areas[0].coordRange[1] };
 
-          updateWhere(
-            where.changeClauseInWhere(
-              SqlExpression.parse(
-                `TIME_IN_INTERVAL(${C('__time')}, '${new Date(start).toISOString()}/${new Date(
-                  end,
-                ).toISOString()}')`,
-              ),
-            ),
-          );
+          const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[0]);
+          const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[1]);
 
+          highlightStore.getState().setHighlight({
+            label: DATE_FORMAT.formatRange(start, end),
+            x: x0 + (x1 - x0) / 2,
+            y: 40,
+            data: { start, end },
+            onDrop: () => {
+              highlightStore.getState().dropHighlight();
+              myChart.dispatchAction({
+                type: 'brush',
+                command: 'clear',
+                areas: [],
+              });
+            },
+            onSave: () => {
+              updateWhere(
+                where.changeClauseInWhere(
+                  SqlExpression.parse(
+                    `TIME_IN_INTERVAL(${C(
+                      timeColumnName,
+                    )}, '${start.toISOString()}/${end.toISOString()}')`,
+                  ),
+                ) as SqlExpression,
+              );
+              highlightStore.getState().dropHighlight();
+              myChart.dispatchAction({
+                type: 'brush',
+                command: 'clear',
+                areas: [],
+              });
+            },
+          });
+        });
+
+        // once the user is done selecting a range, this will snap the start and end
+        myChart.on('brushend', () => {
+          const highlight = highlightStore.getState().highlight;
+          if (!highlight) return;
+
+          // this is already snapped
+          const { start, end } = highlight.data;
+
+          const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, start);
+          const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, end);
+
+          // positions the bubble on the snapped start and end
+          highlightStore.getState().updateHighlight({
+            x: x0 + (x1 - x0) / 2,
+          });
+
+          // gives the chart the snapped range to highlight
+          // (will replace the area the user just selected)
           myChart.dispatchAction({
             type: 'brush',
-            command: 'clear',
-            areas: [],
+            areas: [
+              {
+                brushType: 'lineX',
+                coordRange: [start, end],
+                xAxisIndex: 0,
+              },
+            ],
           });
         });
 
@@ -258,8 +338,26 @@ export default typedVisualModule({
           },
         );
       },
+
+      resize() {
+        myChart.resize();
+
+        // if there is a highlight, update its x position
+        // by calculating new pixel position from the highlight's data
+        const highlight = highlightStore.getState().highlight;
+        if (highlight) {
+          const { start, end } = highlight.data;
+
+          const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, start);
+          const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, end);
+
+          highlightStore.getState().updateHighlight({
+            x: x0 + (x1 - x0) / 2,
+          });
+        }
+      },
+
       destroy() {
-        window.removeEventListener('resize', resizeHandler);
         myChart.dispose();
       },
     };
