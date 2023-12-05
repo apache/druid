@@ -37,6 +37,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -1043,6 +1044,252 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .setExpectedResultRows(expectedResults)
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceAll()
+  {
+    // An empty replace all with no used segment should effectively be the same as an empty insert
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY DAY"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceInterval()
+  {
+    // An empty replace interval with no used segment should effectively be the same as an empty insert
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE WHERE __time >= TIMESTAMP '2016-06-27 01:00:00.00' AND __time < TIMESTAMP '2016-06-27 02:00:00.00'"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY HOUR"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceAllOverExistingSegment()
+  {
+    Interval existingSegmentInterval = Intervals.of("2001-01-01T/2001-01-02T");
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(existingSegmentInterval)
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY DAY"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(existingSegmentInterval))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceIntervalOverPartiallyOverlappingSegment()
+  {
+    // Create a data segment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2016-06-27T/2016-06-28T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE WHERE __time >= TIMESTAMP '2016-06-27 01:00:00.00' AND __time < TIMESTAMP '2016-06-27 02:00:00.00'"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY HOUR"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(
+                         ImmutableSet.of(
+                             Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00")
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceIntervalOverPartiallyOverlappingStart()
+  {
+    // Create a data segment whose start partially lies outside the query's replace interval
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2016-06-01T/2016-07-01T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE WHERE __time >= TIMESTAMP '2016-06-29' AND __time < TIMESTAMP '2016-07-03'"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY DAY"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(
+                         ImmutableSet.of(
+                             Intervals.of("2016-06-29T/2016-06-30T"),
+                             Intervals.of("2016-06-30T/2016-07-01T")
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceIntervalOverPartiallyOverlappingEnd()
+  {
+    // Create a data segment whose end partially lies outside the query's replace interval
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2016-06-01T/2016-07-01T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE WHERE __time >= TIMESTAMP '2016-05-25' AND __time < TIMESTAMP '2016-06-03'"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY DAY"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(
+                         ImmutableSet.of(
+                             Intervals.of("2016-06-01T/2016-06-02T"),
+                             Intervals.of("2016-06-02T/2016-06-03T")
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceAllOverEternitySegment()
+  {
+    // Create a data segment spanning eternity
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.ETERNITY)
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY DAY"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .verifyResults();
+  }
+
+
+  @Test
+  public void testEmptyReplaceIntervalOverEternitySegment()
+  {
+    // Create a data segment spanning eternity
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.ETERNITY)
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE WHERE __time >= TIMESTAMP '2016-06-01' AND __time < TIMESTAMP '2016-06-03'"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY DAY"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(
+                         ImmutableSet.of(
+                             Intervals.of("2016-06-01T/2016-06-02T"),
+                             Intervals.of("2016-06-02T/2016-06-03T")
+                         )
+                     )
                      .verifyResults();
   }
 

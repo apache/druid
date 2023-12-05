@@ -305,6 +305,7 @@ public class ControllerImpl implements Controller
   private WorkerMemoryParameters workerMemoryParameters;
   private boolean isDurableStorageEnabled;
   private final boolean isFaultToleranceEnabled;
+  private final boolean isFailOnEmptyInsertEnabled;
   private volatile SegmentLoadStatusFetcher segmentLoadWaiter;
 
   public ControllerImpl(
@@ -317,9 +318,12 @@ public class ControllerImpl implements Controller
     this.isDurableStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
         task.getQuerySpec().getQuery().context()
     );
-    this.isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(task.getQuerySpec()
-                                                                                      .getQuery()
-                                                                                      .context());
+    this.isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(
+        task.getQuerySpec().getQuery().context()
+    );
+    this.isFailOnEmptyInsertEnabled = MultiStageQueryContext.shouldFailOnEmptyInsertEnabled(
+        task.getQuerySpec().getQuery().context()
+    );
   }
 
   @Override
@@ -957,7 +961,8 @@ public class ControllerImpl implements Controller
       final RowSignature signature,
       final ClusterBy clusterBy,
       final ClusterByPartitions partitionBoundaries,
-      final boolean mayHaveMultiValuedClusterByFields
+      final boolean mayHaveMultiValuedClusterByFields,
+      final Boolean isStageOutputEmpty
   ) throws IOException
   {
     if (destination.isReplaceTimeChunks()) {
@@ -966,7 +971,8 @@ public class ControllerImpl implements Controller
           signature,
           clusterBy,
           partitionBoundaries,
-          mayHaveMultiValuedClusterByFields
+          mayHaveMultiValuedClusterByFields,
+          isStageOutputEmpty
       );
     } else {
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
@@ -974,7 +980,9 @@ public class ControllerImpl implements Controller
           destination,
           partitionBoundaries,
           keyReader,
-          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(task.getQuerySpec().getQuery().getContext()), false));
+          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(task.getQuerySpec().getQuery().getContext()), false),
+          isStageOutputEmpty
+      );
     }
   }
 
@@ -985,14 +993,19 @@ public class ControllerImpl implements Controller
       final DataSourceMSQDestination destination,
       final ClusterByPartitions partitionBoundaries,
       final RowKeyReader keyReader,
-      final TaskLockType taskLockType
+      final TaskLockType taskLockType,
+      final Boolean isStageOutputEmpty
   ) throws IOException
   {
+    final List<SegmentIdWithShardSpec> retVal = new ArrayList<>(partitionBoundaries.size());
+
+    if (Boolean.TRUE.equals(isStageOutputEmpty)) {
+      return retVal;
+    }
+
     final Granularity segmentGranularity = destination.getSegmentGranularity();
 
     String previousSegmentId = null;
-
-    final List<SegmentIdWithShardSpec> retVal = new ArrayList<>(partitionBoundaries.size());
 
     for (ClusterByPartition partitionBoundary : partitionBoundaries) {
       final DateTime timestamp = getBucketDateTime(partitionBoundary, segmentGranularity, keyReader);
@@ -1062,9 +1075,14 @@ public class ControllerImpl implements Controller
       final RowSignature signature,
       final ClusterBy clusterBy,
       final ClusterByPartitions partitionBoundaries,
-      final boolean mayHaveMultiValuedClusterByFields
+      final boolean mayHaveMultiValuedClusterByFields,
+      final Boolean isStageOutputEmpty
   ) throws IOException
   {
+    if (Boolean.TRUE.equals(isStageOutputEmpty)) {
+      return new ArrayList<>(partitionBoundaries.size());
+    }
+
     final RowKeyReader keyReader = clusterBy.keyReader(signature);
     final SegmentIdWithShardSpec[] retVal = new SegmentIdWithShardSpec[partitionBoundaries.size()];
     final Granularity segmentGranularity = destination.getSegmentGranularity();
@@ -1267,6 +1285,10 @@ public class ControllerImpl implements Controller
   )
   {
     final Int2ObjectMap<List<SegmentIdWithShardSpec>> retVal = new Int2ObjectAVLTreeMap<>();
+
+    if (segmentsToGenerate.isEmpty()) {
+      return retVal;
+    }
 
     for (final int workerNumber : workerInputs.workers()) {
       // SegmentGenerator stage has a single input from another stage.
@@ -2689,19 +2711,14 @@ public class ControllerImpl implements Controller
           }
 
           final StageId shuffleStageId = new StageId(queryDef.getQueryId(), shuffleStageNumber);
-          final boolean isTimeBucketed = isTimeBucketedIngestion(task.getQuerySpec());
+          Boolean isShuffleStageOutputEmpty = queryKernel.isStageOutputEmpty(shuffleStageId);
+
+          if (!isFailOnEmptyInsertEnabled && Boolean.TRUE.equals(isShuffleStageOutputEmpty)) {
+            throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
+          }
+
           final ClusterByPartitions partitionBoundaries =
               queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
-
-          // We require some data to be inserted in case it is partitioned by anything other than all and we are
-          // inserting everything into a single bucket. This can be handled more gracefully instead of throwing an exception
-          // Note: This can also be the case when we have limit queries but validation in Broker SQL layer prevents such
-          // queries
-          if (isTimeBucketed && partitionBoundaries.equals(ClusterByPartitions.oneUniversalPartition())) {
-            throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
-          } else {
-            log.info("Query [%s] generating %d segments.", queryDef.getQueryId(), partitionBoundaries.size());
-          }
 
           final boolean mayHaveMultiValuedClusterByFields =
               !queryKernel.getStageDefinition(shuffleStageId).mustGatherResultKeyStatistics()
@@ -2712,8 +2729,11 @@ public class ControllerImpl implements Controller
               queryKernel.getStageDefinition(shuffleStageId).getSignature(),
               queryKernel.getStageDefinition(shuffleStageId).getClusterBy(),
               partitionBoundaries,
-              mayHaveMultiValuedClusterByFields
+              mayHaveMultiValuedClusterByFields,
+              isShuffleStageOutputEmpty
           );
+
+          log.info("Query[%s] generating %d segments.", queryDef.getQueryId(), segmentsToGenerate.size());
         }
 
         final int workerCount = queryKernel.getWorkerInputsForStage(stageId).workerCount();
@@ -2808,7 +2828,7 @@ public class ControllerImpl implements Controller
           stageRuntimesForLiveReports.compute(
               queryKernel.getStageDefinition(stageId).getStageNumber(),
               (k, currentValue) -> {
-                if (currentValue.getEnd().equals(DateTimes.MAX)) {
+                if (currentValue != null && currentValue.getEnd().equals(DateTimes.MAX)) {
                   return new Interval(currentValue.getStart(), DateTimes.nowUtc());
                 } else {
                   return currentValue;

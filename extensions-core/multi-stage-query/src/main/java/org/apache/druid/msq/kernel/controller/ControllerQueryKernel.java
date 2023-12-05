@@ -784,4 +784,18 @@ public class ControllerQueryKernel
   {
     return getStageKernelOrThrow(stageId).allPartialKeyInformationFetched();
   }
+
+  /**
+   * @return {@code true} if the stage output is empty, {@code false} if the stage output is non-empty,
+   * or {@code null} for stages where cluster key statistics are not gathered or is incomplete
+   */
+  @Nullable
+  public Boolean isStageOutputEmpty(final StageId stageId)
+  {
+    CompleteKeyStatisticsInformation completeKeyStatisticsInformation = getCompleteKeyStatisticsInformation(stageId);
+    if (completeKeyStatisticsInformation == null || !completeKeyStatisticsInformation.isComplete()) {
+      return null;
+    }
+    return completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().size() == 0;
+  }
 }

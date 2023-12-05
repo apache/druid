@@ -114,6 +114,10 @@ public class MultiStageQueryContext
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
+
+  public static final String CTX_FAIL_ON_EMPTY_INSERT = "failOnEmptyInsert";
+  public static final boolean DEFAULT_FAIL_ON_EMPTY_INSERT = true;
+
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
@@ -172,6 +176,14 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FAULT_TOLERANCE,
         DEFAULT_FAULT_TOLERANCE
+    );
+  }
+
+  public static boolean shouldFailOnEmptyInsertEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_FAIL_ON_EMPTY_INSERT,
+        DEFAULT_FAIL_ON_EMPTY_INSERT
     );
   }
 

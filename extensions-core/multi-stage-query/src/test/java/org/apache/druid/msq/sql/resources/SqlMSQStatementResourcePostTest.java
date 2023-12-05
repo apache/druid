@@ -189,7 +189,10 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        defaultAsyncContext(),
+        ImmutableMap.<String, Object>builder()
+                    .putAll(defaultAsyncContext())
+                    .put(MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT, false)
+                    .build(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
