@@ -42,7 +42,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Marks dangling tombstones not overshadowed by currently served segments as unused. A dangling segment must fit all the criteria:
+ * Mark eternity tombstones not overshadowed by currently served segments as unused. A candidate segment must fit all
+ * the criteria:
  * <li> It is a tombstone that starts at {@link DateTimes#MIN} or ends at {@link DateTimes#MAX} </li>
  * <li> It does not overlap with any overshadowed segment in the datasource </li>
  * <li> It has has 0 core partitions i.e., {@link TombstoneShardSpec#getNumCorePartitions()} == 0</li>
@@ -58,7 +59,7 @@ import java.util.Set;
  * <p>
  * The overlapping condition is necessary as a candidate segment can overlap with an overshadowed segment, and the latter
  * needs to be marked as unused first by {@link MarkOvershadowedSegmentsAsUnused} duty before the tombstone candidate
- * can be marked as unused by {@link MarkDanglingTombstonesAsUnused} duty.
+ * can be marked as unused by {@link MarkEternityTombstonesAsUnused} duty.
  *</p>
  * <p>
  * Only tombstones with 0 core partitions is considered as candidate segments. Earlier generation tombstones with 1 core
@@ -67,13 +68,13 @@ import java.util.Set;
  * <a href="https://github.com/apache/druid/pull/15379">for details</a>.
  * </p>
  */
-public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
+public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(MarkDanglingTombstonesAsUnused.class);
+  private static final Logger log = new Logger(MarkEternityTombstonesAsUnused.class);
 
   private final SegmentDeleteHandler deleteHandler;
 
-  public MarkDanglingTombstonesAsUnused(final SegmentDeleteHandler deleteHandler)
+  public MarkEternityTombstonesAsUnused(final SegmentDeleteHandler deleteHandler)
   {
     this.deleteHandler = deleteHandler;
   }
@@ -83,24 +84,24 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
   {
     DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
 
-    final Map<String, Set<SegmentId>> datasourceToDanglingTombstones = determineDanglingTombstones(dataSourcesSnapshot);
+    final Map<String, Set<SegmentId>> datasourceToEternityTombstones = determineCandidateTombstones(dataSourcesSnapshot);
 
-    if (datasourceToDanglingTombstones.size() == 0) {
-      log.debug("No dangling tombstones found.");
+    if (datasourceToEternityTombstones.size() == 0) {
+      log.debug("No non-overlapping eternity tombstones found.");
       return params;
     }
 
-    log.debug("Found [%d] datasource dangling tombstones[%s]",
-              datasourceToDanglingTombstones.size(), datasourceToDanglingTombstones
+    log.debug("Found [%d] datasource containing non-overlapping eternity tombstones[%s]",
+              datasourceToEternityTombstones.size(), datasourceToEternityTombstones
     );
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    datasourceToDanglingTombstones.forEach((datasource, unusedSegments) -> {
+    datasourceToEternityTombstones.forEach((datasource, unusedSegments) -> {
       RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
-      stats.add(Stats.Segments.DANGLING_TOMBSTONE, datasourceKey, unusedSegments.size());
+      stats.add(Stats.Segments.ETERNITY_TOMBSTONE, datasourceKey, unusedSegments.size());
       int unusedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
       log.info(
-          "Successfully marked [%d] dangling tombstones of datasource[%s] as unused.",
+          "Successfully marked [%d] non-overlapping eternity tombstones of datasource[%s] as unused.",
           unusedCount,
           datasource
       );
@@ -110,20 +111,20 @@ public class MarkDanglingTombstonesAsUnused implements CoordinatorDuty
   }
 
   /**
-   * Computes the set of dangling tombstones per datasource using the datasources snapshot. The computation is as follows:
+   * Computes the set of eternity tombstones per datasource using the datasources snapshot. The computation is as follows:
    *
    * <li> Determine the set of used and non-overshadowed segments from the used segments' timeline. </li>
    * <li> For each such candidate segment that is a tombstone with an infinite start or end, look at the set of overshadowed
    * segments to see if any of the intervals overlaps with the candidate segment.
-   * <li> If there is no overlap, add the candidate segment to the dangling segments result set. </li>
-   * There can at most be two such dangling tombstones per datasource  -- one that starts at {@link DateTimes#MIN}
+   * <li> If there is no overlap, add the candidate segment to the eternity segments result set. </li>
+   * There can at most be two such candidate tombstones per datasource  -- one that starts at {@link DateTimes#MIN}
    * and another that ends at {@link DateTimes#MAX}. </li>
    * </p>
    *
    * @param dataSourcesSnapshot the datasources snapshot for segments timeline
-   * @return the set of dangling tombstones grouped by datasource
+   * @return the set of candidate tombstones grouped by datasource
    */
-  private Map<String, Set<SegmentId>> determineDanglingTombstones(final DataSourcesSnapshot dataSourcesSnapshot)
+  private Map<String, Set<SegmentId>> determineCandidateTombstones(final DataSourcesSnapshot dataSourcesSnapshot)
   {
     final Map<String, Set<SegmentId>> datasourceToDanglingTombstones = new HashMap<>();
 

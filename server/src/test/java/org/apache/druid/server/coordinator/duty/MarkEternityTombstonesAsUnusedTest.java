@@ -48,7 +48,7 @@ import org.junit.Test;
 
 import java.util.Set;
 
-public class MarkDanglingSegmentsAsUnusedTest
+public class MarkEternityTombstonesAsUnusedTest
 {
   private final String ds1 = "foo";
   private final String ds2 = "bar";
@@ -60,6 +60,13 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                                       .version("0")
                                                                       .size(0)
                                                                       .build();
+
+  private final DataSegment ds1TombstoneSegmentMinToMaxV1 = DataSegment.builder().dataSource(ds1)
+                                                                       .shardSpec(new TombstoneShardSpec())
+                                                                       .interval(Intervals.ETERNITY)
+                                                                       .version("1")
+                                                                       .size(0)
+                                                                       .build();
 
   private final DataSegment ds1TombstoneSegmentMinTo2000V1 = DataSegment.builder().dataSource(ds1)
                                                                         .shardSpec(new TombstoneShardSpec())
@@ -125,8 +132,10 @@ public class MarkDanglingSegmentsAsUnusedTest
                                                                         .build();
 
 
-  // An old generation tombstone with 1 core partition instead of the default 0.
-  final DataSegment ds2TombstoneSegment4000ToMaxV1With1CorePartition = ds2TombstoneSegment4000ToMaxV1.withShardSpec(
+  /**
+   * An old generation tombstone with 1 core partition instead of the default 0.
+   */
+  private final DataSegment ds2TombstoneSegment4000ToMaxV1With1CorePartition = ds2TombstoneSegment4000ToMaxV1.withShardSpec(
       new TombstoneShardSpec() {
         @Override
         @JsonProperty("partitions")
@@ -170,11 +179,34 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
     Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV1));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   /**
-   * Half-inifinity tombstones that don't overlap with any other used segment should be marked as unused.
+   * Inifinity tombstones overlapping with overshadowed segments shouldn't be marked as unused.
+   */
+  @Test
+  public void testCandidateTombstonesWithUsedOvershadowedSegments2()
+  {
+    final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
+        ds1NumberedSegmentMinToMaxV0,
+        ds1TombstoneSegmentMinToMaxV1
+    );
+    final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.copyOf(allUsedSegments);
+    final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
+
+    final SegmentTimeline ds1Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+                                                               .getUsedSegmentsTimelinesPerDataSource()
+                                                               .get(ds1);
+
+    Assert.assertTrue(ds1Timeline.isOvershadowed(ds1NumberedSegmentMinToMaxV0));
+    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinToMaxV1));
+
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+  }
+
+  /**
+   * Half-inifinity tombstones that don't overlap with an overshadowed segment should be marked as unused.
    */
   @Test
   public void testCandidateTombstonesWithNoUsedOvershadowedSegments()
@@ -197,7 +229,28 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(timeline.isOvershadowed(ds1NumberedSegment2000To2001V1));
     Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+  }
+
+  /**
+   * Full-infinity tombstones that has no overlap should be marked as unused.
+   */
+  @Test
+  public void testCandidateTombstonesWithNoUsedOvershadowedSegments2()
+  {
+    final ImmutableList<DataSegment> allUsedSegments = ImmutableList.of(
+        ds1TombstoneSegmentMinToMaxV1
+    );
+    final ImmutableList<DataSegment> expectedUsedSegments = ImmutableList.of();
+    final DruidCoordinatorRuntimeParams params = initializeServerAndGetParams(allUsedSegments);
+
+    final SegmentTimeline ds1Timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+                                                               .getUsedSegmentsTimelinesPerDataSource()
+                                                               .get(ds1);
+
+    Assert.assertFalse(ds1Timeline.isOvershadowed(ds1TombstoneSegmentMinToMaxV1));
+
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   /**
@@ -227,7 +280,7 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegmentMinTo2000V2));
     Assert.assertFalse(timeline.isOvershadowed(ds1TombstoneSegment2001ToMaxV2));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   /**
@@ -238,7 +291,7 @@ public class MarkDanglingSegmentsAsUnusedTest
    * <li> {@link #ds1TombstoneSegment2001ToMaxV1} doesn't overlap with any other segment and can be marked as unused. </li>
    *
    * Note that {@link #ds1TombstoneSegmentMinTo2000V1} will be marked as unused by {@link MarkOvershadowedSegmentsAsUnused} duty
-   * and then subsequently {@link #ds1TombstoneSegmentMinTo2000V2} will be marked as unused by the {@link MarkDanglingTombstonesAsUnused}
+   * and then subsequently {@link #ds1TombstoneSegmentMinTo2000V2} will be marked as unused by the {@link MarkEternityTombstonesAsUnused}
    * duty eventually.
    * </p>
    *
@@ -282,7 +335,7 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   /**
@@ -314,7 +367,7 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment3000To4000V1));
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   /**
@@ -346,7 +399,7 @@ public class MarkDanglingSegmentsAsUnusedTest
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1));
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2NumberedSegment1999To2500V2));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   /**
@@ -369,7 +422,7 @@ public class MarkDanglingSegmentsAsUnusedTest
 
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000To4001V1));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   /**
@@ -393,7 +446,7 @@ public class MarkDanglingSegmentsAsUnusedTest
 
     Assert.assertFalse(ds2Timeline.isOvershadowed(ds2TombstoneSegment4000ToMaxV1With1CorePartition));
 
-    runDanglingTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
+    runEternityTombstonesDutyAndVerify(params, allUsedSegments, expectedUsedSegments);
   }
 
   private DruidCoordinatorRuntimeParams initializeServerAndGetParams(final ImmutableList<DataSegment> segments)
@@ -425,13 +478,13 @@ public class MarkDanglingSegmentsAsUnusedTest
     return params;
   }
 
-  private void runDanglingTombstonesDutyAndVerify(
+  private void runEternityTombstonesDutyAndVerify(
       DruidCoordinatorRuntimeParams params,
       final ImmutableList<DataSegment> allUsedSegments,
       final ImmutableList<DataSegment> expectedUsedSegments
   )
   {
-    params = new MarkDanglingTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
+    params = new MarkEternityTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
 
     final Set<DataSegment> actualUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
 
@@ -441,8 +494,8 @@ public class MarkDanglingSegmentsAsUnusedTest
     final CoordinatorRunStats runStats = params.getCoordinatorStats();
     Assert.assertEquals(
         allUsedSegments.size() - expectedUsedSegments.size(),
-        runStats.get(Stats.Segments.DANGLING_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds1)) +
-        runStats.get(Stats.Segments.DANGLING_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds2))
+        runStats.get(Stats.Segments.ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds1)) +
+        runStats.get(Stats.Segments.ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds2))
     );
   }
 }
