@@ -1291,7 +1291,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       // getDataSource
       Assert.assertEquals(StreamAppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
-      // add
+      // add first row
       commitMetadata.put("x", "1");
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
 
@@ -1314,7 +1314,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(1, absoluteSchemaId1Row1.getNumRows().intValue());
       Assert.assertFalse(absoluteSchemaId1Row1.isDelta());
       Assert.assertEquals(Collections.emptyList(), absoluteSchemaId1Row1.getUpdatedColumns());
-      Assert.assertEquals(Lists.newArrayList("__time", "count", "met", "dim"), absoluteSchemaId1Row1.getNewColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId1Row1.getNewColumns());
       Assert.assertEquals(
           ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
           absoluteSchemaId1Row1.getColumnTypeMap());
@@ -1329,14 +1329,14 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       // absolute schema is sent for a new sink
       Assert.assertFalse(deltaSchemaId1Row1.isDelta());
       Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row1.getUpdatedColumns());
-      Assert.assertEquals(Lists.newArrayList("__time", "count", "met", "dim"), deltaSchemaId1Row1.getNewColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), deltaSchemaId1Row1.getNewColumns());
       Assert.assertEquals(
           ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
           deltaSchemaId1Row1.getColumnTypeMap());
 
       dataSegmentAnnouncer.clear();
 
-      // add
+      // add second row
       commitMetadata.put("x", "2");
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), committerSupplier);
 
@@ -1359,7 +1359,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(2, absoluteSchemaId1Row2.getNumRows().intValue());
       Assert.assertFalse(absoluteSchemaId1Row2.isDelta());
       Assert.assertEquals(Collections.emptyList(), absoluteSchemaId1Row2.getUpdatedColumns());
-      Assert.assertEquals(Lists.newArrayList("__time", "count", "met", "dim"), absoluteSchemaId1Row2.getNewColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId1Row2.getNewColumns());
       Assert.assertEquals(
           ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
           absoluteSchemaId1Row2.getColumnTypeMap());
@@ -1371,36 +1371,61 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(1, segmentSchemas.size());
       Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), deltaSchemaId1Row2.getSegmentId());
       Assert.assertEquals(2, deltaSchemaId1Row2.getNumRows().intValue());
-      Assert.assertTrue(deltaSchemaId1Row1.isDelta());
-      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row1.getUpdatedColumns());
-      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row1.getNewColumns());
-      Assert.assertEquals(Collections.emptyMap(), deltaSchemaId1Row1.getColumnTypeMap());
+      Assert.assertTrue(deltaSchemaId1Row2.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row2.getUpdatedColumns());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row2.getNewColumns());
+      Assert.assertEquals(Collections.emptyMap(), deltaSchemaId1Row2.getColumnTypeMap());
 
       dataSegmentAnnouncer.clear();
 
-      // add
+      // add first row for second segment
       commitMetadata.put("x", "3");
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 4), committerSupplier);
 
       sinkSchemaAnnouncer.computeAndAnnounce();
 
+      // verify schema
       announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
       announcedDeltaSchema = dataSegmentAnnouncer.getAnnouncedDeltaSchema();
 
       Assert.assertEquals(1, announcedAbsoluteSchema.size());
       Assert.assertEquals(1, announcedDeltaSchema.size());
-      Assert.assertEquals(announcedAbsoluteSchema, announcedDeltaSchema);
+
+      // verify absolute schema
       Assert.assertEquals(appenderator.getId(), announcedAbsoluteSchema.get(0).lhs);
       segmentSchemas = announcedAbsoluteSchema.get(0).rhs.getSegmentSchemaList();
-      Assert.assertEquals(1, segmentSchemas.size());
-      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), segmentSchemas.get(0).getSegmentId());
-      Assert.assertEquals(1, segmentSchemas.get(0).getNumRows().intValue());
-      Assert.assertFalse(segmentSchemas.get(0).isDelta());
-      Assert.assertEquals(Collections.emptyList(), segmentSchemas.get(0).getUpdatedColumns());
-      Assert.assertEquals(Lists.newArrayList("__time", "count", "met", "dim"), segmentSchemas.get(0).getNewColumns());
+      Assert.assertEquals(2, segmentSchemas.size());
+      SegmentSchemas.SegmentSchema absoluteSchemaId2Row1 =
+          segmentSchemas.stream()
+                        .filter(v -> v.getSegmentId().equals(IDENTIFIERS.get(1).asSegmentId().toString()))
+                        .findFirst()
+                        .get();
+      Assert.assertEquals(IDENTIFIERS.get(1).asSegmentId().toString(), absoluteSchemaId2Row1.getSegmentId());
+      Assert.assertEquals(1, absoluteSchemaId2Row1.getNumRows().intValue());
+      Assert.assertFalse(absoluteSchemaId2Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), absoluteSchemaId2Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId2Row1.getNewColumns());
       Assert.assertEquals(
           ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
-          segmentSchemas.get(0).getColumnTypeMap());
+          absoluteSchemaId2Row1.getColumnTypeMap());
+
+      // verify delta
+      Assert.assertEquals(appenderator.getId(), announcedDeltaSchema.get(0).lhs);
+      segmentSchemas = announcedDeltaSchema.get(0).rhs.getSegmentSchemaList();
+      SegmentSchemas.SegmentSchema deltaSchemaId2Row1 =
+          segmentSchemas.stream()
+                        .filter(v -> v.getSegmentId().equals(IDENTIFIERS.get(1).asSegmentId().toString()))
+                        .findFirst()
+                        .get();
+      Assert.assertEquals(1, segmentSchemas.size());
+      Assert.assertEquals(IDENTIFIERS.get(1).asSegmentId().toString(), deltaSchemaId2Row1.getSegmentId());
+      Assert.assertEquals(1, deltaSchemaId2Row1.getNumRows().intValue());
+      Assert.assertFalse(deltaSchemaId2Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId2Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), deltaSchemaId2Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          deltaSchemaId2Row1.getColumnTypeMap());
     }
   }
 

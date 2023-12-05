@@ -22,16 +22,19 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas.SegmentSchema;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Utility to compute schema for all sinks in a streaming ingestion task, used in {@link StreamAppenderator}.
@@ -43,25 +46,23 @@ class SinkSchemaUtil
    */
   @VisibleForTesting
   static Optional<SegmentSchemas> computeAbsoluteSchema(
-      Map<SegmentId, Pair<Map<String, ColumnType>, Integer>> sinkSchemaMap
+      Map<SegmentId, Pair<RowSignature, Integer>> sinkSchemaMap
   )
   {
     List<SegmentSchema> sinkSchemas = new ArrayList<>();
 
-    for (Map.Entry<SegmentId, Pair<Map<String, ColumnType>, Integer>> entry : sinkSchemaMap.entrySet()) {
+    for (Map.Entry<SegmentId, Pair<RowSignature, Integer>> entry : sinkSchemaMap.entrySet()) {
       SegmentId segmentId = entry.getKey();
-      Map<String, ColumnType> sinkColumnMap = entry.getValue().lhs;
+      RowSignature sinkSignature = entry.getValue().lhs;
 
       List<String> newColumns = new ArrayList<>();
 
       Map<String, ColumnType> columnMapping = new HashMap<>();
 
       // new Sink
-      for (Map.Entry<String, ColumnType> columnAndType : sinkColumnMap.entrySet()) {
-        String column = columnAndType.getKey();
-        ColumnType columnType = columnAndType.getValue();
-        columnMapping.put(column, columnType);
+      for (String column : sinkSignature.getColumnNames()) {
         newColumns.add(column);
+        sinkSignature.getColumnType(column).ifPresent(type -> columnMapping.put(column, type));
       }
 
       Integer numRows = entry.getValue().rhs;
@@ -88,15 +89,15 @@ class SinkSchemaUtil
    */
   @VisibleForTesting
   static Optional<SegmentSchemas> computeSchemaChange(
-      Map<SegmentId, Pair<Map<String, ColumnType>, Integer>> previousSinkSchemaMap,
-      Map<SegmentId, Pair<Map<String, ColumnType>, Integer>> currentSinkSchemaMap
+      Map<SegmentId, Pair<RowSignature, Integer>> previousSinkSignatureMap,
+      Map<SegmentId, Pair<RowSignature, Integer>> currentSinkSignatureMap
   )
   {
     List<SegmentSchema> sinkSchemas = new ArrayList<>();
 
-    for (Map.Entry<SegmentId, Pair<Map<String, ColumnType>, Integer>> entry : currentSinkSchemaMap.entrySet()) {
+    for (Map.Entry<SegmentId, Pair<RowSignature, Integer>> entry : currentSinkSignatureMap.entrySet()) {
       SegmentId segmentId = entry.getKey();
-      Map<String, ColumnType> sinkDimensions = entry.getValue().lhs;
+      RowSignature sinkSignature = entry.getValue().lhs;
 
       Integer numRows = entry.getValue().rhs;
 
@@ -104,42 +105,47 @@ class SinkSchemaUtil
       List<String> updatedColumns = new ArrayList<>();
       Map<String, ColumnType> columnMapping = new HashMap<>();
 
-      boolean update = false;
+      // whether there are any changes to be published
+      boolean publish = false;
+      // if the resultant schema is delta
       boolean delta = false;
 
-      if (!previousSinkSchemaMap.containsKey(segmentId)) {
+      if (!previousSinkSignatureMap.containsKey(segmentId)) {
         // new Sink
-        for (Map.Entry<String, ColumnType> columnAndType : sinkDimensions.entrySet()) {
-          String column = columnAndType.getKey();
-          ColumnType columnType = columnAndType.getValue();
-          columnMapping.put(column, columnType);
+        for (String column : sinkSignature.getColumnNames()) {
           newColumns.add(column);
+          sinkSignature.getColumnType(column).ifPresent(type -> columnMapping.put(column, type));
         }
         if (newColumns.size() > 0 || numRows > 0) {
-          update = true;
+          publish = true;
         }
       } else {
-        Map<String, ColumnType> previousSinkDimensions = previousSinkSchemaMap.get(segmentId).lhs;
-        Integer previousNumRows = previousSinkSchemaMap.get(segmentId).rhs;
-        for (Map.Entry<String, ColumnType> columnAndType : sinkDimensions.entrySet()) {
-          String column = columnAndType.getKey();
-          ColumnType columnType = columnAndType.getValue();
+        RowSignature previousSinkSignature = previousSinkSignatureMap.get(segmentId).lhs;
+        Set<String> previousSinkDimensions = new HashSet<>(previousSinkSignature.getColumnNames());
 
-          columnMapping.put(column, columnType);
-          if (!previousSinkDimensions.containsKey(column)) {
+        Integer previousNumRows = previousSinkSignatureMap.get(segmentId).rhs;
+        for (String column : sinkSignature.getColumnNames()) {
+          boolean added = false;
+          if (!previousSinkDimensions.contains(column)) {
             newColumns.add(column);
-          } else if (!previousSinkDimensions.get(column).equals(columnType)) {
+            added = true;
+          } else if (!Objects.equals(previousSinkSignature.getColumnType(column), sinkSignature.getColumnType(column))) {
             updatedColumns.add(column);
+            added = true;
+          }
+
+          if (added) {
+            sinkSignature.getColumnType(column).ifPresent(type -> columnMapping.put(column, type));
           }
         }
 
         if ((!Objects.equals(numRows, previousNumRows)) || (updatedColumns.size() > 0) || (newColumns.size() > 0)) {
-          update = true;
+          publish = true;
           delta = true;
         }
       }
 
-      if (update) {
+      if (publish) {
         SegmentSchema segmentSchema =
             new SegmentSchema(
                 segmentId.getDataSource(),

@@ -62,7 +62,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -1619,7 +1619,7 @@ public class StreamAppenderator implements Appenderator
     private final ScheduledExecutorService scheduledExecutorService;
     private final String taskId;
     private final boolean enabled;
-    private Map<SegmentId, Pair<Map<String, ColumnType>, Integer>> previousSinkSchemaMap = new HashMap<>();
+    private Map<SegmentId, Pair<RowSignature, Integer>> previousSinkSignatureMap = new HashMap<>();
 
     SinkSchemaAnnouncer()
     {
@@ -1653,29 +1653,26 @@ public class StreamAppenderator implements Appenderator
     @VisibleForTesting
     void computeAndAnnounce()
     {
-      Map<SegmentId, Pair<Map<String, ColumnType>, Integer>> currentSinkSchema = new HashMap<>();
+      Map<SegmentId, Pair<RowSignature, Integer>> currentSinkSignatureMap = new HashMap<>();
       for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
         SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
         Sink sink = sinkEntry.getValue();
-
-        currentSinkSchema.put(segmentIdWithShardSpec.asSegmentId(), Pair.of(sink.getSchema(), sink.getNumRows()));
+        currentSinkSignatureMap.put(segmentIdWithShardSpec.asSegmentId(), Pair.of(sink.getSignature(), sink.getNumRows()));
       }
 
-      Optional<SegmentSchemas> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSchema);
-      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSchemaMap, currentSinkSchema);
+      Optional<SegmentSchemas> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSignatureMap);
+      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSignatureMap, currentSinkSignatureMap);
 
-      // store currentSinkSchema
-      previousSinkSchemaMap = currentSinkSchema;
+      // update previous reference
+      previousSinkSignatureMap = currentSinkSignatureMap;
 
       // announce schema
       sinksSchema.ifPresent(
-          segmentsSchema -> {
-            announcer.announceSinkSchemaForTask(
-                taskId,
-                segmentsSchema,
-                sinksSchemaChange.orElse(null)
-            );
-          });
+          segmentsSchema -> announcer.announceSinkSchemaForTask(
+              taskId,
+              segmentsSchema,
+              sinksSchemaChange.orElse(null)
+          ));
     }
   }
 }

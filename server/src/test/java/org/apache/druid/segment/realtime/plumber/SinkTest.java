@@ -359,7 +359,7 @@ public class SinkTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGetSchema() throws IndexSizeExceededException
+  public void testGetSinkSignature() throws IndexSizeExceededException
   {
     final DataSchema schema = new DataSchema(
         "test",
@@ -418,12 +418,12 @@ public class SinkTest extends InitializedNullHandlingTest
 
     Map<String, ColumnType> expectedColumnTypeMap = Maps.newLinkedHashMap();
     expectedColumnTypeMap.put("__time", ColumnType.LONG);
-    expectedColumnTypeMap.put("rows", ColumnType.LONG);
     expectedColumnTypeMap.put("dim1", ColumnType.STRING);
     expectedColumnTypeMap.put("dimLong", ColumnType.LONG);
+    expectedColumnTypeMap.put("rows", ColumnType.LONG);
 
-    Map<String, ColumnType> columnTypeMap = sink.getSchema();
-    Assert.assertEquals(expectedColumnTypeMap, columnTypeMap);
+    RowSignature signature = sink.getSignature();
+    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
     sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
@@ -431,9 +431,11 @@ public class SinkTest extends InitializedNullHandlingTest
         ImmutableMap.of("dim1", "value2", "dimLong", "30", "newCol1", "value")
     ), false);
 
+    expectedColumnTypeMap.remove("rows");
     expectedColumnTypeMap.put("newCol1", ColumnType.STRING);
-    columnTypeMap = sink.getSchema();
-    Assert.assertEquals(expectedColumnTypeMap, columnTypeMap);
+    expectedColumnTypeMap.put("rows", ColumnType.LONG);
+    signature = sink.getSignature();
+    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
     sink.swap();
 
@@ -444,8 +446,8 @@ public class SinkTest extends InitializedNullHandlingTest
     ), false);
 
     expectedColumnTypeMap.put("newCol2", ColumnType.STRING);
-    columnTypeMap = sink.getSchema();
-    Assert.assertEquals(expectedColumnTypeMap, columnTypeMap);
+    signature = sink.getSignature();
+    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
     sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
@@ -454,8 +456,8 @@ public class SinkTest extends InitializedNullHandlingTest
     ), false);
 
     expectedColumnTypeMap.put("newCol3", ColumnType.STRING);
-    columnTypeMap = sink.getSchema();
-    Assert.assertEquals(expectedColumnTypeMap, columnTypeMap);
+    signature = sink.getSignature();
+    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
     sink.swap();
 
     sink.add(new MapBasedInputRow(
@@ -465,8 +467,19 @@ public class SinkTest extends InitializedNullHandlingTest
     ), false);
 
     expectedColumnTypeMap.put("newCol4", ColumnType.STRING);
-    columnTypeMap = sink.getSchema();
-    Assert.assertEquals(expectedColumnTypeMap, columnTypeMap);
+    signature = sink.getSignature();
+    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
+  }
+
+  private RowSignature toRowSignature(Map<String, ColumnType> columnTypeMap)
+  {
+    RowSignature.Builder builder = RowSignature.builder();
+
+    for (Map.Entry<String, ColumnType> entry : columnTypeMap.entrySet()) {
+      builder.add(entry.getKey(), entry.getValue());
+    }
+
+    return builder.build();
   }
 
   /**
