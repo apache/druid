@@ -660,7 +660,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
 
     IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
-        .setSortFacts(false)
         .setMaxRowCount(1_000_000)
         .build();
 

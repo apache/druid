@@ -25,8 +25,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -128,11 +132,20 @@ public class GeneratorInputSourceTest
         timestampIncrement
     );
 
-    InputSourceReader reader = inputSource.fixedFormatReader(null, null);
+    InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec(null, null, null),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+        null
+    );
+
+    InputSourceReader reader = inputSource.fixedFormatReader(
+        rowSchema,
+        null
+    );
     CloseableIterator<InputRow> iterator = reader.read();
 
     InputRow first = iterator.next();
-    InputRow generatorFirst = generator.nextRow();
+    InputRow generatorFirst = MapInputRowParser.parse(rowSchema, generator.nextRaw(rowSchema.getTimestampSpec().getTimestampColumn()));
     Assert.assertEquals(generatorFirst, first);
     Assert.assertTrue(iterator.hasNext());
     int i;
@@ -157,7 +170,7 @@ public class GeneratorInputSourceTest
     );
 
     Assert.assertEquals(2, inputSource.estimateNumSplits(null, null));
-    Assert.assertEquals(false, inputSource.needsFormat());
+    Assert.assertFalse(inputSource.needsFormat());
     Assert.assertEquals(2, inputSource.createSplits(null, null).count());
     Assert.assertEquals(
         new Long(2048L),

@@ -79,6 +79,7 @@ public class TaskConfig
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
   private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = -1;
+  private static final boolean DEFAULT_ENABLE_CONCURRENT_APPEND_AND_REPLACE = false;
 
   @JsonProperty
   private final String baseDir;
@@ -125,6 +126,9 @@ public class TaskConfig
   @JsonProperty
   private final long tmpStorageBytesPerTask;
 
+  @JsonProperty
+  private final boolean enableConcurrentAppendAndReplace;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -142,7 +146,8 @@ public class TaskConfig
       @JsonProperty("batchProcessingMode") String batchProcessingMode,
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
-      @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask
+      @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask,
+      @JsonProperty("enableConcurrentAppendAndReplace") @Nullable Boolean enableConcurrentAppendAndReplace
   )
   {
     this.baseDir = Configs.valueOrDefault(baseDir, System.getProperty("java.io.tmpdir"));
@@ -193,6 +198,10 @@ public class TaskConfig
 
     this.storeEmptyColumns = Configs.valueOrDefault(storeEmptyColumns, DEFAULT_STORE_EMPTY_COLUMNS);
     this.tmpStorageBytesPerTask = Configs.valueOrDefault(tmpStorageBytesPerTask, DEFAULT_TMP_STORAGE_BYTES_PER_TASK);
+    this.enableConcurrentAppendAndReplace = Configs.valueOrDefault(
+        enableConcurrentAppendAndReplace,
+        DEFAULT_ENABLE_CONCURRENT_APPEND_AND_REPLACE
+    );
   }
 
   private TaskConfig(
@@ -210,7 +219,8 @@ public class TaskConfig
       BatchProcessingMode batchProcessingMode,
       boolean storeEmptyColumns,
       boolean encapsulatedTask,
-      long tmpStorageBytesPerTask
+      long tmpStorageBytesPerTask,
+      boolean enableConcurrentAppendAndReplace
   )
   {
     this.baseDir = baseDir;
@@ -228,6 +238,7 @@ public class TaskConfig
     this.storeEmptyColumns = storeEmptyColumns;
     this.encapsulatedTask = encapsulatedTask;
     this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
+    this.enableConcurrentAppendAndReplace = enableConcurrentAppendAndReplace;
   }
 
   @JsonProperty
@@ -344,6 +355,12 @@ public class TaskConfig
     return tmpStorageBytesPerTask;
   }
 
+  @JsonProperty("enableConcurrentAppendAndReplace")
+  public boolean isConcurrentAppendAndReplaceEnabled()
+  {
+    return enableConcurrentAppendAndReplace;
+  }
+
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
@@ -370,7 +387,8 @@ public class TaskConfig
         batchProcessingMode,
         storeEmptyColumns,
         encapsulatedTask,
-        tmpStorageBytesPerTask
+        tmpStorageBytesPerTask,
+        enableConcurrentAppendAndReplace
     );
   }
 
@@ -391,7 +409,8 @@ public class TaskConfig
         batchProcessingMode,
         storeEmptyColumns,
         encapsulatedTask,
-        tmpStorageBytesPerTask
+        tmpStorageBytesPerTask,
+        enableConcurrentAppendAndReplace
     );
   }
 }
