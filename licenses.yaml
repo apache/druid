@@ -1871,14 +1871,14 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.5.10
+version: 3.8.3
 libraries:
   - org.apache.zookeeper: zookeeper
   - org.apache.zookeeper: zookeeper-jute
 notices:
   - zookeeper: |
       Apache ZooKeeper
-      Copyright 2009-2019 The Apache Software Foundation
+      Copyright 2009-2023 The Apache Software Foundation
 
 ---
 
@@ -5457,6 +5457,19 @@ copyright: John-David Dalton
 version: 4.17.21
 license_file_path: licenses/bin/lodash.MIT
 
+---
+
+name: "audience-annotations"
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 0.12.0
+libraries:
+  - org.apache.yetus: audience-annotations
+notices:
+  - audience-annotations: |
+      Apache Yetus
+      Copyright 2008-2022 The Apache Software Foundation
 ---
 
 name: "loose-envify"
