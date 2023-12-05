@@ -21,13 +21,16 @@ package org.apache.druid.server.http;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
@@ -332,6 +335,51 @@ public class MetadataResource
     }
 
     return builder.entity(Collections2.transform(segments, DataSegment::getId)).build();
+  }
+
+  @GET
+  @Path("/datasources/{dataSourceName}/unusedSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getUnusedSegmentsInDataSource(
+      @Context final HttpServletRequest req,
+      @PathParam("dataSourceName") final String dataSource,
+      @QueryParam("interval") @Nullable String interval,
+      @QueryParam("limit") @Nullable Integer limit,
+      @QueryParam("offset") @Nullable Integer offset
+  )
+  {
+    if (dataSource != null && dataSource.isEmpty()) {
+      throw InvalidInput.exception("dataSource name must be non-empty");
+    }
+    if (limit != null && limit < 0) {
+      throw InvalidInput.exception("limit must be > 0");
+    }
+    if (offset != null && offset < 0) {
+      throw InvalidInput.exception("offset must be > 0");
+    }
+    if (dataSource == null || dataSource.isEmpty()) {
+      return Response.status(Response.Status.OK).entity(ImmutableList.of()).build();
+    }
+
+    final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
+    Iterable<DataSegment> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+        dataSource,
+        theInterval,
+        limit,
+        offset
+    );
+
+    final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+    final Iterable<DataSegment> authorizedSegments =
+        AuthorizationUtils.filterAuthorizedResources(req, unusedSegments, raGenerator, authorizerMapper);
+
+    // sort by earliest start interval first, then end interval. DataSegment are sorted in this same order due to
+    // how the segment id is generated.
+    final Set<DataSegment> retVal = new TreeSet<>(DataSegment::compareTo);
+    authorizedSegments.iterator().forEachRemaining(retVal::add);
+    return Response.status(Response.Status.OK).entity(retVal).build();
   }
 
   @GET

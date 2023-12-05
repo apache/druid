@@ -232,18 +232,6 @@ Returns a map of segment intervals contained within the specified interval to a 
 
 Returns a map of segment intervals contained within the specified interval to information about the servers that contain the segment for an interval.
 
-`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments/ids?interval={interval}&limit={limit}&offset={offset}`
-
-Returns a list of the ids of segments belonging to a particular datasource, filtered to be within an optional interval if provided. Optional parameters for limit, and offset can be given as well.
-
-`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments/intervals/stats?interval={interval}&limit={limit}&offset={offset}`
-
-Returns a map of segment intervals contained within an optionally specified interval to a JSON object containing the total byte size of unused segments and number of unused segments for an interval. Optional parameters for limit, and offset can be given as well.
-
-`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments/intervals/metadata?interval={interval}&limit={limit}&offset={offset}`
-
-Returns a map of segment intervals contained within an optionally specified interval to a list of segment metadata for unused segments within that interval. Optional parameters for limit, and offset can be given as well.
-
 `GET /druid/coordinator/v1/datasources/{dataSourceName}/segments`
 
 Returns a list of all segments for a datasource in the cluster.
@@ -259,6 +247,11 @@ Returns full segment metadata for a specific segment in the cluster.
 `GET /druid/coordinator/v1/datasources/{dataSourceName}/tiers`
 
 Return the tiers that a datasource exists in.
+
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments?interval={interval}&limit={limit}&offset={offset}`
+
+Returns a list of unused segments for a datasource in the cluster contained within an optionally specified interval.
+Optional parameters for limit, and offset can be given as well, to limit results and enable paginated results.
 
 ## Intervals
 
