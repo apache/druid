@@ -21,7 +21,7 @@ package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -94,8 +94,8 @@ public class SQLAuditManagerTest
         }
     );
 
-    final AuditEvent auditEvent = createAuditEvent("testKey", "testType", DateTimes.nowUtc());
-    auditManager.doAudit(auditEvent);
+    final AuditEntry entry = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
     Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
     Assert.assertEquals(1, metricEvents.size());
@@ -106,24 +106,24 @@ public class SQLAuditManagerTest
 
     ServiceMetricEvent metric = auditMetricEvents.get(0);
 
-    final AuditEvent entry = lookupAuditEntryForKey("testKey");
-    Assert.assertNotNull(entry);
-    Assert.assertEquals(entry.getKey(), metric.getUserDims().get("key"));
-    Assert.assertEquals(entry.getType(), metric.getUserDims().get("type"));
-    Assert.assertEquals(entry.getPayloadAsString(), metric.getUserDims().get("payload"));
-    Assert.assertEquals(entry.getAuditInfo().getAuthor(), metric.getUserDims().get("author"));
-    Assert.assertEquals(entry.getAuditInfo().getComment(), metric.getUserDims().get("comment"));
-    Assert.assertEquals(entry.getAuditInfo().getIp(), metric.getUserDims().get("remote_address"));
+    final AuditEntry dbEntry = lookupAuditEntryForKey("testKey");
+    Assert.assertNotNull(dbEntry);
+    Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
+    Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
+    Assert.assertEquals(dbEntry.getPayload().asString(), metric.getUserDims().get("payload"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getAuthor(), metric.getUserDims().get("author"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getComment(), metric.getUserDims().get("comment"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getIp(), metric.getUserDims().get("remote_address"));
   }
 
   @Test(timeout = 60_000L)
   public void testCreateAuditEntry() throws IOException
   {
-    final AuditEvent auditEvent = createAuditEvent("key1", "type1", DateTimes.nowUtc());
-    auditManager.doAudit(auditEvent);
+    final AuditEntry entry = createAuditEntry("key1", "type1", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
-    AuditEvent dbEvent = lookupAuditEntryForKey(auditEvent.getKey());
-    Assert.assertEquals(auditEvent, dbEvent);
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
+    Assert.assertEquals(entry, dbEntry);
 
     // Verify emitted metrics
     Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
@@ -134,22 +134,22 @@ public class SQLAuditManagerTest
     Assert.assertEquals(1, auditMetricEvents.size());
 
     ServiceMetricEvent metric = auditMetricEvents.get(0);
-    Assert.assertEquals(dbEvent.getKey(), metric.getUserDims().get("key"));
-    Assert.assertEquals(dbEvent.getType(), metric.getUserDims().get("type"));
+    Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
+    Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
     Assert.assertNull(metric.getUserDims().get("payload"));
-    Assert.assertEquals(dbEvent.getAuditInfo().getAuthor(), metric.getUserDims().get("author"));
-    Assert.assertEquals(dbEvent.getAuditInfo().getComment(), metric.getUserDims().get("comment"));
-    Assert.assertEquals(dbEvent.getAuditInfo().getIp(), metric.getUserDims().get("remote_address"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getAuthor(), metric.getUserDims().get("author"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getComment(), metric.getUserDims().get("comment"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getIp(), metric.getUserDims().get("remote_address"));
   }
 
   @Test(timeout = 60_000L)
   public void testFetchAuditHistory()
   {
-    final AuditEvent event = createAuditEvent("testKey", "testType", DateTimes.nowUtc());
+    final AuditEntry event = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
     auditManager.doAudit(event);
     auditManager.doAudit(event);
 
-    List<AuditEvent> auditEntries = auditManager.fetchAuditHistory(
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
         "testKey",
         "testType",
         Intervals.of("2000-01-01T00:00:00Z/2100-01-03T00:00:00Z")
@@ -163,13 +163,13 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByKeyAndTypeWithLimit()
   {
-    final AuditEvent entry1 = createAuditEvent("key1", "type1", DateTimes.nowUtc());
-    final AuditEvent entry2 = createAuditEvent("key2", "type2", DateTimes.nowUtc());
+    final AuditEntry entry1 = createAuditEntry("key1", "type1", DateTimes.nowUtc());
+    final AuditEntry entry2 = createAuditEntry("key2", "type2", DateTimes.nowUtc());
 
     auditManager.doAudit(entry1);
     auditManager.doAudit(entry2);
 
-    List<AuditEvent> auditEntries = auditManager.fetchAuditHistory(entry1.getKey(), entry1.getType(), 1);
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(entry1.getKey(), entry1.getType(), 1);
     Assert.assertEquals(1, auditEntries.size());
     Assert.assertEquals(entry1, auditEntries.get(0));
   }
@@ -177,10 +177,10 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testRemoveAuditLogsOlderThanWithEntryOlderThanTime() throws IOException
   {
-    final AuditEvent entry = createAuditEvent("key1", "type1", DateTimes.nowUtc());
+    final AuditEntry entry = createAuditEntry("key1", "type1", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
-    AuditEvent dbEntry = lookupAuditEntryForKey(entry.getKey());
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
     Assert.assertEquals(entry, dbEntry);
 
     // Verify that the audit entry gets deleted
@@ -191,10 +191,10 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testRemoveAuditLogsOlderThanWithEntryNotOlderThanTime() throws IOException
   {
-    AuditEvent entry = createAuditEvent("key", "type", DateTimes.nowUtc());
+    AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
-    AuditEvent dbEntry = lookupAuditEntryForKey(entry.getKey());
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
     Assert.assertEquals(entry, dbEntry);
 
     // Delete old audit logs
@@ -207,15 +207,15 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByTypeWithLimit()
   {
-    final AuditEvent entry1 = createAuditEvent("testKey", "testType", DateTimes.of("2022-01"));
-    final AuditEvent entry2 = createAuditEvent("testKey", "testType", DateTimes.of("2022-03"));
-    final AuditEvent entry3 = createAuditEvent("testKey", "testType", DateTimes.of("2022-02"));
+    final AuditEntry entry1 = createAuditEntry("testKey", "testType", DateTimes.of("2022-01"));
+    final AuditEntry entry2 = createAuditEntry("testKey", "testType", DateTimes.of("2022-03"));
+    final AuditEntry entry3 = createAuditEntry("testKey", "testType", DateTimes.of("2022-02"));
 
     auditManager.doAudit(entry1);
     auditManager.doAudit(entry2);
     auditManager.doAudit(entry3);
 
-    List<AuditEvent> auditEntries = auditManager.fetchAuditHistory("testType", 2);
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("testType", 2);
     Assert.assertEquals(2, auditEntries.size());
     Assert.assertEquals(entry2, auditEntries.get(0));
     Assert.assertEquals(entry3, auditEntries.get(1));
@@ -248,16 +248,16 @@ public class SQLAuditManagerTest
         }
     );
 
-    final AuditEvent entry = createAuditEvent("key", "type", DateTimes.nowUtc());
+    final AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
     // Verify that all the fields are the same except for the payload
-    AuditEvent dbEntry = lookupAuditEntryForKey(entry.getKey());
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
     Assert.assertEquals(entry.getKey(), dbEntry.getKey());
     // Assert.assertNotEquals(entry.getPayload(), dbEntry.getPayload());
     Assert.assertEquals(
         "Payload truncated as it exceeds 'druid.audit.manager.maxPayloadSizeBytes'[10].",
-        dbEntry.getPayloadAsString()
+        dbEntry.getPayload().asString()
     );
     Assert.assertEquals(entry.getType(), dbEntry.getType());
     Assert.assertEquals(entry.getAuditInfo(), dbEntry.getAuditInfo());
@@ -277,11 +277,11 @@ public class SQLAuditManagerTest
         }
     );
 
-    final AuditEvent entry = createAuditEvent("key", "type", DateTimes.nowUtc());
+    final AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
     // Verify that the actual payload has been persisted
-    AuditEvent dbEntry = lookupAuditEntryForKey(entry.getKey());
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
     Assert.assertEquals(entry, dbEntry);
   }
 
@@ -306,16 +306,16 @@ public class SQLAuditManagerTest
     payloadMap.put("something", null);
 
     auditManager.doAudit(
-        AuditEvent.builder().key("key1").type("type1").auditInfo(auditInfo).payload(payloadMap).build()
+        AuditEntry.builder().key("key1").type("type1").auditInfo(auditInfo).payload(payloadMap).build()
     );
-    AuditEvent entryWithNulls = lookupAuditEntryForKey("key1");
-    Assert.assertEquals("{\"something\":null,\"version\":\"x\"}", entryWithNulls.getPayloadAsString());
+    AuditEntry entryWithNulls = lookupAuditEntryForKey("key1");
+    Assert.assertEquals("{\"something\":null,\"version\":\"x\"}", entryWithNulls.getPayload().asString());
 
     auditManagerSkipNull.doAudit(
-        AuditEvent.builder().key("key2").type("type2").auditInfo(auditInfo).payload(payloadMap).build()
+        AuditEntry.builder().key("key2").type("type2").auditInfo(auditInfo).payload(payloadMap).build()
     );
-    AuditEvent entryWithoutNulls = lookupAuditEntryForKey("key2");
-    Assert.assertEquals("{\"version\":\"x\"}", entryWithoutNulls.getPayloadAsString());
+    AuditEntry entryWithoutNulls = lookupAuditEntryForKey("key2");
+    Assert.assertEquals("{\"version\":\"x\"}", entryWithoutNulls.getPayload().asString());
   }
 
   @After
@@ -333,7 +333,7 @@ public class SQLAuditManagerTest
     Assert.assertEquals(0, rowsAffected);
   }
 
-  private AuditEvent lookupAuditEntryForKey(String key) throws IOException
+  private AuditEntry lookupAuditEntryForKey(String key) throws IOException
   {
     byte[] payload = connector.lookup(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
@@ -345,8 +345,8 @@ public class SQLAuditManagerTest
     if (payload == null) {
       return null;
     } else {
-      AuditRecord record = mapper.readValue(payload, AuditRecord.class);
-      return new AuditEvent(
+      AuditEntry record = mapper.readValue(payload, AuditEntry.class);
+      return new AuditEntry(
           record.getKey(),
           record.getType(),
           record.getAuditInfo(),
@@ -356,12 +356,12 @@ public class SQLAuditManagerTest
     }
   }
 
-  private AuditEvent createAuditEvent(String key, String type, DateTime auditTime)
+  private AuditEntry createAuditEntry(String key, String type, DateTime auditTime)
   {
-    return AuditEvent.builder()
+    return AuditEntry.builder()
                      .key(key)
                      .type(type)
-                     .payloadAsString(StringUtils.format("Test payload for key[%s], type[%s]", key, type))
+                     .serializedPayload(StringUtils.format("Test payload for key[%s], type[%s]", key, type))
                      .auditInfo(new AuditInfo("author", "comment", "127.0.0.1"))
                      .auditTime(auditTime)
                      .build();

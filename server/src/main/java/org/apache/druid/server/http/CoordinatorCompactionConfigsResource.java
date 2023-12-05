@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
@@ -166,7 +166,7 @@ public class CoordinatorCompactionConfigsResource
   {
     Interval theInterval = interval == null ? null : Intervals.of(interval);
     try {
-      List<AuditEvent> auditEntries;
+      List<AuditEntry> auditEntries;
       if (theInterval == null && count != null) {
         auditEntries = auditManager.fetchAuditHistory(
             CoordinatorCompactionConfig.CONFIG_KEY,
@@ -181,9 +181,9 @@ public class CoordinatorCompactionConfigsResource
         );
       }
       DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
-      for (AuditEvent audit : auditEntries) {
+      for (AuditEntry audit : auditEntries) {
         CoordinatorCompactionConfig coordinatorCompactionConfig = configManager.convertBytesToCompactionConfig(
-            audit.getPayloadAsString().getBytes(StandardCharsets.UTF_8)
+            audit.getPayload().asString().getBytes(StandardCharsets.UTF_8)
         );
         history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
       }

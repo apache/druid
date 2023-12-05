@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.DruidServer;
@@ -348,11 +348,11 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
             (handle, transactionStatus) -> {
               final DateTime auditTime = DateTimes.nowUtc();
               auditManager.doAudit(
-                  AuditEvent.builder()
+                  AuditEntry.builder()
                             .key(dataSource)
                             .type("rules")
                             .auditInfo(auditInfo)
-                            .payloadAsString(ruleString)
+                            .serializedPayload(ruleString)
                             .auditTime(auditTime)
                             .build(),
                   handle

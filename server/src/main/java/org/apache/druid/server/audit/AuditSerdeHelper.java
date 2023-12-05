@@ -21,7 +21,7 @@ package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManagerConfig;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
@@ -60,35 +60,39 @@ public class AuditSerdeHelper
     this.jsonMapperSkipNulls = jsonMapperSkipNulls;
   }
 
-  public AuditRecord processAuditEvent(AuditEvent event)
+  public AuditEntry processAuditEntry(AuditEntry entry)
   {
-    final String serialized = event.getPayloadAsString() == null
-                              ? serializePayloadToString(event.getPayload())
-                              : event.getPayloadAsString();
+    final AuditEntry.Payload payload = entry.getPayload();
+    final String serialized = payload.asString() == null
+                              ? serializePayloadToString(payload.raw())
+                              : payload.asString();
 
-    return new AuditRecord(
-        event.getKey(),
-        event.getType(),
-        event.getAuditInfo(),
-        truncateSerializedAuditPayload(serialized),
-        event.getAuditTime()
+    final AuditEntry.Payload processedPayload = AuditEntry.Payload.fromString(
+        truncateSerializedAuditPayload(serialized)
+    );
+    return new AuditEntry(
+        entry.getKey(),
+        entry.getType(),
+        entry.getAuditInfo(),
+        processedPayload,
+        entry.getAuditTime()
     );
   }
 
-  private String serializePayloadToString(Object payload)
+  private String serializePayloadToString(Object rawPayload)
   {
-    if (payload == null) {
+    if (rawPayload == null) {
       return "";
     }
 
     try {
       return config.isSkipNullField()
-             ? jsonMapperSkipNulls.writeValueAsString(payload)
-             : jsonMapper.writeValueAsString(payload);
+             ? jsonMapperSkipNulls.writeValueAsString(rawPayload)
+             : jsonMapper.writeValueAsString(rawPayload);
     }
     catch (IOException e) {
       // Do not throw exception, only log error
-      log.error(e, "Could not serialize audit payload[%s]", payload);
+      log.error(e, "Could not serialize audit payload[%s]", rawPayload);
       return SERIALIZE_ERROR_MSG;
     }
   }

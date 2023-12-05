@@ -22,7 +22,7 @@ package org.apache.druid.security.basic.authentication.endpoint;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.LazySingleton;
@@ -288,7 +288,7 @@ public class BasicAuthenticatorResource
   private void performAudit(String authenticatorName, String action, Object payload, AuditInfo auditInfo)
   {
     auditManager.doAudit(
-        AuditEvent.builder()
+        AuditEntry.builder()
                   .key(authenticatorName)
                   .type(action)
                   .auditInfo(auditInfo)

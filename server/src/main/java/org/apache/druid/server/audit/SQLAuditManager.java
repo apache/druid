@@ -22,7 +22,7 @@ package org.apache.druid.server.audit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
@@ -61,7 +61,7 @@ public class SQLAuditManager implements AuditManager
   private final SQLAuditManagerConfig config;
   private final AuditSerdeHelper serdeHelper;
 
-  private final ResultSetMapper<AuditEvent> resultMapper;
+  private final ResultSetMapper<AuditEntry> resultMapper;
 
   @Inject
   public SQLAuditManager(
@@ -80,7 +80,7 @@ public class SQLAuditManager implements AuditManager
     this.jsonMapper = jsonMapper;
     this.serdeHelper = serdeHelper;
     this.config = config;
-    this.resultMapper = new AuditEventMapper();
+    this.resultMapper = new AuditEntryMapper();
   }
 
   @LifecycleStart
@@ -101,7 +101,7 @@ public class SQLAuditManager implements AuditManager
   }
 
   @Override
-  public void doAudit(AuditEvent event)
+  public void doAudit(AuditEntry event)
   {
     dbi.withHandle(
         handle -> {
@@ -111,29 +111,29 @@ public class SQLAuditManager implements AuditManager
     );
   }
 
-  private ServiceMetricEvent.Builder createMetricEventBuilder(AuditEvent auditEvent)
+  private ServiceMetricEvent.Builder createMetricEventBuilder(AuditEntry entry)
   {
     ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-        .setDimension("key", auditEvent.getKey())
-        .setDimension("type", auditEvent.getType())
-        .setDimension("author", auditEvent.getAuditInfo().getAuthor())
-        .setDimension("comment", auditEvent.getAuditInfo().getComment())
-        .setDimension("remote_address", auditEvent.getAuditInfo().getIp())
-        .setDimension("created_date", auditEvent.getAuditTime().toString());
+        .setDimension("key", entry.getKey())
+        .setDimension("type", entry.getType())
+        .setDimension("author", entry.getAuditInfo().getAuthor())
+        .setDimension("comment", entry.getAuditInfo().getComment())
+        .setDimension("remote_address", entry.getAuditInfo().getIp())
+        .setDimension("created_date", entry.getAuditTime().toString());
 
     if (config.isIncludePayloadAsDimensionInMetric()) {
-      builder.setDimension("payload", auditEvent.getPayloadAsString());
+      builder.setDimension("payload", entry.getPayload().asString());
     }
 
     return builder;
   }
 
   @Override
-  public void doAudit(AuditEvent event, Handle handle) throws IOException
+  public void doAudit(AuditEntry event, Handle handle) throws IOException
   {
     emitter.emit(createMetricEventBuilder(event).setMetric("config/audit", 1));
 
-    final AuditRecord record = serdeHelper.processAuditEvent(event);
+    final AuditEntry record = serdeHelper.processAuditEntry(event);
     handle.createStatement(
         StringUtils.format(
             "INSERT INTO %s (audit_key, type, author, comment, created_date, payload)"
@@ -151,7 +151,7 @@ public class SQLAuditManager implements AuditManager
   }
 
   @Override
-  public List<AuditEvent> fetchAuditHistory(final String key, final String type, Interval interval)
+  public List<AuditEntry> fetchAuditHistory(final String key, final String type, Interval interval)
   {
     final Interval theInterval = createAuditHistoryIntervalIfNull(interval);
     return dbi.withHandle(
@@ -191,7 +191,7 @@ public class SQLAuditManager implements AuditManager
   }
 
   @Override
-  public List<AuditEvent> fetchAuditHistory(final String type, Interval interval)
+  public List<AuditEntry> fetchAuditHistory(final String type, Interval interval)
   {
     final Interval theInterval = createAuditHistoryIntervalIfNull(interval);
     return dbi.withHandle(
@@ -212,14 +212,14 @@ public class SQLAuditManager implements AuditManager
   }
 
   @Override
-  public List<AuditEvent> fetchAuditHistory(final String key, final String type, int limit)
+  public List<AuditEntry> fetchAuditHistory(final String key, final String type, int limit)
       throws IllegalArgumentException
   {
     return fetchAuditHistoryLastEntries(key, type, limit);
   }
 
   @Override
-  public List<AuditEvent> fetchAuditHistory(final String type, int limit)
+  public List<AuditEntry> fetchAuditHistory(final String type, int limit)
       throws IllegalArgumentException
   {
     return fetchAuditHistoryLastEntries(null, type, limit);
@@ -243,7 +243,7 @@ public class SQLAuditManager implements AuditManager
     );
   }
 
-  private List<AuditEvent> fetchAuditHistoryLastEntries(final String key, final String type, int limit)
+  private List<AuditEntry> fetchAuditHistoryLastEntries(final String key, final String type, int limit)
       throws IllegalArgumentException
   {
     final int theLimit = getLimit(limit);
@@ -269,20 +269,12 @@ public class SQLAuditManager implements AuditManager
     );
   }
 
-  private class AuditEventMapper implements ResultSetMapper<AuditEvent>
+  private class AuditEntryMapper implements ResultSetMapper<AuditEntry>
   {
     @Override
-    public AuditEvent map(int index, ResultSet r, StatementContext ctx) throws SQLException
+    public AuditEntry map(int index, ResultSet r, StatementContext ctx) throws SQLException
     {
-      // Read the record and convert to an AuditEvent that can deserialize the payload on-demand
-      AuditRecord record = JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), AuditRecord.class);
-      return new AuditEvent(
-          record.getKey(),
-          record.getType(),
-          record.getAuditInfo(),
-          record.getPayload(),
-          record.getAuditTime()
-      );
+      return JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), AuditEntry.class);
     }
   }
 

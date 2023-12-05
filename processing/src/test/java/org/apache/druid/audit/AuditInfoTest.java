@@ -35,9 +35,9 @@ public class AuditInfoTest
   }
 
   @Test(timeout = 60_000L)
-  public void testAuditEventEquality()
+  public void testAuditEntryEquality()
   {
-    final AuditEvent event1 = new AuditEvent(
+    final AuditEntry event1 = new AuditEntry(
         "testKey",
         "testType",
         new AuditInfo(
@@ -45,10 +45,10 @@ public class AuditInfoTest
             "testComment",
             "127.0.0.1"
         ),
-        "testPayload",
+        AuditEntry.Payload.fromString("testPayload"),
         DateTimes.of("2013-01-01T00:00:00Z")
     );
-    final AuditEvent event2 = new AuditEvent(
+    final AuditEntry event2 = new AuditEntry(
         "testKey",
         "testType",
         new AuditInfo(
@@ -56,7 +56,7 @@ public class AuditInfoTest
             "testComment",
             "127.0.0.1"
         ),
-        "testPayload",
+        AuditEntry.Payload.fromString("testPayload"),
         DateTimes.of("2013-01-01T00:00:00Z")
     );
     Assert.assertEquals(event1, event2);

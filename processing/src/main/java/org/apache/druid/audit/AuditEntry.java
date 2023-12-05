@@ -19,6 +19,9 @@
 
 package org.apache.druid.audit;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
@@ -26,47 +29,24 @@ import org.joda.time.DateTime;
 import java.util.Objects;
 
 /**
- * Represents a single audit event with serialized payload.
+ * Serializable record of an audit event that can be persisted, logged or sent
+ * over REST APIs.
  */
-public class AuditEvent
+public class AuditEntry
 {
   private final String key;
   private final String type;
   private final AuditInfo auditInfo;
+  private final Payload payload;
   private final DateTime auditTime;
 
-  private final String serializedPayload;
-  private final Object payload;
-
-  private AuditEvent(
-      String key,
-      String type,
-      AuditInfo authorInfo,
-      DateTime auditTime,
-      Object payload
-  )
-  {
-    this(key, type, authorInfo, payload, null, auditTime);
-  }
-
-  public AuditEvent(
-      String key,
-      String type,
-      AuditInfo authorInfo,
-      String serializedPayload,
-      DateTime auditTime
-  )
-  {
-    this(key, type, authorInfo, null, serializedPayload, auditTime);
-  }
-
-  public AuditEvent(
-      String key,
-      String type,
-      AuditInfo authorInfo,
-      Object payload,
-      String serializedPayload,
-      DateTime auditTime
+  @JsonCreator
+  public AuditEntry(
+      @JsonProperty("key") String key,
+      @JsonProperty("type") String type,
+      @JsonProperty("auditInfo") AuditInfo authorInfo,
+      @JsonProperty("payload") Payload payload,
+      @JsonProperty("auditTime") DateTime auditTime
   )
   {
     Preconditions.checkNotNull(key, "key cannot be null");
@@ -76,43 +56,43 @@ public class AuditEvent
     this.type = type;
     this.auditInfo = authorInfo;
     this.auditTime = auditTime == null ? DateTimes.nowUtc() : auditTime;
-    this.serializedPayload = serializedPayload;
-    this.payload = payload;
+    this.payload = payload == null ? Payload.fromString("") : payload;
   }
 
+  @JsonProperty
   public String getKey()
   {
     return key;
   }
 
+  @JsonProperty
   public String getType()
   {
     return type;
   }
 
+  @JsonProperty
   public AuditInfo getAuditInfo()
   {
     return auditInfo;
   }
 
-  public Object getPayload()
+  /**
+   * Non-null payload of the audit event.
+   */
+  @JsonProperty
+  public Payload getPayload()
   {
     return payload;
   }
 
-  public String getPayloadAsString()
-  {
-    return serializedPayload;
-  }
-
+  /**
+   * @return audit time as DateTime
+   */
+  @JsonProperty
   public DateTime getAuditTime()
   {
     return auditTime;
-  }
-
-  public static Builder builder()
-  {
-    return new Builder();
   }
 
   @Override
@@ -125,19 +105,23 @@ public class AuditEvent
       return false;
     }
 
-    AuditEvent that = (AuditEvent) o;
+    AuditEntry that = (AuditEntry) o;
     return Objects.equals(this.auditTime, that.auditTime)
            && Objects.equals(this.key, that.key)
            && Objects.equals(this.type, that.type)
            && Objects.equals(this.auditInfo, that.auditInfo)
-           && Objects.equals(this.payload, that.payload)
-           && Objects.equals(this.serializedPayload, that.serializedPayload);
+           && Objects.equals(this.payload, that.payload);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(key, type, auditInfo, payload, serializedPayload, auditTime);
+    return Objects.hash(key, type, auditInfo, payload, auditTime);
+  }
+
+  public static Builder builder()
+  {
+    return new Builder();
   }
 
   public static class Builder
@@ -177,7 +161,7 @@ public class AuditEvent
       return this;
     }
 
-    public Builder payloadAsString(String serializedPayload)
+    public Builder serializedPayload(String serializedPayload)
     {
       this.serializedPayload = serializedPayload;
       return this;
@@ -195,13 +179,65 @@ public class AuditEvent
       return this;
     }
 
-    public AuditEvent build()
+    public AuditEntry build()
     {
-      if (payload != null) {
-        return new AuditEvent(key, type, auditInfo, auditTime, payload);
-      } else {
-        return new AuditEvent(key, type, auditInfo, serializedPayload, auditTime);
+      return new AuditEntry(key, type, auditInfo, new Payload(serializedPayload, payload), auditTime);
+    }
+  }
+
+  public static class Payload
+  {
+    private final String serialized;
+    private final Object raw;
+
+    @JsonCreator
+    public static Payload fromString(String serialized)
+    {
+      return new Payload(serialized, null);
+    }
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return serialized;
+    }
+
+    private Payload(String serialized, Object raw)
+    {
+      this.serialized = serialized;
+      this.raw = raw;
+    }
+
+    public String asString()
+    {
+      return serialized;
+    }
+
+    public Object raw()
+    {
+      return raw;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
       }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      Payload that = (Payload) o;
+      return Objects.equals(this.serialized, that.serialized)
+             && Objects.equals(this.raw, that.raw);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(serialized, raw);
     }
   }
 }

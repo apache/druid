@@ -33,7 +33,7 @@ public interface AuditManager
 
   String X_DRUID_COMMENT = "X-Druid-Comment";
 
-  void doAudit(AuditEvent event);
+  void doAudit(AuditEntry event);
 
   /**
    * Inserts an audit entry in audit table using the provided JDBI handle.
@@ -44,7 +44,7 @@ public interface AuditManager
    * @param event  Event to audit
    * @param handle JDBI Handle representing connection to the database
    */
-  default void doAudit(AuditEvent event, Handle handle) throws IOException
+  default void doAudit(AuditEntry event, Handle handle) throws IOException
   {
     doAudit(event);
   }
@@ -55,7 +55,7 @@ public interface AuditManager
    *
    * @return List of recorded audit events satisfying the passed parameters.
    */
-  List<AuditEvent> fetchAuditHistory(String key, String type, Interval interval);
+  List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval);
 
   /**
    * Fetches audit entries of a type whose audit time lies in the given interval.
@@ -64,21 +64,21 @@ public interface AuditManager
    * @param interval Eligible interval for audit time
    * @return List of recorded audit events satisfying the passed parameters.
    */
-  List<AuditEvent> fetchAuditHistory(String type, Interval interval);
+  List<AuditEntry> fetchAuditHistory(String type, Interval interval);
 
   /**
    * Provides last N entries of audit history for given key, type
    *
    * @return list of recorded audit events satisfying the passed parameters
    */
-  List<AuditEvent> fetchAuditHistory(String key, String type, int limit);
+  List<AuditEntry> fetchAuditHistory(String key, String type, int limit);
 
   /**
    * Provides last N entries of audit history for given type
    *
    * @return List of recorded audit events satisfying the passed parameters.
    */
-  List<AuditEvent> fetchAuditHistory(String type, int limit);
+  List<AuditEntry> fetchAuditHistory(String type, int limit);
 
   /**
    * Remove audit logs created older than the given timestamp.

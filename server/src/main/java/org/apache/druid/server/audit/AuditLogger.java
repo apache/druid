@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.audit;
 
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.java.util.common.logger.Logger;
 
 public class AuditLogger
@@ -39,16 +40,16 @@ public class AuditLogger
     this.level = level;
   }
 
-  public void log(AuditRecord record)
+  public void log(AuditEntry entry)
   {
     Object[] args = {
-        record.getAuditTime(),
-        record.getAuditInfo().getAuthor(),
-        record.getAuditInfo().getIp(),
-        record.getType(),
-        record.getKey(),
-        record.getAuditInfo().getComment(),
-        record.getPayload()
+        entry.getAuditTime(),
+        entry.getAuditInfo().getAuthor(),
+        entry.getAuditInfo().getIp(),
+        entry.getType(),
+        entry.getKey(),
+        entry.getAuditInfo().getComment(),
+        entry.getPayload()
     };
     switch (level) {
       case DEBUG:

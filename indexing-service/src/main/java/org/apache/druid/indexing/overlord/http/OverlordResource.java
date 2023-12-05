@@ -28,7 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
@@ -230,7 +230,7 @@ public class OverlordResource
             // Do an audit only if this API was called by a user and not by internal services
             if (author != null && !author.isEmpty()) {
               auditManager.doAudit(
-                  AuditEvent.builder()
+                  AuditEntry.builder()
                             .key(task.getDataSource())
                             .type("ingestion.batch")
                             .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
@@ -586,7 +586,7 @@ public class OverlordResource
     Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
-        List<AuditEvent> workerEntryList = auditManager.fetchAuditHistory(
+        List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
             WorkerBehaviorConfig.CONFIG_KEY,
             WorkerBehaviorConfig.CONFIG_KEY,
             count
@@ -599,7 +599,7 @@ public class OverlordResource
                        .build();
       }
     }
-    List<AuditEvent> workerEntryList = auditManager.fetchAuditHistory(
+    List<AuditEntry> workerEntryList = auditManager.fetchAuditHistory(
         WorkerBehaviorConfig.CONFIG_KEY,
         WorkerBehaviorConfig.CONFIG_KEY,
         theInterval

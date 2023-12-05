@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.audit.AuditEvent;
+import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.DruidServer;
@@ -183,13 +183,13 @@ public class SQLMetadataRuleManagerTest
     Assert.assertEquals(rules, ruleManager.getRules(DATASOURCE));
 
     // verify audit entry is created
-    List<AuditEvent> auditEntries = auditManager.fetchAuditHistory(DATASOURCE, "rules", null);
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(DATASOURCE, "rules", null);
     Assert.assertEquals(1, auditEntries.size());
-    AuditEvent entry = auditEntries.get(0);
+    AuditEntry entry = auditEntries.get(0);
 
     Assert.assertEquals(
         rules,
-        mapper.readValue(entry.getPayloadAsString(), new TypeReference<List<Rule>>() {})
+        mapper.readValue(entry.getPayload().asString(), new TypeReference<List<Rule>>() {})
     );
     Assert.assertEquals(auditInfo, entry.getAuditInfo());
     Assert.assertEquals(DATASOURCE, entry.getKey());
@@ -217,12 +217,12 @@ public class SQLMetadataRuleManagerTest
     Assert.assertEquals(rules, ruleManager.getRules("test_dataSource2"));
 
     // test fetch audit entries
-    List<AuditEvent> auditEntries = auditManager.fetchAuditHistory("rules", null);
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("rules", null);
     Assert.assertEquals(2, auditEntries.size());
-    for (AuditEvent entry : auditEntries) {
+    for (AuditEntry entry : auditEntries) {
       Assert.assertEquals(
           rules,
-          mapper.readValue(entry.getPayloadAsString(), new TypeReference<List<Rule>>() {})
+          mapper.readValue(entry.getPayload().asString(), new TypeReference<List<Rule>>() {})
       );
       Assert.assertEquals(auditInfo, entry.getAuditInfo());
     }
