@@ -183,3 +183,14 @@ jobs:
           web-console/script/druid start
           (cd web-console && npm run test-e2e)
           web-console/script/druid stop
+
+      - name: Tar druid logs
+        if: ${{ failure() }}
+        run: tar cvzf ./druid-logs.tgz ./distribution/target/apache-druid-29.0.0-SNAPSHOT/logs
+
+      - name: Upload druid logs to GitHub
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@master
+        with:
+          name: Druid logs web-checks
+          path: druid-logs.tgz          
