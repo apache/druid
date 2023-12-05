@@ -466,7 +466,6 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   {
     ImmutableMap.Builder<String, ColumnFormat> builder = ImmutableMap.builder();
 
-    System.out.printf("Logging columns timeAndMetrics[%s] dimensionDescs[%s] %n", timeAndMetricsColumnFormats, dimensionDescs);
     synchronized (dimensionDescs) {
       timeAndMetricsColumnFormats.forEach(builder::put);
       dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getIndexer().getFormat()));
