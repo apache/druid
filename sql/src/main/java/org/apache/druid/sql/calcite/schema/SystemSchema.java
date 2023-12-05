@@ -311,7 +311,7 @@ public class SystemSchema extends AbstractSchema
               numRows = partialSegmentData.getNumRows();
             }
 
-            // If druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
+            // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
             // broker might have outdated or no information regarding numRows and rowSignature for a segment.
             // In that case, we should use {@code numRows} from the segment polled from the coordinator.
             if (null != val.getNumRows()) {
@@ -358,7 +358,7 @@ public class SystemSchema extends AbstractSchema
             }
           });
 
-      // If druid.coordinator.centralizedTableSchema.enabled is set on the Coordinator, all the segments in this loop
+      // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, all the segments in this loop
       // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
           .from(() -> getAuthorizedAvailableSegments(
