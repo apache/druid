@@ -35,7 +35,7 @@ services:
       service: druid-coordinator
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_coordinator_centralizedDatasourceSchema_enabled=true
+      - druid_centralizedDatasourceSchema_enabled=true
       - druid_coordinator_segmentMetadata_metadataRefreshPeriod=PT15S
     depends_on:
       - druid-overlord
