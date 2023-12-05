@@ -160,7 +160,8 @@
                     <groupId>org.elasticsearch.plugin</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
-                <!-- jackson-jaxrs is used by ranger-plugins accessing
+                <!-- excluding to address CVE-2019-10202, CVE-2019-10172 in jackson-jaxrs 1.9.x
+                     jackson-jaxrs is used by ranger-plugins accessing
                 RangerRESTClient class. This should not be needed in an authorizer -->
                 <exclusion>
                     <groupId>org.codehaus.jackson</groupId>
