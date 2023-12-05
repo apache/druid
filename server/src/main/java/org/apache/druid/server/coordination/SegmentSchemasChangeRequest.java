@@ -55,6 +55,6 @@ public class SegmentSchemasChangeRequest implements DataSegmentChangeRequest
   @Override
   public String asString()
   {
-    return null;
+    return segmentSchemas.toString();
   }
 }
