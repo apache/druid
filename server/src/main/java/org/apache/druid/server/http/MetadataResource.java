@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -348,7 +347,7 @@ public class MetadataResource
       @QueryParam("offset") @Nullable Integer offset
   )
   {
-    if (dataSource != null && dataSource.isEmpty()) {
+    if (dataSource == null || dataSource.isEmpty()) {
       throw InvalidInput.exception("dataSource name must be non-empty");
     }
     if (limit != null && limit < 0) {
@@ -356,9 +355,6 @@ public class MetadataResource
     }
     if (offset != null && offset < 0) {
       throw InvalidInput.exception("offset must be > 0");
-    }
-    if (dataSource == null || dataSource.isEmpty()) {
-      return Response.status(Response.Status.OK).entity(ImmutableList.of()).build();
     }
 
     final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
