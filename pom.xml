@@ -79,7 +79,6 @@
         <apache.kafka.version>3.6.0</apache.kafka.version>
         <apache.ranger.version>2.4.0</apache.ranger.version>
         <gson.version>2.10.1</gson.version>
-        <apache.ranger.gson.version>2.10.1</apache.ranger.gson.version>
         <scala.library.version>2.13.11</scala.library.version>
         <avatica.version>1.23.0</avatica.version>
         <avro.version>1.11.3</avro.version>
@@ -411,6 +410,15 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-stdlib</artifactId>
                 <version>1.6.10</version>
+            </dependency>
+            <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
+            schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
+            and direct dependency of druid-ranger
+              -->
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
