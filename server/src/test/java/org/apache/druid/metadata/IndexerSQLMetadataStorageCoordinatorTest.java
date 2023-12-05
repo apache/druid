@@ -1206,7 +1206,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         null,
         null
@@ -1221,7 +1221,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(),
         null,
         null
@@ -1237,27 +1237,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     markAllSegmentsUnused(new HashSet<>(segments));
 
     int offset = 10;
-    final List<DataSegment> expectedSegments = segments.stream().sorted((o1, o2) -> {
-      long o1Start = o1.getInterval().getStartMillis();
-      long o2Start = o2.getInterval().getStartMillis();
-      if (o1Start < o2Start) {
-        return -1;
-      } else if (o1Start > o2Start) {
-        return 1;
-      } else {
-        long o1End = o1.getInterval().getEndMillis();
-        long o2End = o2.getInterval().getEndMillis();
-        if (o1End < o2End) {
-          return -1;
-        }
-        return o1End > o2End
-            ? 1
-            : 0;
-      }
-    })
+    final List<DataSegment> expectedSegments = segments.stream()
         .skip(offset)
         .collect(Collectors.toList());
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(),
         null,
         offset
@@ -1272,7 +1255,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         segments.size(),
         null
@@ -1288,7 +1271,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     markAllSegmentsUnused(new HashSet<>(segments));
 
     final int requestedLimit = segments.size() - 1;
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
         null
@@ -1298,12 +1281,48 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsInSingleBatchLimitAndOffsetInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(2034, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int requestedLimit = segments.size();
+    final int offset = 5;
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
+        segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
+        requestedLimit,
+        offset
+    );
+    Assert.assertEquals(segments.size() - offset, actualUnusedSegments.size());
+    // offset used when number of intervals does not require multiple batches
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().skip(offset).limit(requestedLimit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffsetInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int requestedLimit = segments.size() - 1;
+    final int offset = 5;
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
+        segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
+        requestedLimit,
+        offset
+    );
+    Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
+    // offset not used when number of intervals requires multiple batches
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+  }
+
+  @Test
   public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitOutOfRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         segments.size() + 1,
         null
@@ -1322,7 +1341,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(segments.stream()
                               .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(outOfRangeInterval),
         null,
         null
@@ -3104,7 +3123,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     return segments;
   }
 
-  private ImmutableList<DataSegment> retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+  private ImmutableList<DataSegment> retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
       final List<Interval> intervals,
       final Integer limit,
       final Integer offset

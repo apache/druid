@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -258,20 +258,18 @@ public class MetadataResourceTest
             ArgumentMatchers.any());
 
     // test with null datasource name - fails with expected bad datasource name error
-    DruidException e = Assert.assertThrows(
-        DruidException.class,
-        () -> metadataResource.getUnusedSegmentsInDataSource(request, null, null, -1, null)
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "dataSourceName must be non-empty"
+    ).assertThrowsAndMatches(
+        () -> metadataResource.getUnusedSegmentsInDataSource(request, null, null, null, null)
     );
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-    Assert.assertEquals("dataSource name must be non-empty", e.getMessage());
 
     // test with empty datasource name - fails with expected bad datasource name error
-    e = Assert.assertThrows(
-        DruidException.class,
-        () -> metadataResource.getUnusedSegmentsInDataSource(request, "", null, -1, null)
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "dataSourceName must be non-empty"
+    ).assertThrowsAndMatches(
+        () -> metadataResource.getUnusedSegmentsInDataSource(request, "", null, null, null)
     );
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-    Assert.assertEquals("dataSource name must be non-empty", e.getMessage());
 
     // test invalid datasource - returns empty segments
     Response response = metadataResource.getUnusedSegmentsInDataSource(
@@ -285,27 +283,24 @@ public class MetadataResourceTest
     Assert.assertTrue(resultList.isEmpty());
 
     // test valid datasource with bad limit - fails with expected bad limit message
-    e = Assert.assertThrows(
-        DruidException.class,
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "limit must be > 0"
+    ).assertThrowsAndMatches(
         () -> metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, -1, null)
     );
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-    Assert.assertEquals("limit must be > 0", e.getMessage());
 
     // test valid datasource with bad offset - fails with expected bad offset message
-    e = Assert.assertThrows(
-        DruidException.class,
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "offset must be > 0"
+    ).assertThrowsAndMatches(
         () -> metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, -1)
     );
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-    Assert.assertEquals("offset must be > 0", e.getMessage());
 
     // test valid datasource - returns all unused segments for that datasource
     response = metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, null);
 
     resultList = extractResponseList(response);
     Assert.assertEquals(Arrays.asList(segments), resultList);
-
 
     // test valid datasource with interval filter - returns all unused segments for that datasource within interval
     int numDays = 2;
