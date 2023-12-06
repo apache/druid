@@ -63,6 +63,16 @@ public abstract class ObjectBasedColumnSelector<T> implements ColumnValueSelecto
   @Override
   public final boolean isNull()
   {
-    return getObject() == null;
+    T object = getObject();
+    if (object == null) {
+      return true;
+    }
+    if (object instanceof Number) {
+      return false;
+    }
+    throw DruidException.defensive(
+        "isNull() may only be called in case the underlying object is a Number but it was [%s]",
+        object.getClass().getName()
+    );
   }
 }

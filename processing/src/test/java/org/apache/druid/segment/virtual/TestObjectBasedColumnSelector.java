@@ -79,4 +79,16 @@ public class TestObjectBasedColumnSelector
     assertEquals(11f, selector.getLong(), 0.0f);
   }
 
+  @Test
+  public void testInvalidIsNullUse()
+  {
+    MyObjectColumnSelector selector = new MyObjectColumnSelector(getClass());
+
+    DruidException e = assertThrows(DruidException.class, () -> selector.isNull());
+
+    assertEquals(
+        e.getMessage(),
+        "isNull() may only be called in case the underlying object is a Number but it was [java.lang.Class]"
+    );
+  }
 }
