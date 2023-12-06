@@ -3327,11 +3327,11 @@ public interface Function extends NamedFunction
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExpressionType type = ExpressionType.LONG;
+      ExpressionType type = null;
       for (Expr arg : args) {
-        type = ExpressionTypeConversion.function(type, arg.getOutputType(inspector));
+        type = ExpressionTypeConversion.leastRestrictiveType(type, arg.getOutputType(inspector));
       }
-      return ExpressionType.asArrayType(type);
+      return type == null ? null : ExpressionTypeFactory.getInstance().ofArray(type);
     }
 
     /**

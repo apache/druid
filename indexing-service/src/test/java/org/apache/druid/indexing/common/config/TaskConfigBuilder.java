@@ -41,6 +41,7 @@ public class TaskConfigBuilder
   private Boolean storeEmptyColumns;
   private boolean enableTaskLevelLogPush;
   private Long tmpStorageBytesPerTask;
+  private Boolean enableConcurrentAppendAndReplace;
 
   public TaskConfigBuilder setBaseDir(String baseDir)
   {
@@ -132,6 +133,18 @@ public class TaskConfigBuilder
     return this;
   }
 
+  public TaskConfigBuilder enableConcurrentAppendAndReplace()
+  {
+    this.enableConcurrentAppendAndReplace = true;
+    return this;
+  }
+
+  public TaskConfigBuilder disableConcurrentAppendAndReplace()
+  {
+    this.enableConcurrentAppendAndReplace = false;
+    return this;
+  }
+
   public TaskConfig build()
   {
     return new TaskConfig(
@@ -149,7 +162,8 @@ public class TaskConfigBuilder
         batchProcessingMode,
         storeEmptyColumns,
         enableTaskLevelLogPush,
-        tmpStorageBytesPerTask
+        tmpStorageBytesPerTask,
+        enableConcurrentAppendAndReplace
     );
   }
 }

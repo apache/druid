@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -55,6 +57,7 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -1965,7 +1968,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
    * - Later, after the above was dropped, another segment on same interval was created by the stream but this
    * time there was an integrity violation in the pending segments table because the
    * {@link IndexerSQLMetadataStorageCoordinator#createNewSegment(Handle, String, Interval, PartialShardSpec, String)}
-   * method returned an segment id that already existed in the pending segments table
+   * method returned a segment id that already existed in the pending segments table
    */
   @Test
   public void testAllocatePendingSegmentAfterDroppingExistingSegment()
@@ -2867,28 +2870,28 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     insertUsedSegments(ImmutableSet.of(defaultSegment));
 
     List<Pair<DataSegment, String>> resultForIntervalOnTheLeft =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2001"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("2000/2001")));
     Assert.assertTrue(resultForIntervalOnTheLeft.isEmpty());
 
     List<Pair<DataSegment, String>> resultForIntervalOnTheRight =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("3000/3001"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("3000/3001")));
     Assert.assertTrue(resultForIntervalOnTheRight.isEmpty());
 
     List<Pair<DataSegment, String>> resultForExactInterval =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(defaultSegment.getInterval()));
     Assert.assertEquals(1, resultForExactInterval.size());
     Assert.assertEquals(defaultSegment, resultForExactInterval.get(0).lhs);
 
     List<Pair<DataSegment, String>> resultForIntervalWithLeftOverlap =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2000/2015-01-02"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("2000/2015-01-02")));
     Assert.assertEquals(resultForExactInterval, resultForIntervalWithLeftOverlap);
 
     List<Pair<DataSegment, String>> resultForIntervalWithRightOverlap =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.of("2015-01-01/3000"));
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.of("2015-01-01/3000")));
     Assert.assertEquals(resultForExactInterval, resultForIntervalWithRightOverlap);
 
     List<Pair<DataSegment, String>> resultForEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Intervals.ETERNITY);
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.ETERNITY));
     Assert.assertEquals(resultForExactInterval, resultForEternity);
   }
 
@@ -2899,12 +2902,116 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     insertUsedSegments(ImmutableSet.of(eternitySegment, firstHalfEternityRangeSegment, secondHalfEternityRangeSegment));
 
     List<Pair<DataSegment, String>> resultForRandomInterval =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), defaultSegment.getInterval());
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(defaultSegment.getInterval()));
     Assert.assertEquals(3, resultForRandomInterval.size());
 
     List<Pair<DataSegment, String>> resultForEternity =
-        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), eternitySegment.getInterval());
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(eternitySegment.getInterval()));
     Assert.assertEquals(3, resultForEternity.size());
+  }
+
+  @Test
+  public void testTimelineVisibilityWith0CorePartitionTombstone() throws IOException
+  {
+    final Interval interval = Intervals.of("2020/2021");
+    // Create and commit a tombstone segment
+    final DataSegment tombstoneSegment = createSegment(
+        interval,
+        "version",
+        new TombstoneShardSpec()
+    );
+
+    final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
+    Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
+
+    // Allocate and commit a data segment by appending to the same interval
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+        DS.WIKI,
+        "seq",
+        tombstoneSegment.getVersion(),
+        interval,
+        NumberedPartialShardSpec.instance(),
+        "version",
+        false
+    );
+
+    Assert.assertEquals("wiki_2020-01-01T00:00:00.000Z_2021-01-01T00:00:00.000Z_version_1", identifier.toString());
+    Assert.assertEquals(0, identifier.getShardSpec().getNumCorePartitions());
+
+    final DataSegment dataSegment = createSegment(
+        interval,
+        "version",
+        identifier.getShardSpec()
+    );
+    final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
+
+    // Mark the tombstone as unused
+    markAllSegmentsUnused(tombstones);
+
+    final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
+        DS.WIKI,
+        Segments.ONLY_VISIBLE
+    );
+
+    // The appended data segment will still be visible in the timeline since the
+    // tombstone contains 0 core partitions
+    SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(allUsedSegments);
+    Assert.assertEquals(1, segmentTimeline.lookup(interval).size());
+    Assert.assertEquals(dataSegment, segmentTimeline.lookup(interval).get(0).getObject().getChunk(1).getObject());
+  }
+
+  @Test
+  public void testTimelineWith1CorePartitionTombstone() throws IOException
+  {
+    // Register the old generation tombstone spec for this test.
+    mapper.registerSubtypes(TombstoneShardSpecWith1CorePartition.class);
+
+    final Interval interval = Intervals.of("2020/2021");
+    // Create and commit an old generation tombstone with 1 core partition
+    final DataSegment tombstoneSegment = createSegment(
+        interval,
+        "version",
+        new TombstoneShardSpecWith1CorePartition()
+    );
+
+    final Set<DataSegment> tombstones = new HashSet<>(Collections.singleton(tombstoneSegment));
+    Assert.assertTrue(coordinator.commitSegments(tombstones).containsAll(tombstones));
+
+    // Allocate and commit a data segment by appending to the same interval
+    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+        DS.WIKI,
+        "seq",
+        tombstoneSegment.getVersion(),
+        interval,
+        NumberedPartialShardSpec.instance(),
+        "version",
+        false
+    );
+
+    Assert.assertEquals("wiki_2020-01-01T00:00:00.000Z_2021-01-01T00:00:00.000Z_version_1", identifier.toString());
+    Assert.assertEquals(1, identifier.getShardSpec().getNumCorePartitions());
+
+    final DataSegment dataSegment = createSegment(
+        interval,
+        "version",
+        identifier.getShardSpec()
+    );
+    final Set<DataSegment> dataSegments = new HashSet<>(Collections.singleton(dataSegment));
+    Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
+
+    // Mark the tombstone as unused
+    markAllSegmentsUnused(tombstones);
+
+    final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
+        DS.WIKI,
+        Segments.ONLY_VISIBLE
+    );
+
+    // The appended data segment will not be visible in the timeline since the old generation
+    // tombstone contains 1 core partition
+    SegmentTimeline segmentTimeline = SegmentTimeline.forSegments(allUsedSegments);
+    Assert.assertEquals(0, segmentTimeline.lookup(interval).size());
   }
 
   private static class DS
@@ -2936,7 +3043,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
     final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet);
-    Assert.assertTrue(committedSegments.containsAll(new HashSet<>(segments)));
+    Assert.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
   }
@@ -2960,5 +3067,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           }
         }
     );
+  }
+
+  /**
+   * This test-only shard type is to test the behavior of "old generation" tombstones with 1 core partition.
+   */
+  private static class TombstoneShardSpecWith1CorePartition extends TombstoneShardSpec
+  {
+    @Override
+    @JsonProperty("partitions")
+    public int getNumCorePartitions()
+    {
+      return 1;
+    }
   }
 }

@@ -162,5 +162,5 @@ public class TestNGGroup
 
   public static final String HTTP_ENDPOINT = "http-endpoint";
 
-  public static final String CENTRALIZED_TABLE_SCHEMA = "centralized-table-schema";
+  public static final String CENTRALIZED_DATASOURCE_SCHEMA = "centralized-datasource-schema";
 }
