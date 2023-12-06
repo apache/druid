@@ -69,7 +69,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -164,7 +164,7 @@ public class StreamAppenderator implements Appenderator
       baseSegmentToUpgradedVersions = new ConcurrentHashMap<>();
 
   private final SinkSchemaAnnouncer sinkSchemaAnnouncer;
-  private final CentralizedTableSchemaConfig centralizedTableSchemaConfig;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
@@ -202,7 +202,7 @@ public class StreamAppenderator implements Appenderator
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       boolean useMaxMemoryEstimates,
-      CentralizedTableSchemaConfig centralizedTableSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     log.info("Initialising stream appenderator. logging dataschema %s", schema);
@@ -231,7 +231,7 @@ public class StreamAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.centralizedTableSchemaConfig = centralizedTableSchemaConfig;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
   }
 
@@ -1625,8 +1625,8 @@ public class StreamAppenderator implements Appenderator
     {
       this.announcer = StreamAppenderator.this.segmentAnnouncer;
       this.taskId = StreamAppenderator.this.myId;
-      this.enabled = centralizedTableSchemaConfig.isEnabled()
-                     && centralizedTableSchemaConfig.announceRealtimeSegmentSchema();
+      this.enabled = centralizedDatasourceSchemaConfig.isEnabled()
+                     && centralizedDatasourceSchemaConfig.announceRealtimeSegmentSchema();
       this.scheduledExecutorService = ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d");
     }
 

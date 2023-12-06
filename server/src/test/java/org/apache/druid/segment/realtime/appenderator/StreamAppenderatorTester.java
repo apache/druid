@@ -63,7 +63,7 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -102,7 +102,7 @@ public class StreamAppenderatorTester implements AutoCloseable
       final RowIngestionMeters rowIngestionMeters,
       final boolean skipBytesInMemoryOverheadCheck,
       final DataSegmentAnnouncer announcer,
-      final CentralizedTableSchemaConfig centralizedTableSchemaConfig
+      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -249,7 +249,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         rowIngestionMeters,
         new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
         true,
-        centralizedTableSchemaConfig
+        centralizedDatasourceSchemaConfig
     );
   }
 
@@ -357,13 +357,13 @@ public class StreamAppenderatorTester implements AutoCloseable
           rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
           skipBytesInMemoryOverheadCheck,
           new NoopDataSegmentAnnouncer(),
-          CentralizedTableSchemaConfig.create()
+          CentralizedDatasourceSchemaConfig.create()
       );
     }
 
     public StreamAppenderatorTester build(
         DataSegmentAnnouncer dataSegmentAnnouncer,
-        CentralizedTableSchemaConfig config
+        CentralizedDatasourceSchemaConfig config
     )
     {
       return new StreamAppenderatorTester(

@@ -49,7 +49,7 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
-import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -154,7 +154,7 @@ public class TaskToolboxTest
         null,
         null,
         "1",
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

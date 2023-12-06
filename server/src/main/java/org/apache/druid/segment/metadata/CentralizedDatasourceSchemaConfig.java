@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Config for centralizing table schema management in Coordinator.
+ * Config for centralizing datasource schema management in Coordinator.
  */
-public class CentralizedTableSchemaConfig
+public class CentralizedDatasourceSchemaConfig
 {
   @JsonProperty
   private boolean enabled = false;
@@ -44,9 +44,9 @@ public class CentralizedTableSchemaConfig
     return announceRealtimeSegmentSchema;
   }
 
-  public static CentralizedTableSchemaConfig create()
+  public static CentralizedDatasourceSchemaConfig create()
   {
-    return new CentralizedTableSchemaConfig();
+    return new CentralizedDatasourceSchemaConfig();
   }
 
   @VisibleForTesting

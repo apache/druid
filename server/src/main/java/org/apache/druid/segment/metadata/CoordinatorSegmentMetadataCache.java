@@ -68,13 +68,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       Escalator escalator,
       InternalQueryConfig internalQueryConfig,
       ServiceEmitter emitter,
-      CentralizedTableSchemaConfig centralizedTableSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.realtimeSegmentSchemaAnnouncement =
-        centralizedTableSchemaConfig.isEnabled() && centralizedTableSchemaConfig.announceRealtimeSegmentSchema();
+        centralizedDatasourceSchemaConfig.isEnabled() && centralizedDatasourceSchemaConfig.announceRealtimeSegmentSchema();
     initServerViewTimelineCallback(serverView);
   }
 

@@ -404,7 +404,7 @@ public class BatchDataSegmentAnnouncerTest
         new SegmentSchemas(Collections.singletonList(absoluteSchema1)),
         new SegmentSchemas(Collections.singletonList(absoluteSchema1)));
 
-    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = null;
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot;
 
     snapshot = segmentAnnouncer.getSegmentChangesSince(
         new ChangeRequestHistory.Counter(-1, -1)

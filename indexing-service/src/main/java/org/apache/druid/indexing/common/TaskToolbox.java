@@ -55,7 +55,7 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -129,7 +129,7 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
-  private final CentralizedTableSchemaConfig centralizedTableSchemaConfig;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   public TaskToolbox(
       TaskConfig config,
@@ -171,7 +171,7 @@ public class TaskToolbox
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
       String attemptId,
-      CentralizedTableSchemaConfig centralizedTableSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.config = config;
@@ -214,7 +214,7 @@ public class TaskToolbox
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
-    this.centralizedTableSchemaConfig = centralizedTableSchemaConfig;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   public TaskConfig getConfig()
@@ -482,9 +482,9 @@ public class TaskToolbox
     return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
   }
 
-  public CentralizedTableSchemaConfig getCentralizedTableSchemaConfig()
+  public CentralizedDatasourceSchemaConfig getCentralizedTableSchemaConfig()
   {
-    return centralizedTableSchemaConfig;
+    return centralizedDatasourceSchemaConfig;
   }
 
   /**
@@ -552,7 +552,7 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
-    private CentralizedTableSchemaConfig centralizedTableSchemaConfig;
+    private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
     public Builder()
     {
@@ -597,7 +597,7 @@ public class TaskToolbox
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
-      this.centralizedTableSchemaConfig = other.centralizedTableSchemaConfig;
+      this.centralizedDatasourceSchemaConfig = other.centralizedDatasourceSchemaConfig;
     }
 
     public Builder config(final TaskConfig config)
@@ -834,9 +834,9 @@ public class TaskToolbox
       return this;
     }
 
-    public Builder centralizedTableSchemaConfig(final CentralizedTableSchemaConfig centralizedTableSchemaConfig)
+    public Builder centralizedTableSchemaConfig(final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
     {
-      this.centralizedTableSchemaConfig = centralizedTableSchemaConfig;
+      this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
       return this;
     }
 
@@ -882,7 +882,7 @@ public class TaskToolbox
           shuffleClient,
           taskLogPusher,
           attemptId,
-          centralizedTableSchemaConfig
+          centralizedDatasourceSchemaConfig
       );
     }
   }

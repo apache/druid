@@ -127,7 +127,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -389,7 +389,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -599,7 +599,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -641,7 +641,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -687,7 +687,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -730,7 +730,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -770,7 +770,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -827,7 +827,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -887,7 +887,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -921,7 +921,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -968,7 +968,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -1039,7 +1039,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         internalQueryConfig,
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
@@ -1207,7 +1207,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         emitter,
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -1364,9 +1364,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     // test schema update is applied and realtime segments are not refereshed via segment metadata query
     CountDownLatch schemaAddedLatch = new CountDownLatch(1);
 
-    CentralizedTableSchemaConfig centralizedTableSchemaConfig = new CentralizedTableSchemaConfig();
-    centralizedTableSchemaConfig.setEnabled(true);
-    centralizedTableSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
+    centralizedDatasourceSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
@@ -1375,7 +1375,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        centralizedTableSchemaConfig
+        centralizedDatasourceSchemaConfig
     ) {
       @Override
       void updateSchemaForSegments(SegmentSchemas segmentSchemas)
@@ -1446,9 +1446,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     CountDownLatch refresh1Latch = new CountDownLatch(1);
     CountDownLatch refresh2Latch = new CountDownLatch(1);
 
-    CentralizedTableSchemaConfig centralizedTableSchemaConfig = new CentralizedTableSchemaConfig();
-    centralizedTableSchemaConfig.setEnabled(true);
-    centralizedTableSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
+    centralizedDatasourceSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
@@ -1457,7 +1457,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        centralizedTableSchemaConfig
+        centralizedDatasourceSchemaConfig
     ) {
       @Override
       public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)

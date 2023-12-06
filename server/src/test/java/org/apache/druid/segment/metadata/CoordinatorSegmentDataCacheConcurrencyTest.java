@@ -187,7 +187,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -300,7 +300,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override

@@ -48,7 +48,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
-import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -1278,7 +1278,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
              new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                    .enablePushFailure(true)
                                                    .basePersistDirectory(temporaryFolder.newFolder())
-                                                   .build(dataSegmentAnnouncer, CentralizedTableSchemaConfig.create())) {
+                                                   .build(dataSegmentAnnouncer, CentralizedDatasourceSchemaConfig.create())) {
       final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
 
       final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
@@ -1505,25 +1505,25 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     private List<String> unnanouncementEvents = new ArrayList<>();
 
     @Override
-    public void announceSegment(DataSegment segment) throws IOException
+    public void announceSegment(DataSegment segment)
     {
       // noop
     }
 
     @Override
-    public void unannounceSegment(DataSegment segment) throws IOException
+    public void unannounceSegment(DataSegment segment)
     {
       // noop
     }
 
     @Override
-    public void announceSegments(Iterable<DataSegment> segments) throws IOException
+    public void announceSegments(Iterable<DataSegment> segments)
     {
       // noop
     }
 
     @Override
-    public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+    public void unannounceSegments(Iterable<DataSegment> segments)
     {
       // noop
     }

@@ -50,7 +50,7 @@ import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.NoopDataSegmentMover;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
-import org.apache.druid.segment.metadata.CentralizedTableSchemaConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -136,7 +136,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         "1",
-        CentralizedTableSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create()
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
