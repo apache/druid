@@ -282,13 +282,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public int hashCode()
   {
-    int h0 = Objects.hash(
-        toInclude,
-        merge,
-        usingDefaultInterval,
-        analysisTypes,
-        aggregatorMergeStrategy
-    );
     return Objects.hash(
         super.hashCode(),
         toInclude,
