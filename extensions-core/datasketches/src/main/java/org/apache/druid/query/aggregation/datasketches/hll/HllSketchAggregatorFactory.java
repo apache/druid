@@ -172,8 +172,10 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(final ColumnValueSelector selector)
       {
-        final HllSketchHolder sketch = (HllSketchHolder) selector.getObject();
-        union.update(sketch.getSketch());
+        final HllSketchHolder sketchHolder = (HllSketchHolder) selector.getObject();
+        if (sketchHolder != null) {
+          union.update(sketchHolder.getSketch());
+        }
       }
 
       @Nullable

@@ -27,6 +27,8 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
+import javax.validation.constraints.NotNull;
+
 public class HllSketchHolder
 {
   public static HllSketchHolder fromObj(Object obj)
@@ -143,7 +145,7 @@ public class HllSketchHolder
   }
 
   @SuppressWarnings("VariableNotUsedInsideIf")
-  public HllSketchHolder merge(HllSketchHolder other)
+  public HllSketchHolder merge(@NotNull HllSketchHolder other)
   {
     // It appears like we could make this code cleaner by checking for other.union first and then delegating to add
     // if it's not.  But, we check ourselves first because callers would tend to expect that the object they are
