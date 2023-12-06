@@ -43,6 +43,7 @@ import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.DruidBinders;
@@ -156,7 +157,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  private static final String CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED = "druid.centralizedDatasourceSchema.enabled";
+  private static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = "druid.centralizedDatasourceSchema.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -374,7 +375,7 @@ public class CliCoordinator extends ServerRunnable
 
   private boolean isSegmentMetadataCacheEnabled(Properties properties)
   {
-    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED));
+    return Boolean.parseBoolean(properties.getProperty(CENTRALIZED_DATASOURCE_SCHEMA_ENABLED));
   }
 
   private static class CoordinatorCustomDutyGroupsProvider implements Provider<CoordinatorCustomDutyGroups>
