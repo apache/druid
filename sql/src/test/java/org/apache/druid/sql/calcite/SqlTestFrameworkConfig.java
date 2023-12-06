@@ -94,7 +94,7 @@ public @interface SqlTestFrameworkConfig
     public SqlTestFrameworkConfig defaultConfig()
     {
       try {
-        SqlTestFrameworkConfig annotation = getClass()
+        SqlTestFrameworkConfig annotation = MethodRule.class
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
         return annotation;
