@@ -23,6 +23,13 @@ import org.apache.druid.error.DruidException;
 
 /**
  * Restricts selector usage to only allow {@link #getObject()}.
+ *
+ * This class is convenient for implementation of "object-sourcing"
+ * {@link ColumnValueSelector}s.
+ *
+ * This class should appear ONLY in "extends" clause or anonymous class
+ * creation, but NOT in "user" code, where {@link BaseObjectColumnValueSelector}
+ * must be used instead.
  */
 public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
