@@ -20,12 +20,10 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MethodRule.ConfigurationInstance;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.junit.rules.ExternalResource;
-import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
@@ -78,7 +76,7 @@ public @interface SqlTestFrameworkConfig
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class MethodRule implements TestRule
+  class MethodRule extends ExternalResource
   {
     private SqlTestFrameworkConfig config;
     private ClassRule classRule;
@@ -130,34 +128,38 @@ public @interface SqlTestFrameworkConfig
 
     private ConfigurationInstance getConfigurationInstance()
     {
-      return classRule.configMap.computeIfAbsent(config, ConfigurationInstance::new);
+      return classRule.configMap.computeIfAbsent(config, this::buildConfiguration);
     }
 
-    class ConfigurationInstance
+    ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
     {
+      return new ConfigurationInstance(config, testHost);
+    }
 
-      public SqlTestFramework framework;
+  }
 
-      ConfigurationInstance(SqlTestFrameworkConfig config)
-      {
-        try {
-          SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
-              .minTopNThreshold(config.minTopNThreshold())
-              .mergeBufferCount(config.numMergeBuffers())
-              .withExtraModule(config.resultCache().makeModule());
-          framework = builder.build();
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      }
+  class ConfigurationInstance
+  {
 
-      public void close()
-      {
-        framework.close();
+    public SqlTestFramework framework;
+
+    ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
+    {
+      try {
+        SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+            .minTopNThreshold(config.minTopNThreshold())
+            .mergeBufferCount(config.numMergeBuffers())
+            .withExtraModule(config.resultCache().makeModule());
+        framework = builder.build();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
     }
 
+    public void close()
+    {
+      framework.close();
+    }
   }
 
 }
