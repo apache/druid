@@ -46,11 +46,10 @@ public class IPv6AddressMatchOperatorConversion extends DirectOperatorConversion
         "'" + StringUtils.toUpperCase(IPv6AddressMatchExprMacro.FN_NAME) + "(expr, string)'",
         ADDRESS_OPERAND,
         SUBNET_OPERAND
-      )
-    )
-  .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
-  .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
-  .build();
+      ))
+      .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
+      .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+      .build();
  
   public IPv6AddressMatchOperatorConversion()
   {
