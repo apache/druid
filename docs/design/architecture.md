@@ -38,7 +38,7 @@ Druid has several types of services:
 * [Coordinator](../design/coordinator.md) manages data availability on the cluster.
 * [Overlord](../design/overlord.md) controls the assignment of data ingestion workloads.
 * [Broker](../design/broker.md) handles queries from external clients.
-* [Router](../design/router.md) optionally routes requests to Brokers, Coordinators, and Overlords.
+* [Router](../design/router.md) routes requests to Brokers, Coordinators, and Overlords.
 * [Historical](../design/historical.md) stores queryable data.
 * [MiddleManager](../design/middlemanager.md) and [Peon](../design/peons.md) ingest data.
 * [Indexer](../design/indexer.md) serves an alternative to the MiddleManager + Peon task execution system.
@@ -73,15 +73,13 @@ Query servers divide operations between Broker and Router services.
 
 #### Broker service
 
-[Broker](../design/broker.md) services receive queries from external clients and forward those queries to Data servers. When Brokers receive results from those subqueries, they merge those results and return them to the caller. End users typically query Brokers rather than querying Historical or MiddleManager services on Data servers directly.
+[Broker](../design/broker.md) services receive queries from external clients and forward those queries to Data servers. When Brokers receive results from those subqueries, they merge those results and return them to the caller. Typically, you query Brokers rather than querying Historical or MiddleManager services on Data servers directly.
 
-#### Router service (optional)
+#### Router service
 
-[**Router**](../design/router.md) services are _optional_ services that provide a unified API gateway in front of Druid Brokers,
-Overlords, and Coordinators. They are optional since you can also simply contact the Druid Brokers, Overlords, and
-Coordinators directly.
+[**Router**](../design/router.md) services provide a unified API gateway in front of Brokers, Overlords, and Coordinators.
 
-The Router also runs the [web console](../operations/web-console.md), a management UI for datasources, segments, tasks, data services (Historicals and MiddleManagers), and coordinator dynamic configuration. You can also run SQL and native Druid queries within the console.
+The Router service also runs the [web console](../operations/web-console.md), a UI for loading data, managing datasources and tasks, and viewing server status and segment information.
 
 ### Data server
 
@@ -91,8 +89,7 @@ Data servers divide operations between Historical and MiddleManager services.
 
 #### Historical service
 
-[**Historical**](../design/historical.md) services are the workhorses that handle storage and querying on "historical" data
-(including any streaming data that has been in the system long enough to be committed). Historical services download segments from deep storage and respond to queries about these segments. They don't accept writes.
+[**Historical**](../design/historical.md) services handle storage and querying on historical data, including any streaming data that has been in the system long enough to be committed. Historical services download segments from deep storage and respond to queries about these segments. They don't accept writes.
 
 #### MiddleManager service
 
@@ -179,3 +176,11 @@ For more details, please see the [Metadata storage](../design/metadata-storage.m
 Used for internal service discovery, coordination, and leader election.
 
 For more details, please see the [ZooKeeper](zookeeper.md) page.
+
+## Learn more
+
+See the following topics for more information:
+
+* [Storage components](storage.md) to learn about data storage in Druid.
+* [Segments](segments.md) to learn about segment files.
+* [Query processing](../querying/query-processing.md) for a high-level overview of how Druid processes queries.

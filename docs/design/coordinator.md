@@ -24,27 +24,13 @@ sidebar_label: "Coordinator"
   -->
 
 
-### Configuration
-
-For Apache Druid Coordinator service configuration, see [Coordinator configuration](../configuration/index.md#coordinator).
-
-For basic tuning guidance for the Coordinator service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
-
-### HTTP endpoints
-
-For a list of API endpoints supported by the Coordinator, see [Service status API reference](../api-reference/service-status-api.md#coordinator).
-
-### Overview
-
-The Druid Coordinator service is primarily responsible for segment management and distribution. More specifically, the
-Druid Coordinator service communicates to Historical services to load or drop segments based on configurations. The
-Druid Coordinator is responsible for loading new segments, dropping outdated segments, ensuring that segments are
-"replicated" (that is, loaded on multiple different Historical nodes) proper (configured) number of times, and moving
+The Coordinator service is primarily responsible for segment management and distribution. More specifically, the
+Coordinator service communicates to Historical services to load or drop segments based on configurations. The Coordinator is responsible for loading new segments, dropping outdated segments, ensuring that segments are "replicated" (that is, loaded on multiple different Historical nodes) proper (configured) number of times, and moving
 ("balancing") segments between Historical nodes to keep the latter evenly loaded.
 
-The Druid Coordinator runs its duties periodically and the time between each run is a configurable parameter. On each
+The Coordinator runs its duties periodically and the time between each run is a configurable parameter. On each
 run, the Coordinator assesses the current state of the cluster before deciding on the appropriate actions to take.
-Similar to the Broker and Historical services, the Druid Coordinator maintains a connection to a Zookeeper cluster for
+Similar to the Broker and Historical services, the Coordinator maintains a connection to a ZooKeeper cluster for
 current cluster information. The Coordinator also maintains a connection to a database containing information about
 "used" segments (that is, the segments that *should* be loaded in the cluster) and the loading rules.
 
@@ -53,38 +39,48 @@ sorted in terms of capacity, with least capacity servers having the highest prio
 assigned to the services with least capacity to maintain a level of balance between services. The Coordinator does not
 directly communicate with a Historical service when assigning it a new segment; instead the Coordinator creates some
 temporary information about the new segment under load queue path of the Historical service. Once this request is seen,
-the Historical service will load the segment and begin servicing it.
+the Historical service loads the segment and begins servicing it.
 
-### Running
+## Configuration
+
+For Apache Druid Coordinator service configuration, see [Coordinator configuration](../configuration/index.md#coordinator).
+
+For basic tuning guidance for the Coordinator service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#coordinator).
+
+## HTTP endpoints
+
+For a list of API endpoints supported by the Coordinator, see [Service status API reference](../api-reference/service-status-api.md#coordinator).
+
+## Running
 
 ```
 org.apache.druid.cli.Main server coordinator
 ```
 
-### Rules
+## Rules
 
 Segments can be automatically loaded and dropped from the cluster based on a set of rules. For more information on rules, see [Rule Configuration](../operations/rule-configuration.md).
 
-### Cleaning up segments
+## Cleaning up segments
 
-On each run, the Druid Coordinator compares the set of used segments in the database with the segments served by some
-Historical nodes in the cluster. Coordinator sends requests to Historical nodes to unload unused segments or segments
+On each run, the Coordinator compares the set of used segments in the database with the segments served by some
+Historical nodes in the cluster. The Coordinator sends requests to Historical nodes to unload unused segments or segments
 that are removed from the database.
 
 Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are
 marked as unused. During the next Coordinator's run, they will be unloaded from Historical nodes in the cluster.
 
-### Segment availability
+## Segment availability
 
-If a Historical service restarts or becomes unavailable for any reason, the Druid Coordinator will notice a service has gone missing and treat all segments served by that service as being dropped. Given a sufficient period of time, the segments may be reassigned to other Historical services in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a Historical service becomes unavailable and available again within a short period of time, the Historical service will start up and serve segments from its cache without any those segments being reassigned across the cluster.
+If a Historical service restarts or becomes unavailable for any reason, the Coordinator will notice a service has gone missing and treat all segments served by that service as being dropped. Given a sufficient period of time, the segments may be reassigned to other Historical services in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a Historical service becomes unavailable and available again within a short period of time, the Historical service will start up and serve segments from its cache without any those segments being reassigned across the cluster.
 
-### Balancing segment load
+## Balancing segment load
 
 To ensure an even distribution of segments across Historical servicees in the cluster, the Coordinator service will find the total size of all segments being served by every Historical service each time the Coordinator runs. For every Historical service tier in the cluster, the Coordinator service will determine the Historical service with the highest utilization and the Historical service with the lowest utilization. The percent difference in utilization between the two services is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized service to the lowest utilized service. There is a configurable limit on the number of segments that can be moved from one service to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
 
-### Automatic compaction
+## Automatic compaction
 
-The Druid Coordinator manages the [automatic compaction system](../data-management/automatic-compaction.md).
+The Coordinator manages the [automatic compaction system](../data-management/automatic-compaction.md).
 Each run, the Coordinator compacts segments by merging small segments or splitting a large one. This is useful when the size of your segments is not optimized which may degrade query performance.
 See [Segment size optimization](../operations/segment-optimization.md) for details.
 
@@ -109,7 +105,7 @@ druid.coordinator.<SOME_GROUP_NAME>.duties=["compactSegments"]
 druid.coordinator.<SOME_GROUP_NAME>.period=<PERIOD_TO_RUN_COMPACTING_SEGMENTS_DUTY>
 ```
 
-### Segment search policy in automatic compaction
+## Segment search policy in automatic compaction
 
 At every Coordinator run, this policy looks up time chunks from newest to oldest and checks whether the segments in those time chunks
 need compaction.
@@ -148,18 +144,18 @@ For more information, see [Avoid conflicts with ingestion](../data-management/au
  If it finds such segments, it simply skips them.
 :::
 
-### FAQ
+## FAQ
 
 1. **Do clients ever contact the Coordinator service?**
 
     The Coordinator is not involved in a query.
 
-    Historical services never directly contact the Coordinator service. The Druid Coordinator tells the Historical services to load/drop data via Zookeeper, but the Historical services are completely unaware of the Coordinator.
+    Historical services never directly contact the Coordinator service. The Coordinator tells the Historical services to load/drop data via ZooKeeper, but the Historical services are completely unaware of the Coordinator.
 
     Brokers also never contact the Coordinator. Brokers base their understanding of the data topology on metadata exposed by the Historical services via ZooKeeper and are completely unaware of the Coordinator.
 
 2. **Does it matter if the Coordinator service starts up before or after other services?**
 
-    No. If the Druid Coordinator is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the Coordinator service can be started up at any time, and after a configurable delay, will start running Coordinator tasks.
+    No. If the Coordinator is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the Coordinator service can be started up at any time, and after a configurable delay, will start running Coordinator tasks.
 
     This also means that if you have a working cluster and all of your Coordinators die, the cluster will continue to function, it just won’t experience any changes to its data topology.
