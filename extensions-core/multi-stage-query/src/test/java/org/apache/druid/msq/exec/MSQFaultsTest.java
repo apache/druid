@@ -49,6 +49,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.mockito.ArgumentMatchers;
@@ -443,6 +444,8 @@ public class MSQFaultsTest extends MSQTestBase
     }
   }
 
+  // To see if this test is the culprit for OOM
+  @Ignore
   @Test
   public void testReplaceTombstonesWithTooManyBucketsThrowsFault()
   {
@@ -489,6 +492,8 @@ public class MSQFaultsTest extends MSQTestBase
                      .verifyExecutionError();
   }
 
+  // To see if this test is the culprit for OOM
+  @Ignore
   @Test
   public void testReplaceTombstonesWithTooManyBucketsThrowsFault2()
   {
