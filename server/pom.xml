@@ -68,6 +68,11 @@
             <artifactId>zookeeper-jute</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.xerial.snappy</groupId>
+            <artifactId>snappy-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
             <!-- We use log4j2 and log4j-1.2-api as a bridge -->
@@ -471,6 +476,8 @@
                     <usedDependencies>
                         <!-- These are needed for scope: compile -->
                         <dependency>io.tesla.aether:tesla-aether</dependency>
+                        <!-- These are needed for scope: runtime -->
+                        <dependency>org.xerial.snappy:snappy-java</dependency>
                     </usedDependencies>
                 </configuration>
             </plugin>

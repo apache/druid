@@ -299,7 +299,7 @@ public class SqlNestedDataBenchmark
     );
     List<DimensionSchema> dims = ImmutableList.<DimensionSchema>builder()
                                               .addAll(schemaInfo.getDimensionsSpec().getDimensions())
-                                              .add(new AutoTypeColumnSchema("nested"))
+                                              .add(new AutoTypeColumnSchema("nested", null))
                                               .build();
     DimensionsSpec dimsSpec = new DimensionsSpec(dims);
 

@@ -115,7 +115,7 @@ public abstract class CalciteSelectJoinQueryMSQTest
       final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
           queryJsonMapper,
           injector,
-          new MSQTestTaskActionClient(queryJsonMapper),
+          new MSQTestTaskActionClient(queryJsonMapper, injector),
           workerMemoryParameters,
           ImmutableList.of()
       );

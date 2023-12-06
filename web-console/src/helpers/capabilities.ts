@@ -102,11 +102,13 @@ export class Capabilities {
 
   static async detectManagementProxy(): Promise<boolean> {
     try {
-      await Api.instance.get(`/proxy/coordinator/status?capabilities`, {
+      await Api.instance.get(`/proxy/enabled?capabilities`, {
         timeout: Capabilities.STATUS_TIMEOUT,
       });
     } catch (e) {
-      return false;
+      const { response } = e;
+      // If we detect error code 400 the management proxy is enabled but just does not know about the recently added /proxy/enabled route so treat this as a win.
+      return response.status === 400;
     }
 
     return true;

@@ -60,8 +60,8 @@ public class DimFilterUtils
   static final byte NULL_CACHE_ID = 0x12;
   static final byte EQUALS_CACHE_ID = 0x13;
   static final byte RANGE_CACHE_ID = 0x14;
-
   static final byte IS_FILTER_BOOLEAN_FILTER_CACHE_ID = 0x15;
+  static final byte ARRAY_CONTAINS_CACHE_ID = 0x16;
 
 
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
