@@ -65,7 +65,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
     this.inputDataConfig = inputDataConfig;
 
     Preconditions.checkNotNull(config, "config is null");
-    Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in s3 config");
+    Preconditions.checkNotNull(config.getTempDir(), "tempDir is null in google config");
 
     try {
       FileUtils.mkdirp(config.getTempDir());

@@ -80,8 +80,7 @@ public class GoogleStorage
     if (length != null) {
       reader.limit(start + length);
     }
-    // Limit GCS internal buffer memory to prevent OOM errors
-    reader.setChunkSize(256 * 1024);
+    // Using default read buffer size (2 MB)
     return Channels.newInputStream(reader);
   }
 
@@ -91,8 +90,8 @@ public class GoogleStorage
   )
   {
     WriteChannel writer = storage.get().writer(getBlobInfo(bucket, path));
-    // Limit GCS internal buffer memory to prevent OOM errors
-    writer.setChunkSize(256 * 1024);
+    // Limit GCS internal write buffer memory to prevent OOM errors
+    writer.setChunkSize(2 * 1024 * 1024);
     return Channels.newOutputStream(writer);
   }
 
