@@ -201,7 +201,7 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     final Function<Interval, List<TimelineObjectHolder<String, SegmentLoadInfo>>> lookupFn
-        = timeline::lookup;
+        = timeline::lookupWithIncompletePartitions;
 
     final List<Interval> intervals = query.getIntervals();
     List<TimelineObjectHolder<String, SegmentLoadInfo>> timelineObjectHolders =

@@ -309,6 +309,13 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array(1, 2, 3, 'bar')", new Long[]{1L, 2L, 3L, null});
     assertArrayExpr("array(1.0)", new Double[]{1.0});
     assertArrayExpr("array('foo', 'bar')", new String[]{"foo", "bar"});
+    assertArrayExpr(
+        "array(a, b)",
+        new Object[]{
+            new Object[]{"foo", "bar", "baz", "foobar"},
+            new Object[]{"1", "2", "3", "4", "5"}
+        }
+    );
   }
 
   @Test

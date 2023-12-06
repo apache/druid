@@ -156,7 +156,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  private static final String CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED = "druid.coordinator.centralizedTableSchema.enabled";
+  private static final String CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED = "druid.centralizedDatasourceSchema.enabled";
 
   private Properties properties;
   private boolean beOverlord;

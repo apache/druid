@@ -21,6 +21,7 @@ import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@dru
 import {
   deepGet,
   deleteKeys,
+  formatDuration,
   formatInteger,
   nonEmptyArray,
   oneOf,
@@ -563,7 +564,7 @@ export class Execution {
         break;
 
       case 'SUCCESS':
-        label = 'Segments loaded successfully in ' + segmentStatus.duration + 'ms.';
+        label = `Segments loaded successfully in ${formatDuration(segmentStatus.duration)}`;
         break;
 
       default:

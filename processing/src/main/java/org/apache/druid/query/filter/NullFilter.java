@@ -114,6 +114,10 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
+    if (!Objects.equals(getColumn(), dimension)) {
+      return null;
+    }
+
     RangeSet<String> retSet = TreeRangeSet.create();
     // Nulls are less than empty String in segments
     retSet.add(Range.lessThan(""));
