@@ -412,22 +412,18 @@ public class EqualityFilterTests
     {
       if (isAutoSchema()) {
         // auto ingests arrays instead of strings
-        // single values are implicitly upcast to single element arrays, so we get some matches here...
         if (NullHandling.sqlCompatible()) {
-          assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "", null), ImmutableList.of("2"));
+          assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "", null), ImmutableList.of());
+          assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING_ARRAY, ImmutableList.of(""), null), ImmutableList.of("2"));
         }
-        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "a", null), ImmutableList.of("3"));
+        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "a", null), ImmutableList.of());
+        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING_ARRAY, ImmutableList.of("a"), null), ImmutableList.of("3"));
         assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "b", null), ImmutableList.of());
-        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "c", null), ImmutableList.of("4"));
+        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "c", null), ImmutableList.of());
+        assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING_ARRAY, ImmutableList.of("c"), null), ImmutableList.of("4"));
         assertFilterMatches(new EqualityFilter("dim2", ColumnType.STRING, "d", null), ImmutableList.of());
 
         // array matchers can match the whole array
-        if (NullHandling.sqlCompatible()) {
-          assertFilterMatches(
-              new EqualityFilter("dim2", ColumnType.STRING, ImmutableList.of(""), null),
-              ImmutableList.of("2")
-          );
-        }
         assertFilterMatches(
             new EqualityFilter("dim2", ColumnType.STRING_ARRAY, new Object[]{"a", "b"}, null),
             ImmutableList.of("0")
@@ -994,7 +990,7 @@ public class EqualityFilterTests
       "3", .. [1.1, 2.2, 3.3]
       "4", .. 12.34
       "5", .. [100, 200, 300]
-      
+
        */
       Assume.assumeTrue(isAutoSchema());
       assertFilterMatches(
@@ -1018,11 +1014,21 @@ public class EqualityFilterTests
           ImmutableList.of("0", "1", "2", "3", "4", "5")
       );
 
+      // variant columns must be matched as arrays if they contain any arrays
       assertFilterMatches(
           new EqualityFilter(
               "variant",
               ColumnType.STRING,
               "abc",
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.STRING_ARRAY,
+              ImmutableList.of("abc"),
               null
           ),
           ImmutableList.of("0")
@@ -1035,6 +1041,15 @@ public class EqualityFilterTests
               100L,
               null
           ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.LONG_ARRAY,
+              ImmutableList.of(100L),
+              null
+          ),
           ImmutableList.of("1", "2")
       );
 
@@ -1043,6 +1058,15 @@ public class EqualityFilterTests
               "variant",
               ColumnType.STRING,
               "100",
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "variant",
+              ColumnType.STRING_ARRAY,
+              new Object[]{"100"},
               null
           ),
           ImmutableList.of("1", "2")
@@ -1255,6 +1279,7 @@ public class EqualityFilterTests
                         "cachedOptimizedFilter"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
+                    .withPrefabValues(ExprEval.class, ExprEval.of("hello"), ExprEval.of(1.0))
                     .withIgnoredFields("predicateFactory", "cachedOptimizedFilter", "matchValue")
                     .verify();
     }
