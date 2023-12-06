@@ -49,7 +49,7 @@ import java.util.List;
 */
 public class IPv6AddressMatchExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String FN_NAME = "IPV6_MATCH";
+  public static final String FN_NAME = "ipv6_match";
   private static final int ARG_SUBNET = 1;
  
   @Override
