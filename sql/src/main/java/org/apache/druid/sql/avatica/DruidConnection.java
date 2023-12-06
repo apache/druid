@@ -31,6 +31,7 @@ import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
@@ -110,11 +111,11 @@ public class DruidConnection
       if (statements.containsKey(statementId)) {
         // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
         // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"), Optional.empty());
       }
 
       if (statements.size() >= maxStatements) {
-        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements), Optional.empty());
       }
 
       @SuppressWarnings("GuardedBy")
@@ -145,11 +146,11 @@ public class DruidConnection
       if (statements.containsKey(statementId)) {
         // Will only happen if statementCounter rolls over before old statements are cleaned up. If this
         // ever happens then something fishy is going on, because we shouldn't have billions of statements.
-        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"));
+        throw DruidMeta.logFailure(new ISE("Uh oh, too many statements"), Optional.empty());
       }
 
       if (statements.size() >= maxStatements) {
-        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements));
+        throw DruidMeta.logFailure(new ISE("Too many open statements, limit is %,d", maxStatements), Optional.empty());
       }
 
       @SuppressWarnings("GuardedBy")

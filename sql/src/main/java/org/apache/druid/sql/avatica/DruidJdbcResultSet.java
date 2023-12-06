@@ -35,6 +35,7 @@ import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -341,7 +342,7 @@ public class DruidJdbcResultSet implements Closeable
 
   private RuntimeException closeAndPropagateThrowable(Throwable t)
   {
-    DruidMeta.logFailure(t);
+    DruidMeta.logFailure(t, Optional.ofNullable(stmt.query() != null ? stmt.query().sql() : null));
     // Report a failure so that the failure is logged.
     stmt.reporter().failed(t);
     try {
