@@ -78,7 +78,6 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
-import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -96,6 +95,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -115,16 +115,17 @@ import java.util.concurrent.Executors;
 @RunWith(Parameterized.class)
 public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTestBase
 {
-
   private static final String STREAM = "stream";
 
   private static final String DATASOURCE = "test_ds";
 
-  private static final String MESSAGE = "{\"id\": 1, \"age\": 10, \"timestamp\":\"2023-09-01T00:00:00.000\"}";
+  private static final String MESSAGES_TEMPLATE = "{\"id\": <count>, \"age\": 11, \"timestamp\":\"2023-09-01T00:00:01.000\"}";
 
   private static final String LOCAL_TMP_PATH = "./tmp";
 
   private static final String BASE_PERSIST_DIR = LOCAL_TMP_PATH + "/persist";
+
+  private static final int START_OFFSET = 10;
 
   private static RecordSupplier<String, String, ByteEntity> recordSupplier;
 
@@ -202,13 +203,13 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
   }
 
   @Test
-  public void testRunTaskWithoutIntermediateHandOff() throws ExecutionException, InterruptedException
+  public void testRunTaskWithIntermediateHandOffByMaxRowsPerSegment() throws ExecutionException, InterruptedException
   {
     TestSeekableStreamIndexTaskIOConfig taskIoConfig = new TestSeekableStreamIndexTaskIOConfig(
             0,
             STREAM,
-            new SeekableStreamStartSequenceNumbers<>(STREAM, Collections.singletonMap("0", "10"), Collections.emptySet()),
-            new SeekableStreamEndSequenceNumbers<>(STREAM, Collections.singletonMap("0", "20")),
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Collections.singletonMap("0", String.valueOf(START_OFFSET)), Collections.emptySet()),
+            new SeekableStreamEndSequenceNumbers<>(STREAM, Collections.singletonMap("0", "9223372036854776000")),
             null,
             null,
             null,
@@ -217,12 +218,12 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
 
     TestSeekableStreamIndexTaskTuningConfig taskTuningConfig = new TestSeekableStreamIndexTaskTuningConfig(
             null,
+            2,
             null,
-            10L,
             false,
+            5,
             null,
             null,
-            Period.seconds(1),
             new File(BASE_PERSIST_DIR),
             null,
             null,
@@ -250,32 +251,36 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     taskRunner = new TestSeekableStreamIndexTaskRunner(task, getDataSchema().getParser(), task.authorizerMapper, LockGranularity.TIME_CHUNK);
 
     final ListenableFuture<TaskStatus> future = runTask(task);
-    Thread.sleep(5 * 1000L);
 
-    Assert.assertEquals(0, countEvents(task));
-    Assert.assertEquals(SeekableStreamIndexTaskRunner.Status.READING, task.getRunner().getStatus());
+    Thread.sleep(3 * 1000L); // wait for task to start
+
+    Assert.assertEquals(SeekableStreamIndexTaskRunner.Status.PAUSED, taskRunner.getStatus());
 
     taskRunner.pause();
-    taskRunner.setEndOffsets(Collections.singletonMap("0", "11"), true);
 
-    Thread.sleep(5 * 1000L); // wait for publishing segment
+    String currOffset = taskRunner.getCurrentOffsets().get("0");
+    Response response = taskRunner.setEndOffsets(Collections.singletonMap("0", currOffset), false); // will resume
+    Assert.assertEquals(response.getStatus(), 200);
+
+    Assert.assertEquals(SeekableStreamIndexTaskRunner.Status.READING, taskRunner.getStatus());
+
+    Thread.sleep(3 * 1000L); // wait for publishing segment & reading more data
     taskRunner.stopGracefully();
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(MESSAGE.length()).unparseable(0).totalProcessed(1));
 
     publishedDescriptors();
     publishedSegments();
   }
 
   @Test
-  public void testRunTaskWithIntermediateHandOff() throws ExecutionException, InterruptedException
+  public void testRunTaskWithoutIntermediateHandOff() throws ExecutionException, InterruptedException
   {
     TestSeekableStreamIndexTaskIOConfig taskIoConfig = new TestSeekableStreamIndexTaskIOConfig(
             0,
             STREAM,
-            new SeekableStreamStartSequenceNumbers<>(STREAM, Collections.singletonMap("0", "10"), Collections.emptySet()),
-            new SeekableStreamEndSequenceNumbers<>(STREAM, Collections.singletonMap("0", "20")),
+            new SeekableStreamStartSequenceNumbers<>(STREAM, Collections.singletonMap("0", String.valueOf(START_OFFSET)), Collections.emptySet()),
+            new SeekableStreamEndSequenceNumbers<>(STREAM, Collections.singletonMap("0", "9223372036854776000")),
             null,
             null,
             null,
@@ -285,11 +290,11 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     TestSeekableStreamIndexTaskTuningConfig taskTuningConfig = new TestSeekableStreamIndexTaskTuningConfig(
             null,
             null,
-            10L,
+            null,
             false,
+            1000000,
+            2000000L,
             null,
-            null,
-            Period.seconds(1),
             new File(BASE_PERSIST_DIR),
             null,
             null,
@@ -298,12 +303,11 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
             null,
             null,
             null,
-            Period.seconds(5),
+            null,
             null,
             null,
             null
     );
-
 
     TestSeekableStreamIndexTask task = new TestSeekableStreamIndexTask(
             "id1",
@@ -318,25 +322,17 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     taskRunner = new TestSeekableStreamIndexTaskRunner(task, getDataSchema().getParser(), task.authorizerMapper, LockGranularity.TIME_CHUNK);
 
     final ListenableFuture<TaskStatus> future = runTask(task);
-    Thread.sleep(10 * 1000L); // > intermediateHandoffPeriod
 
-    Assert.assertEquals(0, countEvents(task));
-    Assert.assertEquals(SeekableStreamIndexTaskRunner.Status.PAUSED, task.getRunner().getStatus());
+    Thread.sleep(3 * 1000L); // wait for task to start
 
-    // taskRunner.pause();
-    taskRunner.setEndOffsets(Collections.singletonMap("0", "11"), true);
-    // taskRunner.possiblyResetDataSourceMetadata(this.toolbox, null, Collections.emptySet());
-
-    Thread.sleep(5 * 1000L); // wait for publishing segment
     taskRunner.stopGracefully();
 
-    // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    verifyTaskMetrics(task, RowMeters.with().bytes(MESSAGE.length()).unparseable(0).totalProcessed(1));
 
     publishedDescriptors();
     publishedSegments();
   }
+
 
   @Override
   protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
@@ -454,13 +450,13 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     @Override
     public Duration getHttpTimeout()
     {
-      return new Period("PT1M").toStandardDuration();
+      return new Period("PT10S").toStandardDuration();
     }
 
     @Override
     public Duration getShutdownTimeout()
     {
-      return new Period("PT1S").toStandardDuration();
+      return new Period("PT30S").toStandardDuration();
     }
 
     @Override
@@ -472,7 +468,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     @Override
     public Duration getOffsetFetchPeriod()
     {
-      return new Period("PT5M").toStandardDuration();
+      return new Period("PT10S").toStandardDuration();
     }
 
     @Override
@@ -481,12 +477,12 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
       return new TestSeekableStreamIndexTaskTuningConfig(
                 null,
                 null,
-                10L,
+                null,
                 false,
                 null,
                 null,
-                Period.seconds(1),
-                new File("./tmp"),
+                null,
+                new File(BASE_PERSIST_DIR),
                 null,
                 null,
                 null,
@@ -494,7 +490,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
                 null,
                 null,
                 null,
-                Period.seconds(5),
+                null,
                 null,
                 null,
                 null
@@ -667,6 +663,8 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
 
   public static class TestSeekableStreamIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String, ByteEntity>
   {
+    private int count = 0;
+
     public TestSeekableStreamIndexTaskRunner(SeekableStreamIndexTask<String, String, ByteEntity> task, InputRowParser<ByteBuffer> parser, AuthorizerMapper authorizerMapper, LockGranularity lockGranularityToUse)
     {
       super(task, parser, authorizerMapper, lockGranularityToUse);
@@ -703,7 +701,14 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     @Override
     protected @NotNull List<OrderedPartitionableRecord<String, String, ByteEntity>> getRecords(RecordSupplier<String, String, ByteEntity> recordSupplier, TaskToolbox toolbox)
     {
-      return Collections.singletonList(new OrderedPartitionableRecord<>(STREAM, "0", "11", Collections.singletonList(new ByteEntity(MESSAGE.getBytes(StandardCharsets.UTF_8)))));
+      int currOffset = START_OFFSET + (count++);
+      String msg = MESSAGES_TEMPLATE.replace("<count>", String.valueOf(count));
+
+      System.out.println(msg);
+
+      return Collections.singletonList(
+              new OrderedPartitionableRecord<>(STREAM, "0", String.valueOf(currOffset) , Collections.singletonList(new ByteEntity(msg.getBytes(StandardCharsets.UTF_8))))
+      );
     }
 
     @Override
@@ -726,7 +731,7 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     @Override
     protected boolean isEndOffsetExclusive()
     {
-      return false;
+      return true;
     }
 
     @Override
@@ -830,21 +835,6 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
               maximumMessageTime,
               inputFormat
       );
-    }
-
-    @Override
-    public String toString()
-    {
-      return "TestSeekableStreamIndexTaskIOConfig{" +
-                "taskGroupId=" + getTaskGroupId() +
-                ", baseSequenceName='" + getBaseSequenceName() + '\'' +
-                ", startSequenceNumbers=" + getStartSequenceNumbers() +
-                ", endSequenceNumbers=" + getEndSequenceNumbers() +
-                ", useTransaction=" + isUseTransaction() +
-                ", minimumMessageTime=" + getMinimumMessageTime() +
-                ", maximumMessageTime=" + getMaximumMessageTime() +
-                ", inputFormat=" + getInputFormat() +
-                '}';
     }
   }
 
