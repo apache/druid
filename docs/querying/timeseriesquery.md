@@ -151,7 +151,7 @@ timeseries query for the interval 2012-01-01/2012-01-04 using the SUM aggregator
 
 Time buckets that lie completely outside the data interval are not filled with the default value.
 
-You can disable all NULL filling with the context flag "skipEmptyBuckets".
+You can disable all empty bucket filling with the context flag "skipEmptyBuckets".
 In this mode, Druid omits the data point 2012-01-02 from the results.
 For example:
 
