@@ -20,12 +20,15 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -38,6 +41,10 @@ public class ConstantMultiValueDimensionSelector implements HistoricalDimensionS
 
   public ConstantMultiValueDimensionSelector(List<String> values)
   {
+    if (CollectionUtils.isNullOrEmpty(values)) {
+      throw DruidException.defensive("Use DimensionSelector.constant(null)");
+    }
+
     this.values = values;
     this.row = new RangeIndexedInts();
     row.setSize(values.size());
@@ -98,13 +105,14 @@ public class ConstantMultiValueDimensionSelector implements HistoricalDimensionS
   @Override
   public ValueMatcher makeValueMatcher(@Nullable String value)
   {
-    return BooleanValueMatcher.of(values.stream().anyMatch(v -> Objects.equals(value, v)));
+    return values.stream().anyMatch(v -> Objects.equals(value, v)) ? ValueMatchers.allTrue() : ValueMatchers.allFalse();
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
-    return BooleanValueMatcher.of(values.stream().anyMatch(predicate::apply));
+    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+    return values.stream().anyMatch(predicate::apply) ? ValueMatchers.allTrue() : ValueMatchers.allFalse();
   }
 
   @Override

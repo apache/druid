@@ -132,6 +132,7 @@ public class CalciteRulesManager
           CoreRules.FILTER_VALUES_MERGE,
           CoreRules.PROJECT_FILTER_VALUES_MERGE,
           CoreRules.PROJECT_VALUES_MERGE,
+          CoreRules.SORT_PROJECT_TRANSPOSE,
           CoreRules.AGGREGATE_VALUES
       );
 
@@ -232,7 +233,13 @@ public class CalciteRulesManager
 
     boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
-        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
+        Programs.sequence(
+            new LoggingProgram("Start", isDebug),
+            preProgram,
+            new LoggingProgram("After PreProgram", isDebug),
+            Programs.ofRules(druidConventionRuleSet(plannerContext)),
+            new LoggingProgram("After volcano planner program", isDebug)
+        ),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
         Programs.sequence(
             // currently, adding logging program after every stage for easier debugging

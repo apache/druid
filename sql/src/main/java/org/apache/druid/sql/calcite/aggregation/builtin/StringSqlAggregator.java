@@ -21,9 +21,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -31,6 +29,7 @@ import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.type.CastedLiteralOperandTypeCheckers;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
@@ -47,13 +46,13 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -89,12 +88,10 @@ public class StringSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
@@ -102,20 +99,15 @@ public class StringSqlAggregator implements SqlAggregator
     final List<DruidExpression> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
-        .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
+        .map(i -> inputAccessor.getField(i))
+        .map(rexNode -> Expressions.toDruidExpression(plannerContext, inputAccessor.getInputRowSignature(), rexNode))
         .collect(Collectors.toList());
 
     if (arguments.stream().anyMatch(Objects::isNull)) {
       return null;
     }
 
-    RexNode separatorNode = Expressions.fromFieldAccess(
-        rexBuilder.getTypeFactory(),
-        rowSignature,
-        project,
-        aggregateCall.getArgList().get(1)
-    );
+    RexNode separatorNode = inputAccessor.getField(aggregateCall.getArgList().get(1));
     if (!separatorNode.isA(SqlKind.LITERAL)) {
       // separator must be a literal
       return null;
@@ -133,12 +125,7 @@ public class StringSqlAggregator implements SqlAggregator
     Integer maxSizeBytes = null;
 
     if (arguments.size() > 2) {
-      RexNode maxBytes = Expressions.fromFieldAccess(
-          rexBuilder.getTypeFactory(),
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(2)
-      );
+      RexNode maxBytes = inputAccessor.getField(aggregateCall.getArgList().get(2));
       if (!maxBytes.isA(SqlKind.LITERAL)) {
         // maxBytes must be a literal
         return null;
@@ -265,7 +252,7 @@ public class StringSqlAggregator implements SqlAggregator
                       StringUtils.format("'%s(expr, separator, maxSizeBytes)'", name),
                       OperandTypes.ANY,
                       OperandTypes.STRING,
-                      OperandTypes.POSITIVE_INTEGER_LITERAL
+                      CastedLiteralOperandTypeCheckers.POSITIVE_INTEGER_LITERAL
                   ),
                   OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC)
               )

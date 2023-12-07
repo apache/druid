@@ -232,7 +232,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     SegmentWriteOutMediumFactory writeOutMediumFactory = TmpFileSegmentWriteOutMediumFactory.instance();
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -256,6 +256,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
       }
       VariantColumnSerializer serializer = new VariantColumnSerializer(
           fileNameBase,
+          expectedTypes.getSingleType() == null ? null : expectedLogicalType,
           expectedTypes.getSingleType() == null ? expectedTypes.getByteValue() : null,
           indexSpec,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
@@ -408,9 +409,13 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertArrayEquals(((List) row).toArray(), (Object[]) valueSelector.getObject());
           if (expectedType.getSingleType() != null) {
             Assert.assertArrayEquals(((List) row).toArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
-            Assert.assertTrue(valueIndexes.forValue(row, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
+            Assert.assertTrue(valueIndexes.forValue(row, expectedType.getSingleType()).computeBitmapResult(resultFactory,
+                                                                                                           false
+            ).get(i));
             for (Object o : ((List) row)) {
-              Assert.assertTrue("Failed on row: " + row, arrayElementIndexes.containsValue(o, expectedType.getSingleType().getElementType()).computeBitmapResult(resultFactory).get(i));
+              Assert.assertTrue("Failed on row: " + row, arrayElementIndexes.containsValue(o, expectedType.getSingleType().getElementType()).computeBitmapResult(resultFactory,
+                                                                                                                                                                 false
+              ).get(i));
             }
           } else {
             // mixed type vector object selector coerces to the most common type
@@ -442,7 +447,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             }
           }
         }
-        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
 
       } else {
         Assert.assertNull(valueSelector.getObject());
@@ -454,9 +459,9 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             Assert.assertNull(dimensionVectorSelector.lookupName(dimensionVectorSelector.getRowVector()[0]));
           }
         }
-        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
         if (expectedType.getSingleType() != null) {
-          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory).get(i));
+          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory, false).get(i));
         }
       }
 

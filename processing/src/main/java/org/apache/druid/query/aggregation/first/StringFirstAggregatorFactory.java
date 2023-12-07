@@ -42,11 +42,14 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
+
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -186,9 +189,19 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) selectorFactory.makeValueSelector(
-        timeColumn);
+    final VectorValueSelector timeSelector = selectorFactory.makeValueSelector(timeColumn);
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = selectorFactory.makeValueSelector(fieldName);
+      VectorObjectSelector objectSelector = ExpressionVectorSelectors.castValueSelectorToObject(
+          selectorFactory.getReadableVectorInspector(),
+          fieldName,
+          valueSelector,
+          capabilities.toColumnType(),
+          ColumnType.STRING
+      );
+      return new StringFirstVectorAggregator(timeSelector, objectSelector, maxStringBytes);
+    }
     if (capabilities != null) {
       if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
         // Case 1: Single value string with dimension selector

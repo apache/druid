@@ -20,17 +20,14 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.common.config.ConfigManager;
-import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.RetryableException;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -39,6 +36,7 @@ import org.joda.time.Duration;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -52,32 +50,26 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   private static final Logger log = new Logger(KillCompactionConfig.class);
   private static final int UPDATE_NUM_RETRY = 5;
 
-  private final JacksonConfigManager jacksonConfigManager;
-  private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private final MetadataStorageConnector connector;
-  private final MetadataStorageTablesConfig connectorConfig;
+  private final SegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final CoordinatorConfigManager configManager;
 
-  @Inject
   public KillCompactionConfig(
       DruidCoordinatorConfig config,
-      SqlSegmentsMetadataManager sqlSegmentsMetadataManager,
-      JacksonConfigManager jacksonConfigManager,
-      MetadataStorageConnector connector,
-      MetadataStorageTablesConfig connectorConfig
+      SegmentsMetadataManager sqlSegmentsMetadataManager,
+      CoordinatorConfigManager configManager
   )
   {
     super(
         "compaction configs",
         "druid.coordinator.kill.compaction",
+        config.isCompactionKillEnabled(),
         config.getCoordinatorCompactionKillPeriod(),
         Duration.millis(1), // Retain duration is ignored
         Stats.Kill.COMPACTION_CONFIGS,
         config
     );
     this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
-    this.jacksonConfigManager = jacksonConfigManager;
-    this.connector = connector;
-    this.connectorConfig = connectorConfig;
+    this.configManager = configManager;
   }
 
   @Override
@@ -97,20 +89,16 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   }
 
   /**
-   * Tries to delete compaction configs for inactive datasources and returns
-   * the number of compaction configs successfully removed.
+   * Creates a new compaction config by deleting entries for inactive datasources.
    */
-  private int tryDeleteCompactionConfigs() throws RetryableException
+  private CoordinatorCompactionConfig deleteConfigsForInactiveDatasources(
+      CoordinatorCompactionConfig current
+  )
   {
-    final byte[] currentBytes = CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
-    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(
-        jacksonConfigManager,
-        currentBytes
-    );
     // If current compaction config is empty then there is nothing to do
     if (CoordinatorCompactionConfig.empty().equals(current)) {
       log.info("Nothing to do as compaction config is already empty.");
-      return 0;
+      return current;
     }
 
     // Get all active datasources
@@ -123,13 +111,27 @@ public class KillCompactionConfig extends MetadataCleanupDuty
         .filter(dataSourceCompactionConfig -> activeDatasources.contains(dataSourceCompactionConfig.getDataSource()))
         .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
 
-    // Calculate number of compaction configs removed
-    int compactionConfigRemoved = current.getCompactionConfigs().size() - updated.size();
+    return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(updated.values()));
+  }
 
-    ConfigManager.SetResult result = jacksonConfigManager.set(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        currentBytes,
-        CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(updated.values())),
+  /**
+   * Tries to delete compaction configs for inactive datasources and returns
+   * the number of compaction configs successfully removed.
+   */
+  private int tryDeleteCompactionConfigs() throws RetryableException
+  {
+    // Calculate number of compaction configs removed
+    final AtomicInteger compactionConfigRemoved = new AtomicInteger(0);
+
+    ConfigManager.SetResult result = configManager.getAndUpdateCompactionConfig(
+        current -> {
+          final CoordinatorCompactionConfig updated = deleteConfigsForInactiveDatasources(current);
+          int numCurrentConfigs = current.getCompactionConfigs() == null ? 0 : current.getCompactionConfigs().size();
+          int numUpdatedConfigs = updated.getCompactionConfigs() == null ? 0 : updated.getCompactionConfigs().size();
+          compactionConfigRemoved.set(Math.max(0, numCurrentConfigs - numUpdatedConfigs));
+
+          return updated;
+        },
         new AuditInfo(
             "KillCompactionConfig",
             "CoordinatorDuty for automatic deletion of compaction config",
@@ -138,7 +140,7 @@ public class KillCompactionConfig extends MetadataCleanupDuty
     );
 
     if (result.isOk()) {
-      return compactionConfigRemoved;
+      return compactionConfigRemoved.get();
     } else if (result.isRetryable()) {
       log.debug("Retrying KillCompactionConfig duty");
       throw new RetryableException(result.getException());

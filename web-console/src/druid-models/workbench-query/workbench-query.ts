@@ -226,7 +226,7 @@ export class WorkbenchQuery {
 
     const queryStartingWithInsertOrReplace = queryFragment.substring(matchInsertReplaceIndex);
 
-    const matchEnd = queryStartingWithInsertOrReplace.match(/\b(?:SELECT|WITH)\b|$/i);
+    const matchEnd = queryStartingWithInsertOrReplace.match(/\(|\b(?:SELECT|WITH)\b|$/i);
     const fragmentQuery = SqlQuery.maybeParse(
       queryStartingWithInsertOrReplace.substring(0, matchEnd?.index) + ' SELECT * FROM t',
     );
@@ -552,6 +552,7 @@ export class WorkbenchQuery {
       apiQuery.context.executionMode ??= 'async';
       apiQuery.context.finalizeAggregations ??= !ingestQuery;
       apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
+      apiQuery.context.waitUntilSegmentsLoad ??= true;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

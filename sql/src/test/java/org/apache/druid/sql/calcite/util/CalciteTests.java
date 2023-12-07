@@ -39,7 +39,14 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -52,6 +59,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -68,9 +76,9 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
@@ -82,9 +90,11 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -209,18 +219,18 @@ public class CalciteTests
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
       AuthConfig.ALLOW_ALL_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null, null
+      null,
+      null
   );
 
   public static final AuthenticationResult SUPER_USER_AUTH_RESULT = new AuthenticationResult(
       TEST_SUPERUSER_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null, null
+      null,
+      null
   );
 
-  public static final Injector INJECTOR = new CalciteTestInjectorBuilder()
-      .withDefaultMacroTable()
-      .build();
+  public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
 
   private CalciteTests()
   {
@@ -316,7 +326,7 @@ public class CalciteTests
 
   public static ExprMacroTable createExprMacroTable()
   {
-    return QueryFrameworkUtils.createExprMacroTable(INJECTOR);
+    return INJECTOR.getInstance(ExprMacroTable.class);
   }
 
   public static JoinableFactoryWrapper createJoinableFactoryWrapper()
@@ -368,6 +378,38 @@ public class CalciteTests
           throw new RuntimeException(e);
         }
       }
+
+      @Override
+      public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+          @Nullable String state,
+          @Nullable String dataSource,
+          @Nullable Integer maxCompletedTasks
+      )
+      {
+        List<TaskStatusPlus> tasks = new ArrayList<TaskStatusPlus>();
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 10L));
+        tasks.add(createTaskStatus("id1", DATASOURCE1, 1L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 20L));
+        tasks.add(createTaskStatus("id2", DATASOURCE2, 2L));
+        return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(tasks.iterator()));
+      }
+
+      private TaskStatusPlus createTaskStatus(String id, String datasource, Long duration)
+      {
+        return new TaskStatusPlus(
+            id,
+            "testGroupId",
+            "testType",
+            DateTimes.nowUtc(),
+            DateTimes.nowUtc(),
+            TaskState.RUNNING,
+            RunnerTaskState.RUNNING,
+            duration,
+            TaskLocation.create("testHost", 1010, -1),
+            datasource,
+            null
+        );
+      }
     };
 
     return new SystemSchema(
@@ -376,9 +418,9 @@ public class CalciteTests
             druidLeaderClient,
             getJsonMapper(),
             new BrokerSegmentWatcherConfig(),
-            SegmentMetadataCacheConfig.create()
+            BrokerSegmentMetadataCacheConfig.create()
         ),
-        new TestServerInventoryView(walker.getSegments()),
+        new TestTimelineServerView(walker.getSegments()),
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,

@@ -31,8 +31,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
-import org.apache.druid.guice.annotations.Client;
-import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -60,7 +58,6 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -122,8 +119,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ServerConfig serverConfig,
       Cache cache,
       CacheConfig cacheConfig,
-      LookupExtractorFactoryContainerProvider lookupManager,
-      DruidHttpClientConfig httpClientConfig,
+      SubqueryGuardrailHelper subqueryGuardrailHelper,
       SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
@@ -137,11 +133,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.serverConfig = serverConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
-    this.subqueryGuardrailHelper = new SubqueryGuardrailHelper(
-        lookupManager,
-        Runtime.getRuntime().maxMemory(),
-        httpClientConfig.getNumConnections()
-    );
+    this.subqueryGuardrailHelper = subqueryGuardrailHelper;
     this.subqueryStatsProvider = subqueryStatsProvider;
   }
 
@@ -157,8 +149,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ServerConfig serverConfig,
       Cache cache,
       CacheConfig cacheConfig,
-      LookupExtractorFactoryContainerProvider lookupManager,
-      @Client DruidHttpClientConfig httpClientConfig,
+      SubqueryGuardrailHelper subqueryGuardrailHelper,
       SubqueryCountStatsProvider subqueryStatsProvider
   )
   {
@@ -173,8 +164,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         serverConfig,
         cache,
         cacheConfig,
-        lookupManager,
-        httpClientConfig,
+        subqueryGuardrailHelper,
         subqueryStatsProvider
     );
   }
@@ -767,6 +757,32 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           new ArenaMemoryAllocatorFactory(FRAME_SIZE),
           useNestedForUnknownTypeInSubquery
       );
+
+      if (!framesOptional.isPresent()) {
+        throw DruidException.defensive("Unable to materialize the results as frames. Defaulting to materializing the results as rows");
+      }
+
+      Sequence<FrameSignaturePair> frames = framesOptional.get();
+      List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
+      frames.forEach(
+          frame -> {
+            limitAccumulator.addAndGet(frame.getFrame().numRows());
+            if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
+              subqueryStatsProvider.incrementQueriesExceedingByteLimit();
+              throw ResourceLimitExceededException.withMessage(
+                  "Subquery generated results beyond maximum[%d] bytes",
+                  memoryLimit
+              );
+
+            }
+            frameSignaturePairs.add(frame);
+          }
+      );
+      return Optional.of(new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query)));
+
+    }
+    catch (ResourceLimitExceededException e) {
+      throw e;
     }
     catch (UnsupportedColumnTypeException e) {
       subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
@@ -779,29 +795,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                    + "while conversion. Defaulting to materializing the results as rows");
       return Optional.empty();
     }
-
-    if (!framesOptional.isPresent()) {
-      log.debug("Unable to materialize the results as frames. Defaulting to materializing the results as rows");
-      return Optional.empty();
-    }
-
-    Sequence<FrameSignaturePair> frames = framesOptional.get();
-    List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
-    frames.forEach(
-        frame -> {
-          limitAccumulator.addAndGet(frame.getFrame().numRows());
-          if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
-            subqueryStatsProvider.incrementQueriesExceedingByteLimit();
-            throw ResourceLimitExceededException.withMessage(
-                "Subquery generated results beyond maximum[%d] bytes",
-                memoryLimit
-            );
-
-          }
-          frameSignaturePairs.add(frame);
-        }
-    );
-    return Optional.of(new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query)));
   }
 
   /**

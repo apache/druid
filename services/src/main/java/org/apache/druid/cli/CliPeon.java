@@ -40,6 +40,8 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import io.netty.util.SuppressForbidden;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
@@ -56,6 +58,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.ManageLifecycleServer;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -129,10 +132,12 @@ import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.eclipse.jetty.server.Server;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -175,6 +180,9 @@ public class CliPeon extends GuiceRunnable
    */
   @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
   public String loadBroadcastSegments = "false";
+
+  @Option(name = "--taskId", title = "taskId", description = "TaskId for fetching task.json remotely")
+  public String taskId = "";
 
   private static final Logger log = new Logger(CliPeon.class);
 
@@ -231,7 +239,7 @@ public class CliPeon extends GuiceRunnable
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
 
-            if ("k8s".equals(properties.getProperty("druid.indexer.runner.type", null))) {
+            if (properties.getProperty("druid.indexer.runner.type", "").contains("k8s")) {
               log.info("Running peon in k8s mode");
               executorLifecycleConfig.setParentStreamDefined(false);
             }
@@ -246,7 +254,10 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
-            binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
+            // Bind to ManageLifecycleServer to ensure SingleTaskBackgroundRunner is closed before
+            // its dependent services, such as DiscoveryServiceLocator and OverlordClient.
+            // This order ensures that tasks can finalize their cleanup operations before service location closure.
+            binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycleServer.class);
 
             bindRealtimeCache(binder);
             bindCoordinatorHandoffNotifer(binder);
@@ -282,9 +293,15 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          public Task readTask(@Json ObjectMapper mapper, ExecutorLifecycleConfig config)
+          public Task readTask(@Json ObjectMapper mapper, ExecutorLifecycleConfig config, TaskPayloadManager taskPayloadManager)
           {
             try {
+              if (!config.getTaskFile().exists() || config.getTaskFile().length() == 0) {
+                log.info("Task file not found, trying to pull task payload from deep storage");
+                String task = IOUtils.toString(taskPayloadManager.streamTaskPayload(taskId).get(), Charset.defaultCharset());
+                // write the remote task.json to the task file location for ExecutorLifecycle to pickup
+                FileUtils.write(config.getTaskFile(), task, Charset.defaultCharset());
+              }
               return mapper.readValue(config.getTaskFile(), Task.class);
             }
             catch (IOException e) {

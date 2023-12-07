@@ -20,7 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.CloseableIndexed;
@@ -174,7 +174,7 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
         throw new UnsupportedOperationException();
       }

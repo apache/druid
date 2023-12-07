@@ -62,6 +62,8 @@ import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.frame.processor.SuperSorter;
 import org.apache.druid.frame.processor.SuperSorterProgressTracker;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.indexer.TaskStatus;
@@ -71,8 +73,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterNames;
@@ -295,6 +295,7 @@ public class WorkerImpl implements Worker
   {
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
+    closer.register(context.loadedSegmentDataProviderFactory());
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
 
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
@@ -1100,11 +1101,12 @@ public class WorkerImpl implements Worker
                       .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir()))
                       .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
                       .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
-                      .put(SegmentsInputSlice.class,
-                           new SegmentsInputSliceReader(
-                               frameContext.dataSegmentProvider(),
-                               MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
-                           )
+                      .put(
+                          SegmentsInputSlice.class,
+                          new SegmentsInputSliceReader(
+                              frameContext,
+                              MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
+                          )
                       )
                       .build()
       );
@@ -1152,7 +1154,16 @@ public class WorkerImpl implements Worker
           );
     }
 
-    private <FactoryType extends FrameProcessorFactory<I, WorkerClass, T, R>, I, WorkerClass extends FrameProcessor<T>, T, R> void makeAndRunWorkProcessors()
+    /**
+     * Use {@link FrameProcessorFactory#makeProcessors} to create {@link ProcessorsAndChannels}. Executes the
+     * processors using {@link #exec} and sets the output channels in {@link #workResultAndOutputChannels}.
+     *
+     * @param <FactoryType>         type of {@link StageDefinition#getProcessorFactory()}
+     * @param <ProcessorReturnType> return type of {@link FrameProcessor} created by the manager
+     * @param <ManagerReturnType>   result type of {@link ProcessorManager#result()}
+     * @param <ExtraInfoType>       type of {@link WorkOrder#getExtraInfo()}
+     */
+    private <FactoryType extends FrameProcessorFactory<ProcessorReturnType, ManagerReturnType, ExtraInfoType>, ProcessorReturnType, ManagerReturnType, ExtraInfoType> void makeAndRunWorkProcessors()
         throws IOException
     {
       if (workResultAndOutputChannels != null) {
@@ -1163,13 +1174,13 @@ public class WorkerImpl implements Worker
       final FactoryType processorFactory = (FactoryType) kernel.getStageDefinition().getProcessorFactory();
 
       @SuppressWarnings("unchecked")
-      final ProcessorsAndChannels<WorkerClass, T> processors =
+      final ProcessorsAndChannels<ProcessorReturnType, ManagerReturnType> processors =
           processorFactory.makeProcessors(
               kernel.getStageDefinition(),
               kernel.getWorkOrder().getWorkerNumber(),
               kernel.getWorkOrder().getInputs(),
               inputSliceReader,
-              (I) kernel.getWorkOrder().getExtraInfo(),
+              (ExtraInfoType) kernel.getWorkOrder().getExtraInfo(),
               workOutputChannelFactory,
               frameContext,
               parallelism,
@@ -1177,7 +1188,7 @@ public class WorkerImpl implements Worker
               e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e)
           );
 
-      final Sequence<WorkerClass> processorSequence = processors.processors();
+      final ProcessorManager<ProcessorReturnType, ManagerReturnType> processorManager = processors.getProcessorManager();
 
       final int maxOutstandingProcessors;
 
@@ -1190,10 +1201,8 @@ public class WorkerImpl implements Worker
             Math.max(1, Math.min(parallelism, processors.getOutputChannels().getAllChannels().size()));
       }
 
-      final ListenableFuture<R> workResultFuture = exec.runAllFully(
-          processorSequence,
-          processorFactory.newAccumulatedResult(),
-          processorFactory::accumulateResult,
+      final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
+          processorManager,
           maxOutstandingProcessors,
           processorBouncer,
           cancellationId
@@ -1716,11 +1725,13 @@ public class WorkerImpl implements Worker
 
       final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
           exec.runAllFully(
-              Sequences.simple(processors),
-              stageDefinition.createResultKeyStatisticsCollector(
-                  frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
-              ),
-              ClusterByStatisticsCollector::addAll,
+              ProcessorManagers.of(processors)
+                               .withAccumulation(
+                                   stageDefinition.createResultKeyStatisticsCollector(
+                                       frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                   ),
+                                   ClusterByStatisticsCollector::addAll
+                               ),
               // Run all processors simultaneously. They are lightweight and this keeps things moving.
               processors.size(),
               Bouncer.unlimited(),

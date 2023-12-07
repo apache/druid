@@ -179,14 +179,24 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testStop() throws ExecutionException, InterruptedException, TimeoutException
   {
+    AtomicReference<Boolean> methodCallHolder = new AtomicReference<>();
     final ListenableFuture<TaskStatus> future = runner.run(
         new NoopTask(null, null, null, Long.MAX_VALUE, 0, null) // infinite task
+        {
+          @Override
+          public boolean waitForCleanupToFinish()
+          {
+            methodCallHolder.set(true);
+            return true;
+          }
+        }
     );
     runner.stop();
     Assert.assertEquals(
         TaskState.FAILED,
         future.get(1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
+    Assert.assertTrue(methodCallHolder.get());
   }
 
   @Test

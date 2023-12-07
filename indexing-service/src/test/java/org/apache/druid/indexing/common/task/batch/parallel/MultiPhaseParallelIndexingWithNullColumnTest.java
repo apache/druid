@@ -39,12 +39,14 @@ import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -431,7 +433,10 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
       return new InputEntityIteratingReader(
           inputRowSchema,
           inputFormat,
-          data.stream().map(str -> new ByteEntity(StringUtils.toUtf8(str))).iterator(),
+          CloseableIterators.withEmptyBaggage(
+              data.stream().map(str -> new ByteEntity(StringUtils.toUtf8(str))).iterator()
+          ),
+          SystemFieldDecoratorFactory.NONE,
           temporaryDirectory
       );
     }

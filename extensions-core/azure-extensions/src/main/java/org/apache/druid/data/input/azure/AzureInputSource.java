@@ -27,11 +27,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlob;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -68,10 +71,11 @@ public class AzureInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("objectGlob") @Nullable String objectGlob
+      @JsonProperty("objectGlob") @Nullable String objectGlob,
+      @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields
   )
   {
-    super(SCHEME, uris, prefixes, objects, objectGlob);
+    super(SCHEME, uris, prefixes, objects, objectGlob, systemFields);
     this.storage = Preconditions.checkNotNull(storage, "AzureStorage");
     this.entityFactory = Preconditions.checkNotNull(entityFactory, "AzureEntityFactory");
     this.azureCloudBlobIterableFactory = Preconditions.checkNotNull(
@@ -100,8 +104,26 @@ public class AzureInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getObjectGlob()
+        getObjectGlob(),
+        systemFields
     );
+  }
+
+  @Override
+  public Object getSystemFieldValue(InputEntity entity, SystemField field)
+  {
+    final AzureEntity googleEntity = (AzureEntity) entity;
+
+    switch (field) {
+      case URI:
+        return googleEntity.getUri().toString();
+      case BUCKET:
+        return googleEntity.getLocation().getBucket();
+      case PATH:
+        return googleEntity.getLocation().getPath();
+      default:
+        return null;
+    }
   }
 
   @Override
@@ -156,18 +178,6 @@ public class AzureInputSource extends CloudObjectInputSource
   }
 
   @Override
-  public int hashCode()
-  {
-    return Objects.hash(
-        super.hashCode(),
-        storage,
-        entityFactory,
-        azureCloudBlobIterableFactory,
-        inputDataConfig
-    );
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -187,6 +197,12 @@ public class AzureInputSource extends CloudObjectInputSource
   }
 
   @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), storage, entityFactory, azureCloudBlobIterableFactory, inputDataConfig);
+  }
+
+  @Override
   public String toString()
   {
     return "AzureInputSource{" +
@@ -194,6 +210,7 @@ public class AzureInputSource extends CloudObjectInputSource
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
            ", objectGlob=" + getObjectGlob() +
+           (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
            '}';
   }
 }

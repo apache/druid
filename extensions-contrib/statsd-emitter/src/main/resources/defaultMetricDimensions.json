@@ -9,6 +9,7 @@
   "query/segment/time" : { "dimensions" : [], "type" : "timer"},
   "query/wait/time" : { "dimensions" : [], "type" : "timer"},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge"},
+  "segment/scan/active" : { "dimensions" : [], "type" : "gauge"},
   "query/segmentAndCache/time" : { "dimensions" : [], "type" : "timer" },
   "query/cpu/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer" },
 
@@ -52,6 +53,7 @@
   "ingest/handoff/failed" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
+  "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
@@ -136,8 +138,8 @@
   "sys/storage/used" : { "dimensions" : ["fsDirName"], "type" : "gauge"},
   "sys/cpu" : { "dimensions" : ["cpuName", "cpuTime"], "type" : "gauge"},
 
-  "coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
+  "druid/coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "druid/historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
 
   "jetty/numOpenConnections": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/total": { "dimensions" : [], "type" : "gauge" },

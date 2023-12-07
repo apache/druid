@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
@@ -36,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
@@ -72,7 +74,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   private Interval interval;
   private Filter filter;
   private VirtualColumns virtualColumns;
-  private int limit;
+  private OffsetLimit limit;
   private LinkedHashSet<String> viewableColumns;
   private List<ColumnWithDirection> ordering;
 
@@ -81,7 +83,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       Interval interval,
       Filter filter,
       VirtualColumns virtualColumns,
-      int limit,
+      OffsetLimit limit,
       List<ColumnWithDirection> ordering,
       LinkedHashSet<String> viewableColumns
   )
@@ -101,6 +103,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     return viewableColumns == null ? base.getColumnNames() : viewableColumns;
   }
 
+  public RowsAndColumns getBase()
+  {
+    return base;
+  }
+
   @Override
   public int numRows()
   {
@@ -115,7 +122,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     if (viewableColumns != null && !viewableColumns.contains(name)) {
       return null;
     }
-
     maybeMaterialize();
     return base.findColumn(name);
   }
@@ -158,7 +164,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
   private void maybeMaterialize()
   {
-    if (!(interval == null && filter == null && limit == -1 && ordering == null)) {
+    if (needsMaterialization()) {
       final Pair<byte[], RowSignature> thePair = materialize();
       if (thePair == null) {
         reset(new EmptyRowsAndColumns());
@@ -166,6 +172,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         reset(new FrameRowsAndColumns(Frame.wrap(thePair.lhs), thePair.rhs));
       }
     }
+  }
+
+  private boolean needsMaterialization()
+  {
+    return interval != null || filter != null || limit.isPresent() || ordering != null || virtualColumns != null;
   }
 
   private Pair<byte[], RowSignature> materialize()
@@ -180,7 +191,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     } else {
       return materializeStorageAdapter(as);
     }
-
   }
 
   private void reset(RowsAndColumns rac)
@@ -189,7 +199,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     interval = null;
     filter = null;
     virtualColumns = null;
-    limit = -1;
+    limit = OffsetLimit.NONE;
     viewableColumns = null;
     ordering = null;
   }
@@ -200,13 +210,26 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     final Sequence<Cursor> cursors = as.makeCursors(
         filter,
         interval == null ? Intervals.ETERNITY : interval,
-        virtualColumns,
+        virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns,
         Granularities.ALL,
         false,
         null
     );
 
-    Collection<String> cols = viewableColumns == null ? base.getColumnNames() : viewableColumns;
+
+    final Collection<String> cols;
+    if (viewableColumns != null) {
+      cols = viewableColumns;
+    } else {
+      if (virtualColumns == null) {
+        cols = base.getColumnNames();
+      } else {
+        cols = ImmutableList.<String>builder()
+            .addAll(base.getColumnNames())
+            .addAll(virtualColumns.getColumnNames())
+            .build();
+      }
+    }
     AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
     FrameWriter writer = cursors.accumulate(null, (accumulated, in) -> {
@@ -216,15 +239,25 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         throw new ISE("accumulated[%s] non-null, why did we get multiple cursors?", accumulated);
       }
 
-      int theLimit = limit == -1 ? Integer.MAX_VALUE : limit;
+      long remainingRowsToSkip = limit.getOffset();
+      long remainingRowsToFetch = limit.getLimitOrMax();
 
       final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
       final RowSignature.Builder sigBob = RowSignature.builder();
 
       for (String col : cols) {
-        final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(col);
+        ColumnCapabilities capabilities;
+        capabilities = columnSelectorFactory.getColumnCapabilities(col);
         if (capabilities != null) {
           sigBob.add(col, capabilities.toColumnType());
+          continue;
+        }
+        if (virtualColumns != null) {
+          capabilities = virtualColumns.getColumnCapabilities(columnSelectorFactory, col);
+          if (capabilities != null) {
+            sigBob.add(col, capabilities.toColumnType());
+            continue;
+          }
         }
       }
       final RowSignature signature = sigBob.build();
@@ -253,12 +286,12 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       );
 
       final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      while (!in.isDoneOrInterrupted()) {
+      for (; !in.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
+        in.advance();
+      }
+      for (; !in.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
         frameWriter.addSelection();
         in.advance();
-        if (--theLimit <= 0) {
-          break;
-        }
       }
 
       return frameWriter;
@@ -318,7 +351,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           continue;
         }
 
-        if (!matcher.matches()) {
+        if (!matcher.matches(false)) {
           rowsToSkip.set(theId);
         }
       }
@@ -350,21 +383,17 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     final RowSignature.Builder sigBob = RowSignature.builder();
     final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
 
+
     for (String column : columnsToGenerate) {
       final Column racColumn = rac.findColumn(column);
       if (racColumn == null) {
         continue;
       }
-
       sigBob.add(column, racColumn.toAccessor().getType());
     }
 
-    final int limitedNumRows;
-    if (limit == -1) {
-      limitedNumRows = Integer.MAX_VALUE;
-    } else {
-      limitedNumRows = limit;
-    }
+    long remainingRowsToSkip = limit.getOffset();
+    long remainingRowsToFetch = limit.getLimitOrMax();
 
     final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
@@ -374,11 +403,16 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     ).newFrameWriter(selectorFactory);
 
     rowId.set(0);
-    for (; rowId.get() < numRows && frameWriter.getNumRows() < limitedNumRows; rowId.incrementAndGet()) {
+    for (; rowId.get() < numRows && remainingRowsToFetch > 0; rowId.incrementAndGet()) {
       final int theId = rowId.get();
       if (rowsToSkip != null && rowsToSkip.get(theId)) {
         continue;
       }
+      if (remainingRowsToSkip > 0) {
+        remainingRowsToSkip--;
+        continue;
+      }
+      remainingRowsToFetch--;
       frameWriter.addSelection();
     }
 

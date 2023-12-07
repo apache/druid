@@ -124,6 +124,7 @@ public class CreateTables extends GuiceRunnable
     dbConnector.createDataSourceTable();
     dbConnector.createPendingSegmentsTable();
     dbConnector.createSegmentTable();
+    dbConnector.createUpgradeSegmentsTable();
     dbConnector.createRulesTable();
     dbConnector.createConfigTable();
     dbConnector.createTaskTables();

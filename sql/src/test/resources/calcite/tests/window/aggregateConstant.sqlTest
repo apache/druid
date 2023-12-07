@@ -1,0 +1,26 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    dim1,
+    count(333) OVER () cc
+  FROM foo
+  WHERE length(dim1)>0
+
+expectedOperators:
+  - type: naivePartition
+    partitionColumns: []
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - { type: "count", name: "w0" }
+
+expectedResults:
+  - ["10.1",5]
+  - ["2",5]
+  - ["1",5]
+  - ["def",5]
+  - ["abc",5]
+

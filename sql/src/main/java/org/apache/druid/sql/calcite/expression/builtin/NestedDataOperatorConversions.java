@@ -118,13 +118,10 @@ public class NestedDataOperatorConversions
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder("JSON_KEYS")
-        .operandTypeChecker(
-            OperandTypes.sequence(
-                "'JSON_KEYS(expr, path)'",
-                OperandTypes.ANY,
-                OperandTypes.and(OperandTypes.family(SqlTypeFamily.STRING), OperandTypes.LITERAL)
-            )
-        )
+        .operandNames("expr", "path")
+        .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.STRING)
+        .literalOperands(1)
+        .requiredOperandCount(2)
         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
         .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
         .build();
@@ -202,9 +199,10 @@ public class NestedDataOperatorConversions
 
       final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
-        return null;
+        // if path argument is not constant, just use a pure expression
+        return DruidExpression.ofFunctionCall(ColumnType.NESTED_DATA, "json_query", druidExpressions);
       }
-      // pre-normalize path so that the same expressions with different jq syntax are collapsed
+      // pre-normalize path so that the same expressions with different json path syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
@@ -356,9 +354,17 @@ public class NestedDataOperatorConversions
 
       final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
-        return null;
+        // if path argument is not constant, just use a pure expression
+        return DruidExpression.ofFunctionCall(
+            druidType,
+            "json_value",
+            ImmutableList.<DruidExpression>builder()
+                         .addAll(druidExpressions)
+                         .add(DruidExpression.ofStringLiteral(druidType.asTypeString()))
+                         .build()
+        );
       }
-      // pre-normalize path so that the same expressions with different jq syntax are collapsed
+      // pre-normalize path so that the same expressions with different json path syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
 
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
@@ -480,7 +486,7 @@ public class NestedDataOperatorConversions
       if (!pathExpr.isLiteral()) {
         return null;
       }
-      // pre-normalize path so that the same expressions with different jq syntax are collapsed
+      // pre-normalize path so that the same expressions with different json path syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts;
       try {
@@ -648,7 +654,7 @@ public class NestedDataOperatorConversions
       if (!pathExpr.isLiteral()) {
         return null;
       }
-      // pre-normalize path so that the same expressions with different jq syntax are collapsed
+      // pre-normalize path so that the same expressions with different json path syntax are collapsed
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);

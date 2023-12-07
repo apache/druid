@@ -57,8 +57,9 @@ export class RuleUtil {
   static ruleToString(rule: Rule): string {
     const params: string[] = [];
 
-    if (RuleUtil.hasPeriod(rule))
-      params.push(`${rule.period}${rule.includeFuture ? '+future' : ''}`);
+    if (RuleUtil.hasPeriod(rule)) {
+      params.push(`${rule.period}${RuleUtil.getIncludeFuture(rule) ? '+future' : ''}`);
+    }
     if (RuleUtil.hasInterval(rule)) params.push(rule.interval || '?');
     if (RuleUtil.canHaveTieredReplicants(rule)) params.push(`${RuleUtil.totalReplicas(rule)}x`);
 
@@ -69,20 +70,21 @@ export class RuleUtil {
     const newRule = deepSet(rule, 'type', type);
 
     if (RuleUtil.hasPeriod(newRule)) {
-      if (!newRule.period) newRule.period = 'P1M';
+      newRule.period ??= 'P1M';
+      newRule.includeFuture ??= true;
     } else {
       delete newRule.period;
       delete newRule.includeFuture;
     }
 
     if (RuleUtil.hasInterval(newRule)) {
-      if (!newRule.interval) newRule.interval = '2010-01-01/2020-01-01';
+      newRule.interval ??= '2010-01-01/2020-01-01';
     } else {
       delete newRule.interval;
     }
 
     if (RuleUtil.canHaveTieredReplicants(newRule)) {
-      if (!newRule.tieredReplicants) newRule.tieredReplicants = { _default_tier: 2 };
+      newRule.tieredReplicants ??= { _default_tier: 2 };
     } else {
       delete newRule.tieredReplicants;
     }
@@ -100,6 +102,10 @@ export class RuleUtil {
 
   static hasIncludeFuture(rule: Rule): boolean {
     return RuleUtil.hasPeriod(rule) && rule.type !== 'dropBeforeByPeriod';
+  }
+
+  static getIncludeFuture(rule: Rule): boolean {
+    return rule.includeFuture ?? true;
   }
 
   static changeIncludeFuture(rule: Rule, includeFuture: boolean): Rule {

@@ -358,7 +358,7 @@ public class IndexBuilder
                   ),
                   AggregatorFactory.class
               ),
-              null,
+              schema.getDimensionsSpec(),
               new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID())),
               indexSpec,
               indexSpec,

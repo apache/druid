@@ -39,14 +39,8 @@ an [UnknownError](./reference.md#error_UnknownError) with a message including "N
 
 ## `SELECT` Statement
 
-- `SELECT` from a Druid datasource does not include unpublished real-time data.
-
-- `GROUPING SETS` and `UNION ALL` are not implemented. Queries using these features return a
+- `GROUPING SETS` are not implemented. Queries using these features return a
   [QueryNotSupported](reference.md#error_QueryNotSupported) error.
-
-- For some `COUNT DISTINCT` queries, you'll encounter a [QueryNotSupported](reference.md#error_QueryNotSupported) error
-  that includes `Must not have 'subtotalsSpec'` as one of its causes. This is caused by the planner attempting to use
-  `GROUPING SET`s, which are not implemented.
 
 - The numeric varieties of the `EARLIEST` and `LATEST` aggregators do not work properly. Attempting to use the numeric
   varieties of these aggregators lead to an error like

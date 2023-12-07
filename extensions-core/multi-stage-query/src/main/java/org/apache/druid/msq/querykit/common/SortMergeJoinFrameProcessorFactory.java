@@ -34,10 +34,10 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
@@ -122,7 +122,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
   }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Long>, Long> makeProcessors(
+  public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -156,7 +156,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
     );
 
     if (inputsByPartition.isEmpty()) {
-      return new ProcessorsAndChannels<>(Sequences.empty(), OutputChannels.none());
+      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
     }
 
     // Create output channels.
@@ -166,7 +166,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
     }
 
     // Create processors.
-    final Iterable<FrameProcessor<Long>> processors = Iterables.transform(
+    final Iterable<FrameProcessor<Object>> processors = Iterables.transform(
         inputsByPartition.int2ObjectEntrySet(),
         entry -> {
           final int partitionNumber = entry.getIntKey();
@@ -187,7 +187,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
     );
 
     return new ProcessorsAndChannels<>(
-        Sequences.simple(processors),
+        ProcessorManagers.of(processors),
         OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
     );
   }

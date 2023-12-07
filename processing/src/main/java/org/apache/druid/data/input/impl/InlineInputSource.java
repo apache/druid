@@ -28,6 +28,8 @@ import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -88,7 +90,8 @@ public class InlineInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Stream.of(new ByteEntity(StringUtils.toUtf8(data))).iterator(),
+        CloseableIterators.withEmptyBaggage(Stream.of(new ByteEntity(StringUtils.toUtf8(data))).iterator()),
+        SystemFieldDecoratorFactory.NONE,
         temporaryDirectory
     );
   }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureDataSegmentConfig;
@@ -35,6 +36,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 
 public class AzureInputSourceSerdeTest extends EasyMockSupport
@@ -56,6 +58,13 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
                                                   + "          { \"bucket\": \"conatiner2\", \"path\": \"foo/file2.json\"}\n"
                                                   + "        ]\n"
                                                   + "      }";
+
+  private static final String JSON_WITH_URIS_AND_SYSFIELDS =
+      "{\n"
+      + "        \"type\": \"azure\",\n"
+      + "        \"uris\": [\"azure://datacontainer2/wikipedia.json\"],\n"
+      + "        \"systemFields\": [\"__file_uri\"]\n"
+      + "}";
 
   private static final List<URI> EXPECTED_URIS;
   private static final List<URI> EXPECTED_PREFIXES;
@@ -106,6 +115,23 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
         AzureInputSource.class);
     verifyInputSourceWithUris(roundTripInputSource);
 
+  }
+
+  @Test
+  public void test_uriAndSystemFieldsSerde_constructsProperAzureInputSource() throws Exception
+  {
+    final InjectableValues.Std injectableValues = initInjectableValues();
+    final ObjectMapper objectMapper = new DefaultObjectMapper()
+        .registerModules(new AzureStorageDruidModule().getJacksonModules());
+    objectMapper.setInjectableValues(injectableValues);
+
+    final AzureInputSource inputSource = objectMapper.readValue(JSON_WITH_URIS_AND_SYSFIELDS, AzureInputSource.class);
+    Assert.assertEquals(Collections.singleton(SystemField.URI), inputSource.getConfiguredSystemFields());
+
+    final AzureInputSource roundTripInputSource = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(inputSource),
+        AzureInputSource.class);
+    Assert.assertEquals(Collections.singleton(SystemField.URI), roundTripInputSource.getConfiguredSystemFields());
   }
 
   @Test

@@ -664,21 +664,23 @@ public class ControllerQueryKernel
    */
   public List<WorkOrder> getWorkInCaseWorkerEligibleForRetryElseThrow(int workerNumber, MSQFault msqFault)
   {
+    if (isRetriableFault(msqFault)) {
+      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
+    } else {
+      throw new MSQException(msqFault);
+    }
+  }
 
+  public static boolean isRetriableFault(MSQFault msqFault)
+  {
     final String errorCode;
     if (msqFault instanceof WorkerFailedFault) {
       errorCode = MSQFaultUtils.getErrorCodeFromMessage((((WorkerFailedFault) msqFault).getErrorMsg()));
     } else {
       errorCode = msqFault.getErrorCode();
     }
-
-    log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
-
-    if (RETRIABLE_ERROR_CODES.contains(errorCode)) {
-      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
-    } else {
-      throw new MSQException(msqFault);
-    }
+    log.debug("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
+    return RETRIABLE_ERROR_CODES.contains(errorCode);
   }
 
   /**

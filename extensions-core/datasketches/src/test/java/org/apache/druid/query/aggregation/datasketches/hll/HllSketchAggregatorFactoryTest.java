@@ -82,7 +82,7 @@ public class HllSketchAggregatorFactoryTest
   @Test
   public void testFinalizeComputationNull()
   {
-    Assert.assertNull(target.finalizeComputation(null));
+    Assert.assertEquals(0.0D, target.finalizeComputation(null));
   }
 
   @Test
@@ -293,6 +293,15 @@ public class HllSketchAggregatorFactoryTest
                       null,
                       null,
                       true
+                  ),
+                  new HllSketchMergeAggregatorFactory(
+                      "hllMergeNoFinalize",
+                      "col",
+                      null,
+                      null,
+                      null,
+                      false,
+                      false
                   )
               )
               .postAggregators(
@@ -303,7 +312,14 @@ public class HllSketchAggregatorFactoryTest
                   new FieldAccessPostAggregator("hllMerge-access", "hllMerge"),
                   new FinalizingFieldAccessPostAggregator("hllMerge-finalize", "hllMerge"),
                   new FieldAccessPostAggregator("hllMergeRound-access", "hllMergeRound"),
-                  new FinalizingFieldAccessPostAggregator("hllMergeRound-finalize", "hllMergeRound")
+                  new FinalizingFieldAccessPostAggregator("hllMergeRound-finalize", "hllMergeRound"),
+                  new FieldAccessPostAggregator("hllMergeNoFinalize-access", "hllMergeNoFinalize"),
+                  new FinalizingFieldAccessPostAggregator("hllMergeNoFinalize-finalize", "hllMergeNoFinalize"),
+                  new HllSketchToEstimatePostAggregator(
+                      "hllMergeNoFinalize-estimate",
+                      new FieldAccessPostAggregator(null, "hllMergeNoFinalize"),
+                      false
+                  )
               )
               .build();
 
@@ -315,6 +331,7 @@ public class HllSketchAggregatorFactoryTest
                     .add("hllBuildRound", null)
                     .add("hllMerge", null)
                     .add("hllMergeRound", null)
+                    .add("hllMergeNoFinalize", HllSketchMergeAggregatorFactory.TYPE)
                     .add("hllBuild-access", HllSketchBuildAggregatorFactory.TYPE)
                     .add("hllBuild-finalize", ColumnType.DOUBLE)
                     .add("hllBuildRound-access", HllSketchBuildAggregatorFactory.TYPE)
@@ -323,6 +340,9 @@ public class HllSketchAggregatorFactoryTest
                     .add("hllMerge-finalize", ColumnType.DOUBLE)
                     .add("hllMergeRound-access", HllSketchMergeAggregatorFactory.TYPE)
                     .add("hllMergeRound-finalize", ColumnType.LONG)
+                    .add("hllMergeNoFinalize-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMergeNoFinalize-finalize", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMergeNoFinalize-estimate", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

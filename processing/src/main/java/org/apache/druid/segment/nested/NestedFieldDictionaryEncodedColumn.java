@@ -21,7 +21,6 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -31,6 +30,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -55,7 +56,6 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
@@ -396,9 +396,10 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
             return new ValueMatcher()
             {
               @Override
-              public boolean matches()
+              public boolean matches(boolean includeUnknown)
               {
-                return getRowValue() == valueId;
+                final int rowId = getRowValue();
+                return (includeUnknown && rowId == 0) || rowId == valueId;
               }
 
               @Override
@@ -408,32 +409,48 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               }
             };
           } else {
-            return BooleanValueMatcher.of(false);
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches(boolean includeUnknown)
+              {
+                return includeUnknown && getRowValue() == 0;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("column", NestedFieldDictionaryEncodedColumn.this);
+              }
+            };
           }
         } else {
           // Employ caching BitSet optimization
-          return makeValueMatcher(Predicates.equalTo(value));
+          return makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(value));
         }
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
       {
         final BitSet checkedIds = new BitSet(getCardinality());
         final BitSet matchingIds = new BitSet(getCardinality());
+        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
 
         // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
         {
           @Override
-          public boolean matches()
+          public boolean matches(boolean includeUnknown)
           {
             final int id = getRowValue();
+            final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
 
             if (checkedIds.get(id)) {
               return matchingIds.get(id);
             } else {
-              final boolean matches = predicate.apply(lookupName(id));
+              final String rowVal = lookupName(id);
+              final boolean matches = (matchNull && rowVal == null) || predicate.apply(rowVal);
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);
