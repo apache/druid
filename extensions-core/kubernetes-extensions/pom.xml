@@ -41,6 +41,8 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- This is an indirect dependency of io.kubernetes.client-java
+      update to address vulnerability in transitive dependency okio used by okhttp -->
       <dependency>
           <groupId>com.squareup.okhttp3</groupId>
           <artifactId>okhttp</artifactId>
@@ -89,18 +91,6 @@
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <scope>test</scope>
-    </dependency>
-
-    <!-- Version override to address CVE-2020-28052 -->
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-ext-jdk15on</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <!-- others -->
