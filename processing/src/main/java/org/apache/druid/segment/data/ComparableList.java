@@ -27,7 +27,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import java.util.List;
 
 
-public class ComparableList<T extends Comparable> implements Comparable<ComparableList>
+public class ComparableList<T extends Comparable>
 {
   private final List<T> delegate;
 
@@ -67,7 +67,6 @@ public class ComparableList<T extends Comparable> implements Comparable<Comparab
     return this.delegate.equals(((ComparableList) obj).getDelegate());
   }
 
-  @Override
   public int compareTo(ComparableList rhs)
   {
     if (rhs == null) {

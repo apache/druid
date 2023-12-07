@@ -447,8 +447,8 @@ public class DefaultLimitSpec implements LimitSpec
       } else if (columnType.getElementType().equals(ColumnType.STRING)) {
         arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableStringArray.compareWithComparator(
             comparator,
-            DimensionHandlerUtils.convertToComparableStringArray(o1),
-            DimensionHandlerUtils.convertToComparableStringArray(o2)
+            DimensionHandlerUtils.coerceToStringArray(o1),
+            DimensionHandlerUtils.coerceToStringArray(o2)
         );
       } else {
         throw new ISE("Cannot create comparator for array type %s.", columnType.toString());

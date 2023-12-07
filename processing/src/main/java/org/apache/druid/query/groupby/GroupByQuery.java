@@ -789,8 +789,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
         }
       } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
-        final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhsObj);
-        final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhsObj);
+        final ComparableStringArray lhsArr = DimensionHandlerUtils.coerceToStringArray(lhsObj);
+        final ComparableStringArray rhsArr = DimensionHandlerUtils.coerceToStringArray(rhsObj);
         dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
       } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
                  || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {

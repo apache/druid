@@ -289,37 +289,37 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
   @Test
   public void testComparableStringArrayList()
   {
-    Assert.assertEquals(null, DimensionHandlerUtils.convertToComparableStringArray(null));
+    Assert.assertEquals(null, DimensionHandlerUtils.coerceToStringArray(null));
     Assert.assertEquals(
         COMPARABLE_STRING_ARRAY,
-        DimensionHandlerUtils.convertToComparableStringArray(ImmutableList.of("1", "2"))
+        DimensionHandlerUtils.coerceToStringArray(ImmutableList.of("1", "2"))
     );
 
     Assert.assertEquals(
         COMPARABLE_STRING_ARRAY,
-        DimensionHandlerUtils.convertToComparableStringArray(new Object[]{1L, 2L})
+        DimensionHandlerUtils.coerceToStringArray(new Object[]{1L, 2L})
     );
     Assert.assertEquals(
         COMPARABLE_STRING_ARRAY,
-        DimensionHandlerUtils.convertToComparableStringArray(new Long[]{1L, 2L})
+        DimensionHandlerUtils.coerceToStringArray(new Long[]{1L, 2L})
     );
     Assert.assertEquals(
         COMPARABLE_STRING_ARRAY_DECIMAL,
-        DimensionHandlerUtils.convertToComparableStringArray(new String[]{"1.0", "2.0"})
+        DimensionHandlerUtils.coerceToStringArray(new String[]{"1.0", "2.0"})
     );
     Assert.assertEquals(
         COMPARABLE_STRING_ARRAY_DECIMAL,
-        DimensionHandlerUtils.convertToComparableStringArray(new Double[]{1.0, 2.0})
+        DimensionHandlerUtils.coerceToStringArray(new Double[]{1.0, 2.0})
     );
     Assert.assertEquals(
         COMPARABLE_STRING_ARRAY_DECIMAL,
-        DimensionHandlerUtils.convertToComparableStringArray(new Float[]{1F, 2F})
+        DimensionHandlerUtils.coerceToStringArray(new Float[]{1F, 2F})
     );
 
     Assert.assertThrows(
         "Unable to convert object of type[String] to [ComparablComparableStringArray]",
         ISE.class,
-        () -> DimensionHandlerUtils.convertToComparableStringArray("1")
+        () -> DimensionHandlerUtils.coerceToStringArray("1")
     );
   }
 

@@ -27,10 +27,10 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.ComparisonUtils;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -386,7 +386,7 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Comparable<?> convertObjectToType(
+  public static Object convertObjectToType(
       @Nullable final Object obj,
       final TypeSignature<ValueType> type,
       final boolean reportParseExceptions
@@ -406,13 +406,13 @@ public final class DimensionHandlerUtils
       case ARRAY:
         switch (type.getElementType().getType()) {
           case STRING:
-            return convertToComparableStringArray(obj);
+            return coerceToStringArray(obj);
           case LONG:
-            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+            return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
           case FLOAT:
-            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+            return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
           case DOUBLE:
-            return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
+            return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
         }
 
       default:
@@ -421,15 +421,15 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static ComparableList convertToList(Object obj, ValueType elementType)
+  public static Object[] convertToList(Object obj, ValueType elementType)
   {
     switch (elementType) {
       case LONG:
-        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+        return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
       case FLOAT:
-        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+        return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
       case DOUBLE:
-        return convertToListWithObjectFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
+        return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
     }
     throw new ISE(
         "Unable to convert object of type[%s] to [%s]",
@@ -439,72 +439,61 @@ public final class DimensionHandlerUtils
   }
 
 
-  private static <T> ComparableList convertToListWithObjectFunction(Object obj, Function<Object, T> convertFunction)
+  private static Object[] coerceToObjectWithCoercionFunction(Object obj, Function<Object, Object> coercionFunction)
   {
+//    if (obj == null) {
+//      return null;
+//    }
+//    if (obj instanceof List) {
+//      return convertToComparableList((List) obj, convertFunction);
+//    }
+//    if (obj instanceof ComparableList) {
+//      return convertToComparableList(((ComparableList) obj).getDelegate(), convertFunction);
+//    }
+//    if (obj instanceof Object[]) {
+//      final List<T> delegateList = new ArrayList<>();
+//      for (Object eachObj : (Object[]) obj) {
+//        delegateList.add(convertFunction.apply(eachObj));
+//      }
+//      return new ComparableList(delegateList);
+//    }
+//    throw new ISE(
+//        "Unable to convert object of type[%s] to [%s]",
+//        obj.getClass().getName(),
+//        ComparableList.class.getName()
+//    );
+
     if (obj == null) {
       return null;
-    }
-    if (obj instanceof List) {
-      return convertToComparableList((List) obj, convertFunction);
-    }
-    if (obj instanceof ComparableList) {
-      return convertToComparableList(((ComparableList) obj).getDelegate(), convertFunction);
-    }
-    if (obj instanceof Object[]) {
-      final List<T> delegateList = new ArrayList<>();
-      for (Object eachObj : (Object[]) obj) {
-        delegateList.add(convertFunction.apply(eachObj));
-      }
-      return new ComparableList(delegateList);
-    }
-    throw new ISE(
-        "Unable to convert object of type[%s] to [%s]",
-        obj.getClass().getName(),
-        ComparableList.class.getName()
-    );
-  }
-
-  @Nonnull
-  private static <T> ComparableList convertToComparableList(List obj, Function<Object, T> convertFunction)
-  {
-    final List<T> delegateList = new ArrayList<>();
-    for (Object eachObj : obj) {
-      delegateList.add(convertFunction.apply(eachObj));
-    }
-    return new ComparableList(delegateList);
-  }
-
-
-  @Nullable
-  public static ComparableStringArray convertToComparableStringArray(Object obj)
-  {
-    if (obj == null) {
-      return null;
-    }
-    if (obj instanceof ComparableStringArray) {
-      return (ComparableStringArray) obj;
     }
     // Jackson converts the serialized array into a list. Converting it back to a string array
     if (obj instanceof List) {
-      String[] delegate = new String[((List) obj).size()];
-      for (int i = 0; i < delegate.length; i++) {
-        delegate[i] = convertObjectToString(((List) obj).get(i));
+      Object[] retVal = new Object[((List) obj).size()];
+      for (int i = 0; i < retVal.length; i++) {
+        retVal[i] = coercionFunction.apply(((List) obj).get(i));
       }
-      return ComparableStringArray.of(delegate);
+      return retVal;
     }
     if (obj instanceof Object[]) {
       Object[] objects = (Object[]) obj;
-      String[] delegate = new String[objects.length];
+      Object[] retVal = new Object[objects.length];
       for (int i = 0; i < objects.length; i++) {
-        delegate[i] = convertObjectToString(objects[i]);
+        retVal[i] = convertObjectToString(objects[i]);
       }
-      return ComparableStringArray.of(delegate);
+      return retVal;
     }
     throw new ISE(
         "Unable to convert object of type[%s] to [%s]",
         obj.getClass().getName(),
         ComparableStringArray.class.getName()
     );
+
+  }
+
+  @Nullable
+  public static Object[] coerceToStringArray(Object obj)
+  {
+    return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToString);
   }
 
   public static int compareObjectsAsType(
@@ -514,26 +503,27 @@ public final class DimensionHandlerUtils
   )
   {
     //noinspection unchecked
-    return Comparators.<Comparable>naturalNullsFirst().compare(
-        convertObjectToType(lhs, type),
-        convertObjectToType(rhs, type)
-    );
+    return ComparisonUtils
+        .getComparatorForType(type)
+        .compare(convertObjectToType(lhs, type), convertObjectToType(rhs, type));
   }
 
+  // TODO(laksh): Explain why coercion is needed
   @Nullable
-  public static Comparable<?> convertObjectToType(@Nullable final Object obj, final TypeSignature<ValueType> type)
+  public static Object convertObjectToType(@Nullable final Object obj, final TypeSignature<ValueType> type)
   {
     return convertObjectToType(obj, Preconditions.checkNotNull(type, "type"), false);
   }
 
-  public static Function<Object, Comparable<?>> converterFromTypeToType(
+  // TODO(laksh): TopN specific method
+  public static Function<Object, Object> converterFromTypeToType(
       final TypeSignature<ValueType> fromType,
       final TypeSignature<ValueType> toType
   )
   {
     if (Objects.equals(fromType, toType)) {
       //noinspection unchecked
-      return (Function) Function.identity();
+      return Function.identity();
     } else {
       return obj -> convertObjectToType(obj, toType);
     }

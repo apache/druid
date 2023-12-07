@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public abstract class ArrayNumericGroupByColumnSelectorStrategy<T extends Comparable>
+public abstract class ArrayNumericGroupByColumnSelectorStrategy<T>
     implements GroupByColumnSelectorStrategy
 {
   protected static final int GROUP_BY_MISSING_VALUE = -1;

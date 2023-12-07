@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.ComparisonUtils;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
@@ -336,7 +337,7 @@ public class RowBasedGrouperHelper
 
       columnSelectorRow.set(row);
 
-      final Comparable[] key = new Comparable[keySize];
+      final Object[] key = new Object[keySize];
       valueExtractFn.apply(row, key);
 
       final AggregateResult aggregateResult = grouper.aggregate(new RowBasedKey(key));
@@ -498,7 +499,7 @@ public class RowBasedGrouperHelper
 
   private interface ValueExtractFunction
   {
-    Comparable[] apply(ResultRow row, Comparable[] key);
+    Object[] apply(ResultRow row, Object[] key);
   }
 
   private static ValueExtractFunction makeValueExtractFunction(
@@ -513,10 +514,10 @@ public class RowBasedGrouperHelper
                                                         makeTimestampExtractFunction(query, combining) :
                                                         null;
 
-    final Function<Comparable, Comparable>[] valueConvertFns = makeValueConvertFunctions(valueTypes);
+    final Function<Object, Object>[] valueConvertFns = makeValueConvertFunctions(valueTypes);
 
     if (!combining) {
-      final Supplier<Comparable>[] inputRawSuppliers = getValueSuppliersForDimensions(
+      final Supplier<Object>[] inputRawSuppliers = getValueSuppliersForDimensions(
           columnSelectorFactory,
           query.getDimensions()
       );
@@ -525,7 +526,7 @@ public class RowBasedGrouperHelper
         return (row, key) -> {
           key[0] = timestampExtractFn.apply(row);
           for (int i = 1; i < key.length; i++) {
-            final Comparable val = inputRawSuppliers[i - 1].get();
+            final Object val = inputRawSuppliers[i - 1].get();
             key[i] = valueConvertFns[i - 1].apply(val);
           }
           return key;
@@ -533,7 +534,7 @@ public class RowBasedGrouperHelper
       } else {
         return (row, key) -> {
           for (int i = 0; i < key.length; i++) {
-            final Comparable val = inputRawSuppliers[i].get();
+            final Object val = inputRawSuppliers[i].get();
             key[i] = valueConvertFns[i].apply(val);
           }
           return key;
@@ -546,7 +547,7 @@ public class RowBasedGrouperHelper
         return (row, key) -> {
           key[0] = timestampExtractFn.apply(row);
           for (int i = 1; i < key.length; i++) {
-            final Comparable val = (Comparable) row.get(dimensionStartPosition + i - 1);
+            final Object val = row.get(dimensionStartPosition + i - 1);
             key[i] = valueConvertFns[i - 1].apply(val);
           }
           return key;
@@ -554,7 +555,7 @@ public class RowBasedGrouperHelper
       } else {
         return (row, key) -> {
           for (int i = 0; i < key.length; i++) {
-            final Comparable val = (Comparable) row.get(dimensionStartPosition + i);
+            final Object val = row.get(dimensionStartPosition + i);
             key[i] = valueConvertFns[i].apply(val);
           }
           return key;
@@ -718,14 +719,14 @@ public class RowBasedGrouperHelper
 
   private interface InputRawSupplierColumnSelectorStrategy<ValueSelectorType> extends ColumnSelectorStrategy
   {
-    Supplier<Comparable> makeInputRawSupplier(ValueSelectorType selector);
+    Supplier<Object> makeInputRawSupplier(ValueSelectorType selector);
   }
 
   private static class StringInputRawSupplierColumnSelectorStrategy
       implements InputRawSupplierColumnSelectorStrategy<DimensionSelector>
   {
     @Override
-    public Supplier<Comparable> makeInputRawSupplier(DimensionSelector selector)
+    public Supplier<Object> makeInputRawSupplier(DimensionSelector selector)
     {
       return () -> {
         IndexedInts index = selector.getRow();
@@ -762,7 +763,7 @@ public class RowBasedGrouperHelper
             case STRING:
               return (InputRawSupplierColumnSelectorStrategy<ColumnValueSelector>)
                   columnSelector ->
-                      () -> DimensionHandlerUtils.convertToComparableStringArray(columnSelector.getObject());
+                      () -> DimensionHandlerUtils.coerceToStringArray(columnSelector.getObject());
             case FLOAT:
             case LONG:
             case DOUBLE:
@@ -783,7 +784,7 @@ public class RowBasedGrouperHelper
   }
 
   @SuppressWarnings("unchecked")
-  private static Supplier<Comparable>[] getValueSuppliersForDimensions(
+  private static Supplier<Object>[] getValueSuppliersForDimensions(
       final ColumnSelectorFactory columnSelectorFactory,
       final List<DimensionSpec> dimensions
   )
@@ -805,11 +806,11 @@ public class RowBasedGrouperHelper
   }
 
   @SuppressWarnings("unchecked")
-  private static Function<Comparable, Comparable>[] makeValueConvertFunctions(
+  private static Function<Object, Object>[] makeValueConvertFunctions(
       final List<ColumnType> valueTypes
   )
   {
-    final Function<Comparable, Comparable>[] functions = new Function[valueTypes.size()];
+    final Function<Object, Object>[] functions = new Function[valueTypes.size()];
     for (int i = 0; i < functions.length; i++) {
       // Subquery post-aggs aren't added to the rowSignature (see rowSignatureFor() in GroupByQueryHelper) because
       // their types aren't known, so default to String handling.
@@ -1048,26 +1049,24 @@ public class RowBasedGrouperHelper
         if (fieldTypes.get(i - dimStart).is(ValueType.DOUBLE)) {
           Object lhs = key1.getKey()[i];
           Object rhs = key2.getKey()[i];
-          cmp = Comparators.<Comparable>naturalNullsFirst().compare(
+          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i - dimStart)).compare(
               lhs != null ? ((Number) lhs).doubleValue() : null,
               rhs != null ? ((Number) rhs).doubleValue() : null
           );
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.STRING_ARRAY)) {
-          final ComparableStringArray lhs = DimensionHandlerUtils.convertToComparableStringArray(key1.getKey()[i]);
-          final ComparableStringArray rhs = DimensionHandlerUtils.convertToComparableStringArray(key2.getKey()[i]);
-          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
+          final Object[] lhs = DimensionHandlerUtils.coerceToStringArray(key1.getKey()[i]);
+          final Object[] rhs = DimensionHandlerUtils.coerceToStringArray(key2.getKey()[i]);
+          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i-dimStart)).compare(lhs, rhs);
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.LONG_ARRAY)
                    || fieldTypes.get(i - dimStart).equals(ColumnType.DOUBLE_ARRAY)) {
-          final ComparableList lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i],
+          final Object[] lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i],
                                                                          fieldTypes.get(i - dimStart).getElementType().getType());
-          final ComparableList rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i],
+          final Object[] rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i],
                                                                          fieldTypes.get(i - dimStart).getElementType().getType());
-          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
+          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i-dimStart)).compare(lhs, rhs);
         } else {
-          cmp = Comparators.<Comparable>naturalNullsFirst().compare(
-              (Comparable) key1.getKey()[i],
-              (Comparable) key2.getKey()[i]
-          );
+          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i - dimStart))
+                               .compare(key1.getKey()[i], key2.getKey()[i]);
         }
         if (cmp != 0) {
           return cmp;
@@ -1130,10 +1129,11 @@ public class RowBasedGrouperHelper
             cmp = Comparators.<Comparable>naturalNullsFirst().compare((Comparable) lhs, (Comparable) rhs);
           }
         } else if (fieldType.equals(ColumnType.STRING_ARRAY)) {
-          cmp = ComparableStringArray.compareWithComparator(
-              comparator,
-              DimensionHandlerUtils.convertToComparableStringArray(lhs),
-              DimensionHandlerUtils.convertToComparableStringArray(rhs)
+          cmp = new ComparisonUtils.ListComparator<String>(
+              comparator == null ? StringComparators.LEXICOGRAPHIC : comparator
+          ).compare(
+              DimensionHandlerUtils.coerceToStringArray(lhs),
+              DimensionHandlerUtils.coerceToStringArray(rhs)
           );
         } else if (fieldType.equals(ColumnType.LONG_ARRAY)
                    || fieldType.equals(ColumnType.DOUBLE_ARRAY)) {
