@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -68,9 +69,10 @@ final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumn
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
-        return Objects.equals(value, getObject());
+        final Object rowValue = getObject();
+        return (includeUnknown && rowValue == null) || Objects.equals(value, rowValue);
       }
 
       @Override
@@ -84,14 +86,17 @@ final class StringTypeMapVirtualColumnDimensionSelector extends MapVirtualColumn
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
+    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
-        return predicate.apply((String) getObject());
+        final String rowValue = (String) getObject();
+        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
+        return (matchNull && rowValue == null) || predicate.apply(rowValue);
       }
 
       @Override

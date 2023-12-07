@@ -72,6 +72,7 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 export interface IngestionSpec {
   readonly type: IngestionType;
   readonly spec: IngestionSpecInner;
+  readonly context?: { taskLockType?: 'APPEND' | 'REPLACE' };
 }
 
 export interface IngestionSpecInner {
@@ -344,6 +345,11 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   spec = deepSetIfUnset(spec, 'type', specType);
   spec = deepSetIfUnset(spec, 'spec.ioConfig.type', specType);
   spec = deepSetIfUnset(spec, 'spec.tuningConfig.type', specType);
+
+  if (spec.context?.taskLockType !== undefined) {
+    spec.context.taskLockType = spec.spec?.ioConfig.appendToExisting ? 'APPEND' : 'REPLACE';
+  }
+
   return spec as IngestionSpec;
 }
 

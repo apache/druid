@@ -23,13 +23,14 @@ import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
@@ -66,7 +67,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
    */
   ValueMatcher makeValueMatcher(@Nullable String value);
 
-  ValueMatcher makeValueMatcher(Predicate<String> predicate);
+  ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory);
 
   /**
    * @deprecated This method is marked as deprecated in DimensionSelector to minimize the probability of accidental
@@ -261,13 +262,21 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       @Override
       public ValueMatcher makeValueMatcher(@Nullable String value)
       {
-        return BooleanValueMatcher.of(value == null);
+        if (NullHandling.isNullOrEquivalent(value)) {
+          return ValueMatchers.allTrue();
+        }
+        return ValueMatchers.allUnknown();
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return BooleanValueMatcher.of(predicate.apply(null));
+        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+        if (predicate.apply(null)) {
+          return ValueMatchers.allTrue();
+        }
+
+        return predicateFactory.isNullInputUnknown() ? ValueMatchers.allUnknown() : ValueMatchers.allFalse();
       }
 
       @Override

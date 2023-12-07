@@ -112,7 +112,12 @@ public class DruidUnionDataSourceRule extends RelOptRule
 
   // Can only do UNION ALL of inputs that have compatible schemas (or schema mappings) and right side
   // is a simple table scan
-  public static boolean isCompatible(final Union unionRel, final DruidRel<?> first, final DruidRel<?> second, @Nullable PlannerContext plannerContext)
+  public static boolean isCompatible(
+      final Union unionRel,
+      final DruidRel<?> first,
+      final DruidRel<?> second,
+      @Nullable PlannerContext plannerContext
+  )
   {
     if (!(second instanceof DruidQueryRel)) {
       return false;

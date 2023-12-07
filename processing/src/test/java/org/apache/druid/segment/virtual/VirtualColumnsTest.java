@@ -20,7 +20,6 @@
 package org.apache.druid.segment.virtual;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -29,6 +28,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.BucketExtractionFn;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -64,7 +64,11 @@ import org.mockito.quality.Strictness;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class VirtualColumnsTest extends InitializedNullHandlingTest
 {
@@ -88,6 +92,26 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     Assert.assertTrue(virtualColumns.exists("foo"));
     Assert.assertTrue(virtualColumns.exists("foo.5"));
     Assert.assertFalse(virtualColumns.exists("bar"));
+  }
+
+  @Test
+  public void testIsEmpty()
+  {
+    assertTrue(VirtualColumns.EMPTY.isEmpty());
+    assertTrue(VirtualColumns.create(Collections.emptyList()).isEmpty());
+  }
+
+  @Test
+  public void testGetColumnNames()
+  {
+    final VirtualColumns virtualColumns = makeVirtualColumns();
+    List<String> colNames = ImmutableList.<String>builder()
+        .add("expr")
+        .add("expr2i")
+        .add("expr2")
+        .add("foo")
+        .build();
+    assertEquals(colNames, virtualColumns.getColumnNames());
   }
 
   @Test
@@ -579,9 +603,9 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
         {
-          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
         }
 
         @Override

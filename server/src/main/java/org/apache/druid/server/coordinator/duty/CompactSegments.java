@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -175,7 +176,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     // Skip all the intervals locked by higher priority tasks for each datasource
     // This must be done after the invalid compaction tasks are cancelled
     // in the loop above so that their intervals are not considered locked
-    getLockedIntervalsToSkip(compactionConfigList).forEach(
+    getLockedIntervals(compactionConfigList).forEach(
         (dataSource, intervals) ->
             intervalsToSkipCompaction
                 .computeIfAbsent(dataSource, ds -> new ArrayList<>())
@@ -247,6 +248,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   /**
    * Gets a List of Intervals locked by higher priority tasks for each datasource.
+   * However, when using a REPLACE lock for compaction, intervals locked with any APPEND lock will not be returned
    * Since compaction tasks submitted for these Intervals would have to wait anyway,
    * we skip these Intervals until the next compaction run.
    * <p>
@@ -254,25 +256,21 @@ public class CompactSegments implements CoordinatorCustomDuty
    * though they lock only a Segment and not the entire Interval. Thus,
    * a compaction task will not be submitted for an Interval if
    * <ul>
-   *   <li>either the whole Interval is locked by a higher priority Task</li>
+   *   <li>either the whole Interval is locked by a higher priority Task with an incompatible lock type</li>
    *   <li>or there is atleast one Segment in the Interval that is locked by a
    *   higher priority Task</li>
    * </ul>
    */
-  private Map<String, List<Interval>> getLockedIntervalsToSkip(
+  private Map<String, List<Interval>> getLockedIntervals(
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    final Map<String, Integer> minTaskPriority = compactionConfigs
+    final List<LockFilterPolicy> lockFilterPolicies = compactionConfigs
         .stream()
-        .collect(
-            Collectors.toMap(
-                DataSourceCompactionConfig::getDataSource,
-                DataSourceCompactionConfig::getTaskPriority
-            )
-        );
+        .map(config -> new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), config.getTaskContext()))
+        .collect(Collectors.toList());
     final Map<String, List<Interval>> datasourceToLockedIntervals =
-        new HashMap<>(FutureUtils.getUnchecked(overlordClient.findLockedIntervals(minTaskPriority), true));
+        new HashMap<>(FutureUtils.getUnchecked(overlordClient.findLockedIntervals(lockFilterPolicies), true));
     LOG.debug(
         "Skipping the following intervals for Compaction as they are currently locked: %s",
         datasourceToLockedIntervals

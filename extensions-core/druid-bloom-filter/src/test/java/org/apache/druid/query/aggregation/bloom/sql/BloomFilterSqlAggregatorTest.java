@@ -47,10 +47,10 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -125,7 +125,8 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT\n"
-        + "BLOOM_FILTER(dim1, 1000)\n"
+        + "BLOOM_FILTER(dim1, 1000),\n"
+        + "BLOOM_FILTER(dim1, CAST(1000 AS INTEGER))\n"
         + "FROM numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -145,7 +146,10 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{queryFramework().queryJsonMapper().writeValueAsString(expected1)}
+            new Object[]{
+                queryFramework().queryJsonMapper().writeValueAsString(expected1),
+                queryFramework().queryJsonMapper().writeValueAsString(expected1)
+            }
         )
     );
   }

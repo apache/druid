@@ -22,8 +22,8 @@ package org.apache.druid.msq.querykit.scan;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
@@ -41,38 +41,51 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /**
  * A {@link FrameProcessor} that reads one {@link Frame} at a time from a particular segment, writes them
@@ -80,13 +93,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 {
+  private static final Logger log = new Logger(ScanQueryFrameProcessor.class);
   private final ScanQuery query;
   private final AtomicLong runningCountForLimit;
+  private final ObjectMapper jsonMapper;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
 
-  private long rowsOutput = 0;
   private Cursor cursor;
   private Segment segment;
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
@@ -95,25 +109,23 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
   public ScanQueryFrameProcessor(
       final ScanQuery query,
-      final ReadableInput baseInput,
-      final Int2ObjectMap<ReadableInput> sideChannels,
-      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       @Nullable final AtomicLong runningCountForLimit,
-      final long memoryReservedForBroadcastJoin,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final ReadableInput baseInput,
+      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
   )
   {
     super(
-        query,
         baseInput,
-        sideChannels,
+        segmentMapFn,
         outputChannelHolder,
-        frameWriterFactoryHolder,
-        memoryReservedForBroadcastJoin
+        frameWriterFactoryHolder
     );
     this.query = query;
     this.runningCountForLimit = runningCountForLimit;
+    this.jsonMapper = jsonMapper;
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
 
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
@@ -130,7 +142,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
 
@@ -140,7 +152,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
     if (runningCountForLimit != null
         && runningCountForLimit.get() > query.getScanRowsOffset() + query.getScanRowsLimit()) {
-      return ReturnOrAwait.returnObject(rowsOutput);
+      return ReturnOrAwait.returnObject(Unit.instance());
     }
 
     return super.runIncrementally(readableInputs);
@@ -154,8 +166,83 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     closer.close();
   }
 
+  public static Sequence<Object[]> mappingFunction(Sequence<ScanResultValue> inputSequence)
+  {
+    return inputSequence.flatMap(resultRow -> {
+      List<List<Object>> events = (List<List<Object>>) resultRow.getEvents();
+      return Sequences.simple(events);
+    }).map(List::toArray);
+  }
+
+  /**
+   * Prepares the scan query to be sent to a data server.
+   * If the query contains a non-time ordering, removes the ordering and limit, as the native query stack does not
+   * support it.
+   */
+  private static ScanQuery prepareScanQueryForDataServer(@NotNull ScanQuery scanQuery)
+  {
+    if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
+      return Druids.ScanQueryBuilder.copy(scanQuery)
+                                    .orderBy(ImmutableList.of())
+                                    .limit(0)
+                                    .build();
+    } else {
+      return scanQuery;
+    }
+  }
+
   @Override
-  protected ReturnOrAwait<Long> runWithSegment(final SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithLoadedSegment(final SegmentWithDescriptor segment) throws IOException
+  {
+    if (cursor == null) {
+      ScanQuery preparedQuery = prepareScanQueryForDataServer(query);
+      final Pair<LoadedSegmentDataProvider.DataServerQueryStatus, Yielder<Object[]>> statusSequencePair =
+          segment.fetchRowsFromDataServer(
+              preparedQuery,
+              ScanQueryFrameProcessor::mappingFunction,
+              closer
+          );
+      if (LoadedSegmentDataProvider.DataServerQueryStatus.HANDOFF.equals(statusSequencePair.lhs)) {
+        log.info("Segment[%s] was handed off, falling back to fetching the segment from deep storage.",
+                 segment.getDescriptor());
+        return runWithSegment(segment);
+      }
+
+      RowSignature rowSignature = ScanQueryKit.getAndValidateSignature(preparedQuery, jsonMapper);
+      Pair<Cursor, Closeable> cursorFromIterable = IterableRowsCursorHelper.getCursorFromYielder(
+          statusSequencePair.rhs,
+          rowSignature
+      );
+
+      closer.register(cursorFromIterable.rhs);
+      final Yielder<Cursor> cursorYielder = Yielders.each(Sequences.simple(ImmutableList.of(cursorFromIterable.lhs)));
+
+      if (cursorYielder.isDone()) {
+        // No cursors!
+        cursorYielder.close();
+        return ReturnOrAwait.returnObject(Unit.instance());
+      } else {
+        final long rowsFlushed = setNextCursor(cursorYielder.get(), null);
+        assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
+        closer.register(cursorYielder);
+      }
+    }
+
+    populateFrameWriterAndFlushIfNeededWithExceptionHandling();
+
+    if (cursor.isDone()) {
+      flushFrameWriter();
+    }
+
+    if (cursor.isDone() && (frameWriter == null || frameWriter.getNumRows() == 0)) {
+      return ReturnOrAwait.returnObject(Unit.instance());
+    } else {
+      return ReturnOrAwait.runAgain();
+    }
+  }
+
+  @Override
+  protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
@@ -170,7 +257,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       if (cursorYielder.isDone()) {
         // No cursors!
         cursorYielder.close();
-        return ReturnOrAwait.returnObject(rowsOutput);
+        return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         final long rowsFlushed = setNextCursor(cursorYielder.get(), segmentHolder.get());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
@@ -185,14 +272,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
 
     if (cursor.isDone() && (frameWriter == null || frameWriter.getNumRows() == 0)) {
-      return ReturnOrAwait.returnObject(rowsOutput);
+      return ReturnOrAwait.returnObject(Unit.instance());
     } else {
       return ReturnOrAwait.runAgain();
     }
   }
 
   @Override
-  protected ReturnOrAwait<Long> runWithInputChannel(
+  protected ReturnOrAwait<Unit> runWithInputChannel(
       final ReadableFrameChannel inputChannel,
       final FrameReader inputFrameReader
   ) throws IOException
@@ -217,7 +304,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         }
       } else if (inputChannel.isFinished()) {
         flushFrameWriter();
-        return ReturnOrAwait.returnObject(rowsOutput);
+        return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.awaitAll(inputChannels().size());
       }
@@ -296,7 +383,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
       frameWriter.close();
       frameWriter = null;
-      rowsOutput += frame.numRows();
       return frame.numRows();
     } else {
       if (frameWriter != null) {
@@ -326,6 +412,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       return new ExternalColumnSelectorFactory(
           baseColumnSelectorFactory,
           ((ExternalSegment) segment).externalInputSource(),
+          ((ExternalSegment) segment).signature(),
           cursorOffset
       );
     }

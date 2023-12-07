@@ -84,6 +84,7 @@ public class StringConstantValueMatcherFactory implements ColumnProcessorFactory
   )
   {
     // this is gonna fail because SelectorPredicateFactory does not implement array predicate...
+    // let it happen anyway to bubble up standard error messaging about predicate not supporting arrays
     return new PredicateValueMatcherFactory(
         new SelectorPredicateFactory(matchValue)
     ).makeArrayProcessor(selector, columnCapabilities);

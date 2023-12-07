@@ -20,9 +20,11 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -34,7 +36,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
@@ -48,7 +50,6 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
@@ -216,9 +217,9 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+        public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
         {
-          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
         }
 
         @Nullable
@@ -279,13 +280,15 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
         {
           if (extractionFn == null) {
             final int valueId = super.lookupId(value);
+            final int nullId = super.lookupId(null);
             if (valueId >= 0) {
               return new ValueMatcher()
               {
                 @Override
-                public boolean matches()
+                public boolean matches(boolean includeUnknown)
                 {
-                  return getRowValue() == valueId;
+                  final int rowId = getRowValue();
+                  return (includeUnknown && rowId == nullId) || rowId == valueId;
                 }
 
                 @Override
@@ -295,32 +298,55 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
                 }
               };
             } else {
-              return BooleanValueMatcher.of(false);
+              // no nulls, and value isn't in column, we can safely optimize to 'allFalse'
+              if (nullId < 0) {
+                return ValueMatchers.allFalse();
+              }
+              return new ValueMatcher()
+              {
+                @Override
+                public boolean matches(boolean includeUnknown)
+                {
+                  if (includeUnknown && getRowValue() == 0) {
+                    return true;
+                  }
+                  return false;
+                }
+
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
+                  inspector.visit("column", StringUtf8DictionaryEncodedColumn.this);
+                }
+              };
             }
           } else {
             // Employ caching BitSet optimization
-            return makeValueMatcher(Predicates.equalTo(value));
+            return makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(value));
           }
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
         {
           final BitSet checkedIds = new BitSet(getCardinality());
           final BitSet matchingIds = new BitSet(getCardinality());
+          final Predicate<String> predicate = predicateFactory.makeStringPredicate();
 
           // Lazy matcher; only check an id if matches() is called.
           return new ValueMatcher()
           {
             @Override
-            public boolean matches()
+            public boolean matches(boolean includeUnknown)
             {
               final int id = getRowValue();
 
               if (checkedIds.get(id)) {
                 return matchingIds.get(id);
               } else {
-                final boolean matches = predicate.apply(lookupName(id));
+                final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
+                final String rowValue = lookupName(id);
+                final boolean matches = (matchNull && rowValue == null) || predicate.apply(rowValue);
                 checkedIds.set(id);
                 if (matches) {
                   matchingIds.set(id);
@@ -772,14 +798,14 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
 
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
         IndexedInts ithRow = vector[i];
-        if (ithRow.size() == 0) {
+        final int size = ithRow.size();
+        if (size == 0) {
           strings[i] = null;
-        } else if (ithRow.size() == 1) {
+        } else if (size == 1) {
           strings[i] = lookupName(ithRow.get(0));
         } else {
-          List<String> row = new ArrayList<>(ithRow.size());
-          // noinspection SSBasedInspection
-          for (int j = 0; j < ithRow.size(); j++) {
+          List<String> row = Lists.newArrayListWithCapacity(size);
+          for (int j = 0; j < size; j++) {
             row.add(lookupName(ithRow.get(j)));
           }
           strings[i] = row;

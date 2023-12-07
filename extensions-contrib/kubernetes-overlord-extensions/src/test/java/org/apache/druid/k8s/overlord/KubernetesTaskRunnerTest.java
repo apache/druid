@@ -221,10 +221,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     TaskStatus taskStatus = TaskStatus.success(task.getId());
 
     EasyMock.expect(taskAdapter.fromTask(task)).andReturn(job);
+    EasyMock.expect(taskAdapter.shouldUseDeepStorageForTaskPayload(task)).andReturn(false);
     EasyMock.expect(kubernetesPeonLifecycle.run(
         EasyMock.eq(job),
         EasyMock.anyLong(),
-        EasyMock.anyLong()
+        EasyMock.anyLong(),
+        EasyMock.anyBoolean()
     )).andReturn(taskStatus);
 
     replayAll();
@@ -256,10 +258,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         .build();
 
     EasyMock.expect(taskAdapter.fromTask(task)).andReturn(job);
+    EasyMock.expect(taskAdapter.shouldUseDeepStorageForTaskPayload(task)).andReturn(false);
     EasyMock.expect(kubernetesPeonLifecycle.run(
         EasyMock.eq(job),
         EasyMock.anyLong(),
-        EasyMock.anyLong()
+        EasyMock.anyLong(),
+        EasyMock.anyBoolean()
     )).andThrow(new IllegalStateException());
 
     replayAll();

@@ -193,7 +193,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
             config.getTaskLaunchTimeout().toStandardDuration().getMillis(),
-            config.getTaskTimeout().toStandardDuration().getMillis()
+            config.getTaskTimeout().toStandardDuration().getMillis(),
+            adapter.shouldUseDeepStorageForTaskPayload(task)
         );
       } else {
         taskStatus = peonLifecycle.join(

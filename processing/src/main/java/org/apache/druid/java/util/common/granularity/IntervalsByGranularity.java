@@ -52,7 +52,7 @@ public class IntervalsByGranularity
   }
 
   /**
-   * @return The intervals according the granularity. The intervals are provided in
+   * @return The intervals according to the granularity. The intervals are provided in
    * order according to Comparators.intervalsByStartThenEnd()
    */
   public Iterator<Interval> granularityIntervalsIterator()

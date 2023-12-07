@@ -25,6 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
@@ -34,7 +35,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -51,16 +51,17 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -87,7 +88,6 @@ import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -96,7 +96,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
@@ -110,9 +109,10 @@ public class MSQSelectTest extends MSQTestBase
   public static final Map<String, Object> QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 
@@ -122,7 +122,7 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 
@@ -224,7 +224,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{2, 2, 2} : new long[]{6})
+                .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
@@ -287,7 +289,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1L, 2L} : new long[]{3L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L} : new long[]{1L}),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -342,15 +346,16 @@ public class MSQSelectTest extends MSQTestBase
             CounterSnapshotMatcher
                 .with().totalFiles(1),
             0, 0, "input0"
-        )
-        .setExpectedCountersForStageWorkerChannel(
+        ).setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{2, 2, 2} : new long[]{6})
+                .frames(isPageSizeLimited() ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
@@ -767,7 +772,7 @@ public class MSQSelectTest extends MSQTestBase
                                                DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
                                                DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
                                            ),
-                                           JoinType.LEFT
+                                           NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -792,7 +797,11 @@ public class MSQSelectTest extends MSQTestBase
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
-            ImmutableList.of(
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of(
+                new Object[]{"xabc", 1L}
+            )
+            : ImmutableList.of(
                 new Object[]{NullHandling.defaultStringValue(), 3L},
                 new Object[]{"xabc", 1L}
             )
@@ -1248,7 +1257,7 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
-  public void testExternSelect1() throws IOException
+  public void testExternGroupBy() throws IOException
   {
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
@@ -1262,7 +1271,12 @@ public class MSQSelectTest extends MSQTestBase
         GroupByQuery.builder()
                     .setDataSource(
                         new ExternalDataSource(
-                            new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile())),
+                            new LocalInputSource(
+                                null,
+                                null,
+                                ImmutableList.of(toRead.getAbsoluteFile()),
+                                SystemFields.none()
+                            ),
                             new JsonInputFormat(null, null, null, null, null),
                             RowSignature.builder()
                                         .add("timestamp", ColumnType.STRING)
@@ -1332,6 +1346,158 @@ public class MSQSelectTest extends MSQTestBase
             0, 0, "shuffle"
         )
         .verifyResults();
+  }
+
+
+  @Test
+  public void testExternSelectWithMultipleWorkers() throws IOException
+  {
+    Map<String, Object> multipleWorkerContext = new HashMap<>(context);
+    multipleWorkerContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 3);
+
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("user", ColumnType.STRING)
+                                            .build();
+
+    final ScanQuery expectedQuery =
+        newScanQueryBuilder().dataSource(
+                                 new ExternalDataSource(
+                                     new LocalInputSource(
+                                         null,
+                                         null,
+                                         ImmutableList.of(
+                                             toRead.getAbsoluteFile(),
+                                             toRead.getAbsoluteFile()
+                                         ),
+                                         SystemFields.none()
+                                     ),
+                                     new JsonInputFormat(null, null, null, null, null),
+                                     RowSignature.builder()
+                                                 .add("timestamp", ColumnType.STRING)
+                                                 .add("page", ColumnType.STRING)
+                                                 .add("user", ColumnType.STRING)
+                                                 .build()
+                                 )
+                             ).eternityInterval().virtualColumns(
+                                 new ExpressionVirtualColumn(
+                                     "v0",
+                                     "timestamp_floor(timestamp_parse(\"timestamp\",null,'UTC'),'P1D',null,'UTC')",
+                                     ColumnType.LONG,
+                                     CalciteTests.createExprMacroTable()
+                                 )
+                             ).columns("user", "v0").filters(new LikeDimFilter("user", "%ot%", null, null))
+                             .context(defaultScanQueryContext(multipleWorkerContext, RowSignature.builder()
+                                                                                                 .add(
+                                                                                                     "user",
+                                                                                                     ColumnType.STRING
+                                                                                                 )
+                                                                                                 .add(
+                                                                                                     "v0",
+                                                                                                     ColumnType.LONG
+                                                                                                 )
+                                                                                                 .build()))
+                             .build();
+
+    SelectTester selectTester = testSelectQuery()
+        .setSql("SELECT\n"
+                + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                + "  user\n"
+                + "FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [" + toReadAsJson + "," + toReadAsJson + "],\"type\":\"local\"}',\n"
+                + "    '{\"type\": \"json\"}',\n"
+                + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                + "  )\n"
+                + ") where user like '%ot%'")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(multipleWorkerContext)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "Beau.bot"},
+            new Object[]{1466985600000L, "Beau.bot"},
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "TaxonBot"},
+            new Object[]{1466985600000L, "TaxonBot"},
+            new Object[]{1466985600000L, "GiftBot"},
+            new Object[]{1466985600000L, "GiftBot"}
+        ))
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("v0", "__time"),
+                        new ColumnMapping("user", "user")
+                    )
+                ))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .destination(isDurableStorageDestination()
+                             ? DurableStorageMSQDestination.INSTANCE
+                             : TaskReportMSQDestination.INSTANCE)
+                .build()
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
+            0, 0, "shuffle"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+            0, 1, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5).frames(1),
+            0, 1, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited() ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
+            0, 1, "shuffle"
+        );
+    // adding result stage counter checks
+    if (isPageSizeLimited()) {
+      selectTester.setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(2, 0, 2, 0, 2),
+          1, 0, "input0"
+      ).setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(2, 0, 2, 0, 2),
+          1, 0, "output"
+      ).setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(0, 2, 0, 2),
+          1, 1, "input0"
+      ).setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(0, 2, 0, 2),
+          1, 1, "output"
+      );
+    }
+    selectTester.verifyResults();
   }
 
   @Test
@@ -1448,7 +1614,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited() ? new long[]{1, 2} : new long[]{3})
+                .frames(isPageSizeLimited() ? new long[]{1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .verifyResults();
@@ -1669,14 +1837,14 @@ public class MSQSelectTest extends MSQTestBase
                                                               )
                                                           )
                                                       )
-                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
-                                                          "a0")))
+                                                      .setAggregatorSpecs(
+                                                          aggregators(new CountAggregatorFactory("a0"))
+                                                      )
                                                       .setPostAggregatorSpecs(
-                                                          ImmutableList.of(new ExpressionPostAggregator(
-                                                                               "p0",
-                                                                               "mv_to_array(\"d0\")",
-                                                                               null, ExprMacroTable.nil()
-                                                                           )
+                                                          expressionPostAgg(
+                                                              "p0",
+                                                              "mv_to_array(\"d0\")",
+                                                              ColumnType.STRING_ARRAY
                                                           )
                                                       )
                                                       .setContext(localContext)
@@ -1798,7 +1966,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedValidationErrorMatcher(
             new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
                 .expectMessageIs(
-                    "Query planning failed for unknown reason, our best guess is this "
+                    "Query could not be planned. A possible reason is "
                     + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
                     + "but the table queried doesn't contain a __time column.  "
                     + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"
@@ -1929,8 +2097,8 @@ public class MSQSelectTest extends MSQTestBase
                                        new ColumnMappings(ImmutableList.of(
                                            new ColumnMapping("d0", "cnt"),
                                            new ColumnMapping("a0", "cnt1")
-                                       )
                                        ))
+                                   )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
                                                 ? DurableStorageMSQDestination.INSTANCE
@@ -1987,7 +2155,12 @@ public class MSQSelectTest extends MSQTestBase
                 .builder()
                 .query(newScanQueryBuilder()
                            .dataSource(new ExternalDataSource(
-                               new LocalInputSource(null, null, Collections.nCopies(numFiles, toRead)),
+                               new LocalInputSource(
+                                   null,
+                                   null,
+                                   Collections.nCopies(numFiles, toRead),
+                                   SystemFields.none()
+                               ),
                                new CsvInputFormat(null, null, null, true, 0),
                                RowSignature.builder().add("timestamp", ColumnType.STRING).build()
                            ))
@@ -2060,11 +2233,10 @@ public class MSQSelectTest extends MSQTestBase
                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                 .setGranularity(Granularities.ALL)
                                 .setPostAggregatorSpecs(
-                                    ImmutableList.of(new ExpressionPostAggregator(
-                                                         "a0",
-                                                         "1",
-                                                         null, ExprMacroTable.nil()
-                                                     )
+                                    expressionPostAgg(
+                                        "a0",
+                                        "1",
+                                        ColumnType.LONG
                                     )
                                 )
                                 .build()
@@ -2322,7 +2494,64 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Nonnull
+  @Test
+  public void testUnionAllUsingUnionDataSource()
+  {
+
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .build();
+
+    final List<Object[]> results = ImmutableList.of(
+        new Object[]{946684800000L, ""},
+        new Object[]{946684800000L, ""},
+        new Object[]{946771200000L, "10.1"},
+        new Object[]{946771200000L, "10.1"},
+        new Object[]{946857600000L, "2"},
+        new Object[]{946857600000L, "2"},
+        new Object[]{978307200000L, "1"},
+        new Object[]{978307200000L, "1"},
+        new Object[]{978393600000L, "def"},
+        new Object[]{978393600000L, "def"},
+        new Object[]{978480000000L, "abc"},
+        new Object[]{978480000000L, "abc"}
+    );
+    // This plans the query using DruidUnionDataSourceRule since the DruidUnionDataSourceRule#isCompatible
+    // returns true (column names, types match, and it is a union on the table data sources).
+    // It gets planned correctly, however MSQ engine cannot plan the query correctly
+    testSelectQuery()
+        .setSql("SELECT __time, dim1 FROM foo\n"
+                + "UNION ALL\n"
+                + "SELECT __time, dim1 FROM foo\n")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(new UnionDataSource(
+                                  ImmutableList.of(new TableDataSource("foo"), new TableDataSource("foo"))
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .legacy(false)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  rowSignature
+                              ))
+                              .columns(ImmutableList.of("__time", "dim1"))
+                              .build())
+                   .columnMappings(ColumnMappings.identity(rowSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination()
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(results)
+        .verifyResults();
+  }
+
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2341,7 +2570,6 @@ public class MSQSelectTest extends MSQTestBase
     return expected;
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2370,5 +2598,10 @@ public class MSQSelectTest extends MSQTestBase
   public boolean isDurableStorageDestination()
   {
     return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName) || QUERY_RESULTS_WITH_DEFAULT_CONTEXT.equals(context);
+  }
+
+  public boolean isPageSizeLimited()
+  {
+    return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName);
   }
 }

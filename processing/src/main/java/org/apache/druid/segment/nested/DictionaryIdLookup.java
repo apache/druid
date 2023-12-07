@@ -24,7 +24,6 @@ import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -57,28 +56,35 @@ import java.util.EnumSet;
 public final class DictionaryIdLookup implements Closeable
 {
   private final String name;
+  private final Path tempBasePath;
+
   @Nullable
   private final DictionaryWriter<String> stringDictionaryWriter;
+  private Path stringDictionaryFile = null;
   private SmooshedFileMapper stringBufferMapper = null;
   private Indexed<ByteBuffer> stringDictionary = null;
 
   @Nullable
   private final DictionaryWriter<Long> longDictionaryWriter;
+  private Path longDictionaryFile = null;
   private MappedByteBuffer longBuffer = null;
   private FixedIndexed<Long> longDictionary = null;
 
   @Nullable
   private final DictionaryWriter<Double> doubleDictionaryWriter;
+  private Path doubleDictionaryFile = null;
   MappedByteBuffer doubleBuffer = null;
   FixedIndexed<Double> doubleDictionary = null;
 
   @Nullable
   private final DictionaryWriter<int[]> arrayDictionaryWriter;
+  private Path arrayDictionaryFile = null;
   private MappedByteBuffer arrayBuffer = null;
   private FrontCodedIntArrayIndexed arrayDictionary = null;
 
   public DictionaryIdLookup(
       String name,
+      Path tempBasePath,
       @Nullable DictionaryWriter<String> stringDictionaryWriter,
       @Nullable DictionaryWriter<Long> longDictionaryWriter,
       @Nullable DictionaryWriter<Double> doubleDictionaryWriter,
@@ -86,6 +92,7 @@ public final class DictionaryIdLookup implements Closeable
   )
   {
     this.name = name;
+    this.tempBasePath = tempBasePath;
     this.stringDictionaryWriter = stringDictionaryWriter;
     this.longDictionaryWriter = longDictionaryWriter;
     this.doubleDictionaryWriter = doubleDictionaryWriter;
@@ -99,16 +106,20 @@ public final class DictionaryIdLookup implements Closeable
       // for strings because of this. if other type dictionary writers could potentially use multiple internal files
       // in the future, we should transition them to using this approach as well (or build a combination smoosher and
       // mapper so that we can have a mutable smoosh)
-      File stringSmoosh = FileUtils.createTempDir(name + "__stringTempSmoosh");
+      File stringSmoosh = FileUtils.createTempDirInLocation(tempBasePath, StringUtils.urlEncode(name) + "__stringTempSmoosh");
+      stringDictionaryFile = stringSmoosh.toPath();
       final String fileName = NestedCommonFormatColumnSerializer.getInternalFileName(
           name,
           NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
       );
-      final FileSmoosher smoosher = new FileSmoosher(stringSmoosh);
-      try (final SmooshedWriter writer = smoosher.addWithSmooshedWriter(
-          fileName,
-          stringDictionaryWriter.getSerializedSize()
-      )) {
+
+      try (
+          final FileSmoosher smoosher = new FileSmoosher(stringSmoosh);
+          final SmooshedWriter writer = smoosher.addWithSmooshedWriter(
+              fileName,
+              stringDictionaryWriter.getSerializedSize()
+          )
+      ) {
         stringDictionaryWriter.writeTo(writer, smoosher);
         writer.close();
         smoosher.close();
@@ -127,7 +138,7 @@ public final class DictionaryIdLookup implements Closeable
     final byte[] bytes = StringUtils.toUtf8Nullable(value);
     final int index = stringDictionary.indexOf(bytes == null ? null : ByteBuffer.wrap(bytes));
     if (index < 0) {
-      throw DruidException.defensive("Value not found in string dictionary");
+      throw DruidException.defensive("Value not found in column[%s] string dictionary", name);
     }
     return index;
   }
@@ -135,15 +146,15 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupLong(@Nullable Long value)
   {
     if (longDictionary == null) {
-      Path longFile = makeTempFile(name + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME);
-      longBuffer = mapWriter(longFile, longDictionaryWriter);
+      longDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME);
+      longBuffer = mapWriter(longDictionaryFile, longDictionaryWriter);
       longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
       // reset position
       longBuffer.position(0);
     }
     final int index = longDictionary.indexOf(value);
     if (index < 0) {
-      throw DruidException.defensive("Value not found in long dictionary");
+      throw DruidException.defensive("Value not found in column[%s] long dictionary", name);
     }
     return index + longOffset();
   }
@@ -151,15 +162,20 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupDouble(@Nullable Double value)
   {
     if (doubleDictionary == null) {
-      Path doubleFile = makeTempFile(name + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME);
-      doubleBuffer = mapWriter(doubleFile, doubleDictionaryWriter);
-      doubleDictionary = FixedIndexed.read(doubleBuffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Double.BYTES).get();
+      doubleDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME);
+      doubleBuffer = mapWriter(doubleDictionaryFile, doubleDictionaryWriter);
+      doubleDictionary = FixedIndexed.read(
+          doubleBuffer,
+          TypeStrategies.DOUBLE,
+          ByteOrder.nativeOrder(),
+          Double.BYTES
+      ).get();
       // reset position
       doubleBuffer.position(0);
     }
     final int index = doubleDictionary.indexOf(value);
     if (index < 0) {
-      throw DruidException.defensive("Value not found in double dictionary");
+      throw DruidException.defensive("Value not found in column[%s] double dictionary", name);
     }
     return index + doubleOffset();
   }
@@ -167,15 +183,15 @@ public final class DictionaryIdLookup implements Closeable
   public int lookupArray(@Nullable int[] value)
   {
     if (arrayDictionary == null) {
-      Path arrayFile = makeTempFile(name + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME);
-      arrayBuffer = mapWriter(arrayFile, arrayDictionaryWriter);
+      arrayDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME);
+      arrayBuffer = mapWriter(arrayDictionaryFile, arrayDictionaryWriter);
       arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
       // reset position
       arrayBuffer.position(0);
     }
     final int index = arrayDictionary.indexOf(value);
     if (index < 0) {
-      throw DruidException.defensive("Value not found in array dictionary");
+      throw DruidException.defensive("Value not found in column[%s] array dictionary", name);
     }
     return index + arrayOffset();
   }
@@ -209,15 +225,19 @@ public final class DictionaryIdLookup implements Closeable
   {
     if (stringBufferMapper != null) {
       stringBufferMapper.close();
+      deleteTempFile(stringDictionaryFile);
     }
     if (longBuffer != null) {
       ByteBufferUtils.unmap(longBuffer);
+      deleteTempFile(longDictionaryFile);
     }
     if (doubleBuffer != null) {
       ByteBufferUtils.unmap(doubleBuffer);
+      deleteTempFile(doubleDictionaryFile);
     }
     if (arrayBuffer != null) {
       ByteBufferUtils.unmap(arrayBuffer);
+      deleteTempFile(arrayDictionaryFile);
     }
   }
 
@@ -239,7 +259,22 @@ public final class DictionaryIdLookup implements Closeable
   private Path makeTempFile(String name)
   {
     try {
-      return Files.createTempFile(name, ".tmp");
+      return Files.createTempFile(tempBasePath, StringUtils.urlEncode(name), null);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void deleteTempFile(Path path)
+  {
+    try {
+      final File file = path.toFile();
+      if (file.isDirectory()) {
+        FileUtils.deleteDirectory(file);
+      } else {
+        Files.delete(path);
+      }
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -315,7 +350,11 @@ public final class DictionaryIdLookup implements Closeable
       public int addToOffset(long numBytesWritten)
       {
         if (numBytesWritten > bytesLeft()) {
-          throw new ISE("Wrote more bytes[%,d] than available[%,d]. Don't do that.", numBytesWritten, bytesLeft());
+          throw DruidException.defensive(
+              "Wrote more bytes[%,d] than available[%,d]. Don't do that.",
+              numBytesWritten,
+              bytesLeft()
+          );
         }
         currOffset += numBytesWritten;
 

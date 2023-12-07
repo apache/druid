@@ -22,17 +22,24 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import javax.annotation.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,6 +74,50 @@ public class SupervisorManager
   public Set<String> getSupervisorIds()
   {
     return supervisors.keySet();
+  }
+
+  /**
+   * @param datasource Datasource to find active supervisor id with append lock for.
+   * @return An optional with the active appending supervisor id if it exists.
+   */
+  public Optional<String> getActiveSupervisorIdForDatasourceWithAppendLock(String datasource)
+  {
+    for (Map.Entry<String, Pair<Supervisor, SupervisorSpec>> entry : supervisors.entrySet()) {
+      final String supervisorId = entry.getKey();
+      final Supervisor supervisor = entry.getValue().lhs;
+      final SupervisorSpec supervisorSpec = entry.getValue().rhs;
+
+      TaskLockType taskLockType = null;
+      if (supervisorSpec instanceof SeekableStreamSupervisorSpec) {
+        SeekableStreamSupervisorSpec seekableStreamSupervisorSpec = (SeekableStreamSupervisorSpec) supervisorSpec;
+        Map<String, Object> context = seekableStreamSupervisorSpec.getContext();
+        if (context != null) {
+          taskLockType = QueryContexts.getAsEnum(
+              Tasks.TASK_LOCK_TYPE,
+              context.get(Tasks.TASK_LOCK_TYPE),
+              TaskLockType.class
+          );
+        }
+      }
+
+      if (supervisor instanceof SeekableStreamSupervisor
+          && !supervisorSpec.isSuspended()
+          && supervisorSpec.getDataSources().contains(datasource)
+          && TaskLockType.APPEND.equals(taskLockType)) {
+        return Optional.of(supervisorId);
+      }
+    }
+
+    return Optional.absent();
+  }
+
+  public Set<String> getActiveRealtimeSequencePrefixes(String activeSupervisorId)
+  {
+    if (supervisors.containsKey(activeSupervisorId)) {
+      return supervisors.get(activeSupervisorId).lhs.getActiveRealtimeSequencePrefixes();
+    } else {
+      return Collections.emptySet();
+    }
   }
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
@@ -243,6 +294,39 @@ public class SupervisorManager
     }
     catch (Exception e) {
       log.error(e, "Checkpoint request failed");
+    }
+    return false;
+  }
+
+  /**
+   * Registers a new version of the given pending segment on a supervisor. This
+   * allows the supervisor to include the pending segment in queries fired against
+   * that segment version.
+   */
+  public boolean registerNewVersionOfPendingSegmentOnSupervisor(
+      String supervisorId,
+      SegmentIdWithShardSpec basePendingSegment,
+      SegmentIdWithShardSpec newSegmentVersion
+  )
+  {
+    try {
+      Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
+      Preconditions.checkNotNull(basePendingSegment, "rootPendingSegment cannot be null");
+      Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion cannot be null");
+
+      Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+      Preconditions.checkNotNull(supervisor, "supervisor could not be found");
+      if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
+        return false;
+      }
+
+      SeekableStreamSupervisor<?, ?, ?> seekableStreamSupervisor = (SeekableStreamSupervisor<?, ?, ?>) supervisor.lhs;
+      seekableStreamSupervisor.registerNewVersionOfPendingSegment(basePendingSegment, newSegmentVersion);
+      return true;
+    }
+    catch (Exception e) {
+      log.error(e, "PendingSegment[%s] mapping update request to version[%s] on Supervisor[%s] failed",
+                basePendingSegment.asSegmentId(), newSegmentVersion.getVersion(), supervisorId);
     }
     return false;
   }

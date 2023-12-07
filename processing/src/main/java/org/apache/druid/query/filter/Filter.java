@@ -39,8 +39,8 @@ public interface Filter
   /**
    * Returns a {@link BitmapColumnIndex} if this filter supports using a bitmap index for filtering for the given input
    * {@link ColumnIndexSelector}. The {@link BitmapColumnIndex} can be used to compute into a bitmap indicating rows
-   * that match this filter result {@link BitmapColumnIndex#computeBitmapResult(BitmapResultFactory)}, or examine
-   * details about the index prior to computing it, via {@link BitmapColumnIndex#getIndexCapabilities()}.
+   * that match this filter result {@link BitmapColumnIndex#computeBitmapResult(BitmapResultFactory, boolean)}, or
+   * examine details about the index prior to computing it, via {@link BitmapColumnIndex#getIndexCapabilities()}.
    *
    * @param selector Object used to create BitmapColumnIndex
    *
@@ -50,7 +50,7 @@ public interface Filter
   BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector);
 
   /**
-   * Get a ValueMatcher that applies this filter to row values.
+   * Get a {@link ValueMatcher} that applies this filter to row values.
    *
    * @param factory Object used to create ValueMatchers
    *
@@ -59,7 +59,7 @@ public interface Filter
   ValueMatcher makeMatcher(ColumnSelectorFactory factory);
 
   /**
-   * Get a VectorValueMatcher that applies this filter to row vectors.
+   * Get a {@link VectorValueMatcher} that applies this filter to row vectors.
    *
    * @param factory Object used to create ValueMatchers
    *

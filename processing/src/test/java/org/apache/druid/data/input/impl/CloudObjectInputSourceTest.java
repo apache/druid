@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -75,7 +76,7 @@ public class CloudObjectInputSourceTest
   public void testGetUris()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, null)
+        .useConstructor(SCHEME, URIS, null, null, null, SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -89,7 +90,7 @@ public class CloudObjectInputSourceTest
   public void testGetPrefixes()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, PREFIXES, null, null)
+        .useConstructor(SCHEME, null, PREFIXES, null, null, SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -103,7 +104,7 @@ public class CloudObjectInputSourceTest
   public void testGetObjectGlob()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, "**.parquet")
+        .useConstructor(SCHEME, URIS, null, null, "**.parquet", SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -114,12 +115,12 @@ public class CloudObjectInputSourceTest
   public void testInequality()
   {
     CloudObjectInputSource inputSource1 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, "**.parquet")
+        .useConstructor(SCHEME, URIS, null, null, "**.parquet", SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
     CloudObjectInputSource inputSource2 = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, "**.csv")
+        .useConstructor(SCHEME, URIS, null, null, "**.csv", SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
 
@@ -132,7 +133,7 @@ public class CloudObjectInputSourceTest
   public void testWithUrisFilter()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS2, null, null, "**.csv")
+        .useConstructor(SCHEME, URIS2, null, null, "**.csv", SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
     Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget());
@@ -158,7 +159,7 @@ public class CloudObjectInputSourceTest
   public void testWithUris()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, URIS, null, null, null)
+        .useConstructor(SCHEME, URIS, null, null, null, SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
     Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget());
@@ -184,7 +185,7 @@ public class CloudObjectInputSourceTest
   public void testWithObjectsFilter()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_GLOB, "**.csv")
+        .useConstructor(SCHEME, null, null, OBJECTS_BEFORE_GLOB, "**.csv", SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
     Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget());
@@ -210,7 +211,7 @@ public class CloudObjectInputSourceTest
   public void testWithObjects()
   {
     CloudObjectInputSource inputSource = Mockito.mock(CloudObjectInputSource.class, Mockito.withSettings()
-        .useConstructor(SCHEME, null, null, OBJECTS, null)
+        .useConstructor(SCHEME, null, null, OBJECTS, null, SystemFields.none())
         .defaultAnswer(Mockito.CALLS_REAL_METHODS)
     );
     Mockito.when(inputSource.getSplitWidget()).thenReturn(new MockSplitWidget());

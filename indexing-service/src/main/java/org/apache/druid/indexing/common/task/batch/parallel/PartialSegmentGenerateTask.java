@@ -94,7 +94,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         taskResource,
         ingestionSchema.getDataSchema(),
         ingestionSchema.getTuningConfig(),
-        context
+        context,
+        supervisorTaskId
     );
 
     Preconditions.checkArgument(

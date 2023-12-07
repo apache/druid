@@ -98,7 +98,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
 |`STRLEN(expr)`|Alias for `LENGTH`.|
-|`LOOKUP(expr, lookupName)`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql.md#from).|
+|`LOOKUP(expr, lookupName, [replaceMissingValueWith])`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql.md#from). Optional constant replaceMissingValueWith can be passed as 3rd argument to be returned when value is missing from lookup.|
 |`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`UPPER(expr)`|Returns `expr` in all uppercase.|
 |`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
