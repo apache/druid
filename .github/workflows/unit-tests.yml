@@ -66,7 +66,7 @@ jobs:
             kinesis:
               - 'extensions-core/kinesis-indexing-service/**'
 
-      - name: Collect an tarball hprof dumps on failure
+      - name: Collect tarball hprof dumps on failure
         if: ${{ failure() }}
         run: |
           tar cvzf ./hprof-dumps.tgz /home/runner/work/druid/druid/*.hprof
