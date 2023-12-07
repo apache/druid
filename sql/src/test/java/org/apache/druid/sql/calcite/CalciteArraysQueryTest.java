@@ -65,6 +65,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
@@ -7128,6 +7129,67 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a", "xa", "xa"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithGroupByOnExpression()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "WITH X as \n"
+        + "(\n"
+        + "SELECT\n"
+        + "ARRAY[1,2,3] as allNums\n"
+        + "FROM foo\n"
+        + "GROUP BY 1\n"
+        + ")\n"
+        + "select * from X CROSS JOIN UNNEST(X.allNums) as ud(num)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                                  new QueryDataSource(
+                                      GroupByQuery.builder()
+                                                  .setDataSource(CalciteTests.DATASOURCE1)
+                                                  .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(
+                                                      Filtration.eternity())))
+                                                  .setVirtualColumns(expressionVirtualColumn(
+                                                      "v0",
+                                                      "array(1,2,3)",
+                                                      ColumnType.LONG_ARRAY
+                                                  ))
+                                                  .setDimensions(dimensions(
+                                                      new DefaultDimensionSpec(
+                                                          "v0",
+                                                          "d0",
+                                                          ColumnType.LONG_ARRAY
+                                                      )
+                                                  ))
+                                                  .setGranularity(Granularities.ALL)
+                                                  .setContext(QUERY_CONTEXT_DEFAULT)
+                                                  .build()),
+                                  expressionVirtualColumn(
+                                      "j0.unnest",
+                                      "array(1,2,3)",
+                                      ColumnType.LONG_ARRAY
+                                  ),
+                                  null
+                              )
+                  )
+                  .eternityInterval()
+                  .columns("d0", "j0.unnest")
+                  .legacy(false)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(1L, 2L, 3L), 1},
+            new Object[]{ImmutableList.of(1L, 2L, 3L), 2},
+            new Object[]{ImmutableList.of(1L, 2L, 3L), 3}
         )
     );
   }
