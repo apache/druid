@@ -146,23 +146,6 @@
             <version>${aws.sdk.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.google.api-client</groupId>
-            <artifactId>google-api-client</artifactId>
-            <version>${com.google.apis.client.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.apis</groupId>
-            <artifactId>google-api-services-storage</artifactId>
-            <version>${com.google.apis.storage.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.api-client</groupId>
-                    <artifactId>google-api-client</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>com.microsoft.azure</groupId>
             <artifactId>azure-storage</artifactId>
             <version>8.6.0</version>

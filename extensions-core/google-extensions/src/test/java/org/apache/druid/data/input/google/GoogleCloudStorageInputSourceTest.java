@@ -209,7 +209,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testWithUrisSplit() throws Exception
+  public void testWithUrisSplit()
   {
     EasyMock.reset(STORAGE);
 
@@ -255,7 +255,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testWithUrisGlob() throws Exception
+  public void testWithUrisGlob()
   {
     GoogleStorageObjectMetadata objectMetadata = new GoogleStorageObjectMetadata(
         BUCKET,

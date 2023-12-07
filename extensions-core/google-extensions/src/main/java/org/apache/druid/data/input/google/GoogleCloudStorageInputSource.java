@@ -136,7 +136,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       }
 
       @Override
-      public long getObjectSize(CloudObjectLocation location) throws IOException
+      public long getObjectSize(CloudObjectLocation location)
       {
         final GoogleStorageObjectMetadata storageObject = storage.getMetadata(location.getBucket(), location.getPath());
         return getSize(storageObject);

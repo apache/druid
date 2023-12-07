@@ -129,7 +129,6 @@
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20230301-2.0.0</com.google.apis.storage.version>
         <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>

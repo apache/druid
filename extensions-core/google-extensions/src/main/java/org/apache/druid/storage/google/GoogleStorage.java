@@ -110,14 +110,13 @@ public class GoogleStorage
     );
   }
 
-  public void delete(final String bucket, final String path) throws IOException
+  public void delete(final String bucket, final String path)
   {
     storage.get().delete(bucket, path);
   }
 
   /**
    * Deletes a list of objects in a bucket
-   *
    * @param bucket GCS bucket
    * @param paths  Iterable for absolute paths of objects to be deleted inside the bucket
    */
@@ -133,13 +132,13 @@ public class GoogleStorage
     return blob != null;
   }
 
-  public long size(final String bucket, final String path) throws IOException
+  public long size(final String bucket, final String path)
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.SIZE));
     return blob.getSize();
   }
 
-  public String version(final String bucket, final String path) throws IOException
+  public String version(final String bucket, final String path)
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
     return blob.getGeneratedId();
@@ -152,15 +151,13 @@ public class GoogleStorage
    * @param pageSize Number of objects per page
    * @param pageToken Continuation token for the next page; use null for the first page
    *                  or the nextPageToken from the previous {@link GoogleStorageObjectPage}
-   * @return
-   * @throws IOException
    */
   public GoogleStorageObjectPage list(
       final String bucket,
       @Nullable final String prefix,
       @Nullable final Long pageSize,
       @Nullable final String pageToken
-  ) throws IOException
+  )
   {
     List<Storage.BlobListOption> options = new ArrayList<>();
 
