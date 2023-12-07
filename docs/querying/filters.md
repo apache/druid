@@ -487,6 +487,19 @@ The `arrayContainsElement` filter checks if an `ARRAY` contains a specific eleme
 
 ```
 
+### Example: equivalent of `WHERE ARRAY_OVERLAPS(someNumericArrayColumn, ARRAY[1, 2, 3])`
+
+```json
+{
+ "type": "or",
+ "fields": [
+  { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 1 },
+  { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 2 },
+  { "type": "arrayContainsElement", "column": "someNumericArrayColumn", "elementMatchValueType": "LONG", "elementMatchValue": 3 }
+ ]
+}
+```
+
 ## Interval filter
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
