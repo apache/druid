@@ -55,6 +55,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -702,12 +703,10 @@ public class SeekableStreamIndexTaskRunnerTest extends SeekableStreamIndexTaskTe
     protected @NotNull List<OrderedPartitionableRecord<String, String, ByteEntity>> getRecords(RecordSupplier<String, String, ByteEntity> recordSupplier, TaskToolbox toolbox)
     {
       int currOffset = START_OFFSET + (count++);
-      String msg = MESSAGES_TEMPLATE.replace("<count>", String.valueOf(count));
-
-      System.out.println(msg);
+      String msg = StringUtils.replace(MESSAGES_TEMPLATE, "<count>", String.valueOf(count));
 
       return Collections.singletonList(
-              new OrderedPartitionableRecord<>(STREAM, "0", String.valueOf(currOffset) , Collections.singletonList(new ByteEntity(msg.getBytes(StandardCharsets.UTF_8))))
+              new OrderedPartitionableRecord<>(STREAM, "0", String.valueOf(currOffset), Collections.singletonList(new ByteEntity(msg.getBytes(StandardCharsets.UTF_8))))
       );
     }
 
