@@ -58,7 +58,7 @@ public class IPv6AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testSubnetArgInvalid()
   {
-    expectException(ExpressionProcessingException.class, "Function[IPV6_MATCH] failed to parse address");
+    expectException(ExpressionProcessingException.class, "Function[ipv6_match] failed to parse address");
     Expr invalidSubnet = ExprEval.of("201:ef:168::/invalid").toExpr();
     apply(Arrays.asList(IPV6, invalidSubnet));
   }
