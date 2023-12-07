@@ -200,8 +200,9 @@ public class SqlExpressionBenchmark
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long4), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
       // 37: time shift + expr agg (group by), uniform distribution high cardinality
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long5), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
-      // 38: array filtering
-      "SELECT string1, long1 FROM foo WHERE ARRAY_CONTAINS(\"multi-string3\", 100) GROUP BY 1,2"
+      // 38,39: array element filtering
+      "SELECT string1, long1 FROM foo WHERE ARRAY_CONTAINS(\"multi-string3\", 100) GROUP BY 1,2",
+      "SELECT string1, long1 FROM foo WHERE ARRAY_OVERLAP(\"multi-string3\", ARRAY[100, 200]) GROUP BY 1,2"
   );
 
   @Param({"5000000"})
@@ -260,7 +261,8 @@ public class SqlExpressionBenchmark
       "35",
       "36",
       "37",
-      "38"
+      "38",
+      "39"
   })
   private String query;
 

@@ -6,19 +6,9 @@ updates:
       interval: "daily"
     open-pull-requests-limit: 20
     ignore:
-      - dependency-name: "com.google.guava:guava"
       # pin ZooKeeper dependencies to 3.5.x
       - dependency-name: "org.apache.zookeeper"
         versions: "[3.6,)"
       # pin Jetty dependencies to 9.4.x
       - dependency-name: "org.eclipse.jetty"
         versions: "[9.5,)"
-      - dependency-name: "org.apache.hadoop"
-      # We can't upgrade calcite without shading their guava dependencies. 
-      # We can't upgrade our own guava because we have to support Hadoop 2.
-      # Even then this will involve significant effort.
-      # See https://github.com/apache/druid/pull/12258
-      - dependency-name: "org.apache.calcite"
-      # jclouds 2.1 needs Guava 18+
-      - dependency-name: "org.apache.jclouds"
-        versions: "[2.1,)"
