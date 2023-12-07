@@ -69,11 +69,6 @@ public class NilVectorAggregator implements VectorAggregator
   @Nullable
   private final Object returnValue;
 
-  public static NilVectorAggregator of(Object returnValue)
-  {
-    return new NilVectorAggregator(returnValue);
-  }
-
   private NilVectorAggregator(@Nullable Object returnValue)
   {
     this.returnValue = returnValue;

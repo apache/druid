@@ -66,25 +66,4 @@ public class FirstLastUtils
     return clazz.isAssignableFrom(pairClass)
            || pairClass.isAssignableFrom(clazz);
   }
-
-
-  /**
-   * Returns boolean array indicating null values for the given objectVector.
-   * Returns null is no null objects are found in objectVector
-   */
-  @Nullable
-  public static boolean[] getNullVector(Object[] objectVector)
-  {
-    boolean containsNullValues = false;
-    boolean[] nullValueVector = new boolean[objectVector.length];
-    for (int i = 0; i < objectVector.length; i++) {
-      if (objectVector[i] != null) {
-        nullValueVector[i] = false;
-      } else {
-        nullValueVector[i] = true;
-        containsNullValues = true;
-      }
-    }
-    return containsNullValues ? nullValueVector : null;
-  }
 }
