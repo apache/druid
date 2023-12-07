@@ -259,7 +259,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     final TreeMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
     for (Map.Entry<String, FieldIndexer> entry : fieldIndexers.entrySet()) {
       // skip adding the field if no types are in the set, meaning only null values have been processed
-      if (!entry.getValue().getTypes().isEmpty()) {
+      if (!entry.getValue().getTypes().isEmpty() || entry.getValue().getTypes().hasUntypedArray()) {
         fields.put(entry.getKey(), entry.getValue().getTypes());
       }
     }
@@ -420,6 +420,10 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
           return logicalType;
         }
         return ColumnTypeFactory.getInstance().ofArray(logicalType);
+      }
+      // if we only have empty an null arrays, ARRAY<LONG> is the most restrictive type we can pick
+      if (rootField.getTypes().hasUntypedArray()) {
+        return ColumnType.LONG_ARRAY;
       }
     }
     return ColumnType.NESTED_DATA;

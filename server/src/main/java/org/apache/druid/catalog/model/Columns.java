@@ -38,6 +38,10 @@ public class Columns
   public static final String BIGINT = "BIGINT";
   public static final String FLOAT = "FLOAT";
   public static final String DOUBLE = "DOUBLE";
+  public static final String VARCHAR_ARRAY = "VARCHAR ARRAY";
+  public static final String BIGINT_ARRAY = "BIGINT ARRAY";
+  public static final String FLOAT_ARRAY = "FLOAT ARRAY";
+  public static final String DOUBLE_ARRAY = "DOUBLE ARRAY";
   public static final String TIMESTAMP = "TIMESTAMP";
 
   public static final Set<String> NUMERIC_TYPES =
@@ -52,6 +56,10 @@ public class Columns
         .put(FLOAT, ColumnType.FLOAT)
         .put(DOUBLE, ColumnType.DOUBLE)
         .put(VARCHAR, ColumnType.STRING)
+        .put(VARCHAR_ARRAY, ColumnType.STRING_ARRAY)
+        .put(BIGINT_ARRAY, ColumnType.LONG_ARRAY)
+        .put(FLOAT_ARRAY, ColumnType.FLOAT_ARRAY)
+        .put(DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY)
         .build();
 
   public static final Map<ColumnType, String> DRUID_TO_SQL_TYPES =
@@ -60,6 +68,10 @@ public class Columns
       .put(ColumnType.FLOAT, FLOAT)
       .put(ColumnType.DOUBLE, DOUBLE)
       .put(ColumnType.STRING, VARCHAR)
+      .put(ColumnType.STRING_ARRAY, VARCHAR_ARRAY)
+      .put(ColumnType.LONG_ARRAY, BIGINT_ARRAY)
+      .put(ColumnType.FLOAT_ARRAY, FLOAT_ARRAY)
+      .put(ColumnType.DOUBLE_ARRAY, DOUBLE_ARRAY)
       .build();
 
   private Columns()

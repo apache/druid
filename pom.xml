@@ -79,7 +79,6 @@
         <apache.kafka.version>3.6.0</apache.kafka.version>
         <apache.ranger.version>2.4.0</apache.ranger.version>
         <gson.version>2.10.1</gson.version>
-        <apache.ranger.gson.version>2.10.1</apache.ranger.gson.version>
         <scala.library.version>2.13.11</scala.library.version>
         <avatica.version>1.23.0</avatica.version>
         <avro.version>1.11.3</avro.version>
@@ -124,7 +123,7 @@
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.5.10</zookeeper.version>
+        <zookeeper.version>3.8.3</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
@@ -412,6 +411,15 @@
                 <artifactId>kotlin-stdlib</artifactId>
                 <version>1.6.10</version>
             </dependency>
+            <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
+            schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
+            and direct dependency of druid-ranger
+              -->
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
@@ -436,6 +444,14 @@
                     <exclusion>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-annotations</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-classic</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-core</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -1709,7 +1725,9 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
-                            -Xmx1500m
+                            <!-- Bump up memory from 1.5 GB to 2 GB. This is particularly needed for JDK 17 where
+                            we have jfr profiler enabled which adds additional memory pressure. -->
+                            -Xmx2048m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
                             -XX:+HeapDumpOnOutOfMemoryError
