@@ -202,7 +202,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     // IN such a case we use a RexShuttle to remove the reference on the left
     // And rewrite the left project
     // Added the isSimpleExtraction() check to prevent a NPE
-    // When using Date expand in the value to be unnested
+    // When using an expression in the value to be unnested
     // If the simpleExtraction is null, we do not create the shuttle to update the projects
     if (unnestDatasourceRel.getInputRexNode().getKind() == SqlKind.FIELD_ACCESS && expressionToUnnest.isSimpleExtraction()) {
       final PartialDruidQuery leftPartialQueryToBeUpdated;
