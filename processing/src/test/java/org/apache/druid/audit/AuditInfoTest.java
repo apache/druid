@@ -19,12 +19,18 @@
 
 package org.apache.druid.audit;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public class AuditInfoTest
 {
+  private final ObjectMapper mapper = new DefaultObjectMapper();
+
   @Test
   public void testAuditInfoEquality()
   {
@@ -34,10 +40,22 @@ public class AuditInfoTest
     Assert.assertEquals(auditInfo1.hashCode(), auditInfo2.hashCode());
   }
 
-  @Test(timeout = 60_000L)
-  public void testAuditEntryEquality()
+  @Test
+  public void testAuditInfoSerde() throws IOException
   {
-    final AuditEntry event1 = new AuditEntry(
+    final AuditInfo auditInfo = new AuditInfo("author", "comment", "ip");
+    AuditInfo deserialized = mapper.readValue(mapper.writeValueAsString(auditInfo), AuditInfo.class);
+    Assert.assertEquals(auditInfo, deserialized);
+
+    final AuditInfo auditInfoWithIdentity = new AuditInfo("author", "identity", "comment", "ip");
+    deserialized = mapper.readValue(mapper.writeValueAsString(auditInfoWithIdentity), AuditInfo.class);
+    Assert.assertEquals(auditInfoWithIdentity, deserialized);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testAuditEntrySerde() throws IOException
+  {
+    AuditEntry entry = new AuditEntry(
         "testKey",
         "testType",
         new AuditInfo(
@@ -48,18 +66,8 @@ public class AuditInfoTest
         AuditEntry.Payload.fromString("testPayload"),
         DateTimes.of("2013-01-01T00:00:00Z")
     );
-    final AuditEntry event2 = new AuditEntry(
-        "testKey",
-        "testType",
-        new AuditInfo(
-            "testAuthor",
-            "testComment",
-            "127.0.0.1"
-        ),
-        AuditEntry.Payload.fromString("testPayload"),
-        DateTimes.of("2013-01-01T00:00:00Z")
-    );
-    Assert.assertEquals(event1, event2);
+    AuditEntry serde = mapper.readValue(mapper.writeValueAsString(entry), AuditEntry.class);
+    Assert.assertEquals(entry, serde);
   }
 
 }

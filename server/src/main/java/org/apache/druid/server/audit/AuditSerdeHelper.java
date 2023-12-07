@@ -31,6 +31,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Audit utility class that can be used by different implementations of
+ * {@link org.apache.druid.audit.AuditManager} to serialize/deserialize audit
+ * payloads based on the values configured in {@link AuditManagerConfig}.
+ */
 public class AuditSerdeHelper
 {
   /**
@@ -60,12 +65,20 @@ public class AuditSerdeHelper
     this.jsonMapperSkipNulls = jsonMapperSkipNulls;
   }
 
+  /**
+   * Processes the given AuditEntry for further use such as logging or persistence.
+   * This involves serializing and truncating the payload based on the values
+   * configured in {@link AuditManagerConfig}.
+   *
+   * @return A new AuditEntry with a serialized payload that can be used for
+   * logging or persistence.
+   */
   public AuditEntry processAuditEntry(AuditEntry entry)
   {
     final AuditEntry.Payload payload = entry.getPayload();
-    final String serialized = payload.asString() == null
+    final String serialized = payload.serialized() == null
                               ? serializePayloadToString(payload.raw())
-                              : payload.asString();
+                              : payload.serialized();
 
     final AuditEntry.Payload processedPayload = AuditEntry.Payload.fromString(
         truncateSerializedAuditPayload(serialized)

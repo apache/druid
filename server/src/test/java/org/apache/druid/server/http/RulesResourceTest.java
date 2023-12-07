@@ -193,7 +193,7 @@ public class RulesResourceTest
 
   private AuditInfo createAuditInfo()
   {
-    return new AuditInfo("testAuthor", "testComment", "127.0.0.1");
+    return new AuditInfo("testAuthor", "testIdentity", "testComment", "127.0.0.1");
   }
 
   private AuditEntry createAuditEntry(DateTime auditTime)

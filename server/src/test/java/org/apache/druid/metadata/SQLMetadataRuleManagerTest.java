@@ -189,7 +189,7 @@ public class SQLMetadataRuleManagerTest
 
     Assert.assertEquals(
         rules,
-        mapper.readValue(entry.getPayload().asString(), new TypeReference<List<Rule>>() {})
+        mapper.readValue(entry.getPayload().serialized(), new TypeReference<List<Rule>>() {})
     );
     Assert.assertEquals(auditInfo, entry.getAuditInfo());
     Assert.assertEquals(DATASOURCE, entry.getKey());
@@ -222,7 +222,7 @@ public class SQLMetadataRuleManagerTest
     for (AuditEntry entry : auditEntries) {
       Assert.assertEquals(
           rules,
-          mapper.readValue(entry.getPayload().asString(), new TypeReference<List<Rule>>() {})
+          mapper.readValue(entry.getPayload().serialized(), new TypeReference<List<Rule>>() {})
       );
       Assert.assertEquals(auditInfo, entry.getAuditInfo());
     }

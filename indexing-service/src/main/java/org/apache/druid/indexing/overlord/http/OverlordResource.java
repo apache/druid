@@ -232,9 +232,9 @@ public class OverlordResource
               auditManager.doAudit(
                   AuditEntry.builder()
                             .key(task.getDataSource())
-                            .type("ingestion.batch")
+                            .type("overlord" + req.getServletPath())
                             .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
-                            .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+                            .auditInfo(AuthorizationUtils.buildAuditInfo(author, comment, req))
                             .build()
               );
             }

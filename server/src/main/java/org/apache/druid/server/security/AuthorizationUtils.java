@@ -22,6 +22,7 @@ package org.apache.druid.server.security;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 
@@ -87,6 +88,33 @@ public class AuthorizationUtils
     }
 
     return authenticationResult;
+  }
+
+  /**
+   * Extracts the identity from the authentication result if set as an atrribute
+   * of this request.
+   */
+  public static String getAuthenticatedIdentity(HttpServletRequest request)
+  {
+    final AuthenticationResult authenticationResult = (AuthenticationResult) request.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT
+    );
+
+    if (authenticationResult == null) {
+      return null;
+    } else {
+      return authenticationResult.getIdentity();
+    }
+  }
+
+  public static AuditInfo buildAuditInfo(String author, String comment, HttpServletRequest request)
+  {
+    return new AuditInfo(
+        author,
+        getAuthenticatedIdentity(request),
+        comment,
+        request.getRemoteAddr()
+    );
   }
 
   /**

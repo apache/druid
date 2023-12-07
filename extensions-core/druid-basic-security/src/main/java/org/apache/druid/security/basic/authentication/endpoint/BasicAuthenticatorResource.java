@@ -29,6 +29,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.AuthValidator;
+import org.apache.druid.server.security.AuthorizationUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -166,7 +167,7 @@ public class BasicAuthenticatorResource
     final Response response = handler.createUser(authenticatorName, userName);
 
     if (isSuccess(response)) {
-      final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(author, comment, req);
       performAudit(authenticatorName, "users.create", Collections.singletonMap("username", userName), auditInfo);
     }
 
@@ -198,7 +199,7 @@ public class BasicAuthenticatorResource
     final Response response = handler.deleteUser(authenticatorName, userName);
 
     if (isSuccess(response)) {
-      final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(author, comment, req);
       performAudit(authenticatorName, "users.delete", Collections.singletonMap("username", userName), auditInfo);
     }
 
@@ -231,7 +232,7 @@ public class BasicAuthenticatorResource
     final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
 
     if (isSuccess(response)) {
-      final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(author, comment, req);
       performAudit(authenticatorName, "users.update", Collections.singletonMap("username", userName), auditInfo);
     }
 

@@ -95,6 +95,11 @@ public class AuditEntry
     return auditTime;
   }
 
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -119,27 +124,18 @@ public class AuditEntry
     return Objects.hash(key, type, auditInfo, payload, auditTime);
   }
 
-  public static Builder builder()
-  {
-    return new Builder();
-  }
-
   public static class Builder
   {
     private String key;
     private String type;
     private AuditInfo auditInfo;
-
-    private String serializedPayload;
     private Object payload;
+    private String serializedPayload;
 
     private DateTime auditTime;
 
     private Builder()
     {
-      this.key = null;
-      this.auditInfo = null;
-      this.serializedPayload = null;
       this.auditTime = DateTimes.nowUtc();
     }
 
@@ -185,6 +181,9 @@ public class AuditEntry
     }
   }
 
+  /**
+   * Payload of an {@link AuditEntry} that may be specified {@link #raw()} or {@link #serialized()}.
+   */
   public static class Payload
   {
     private final String serialized;
@@ -200,7 +199,7 @@ public class AuditEntry
     @Override
     public String toString()
     {
-      return serialized;
+      return serialized == null ? "" : serialized;
     }
 
     private Payload(String serialized, Object raw)
@@ -209,7 +208,7 @@ public class AuditEntry
       this.raw = raw;
     }
 
-    public String asString()
+    public String serialized()
     {
       return serialized;
     }

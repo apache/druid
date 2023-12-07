@@ -122,7 +122,7 @@ public class SQLAuditManager implements AuditManager
         .setDimension("created_date", entry.getAuditTime().toString());
 
     if (config.isIncludePayloadAsDimensionInMetric()) {
-      builder.setDimension("payload", entry.getPayload().asString());
+      builder.setDimension("payload", entry.getPayload().serialized());
     }
 
     return builder;

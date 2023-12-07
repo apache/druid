@@ -110,7 +110,7 @@ public class SQLAuditManagerTest
     Assert.assertNotNull(dbEntry);
     Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
     Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
-    Assert.assertEquals(dbEntry.getPayload().asString(), metric.getUserDims().get("payload"));
+    Assert.assertEquals(dbEntry.getPayload().serialized(), metric.getUserDims().get("payload"));
     Assert.assertEquals(dbEntry.getAuditInfo().getAuthor(), metric.getUserDims().get("author"));
     Assert.assertEquals(dbEntry.getAuditInfo().getComment(), metric.getUserDims().get("comment"));
     Assert.assertEquals(dbEntry.getAuditInfo().getIp(), metric.getUserDims().get("remote_address"));
@@ -257,7 +257,7 @@ public class SQLAuditManagerTest
     // Assert.assertNotEquals(entry.getPayload(), dbEntry.getPayload());
     Assert.assertEquals(
         "Payload truncated as it exceeds 'druid.audit.manager.maxPayloadSizeBytes'[10].",
-        dbEntry.getPayload().asString()
+        dbEntry.getPayload().serialized()
     );
     Assert.assertEquals(entry.getType(), dbEntry.getType());
     Assert.assertEquals(entry.getAuditInfo(), dbEntry.getAuditInfo());
@@ -309,13 +309,13 @@ public class SQLAuditManagerTest
         AuditEntry.builder().key("key1").type("type1").auditInfo(auditInfo).payload(payloadMap).build()
     );
     AuditEntry entryWithNulls = lookupAuditEntryForKey("key1");
-    Assert.assertEquals("{\"something\":null,\"version\":\"x\"}", entryWithNulls.getPayload().asString());
+    Assert.assertEquals("{\"something\":null,\"version\":\"x\"}", entryWithNulls.getPayload().serialized());
 
     auditManagerSkipNull.doAudit(
         AuditEntry.builder().key("key2").type("type2").auditInfo(auditInfo).payload(payloadMap).build()
     );
     AuditEntry entryWithoutNulls = lookupAuditEntryForKey("key2");
-    Assert.assertEquals("{\"version\":\"x\"}", entryWithoutNulls.getPayload().asString());
+    Assert.assertEquals("{\"version\":\"x\"}", entryWithoutNulls.getPayload().serialized());
   }
 
   @After
@@ -362,7 +362,7 @@ public class SQLAuditManagerTest
                      .key(key)
                      .type(type)
                      .serializedPayload(StringUtils.format("Test payload for key[%s], type[%s]", key, type))
-                     .auditInfo(new AuditInfo("author", "comment", "127.0.0.1"))
+                     .auditInfo(new AuditInfo("author", "identity", "comment", "127.0.0.1"))
                      .auditTime(auditTime)
                      .build();
   }

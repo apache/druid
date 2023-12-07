@@ -27,25 +27,39 @@ import java.util.Objects;
 public class AuditInfo
 {
   private final String author;
+  private final String identity;
   private final String comment;
   private final String ip;
 
   @JsonCreator
   public AuditInfo(
       @JsonProperty("author") String author,
+      @JsonProperty("identity") String identity,
       @JsonProperty("comment") String comment,
       @JsonProperty("ip") String ip
   )
   {
     this.author = author;
+    this.identity = identity;
     this.comment = comment;
     this.ip = ip;
+  }
+
+  public AuditInfo(String author, String comment, String ip)
+  {
+    this(author, null, comment, ip);
   }
 
   @JsonProperty
   public String getAuthor()
   {
     return author;
+  }
+
+  @JsonProperty
+  public String getIdentity()
+  {
+    return identity;
   }
 
   @JsonProperty
@@ -69,16 +83,17 @@ public class AuditInfo
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    AuditInfo auditInfo = (AuditInfo) o;
-    return Objects.equals(author, auditInfo.author)
-           && Objects.equals(comment, auditInfo.comment)
-           && Objects.equals(ip, auditInfo.ip);
+    AuditInfo that = (AuditInfo) o;
+    return Objects.equals(this.author, that.author)
+           && Objects.equals(this.identity, that.identity)
+           && Objects.equals(this.comment, that.comment)
+           && Objects.equals(this.ip, that.ip);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(author, comment, ip);
+    return Objects.hash(author, identity, comment, ip);
   }
 
   @Override
@@ -86,6 +101,7 @@ public class AuditInfo
   {
     return "AuditInfo{" +
            "author='" + author + '\'' +
+           ", identity='" + identity + '\'' +
            ", comment='" + comment + '\'' +
            ", ip='" + ip + '\'' +
            '}';

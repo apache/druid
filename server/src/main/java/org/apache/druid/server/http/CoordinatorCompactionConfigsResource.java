@@ -35,6 +35,7 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -107,7 +108,7 @@ public class CoordinatorCompactionConfigsResource
             maxCompactionTaskSlots,
             useAutoScaleSlots
         );
-    return updateConfigHelper(operator, new AuditInfo(author, comment, req.getRemoteAddr()));
+    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(author, comment, req));
   }
 
   @POST
@@ -132,7 +133,7 @@ public class CoordinatorCompactionConfigsResource
     };
     return updateConfigHelper(
         callable,
-        new AuditInfo(author, comment, req.getRemoteAddr())
+        AuthorizationUtils.buildAuditInfo(author, comment, req)
     );
   }
 
@@ -183,7 +184,7 @@ public class CoordinatorCompactionConfigsResource
       DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
       for (AuditEntry audit : auditEntries) {
         CoordinatorCompactionConfig coordinatorCompactionConfig = configManager.convertBytesToCompactionConfig(
-            audit.getPayload().asString().getBytes(StandardCharsets.UTF_8)
+            audit.getPayload().serialized().getBytes(StandardCharsets.UTF_8)
         );
         history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
       }
@@ -219,7 +220,7 @@ public class CoordinatorCompactionConfigsResource
 
       return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values()));
     };
-    return updateConfigHelper(callable, new AuditInfo(author, comment, req.getRemoteAddr()));
+    return updateConfigHelper(callable, AuthorizationUtils.buildAuditInfo(author, comment, req));
   }
 
   private Response updateConfigHelper(
