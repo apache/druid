@@ -257,6 +257,32 @@ public interface Task
    */
   TaskStatus run(TaskToolbox toolbox) throws Exception;
 
+  /**
+   * Performs cleanup operations after the task execution.
+   * This method is intended to be overridden by tasks that need to perform
+   * specific cleanup actions upon task completion or termination.
+   *
+   * @param toolbox Toolbox for this task
+   * @param taskStatus Provides the final status of the task, indicating if the task
+   *                   was successful, failed, or was killed.
+   * @throws Exception If any error occurs during the cleanup process.
+   */
+  default void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  {
+  }
+
+  /**
+   * Waits for the cleanup operations to finish.
+   * This method can be overridden by tasks that need to ensure that certain cleanup
+   * operations have completed before proceeding further.
+   *
+   * @return true if the cleanup completed successfully, false otherwise.
+   */
+  default boolean waitForCleanupToFinish()
+  {
+    return true;
+  }
+
   default Map<String, Object> addToContext(String key, Object val)
   {
     getContext().put(key, val);

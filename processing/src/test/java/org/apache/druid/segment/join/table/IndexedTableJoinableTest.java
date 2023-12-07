@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantDimensionSelector;
@@ -43,9 +44,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
-import java.util.Set;
 
 public class IndexedTableJoinableTest
 {
@@ -89,7 +90,8 @@ public class IndexedTableJoinableTest
       ImmutableList.of(
           new Object[]{"foo", 1L, 1L},
           new Object[]{"bar", 2L, 1L},
-          new Object[]{"baz", null, 1L}
+          new Object[]{"baz", null, 1L},
+          new Object[]{null, 3L, 1L}
       ),
       RowSignature.builder()
                   .add(KEY_COLUMN, ColumnType.STRING)
@@ -187,7 +189,7 @@ public class IndexedTableJoinableTest
                                                   .makeDimensionSelector(DefaultDimensionSpec.of("str"));
 
     // getValueCardinality
-    Assert.assertEquals(4, selector.getValueCardinality());
+    Assert.assertEquals(5, selector.getValueCardinality());
 
     // nameLookupPossibleInAdvance
     Assert.assertTrue(selector.nameLookupPossibleInAdvance());
@@ -197,6 +199,7 @@ public class IndexedTableJoinableTest
     Assert.assertEquals("bar", selector.lookupName(1));
     Assert.assertEquals("baz", selector.lookupName(2));
     Assert.assertNull(selector.lookupName(3));
+    Assert.assertNull(selector.lookupName(4));
 
     // lookupId
     Assert.assertNull(selector.idLookup());
@@ -205,13 +208,14 @@ public class IndexedTableJoinableTest
   @Test
   public void getCorrelatedColummnValuesMissingSearchColumnShouldReturnEmpty()
   {
-    Optional<Set<String>> correlatedValues =
+    Optional<InDimFilter.ValuesSet> correlatedValues =
         target.getCorrelatedColumnValues(
             UNKNOWN_COLUMN,
             "foo",
             VALUE_COLUMN,
             MAX_CORRELATION_SET_SIZE,
-            false);
+            false
+        );
 
     Assert.assertEquals(Optional.empty(), correlatedValues);
   }
@@ -219,13 +223,14 @@ public class IndexedTableJoinableTest
   @Test
   public void getCorrelatedColummnValuesMissingRetrievalColumnShouldReturnEmpty()
   {
-    Optional<Set<String>> correlatedValues =
+    Optional<InDimFilter.ValuesSet> correlatedValues =
         target.getCorrelatedColumnValues(
             KEY_COLUMN,
             "foo",
             UNKNOWN_COLUMN,
             MAX_CORRELATION_SET_SIZE,
-            false);
+            false
+        );
 
     Assert.assertEquals(Optional.empty(), correlatedValues);
   }
@@ -233,149 +238,179 @@ public class IndexedTableJoinableTest
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnShouldReturnSearchValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_VALUE,
         KEY_COLUMN,
         MAX_CORRELATION_SET_SIZE,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnAboveLimitShouldReturnEmpty()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_VALUE,
         KEY_COLUMN,
         0,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyMissingAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_NULL_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.of(Collections.singleton(null)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnAndNonKeyColumnSearchDisabledShouldReturnEmpty()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.empty(), correlatedValues);
     correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         KEY_COLUMN,
         10,
-        false);
+        false
+    );
     Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnShouldReturnSearchValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnShouldReturnUnAppliedValue()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         KEY_COLUMN,
         10,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnWithMaxLimitSetShouldHonorMaxLimit()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         KEY_COLUMN,
         0,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchUnknownValueAndRetrieveKeyColumnShouldReturnNoCorrelatedValues()
   {
-    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<InDimFilter.ValuesSet> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_UNKNOWN,
         KEY_COLUMN,
         10,
-        true);
+        true
+    );
     Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnValues()
+  public void getMatchableColumnValuesIfAllUniqueForValueColumnShouldReturnValues()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(VALUE_COLUMN, Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values =
+        target.getMatchableColumnValues(VALUE_COLUMN, false, Integer.MAX_VALUE);
 
-    Assert.assertEquals(ImmutableSet.of("1", "2"), values.getColumnValues());
+    Assert.assertEquals(ImmutableSet.of("1", "2", "3"), values.getColumnValues());
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForNonexistentColumnShouldReturnEmpty()
+  public void getMatchableColumnValuesIfAllUniqueForNonexistentColumnShouldReturnEmpty()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues("nonexistent", Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values =
+        target.getMatchableColumnValues("nonexistent", false, Integer.MAX_VALUE);
 
     Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
+  public void getMatchableColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(KEY_COLUMN, Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values =
+        target.getMatchableColumnValues(KEY_COLUMN, false, Integer.MAX_VALUE);
 
     Assert.assertEquals(
         ImmutableSet.of("foo", "bar", "baz"),
         values.getColumnValues()
     );
+
+    Assert.assertTrue(values.isAllUnique());
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForAllSameColumnShouldReturnEmpty()
+  public void getMatchableColumnValuesWithIncludeNullIfAllUniqueForKeyColumnShouldReturnValues()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(ALL_SAME_COLUMN, Integer.MAX_VALUE);
+    final Joinable.ColumnValuesWithUniqueFlag values =
+        target.getMatchableColumnValues(KEY_COLUMN, true, Integer.MAX_VALUE);
+
+    Assert.assertEquals(
+        InDimFilter.ValuesSet.copyOf(Arrays.asList(null, "foo", "bar", "baz")),
+        values.getColumnValues()
+    );
+
+    Assert.assertTrue(values.isAllUnique());
+  }
+
+  @Test
+  public void getMatchableColumnValuesIfAllUniqueForAllSameColumnShouldReturnEmpty()
+  {
+    final Joinable.ColumnValuesWithUniqueFlag values =
+        target.getMatchableColumnValues(ALL_SAME_COLUMN, false, Integer.MAX_VALUE);
 
     Assert.assertEquals(
         ImmutableSet.of("1"),
@@ -385,9 +420,10 @@ public class IndexedTableJoinableTest
   }
 
   @Test
-  public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
+  public void getMatchableColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
   {
-    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(KEY_COLUMN, 1);
+    final Joinable.ColumnValuesWithUniqueFlag values =
+        target.getMatchableColumnValues(KEY_COLUMN, false, 1);
 
     Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }

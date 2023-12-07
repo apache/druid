@@ -367,8 +367,6 @@ The following table shows examples of how Druid returns the column names and dat
 
 ## Query from deep storage
 
-> Query from deep storage is an [experimental feature](../development/experimental.md).
-
 You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules.
 
 Note that at least one segment of a datasource must be available on a Historical process so that the Broker can plan your query. A quick way to check if this is true is whether or not a datasource is visible in the Druid console.
@@ -392,12 +390,10 @@ Generally, the `sql` and `sql/statements` endpoints support the same response bo
 
 Keep the following in mind when submitting queries to the `sql/statements` endpoint:
 
-- There are additional context parameters  for `sql/statements`:
+- Apart from the context parameters mentioned [here](../multi-stage-query/reference.md#context-parameters) there are additional context parameters for `sql/statements` specifically:
 
    - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. You must manually retrieve your results after the query completes.
-   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
-
-- The only supported value for `resultFormat` is JSON LINES.
+   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. For result sets with more than 3000 rows, it is highly recommended to use `durableStorage`. Note that this requires you to have [durable storage for MSQ](../operations/durable-storage.md) enabled.
 
 #### Responses
 
@@ -814,12 +810,10 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves results for completed queries. Results are separated into pages, so you can use the optional `page` parameter to refine the results you get. Druid returns information about the composition of each page and its page number (`id`). For information about pages, see [Get query status](#get-query-status).
 
+
 If a page number isn't passed, all results are returned sequentially in the same response. If you have large result sets, you may encounter timeouts based on the value configured for `druid.router.http.readTimeout`.
 
-When getting query results, keep the following in mind:
-
-- JSON Lines is the only supported result format.
-- Getting the query results for an ingestion query returns an empty response.
+Getting the query results for an ingestion query returns an empty response.
 
 #### URL
 
@@ -828,7 +822,10 @@ When getting query results, keep the following in mind:
 #### Query parameters
 * `page` (optional)
     * Type: Int
-    * Refine paginated results
+    * Fetch results based on page numbers. If not specified, all results are returned sequentially starting from page 0 to N in the same response.
+* `resultFormat` (optional)
+    * Type: String
+    * Defines the format in which the results are presented. The following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. The default is `object`.
 
 #### Responses
 

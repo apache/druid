@@ -94,18 +94,24 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   {
     if (selector instanceof NilColumnValueSelector) {
       // Column does not exist, or is unfilterable. Treat it as all nulls.
-      return BooleanValueMatcher.of(predicateFactory.makeArrayPredicate(columnCapabilities).apply(null));
+
+      final boolean matchesNull = predicateFactory.makeArrayPredicate(columnCapabilities).apply(null);
+      if (matchesNull) {
+        return ValueMatchers.allTrue();
+      }
+      return ValueMatchers.makeAlwaysFalseObjectMatcher(selector);
     } else {
       // use the object predicate
       final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnCapabilities);
       return new ValueMatcher()
       {
         @Override
-        public boolean matches()
+        public boolean matches(boolean includeUnknown)
         {
+          final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
           Object o = selector.getObject();
           if (o == null || o instanceof Object[]) {
-            return predicate.apply((Object[]) o);
+            return (matchNull && o == null) || predicate.apply((Object[]) o);
           }
           if (o instanceof List) {
             ExprEval<?> oEval = ExprEval.bestEffortArray((List<?>) o);
@@ -130,16 +136,22 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   {
     if (selector instanceof NilColumnValueSelector) {
       // Column does not exist, or is unfilterable. Treat it as all nulls.
-      return BooleanValueMatcher.of(predicateFactory.makeStringPredicate().apply(null));
+      final boolean predicateMatches = predicateFactory.makeStringPredicate().apply(null);
+      if (predicateMatches) {
+        return ValueMatchers.allTrue();
+      }
+      return ValueMatchers.makeAlwaysFalseObjectMatcher(selector);
     } else if (!isNumberOrString(selector.classOfObject())) {
       // if column is definitely not a number of string, use the object predicate
       final Predicate<Object> predicate = predicateFactory.makeObjectPredicate();
       return new ValueMatcher()
       {
         @Override
-        public boolean matches()
+        public boolean matches(boolean includeUnknown)
         {
-          return predicate.apply(selector.getObject());
+          final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
+          final Object val = selector.getObject();
+          return (matchNull && val == null) || predicate.apply(val);
         }
 
         @Override
@@ -162,12 +174,13 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
         private Predicate<Object[]> arrayPredicate;
 
         @Override
-        public boolean matches()
+        public boolean matches(boolean includeUnknown)
         {
           final Object rowValue = selector.getObject();
+          final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
 
           if (rowValue == null) {
-            return getStringPredicate().apply(null);
+            return matchNull || getStringPredicate().apply(null);
           } else if (rowValue instanceof Integer) {
             return getLongPredicate().applyLong((int) rowValue);
           } else if (rowValue instanceof Long) {
@@ -176,7 +189,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
             return getFloatPredicate().applyFloat((float) rowValue);
           } else if (rowValue instanceof Number) {
             // Double or some other non-int, non-long, non-float number.
-            return getDoublePredicate().applyDouble((double) rowValue);
+            return getDoublePredicate().applyDouble(((Number) rowValue).doubleValue());
           } else if (rowValue instanceof Object[]) {
             return getArrayPredicate().apply((Object[]) rowValue);
           } else {
@@ -186,11 +199,12 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
 
             if (rowValueStrings.isEmpty()) {
               // Empty list is equivalent to null.
-              return getStringPredicate().apply(null);
+              return matchNull || getStringPredicate().apply(null);
             }
 
             for (String rowValueString : rowValueStrings) {
-              if (getStringPredicate().apply(NullHandling.emptyToNullIfNeeded(rowValueString))) {
+              final String coerced = NullHandling.emptyToNullIfNeeded(rowValueString);
+              if ((matchNull && coerced == null) || getStringPredicate().apply(coerced)) {
                 return true;
               }
             }

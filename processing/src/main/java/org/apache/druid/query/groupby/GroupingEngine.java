@@ -36,6 +36,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -66,16 +67,20 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
@@ -172,40 +177,8 @@ public class GroupingEngine
     return new GroupByBinaryFnV2((GroupByQuery) queryParam);
   }
 
-  /**
-   * Runs a provided {@link QueryRunner} on a provided {@link GroupByQuery}, which is assumed to return rows that are
-   * properly sorted (by timestamp and dimensions) but not necessarily fully merged (that is, there may be adjacent
-   * rows with the same timestamp and dimensions) and without PostAggregators computed. This method will fully merge
-   * the rows, apply PostAggregators, and return the resulting {@link Sequence}.
-   *
-   * The query will be modified before passing it down to the base runner. For example, "having" clauses will be
-   * removed and various context parameters will be adjusted.
-   *
-   * Despite the similar name, this method is much reduced in scope compared to
-   * {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)}. That method does delegate to this one at some points,
-   * but has a truckload of other responsibility, including computing outer query results (if there are subqueries),
-   * computing subtotals (like GROUPING SETS), and computing the havingSpec and limitSpec.
-   *
-   * @param baseRunner      base query runner
-   * @param query           the groupBy query to run inside the base query runner
-   * @param responseContext the response context to pass to the base query runner
-   *
-   * @return merged result sequence
-   */
-  public Sequence<ResultRow> mergeResults(
-      final QueryRunner<ResultRow> baseRunner,
-      final GroupByQuery query,
-      final ResponseContext responseContext
-  )
+  public GroupByQuery prepareGroupByQuery(GroupByQuery query)
   {
-    // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
-    // involve materialization)
-    final ResultMergeQueryRunner<ResultRow> mergingQueryRunner = new ResultMergeQueryRunner<>(
-        baseRunner,
-        this::createResultComparator,
-        this::createMergeFn
-    );
-
     // Set up downstream context.
     final ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
     context.put(QueryContexts.FINALIZE_KEY, false);
@@ -219,7 +192,6 @@ public class GroupingEngine
     final boolean hasTimestampResultField = (timestampResultField != null && !timestampResultField.isEmpty())
                                             && queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
                                             && !query.isApplyLimitPushDown();
-    int timestampResultFieldIndex = 0;
     if (hasTimestampResultField) {
       // sql like "group by city_id,time_floor(__time to day)",
       // the original translated query is granularity=all and dimensions:[d0, d1]
@@ -252,7 +224,7 @@ public class GroupingEngine
       granularity = timestampResultFieldGranularity;
       // when timestampResultField is the last dimension, should set sortByDimsFirst=true,
       // otherwise the downstream is sorted by row's timestamp first which makes the final ordering not as expected
-      timestampResultFieldIndex = queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX);
+      int timestampResultFieldIndex = queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX, 0);
       if (!query.getContextSortByDimsFirst() && timestampResultFieldIndex == query.getDimensions().size() - 1) {
         context.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, true);
       }
@@ -264,7 +236,6 @@ public class GroupingEngine
       // when hasTimestampResultField=true and timestampResultField is neither first nor last dimension,
       // the DefaultLimitSpec will always do the reordering
     }
-    final int timestampResultFieldIndexInOriginalDimensions = timestampResultFieldIndex;
     if (query.getUniversalTimestamp() != null && !hasTimestampResultField) {
       // universalTimestamp works only when granularity is all
       // hasTimestampResultField works only when granularity is all
@@ -278,7 +249,7 @@ public class GroupingEngine
     // Always request array result rows when passing the query downstream.
     context.put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true);
 
-    final GroupByQuery newQuery = new GroupByQuery(
+    return new GroupByQuery(
         query.getDataSource(),
         query.getQuerySegmentSpec(),
         query.getVirtualColumns(),
@@ -300,6 +271,49 @@ public class GroupingEngine
     ).withOverriddenContext(
         context.build()
     );
+  }
+
+  /**
+   * Runs a provided {@link QueryRunner} on a provided {@link GroupByQuery}, which is assumed to return rows that are
+   * properly sorted (by timestamp and dimensions) but not necessarily fully merged (that is, there may be adjacent
+   * rows with the same timestamp and dimensions) and without PostAggregators computed. This method will fully merge
+   * the rows, apply PostAggregators, and return the resulting {@link Sequence}.
+   *
+   * The query will be modified using {@link #prepareGroupByQuery(GroupByQuery)} before passing it down to the base
+   * runner. For example, "having" clauses will be removed and various context parameters will be adjusted.
+   *
+   * Despite the similar name, this method is much reduced in scope compared to
+   * {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)}. That method does delegate to this one at some points,
+   * but has a truckload of other responsibility, including computing outer query results (if there are subqueries),
+   * computing subtotals (like GROUPING SETS), and computing the havingSpec and limitSpec.
+   *
+   * @param baseRunner      base query runner
+   * @param query           the groupBy query to run inside the base query runner
+   * @param responseContext the response context to pass to the base query runner
+   *
+   * @return merged result sequence
+   */
+  public Sequence<ResultRow> mergeResults(
+      final QueryRunner<ResultRow> baseRunner,
+      final GroupByQuery query,
+      final ResponseContext responseContext
+  )
+  {
+    // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
+    // involve materialization)
+    final ResultMergeQueryRunner<ResultRow> mergingQueryRunner = new ResultMergeQueryRunner<>(
+        baseRunner,
+        this::createResultComparator,
+        this::createMergeFn
+    );
+
+    final QueryContext queryContext = query.context();
+    final String timestampResultField = queryContext.getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD);
+    final boolean hasTimestampResultField = (timestampResultField != null && !timestampResultField.isEmpty())
+                                            && queryContext.getBoolean(CTX_KEY_OUTERMOST, true)
+                                            && !query.isApplyLimitPushDown();
+    final int timestampResultFieldIndexInOriginalDimensions = hasTimestampResultField ? queryContext.getInt(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_INDEX) : 0;
+    final GroupByQuery newQuery = prepareGroupByQuery(query);
 
     final Sequence<ResultRow> mergedResults = mergingQueryRunner.run(QueryPlus.wrap(newQuery), responseContext);
 
@@ -436,6 +450,8 @@ public class GroupingEngine
    */
   public Sequence<ResultRow> applyPostProcessing(Sequence<ResultRow> results, GroupByQuery query)
   {
+    results = wrapSummaryRowIfNeeded(query, results);
+
     // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.context().getBoolean(CTX_KEY_OUTERMOST, true)) {
       return query.postProcess(results);
@@ -726,4 +742,65 @@ public class GroupingEngine
 
     return aggsAndPostAggs;
   }
+
+  /**
+   * Wraps the sequence around if for this query a summary row might be needed in case the input becomes empty.
+   */
+  public static Sequence<ResultRow> wrapSummaryRowIfNeeded(GroupByQuery query, Sequence<ResultRow> process)
+  {
+    if (!summaryRowPreconditions(query)) {
+      return process;
+    }
+
+    final AtomicBoolean t = new AtomicBoolean();
+
+    return Sequences.concat(
+        Sequences.map(process, ent -> {
+          t.set(true);
+          return ent;
+        }),
+        Sequences.simple(() -> {
+          if (t.get()) {
+            return Collections.emptyIterator();
+          }
+          return summaryRowIterator(query);
+        }));
+  }
+
+  private static boolean summaryRowPreconditions(GroupByQuery query)
+  {
+    LimitSpec limit = query.getLimitSpec();
+    if (limit instanceof DefaultLimitSpec) {
+      DefaultLimitSpec limitSpec = (DefaultLimitSpec) limit;
+      if (limitSpec.getLimit() == 0 || limitSpec.getOffset() > 0) {
+        return false;
+      }
+    }
+    if (!query.getDimensions().isEmpty()) {
+      return false;
+    }
+    if (query.getGranularity().isFinerThan(Granularities.ALL)) {
+      return false;
+    }
+    return true;
+  }
+
+  private static Iterator<ResultRow> summaryRowIterator(GroupByQuery q)
+  {
+    List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
+    ResultRow resultRow = ResultRow.create(q.getResultRowSizeWithPostAggregators());
+    for (int i = 0; i < aggSpec.size(); i++) {
+      resultRow.set(i, aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get());
+    }
+    Map<String, Object> map = resultRow.toMap(q);
+    for (int i = 0; i < q.getPostAggregatorSpecs().size(); i++) {
+      final PostAggregator postAggregator = q.getPostAggregatorSpecs().get(i);
+      final Object value = postAggregator.compute(map);
+
+      resultRow.set(q.getResultRowPostAggregatorStart() + i, value);
+      map.put(postAggregator.getName(), value);
+    }
+    return Collections.singleton(resultRow).iterator();
+  }
+
 }

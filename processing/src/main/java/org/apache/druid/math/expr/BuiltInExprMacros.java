@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,7 +32,13 @@ public class BuiltInExprMacros
   public static class ComplexDecodeBase64ExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "complex_decode_base64";
+    public static final String ALIAS = "decode_base64_complex";
 
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
     @Override
     public String name()
     {
@@ -51,7 +58,7 @@ public class BuiltInExprMacros
 
       public ComplexDecodeBase64Expression(List<Expr> args)
       {
-        super(NAME, args);
+        super(name(), args);
         validationHelperCheckArgumentCount(args, 2);
         final Expr arg0 = args.get(0);
 
@@ -144,4 +151,78 @@ public class BuiltInExprMacros
       }
     }
   }
+
+  public static class StringDecodeBase64UTFExprMacro implements ExprMacroTable.ExprMacro
+  {
+    public static final String NAME = "decode_base64_utf8";
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+      return new StringDecodeBase64UTFExpression(args.get(0));
+    }
+
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    {
+      public StringDecodeBase64UTFExpression(Expr arg)
+      {
+        super(name(), arg);
+      }
+
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        ExprEval<?> toDecode = arg.eval(bindings);
+        if (toDecode.value() == null) {
+          return ExprEval.of(null);
+        }
+        return new StringExpr(StringUtils.fromUtf8(StringUtils.decodeBase64String(toDecode.asString()))).eval(bindings);
+      }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        return shuttle.visit(apply(shuttle.visitAll(Collections.singletonList(arg))));
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
+      }
+
+      @Override
+      public boolean isLiteral()
+      {
+        return arg.isLiteral();
+      }
+
+      @Override
+      public boolean isNullLiteral()
+      {
+        return arg.isNullLiteral();
+      }
+
+      @Nullable
+      @Override
+      public Object getLiteralValue()
+      {
+        return eval(InputBindings.nilBindings()).value();
+      }
+    }
+  }
+
 }

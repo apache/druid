@@ -27,7 +27,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>28.0.0-SNAPSHOT</version>
+        <version>29.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -207,6 +207,10 @@
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.jdbi</groupId>
+            <artifactId>jdbi</artifactId>
+        </dependency>
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -277,6 +281,12 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <!-- when specifying outputFile the shade plugin should not replace the main artifact.
+                                 Starting with maven-shade-plugin 3.3.0 shaded dependencies are removed in the main pom.
+                                 Setting this flag preserves the behavior of previous versions to list all
+                                 dependencies in the final pom to ensure our distribution step has the correct
+                                 classpath with all dependencies when running pull-deps -->
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                             <outputFile>
                                 ${project.build.directory}/${project.artifactId}-${project.version}-selfcontained.jar
                             </outputFile>

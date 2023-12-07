@@ -38,21 +38,21 @@ public class SubqueryGuardrailHelper
   private static final Logger log = new Logger(SubqueryGuardrailHelper.class);
 
 
-  public static final String UNLIMITED_LIMIT_VALUE = "unlimited";
+  public static final String LIMIT_DISABLED_VALUE = "disabled";
   public static final String AUTO_LIMIT_VALUE = "auto";
 
-  public static final Long UNLIMITED_LIMIT_REPRESENTATION = -1L;
+  public static final Long LIMIT_DISABLED_REPRESENTATION = -1L;
 
   private final long autoLimitBytes;
 
   public SubqueryGuardrailHelper(
       final LookupExtractorFactoryContainerProvider lookupManager,
       final long maxMemoryInJvm,
-      final int brokerNumHttpConnections
+      final int maxConcurrentQueries
   )
   {
     final DateTime start = DateTimes.nowUtc();
-    autoLimitBytes = computeLimitBytesForAuto(lookupManager, maxMemoryInJvm, brokerNumHttpConnections);
+    autoLimitBytes = computeLimitBytesForAuto(lookupManager, maxMemoryInJvm, maxConcurrentQueries);
     final long startupTimeMs = new Interval(start, DateTimes.nowUtc()).toDurationMillis();
 
     log.info("Took [%d] ms to initialize the SubqueryGuardrailHelper.", startupTimeMs);
@@ -70,8 +70,8 @@ public class SubqueryGuardrailHelper
 
   public long convertSubqueryLimitStringToLong(final String maxSubqueryLimit)
   {
-    if (UNLIMITED_LIMIT_VALUE.equalsIgnoreCase(maxSubqueryLimit)) {
-      return UNLIMITED_LIMIT_REPRESENTATION;
+    if (LIMIT_DISABLED_VALUE.equalsIgnoreCase(maxSubqueryLimit)) {
+      return LIMIT_DISABLED_REPRESENTATION;
     }
     if (AUTO_LIMIT_VALUE.equalsIgnoreCase(maxSubqueryLimit)) {
       return autoLimitBytes;
@@ -85,7 +85,7 @@ public class SubqueryGuardrailHelper
       throw InvalidInput.exception(
           e,
           "Unable to parse the provided maxSubqueryLimit [%s] to a valid number. Valid values for the "
-          + "maxSubqueryLimits can be 'auto', 'unlimited' or a positive number representing bytes to reserve.",
+          + "maxSubqueryLimits can be 'auto', 'disabled' or a positive integer representing bytes to reserve.",
           maxSubqueryLimit
       );
     }
@@ -114,13 +114,13 @@ public class SubqueryGuardrailHelper
   private static long computeLimitBytesForAuto(
       final LookupExtractorFactoryContainerProvider lookupManager,
       final long maxMemoryInJvm,
-      final int brokerNumHttpConnections
+      final int maxConcurrentQueries
   )
   {
     long memoryInJvmWithoutLookups = maxMemoryInJvm - computeLookupFootprint(lookupManager);
     long memoryInJvmForSubqueryResultsInlining = (long) (memoryInJvmWithoutLookups * SUBQUERY_MEMORY_BYTES_FRACTION);
-    long memoryInJvmForSubqueryResultsInliningPerQuery = memoryInJvmForSubqueryResultsInlining
-                                                         / brokerNumHttpConnections;
+    long memoryInJvmForSubqueryResultsInliningPerQuery =
+        memoryInJvmForSubqueryResultsInlining / maxConcurrentQueries;
     return Math.max(memoryInJvmForSubqueryResultsInliningPerQuery, 1L);
   }
 

@@ -40,7 +40,7 @@ import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.SpatialIndex;
 
@@ -75,9 +75,12 @@ public class SpatialFilter implements Filter
       return null;
     }
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
-    final SpatialIndex spatialIndex = indexSupplier == null ? null : indexSupplier.as(SpatialIndex.class);
+    if (indexSupplier == null) {
+      return new AllUnknownBitmapColumnIndex(selector);
+    }
+    final SpatialIndex spatialIndex = indexSupplier.as(SpatialIndex.class);
     if (spatialIndex == null) {
-      return new AllFalseBitmapColumnIndex(selector);
+      return null;
     }
     return new BitmapColumnIndex()
     {
@@ -95,7 +98,7 @@ public class SpatialFilter implements Filter
       }
 
       @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);
         return bitmapResultFactory.unionDimensionValueBitmaps(search);

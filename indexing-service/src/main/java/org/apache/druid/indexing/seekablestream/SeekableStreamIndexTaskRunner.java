@@ -46,6 +46,8 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -60,6 +62,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -83,6 +86,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
+import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Access;
@@ -209,6 +213,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final String stream;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
+  private final Set<String> publishedSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
 
@@ -319,7 +324,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   previous.getValue(),
                   current.getValue(),
                   true,
-                  exclusiveStartPartitions
+                  exclusiveStartPartitions,
+                  getTaskLockType()
               )
           );
           previous = current;
@@ -334,7 +340,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 previous.getValue(),
                 endOffsets,
                 false,
-                exclusiveStartPartitions
+                exclusiveStartPartitions,
+                getTaskLockType()
             )
         );
       } else {
@@ -345,7 +352,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap(),
                 endOffsets,
                 false,
-                ioConfig.getStartSequenceNumbers().getExclusivePartitions()
+                ioConfig.getStartSequenceNumbers().getExclusivePartitions(),
+                getTaskLockType()
             )
         );
       }
@@ -444,7 +452,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               } else {
                 final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
-                        TaskLockType.EXCLUSIVE,
+                        TaskLocks.determineLockTypeForAppend(task.getContext()),
                         segmentId.getInterval(),
                         1000L
                     )
@@ -931,6 +939,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
+  }
+
+  private TaskLockType getTaskLockType()
+  {
+    return TaskLocks.determineLockTypeForAppend(task.getContext());
   }
 
   private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException
@@ -1441,7 +1454,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     log.info("Stopping forcefully (status: [%s])", status);
     stopRequested.set(true);
-    runThread.interrupt();
+    // Interrupt if the task has started to run
+    if (runThread != null) {
+      runThread.interrupt();
+    }
   }
 
   public void stopGracefully()
@@ -1555,6 +1571,40 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.WRITE);
     return setEndOffsets(sequences, finish);
+  }
+
+  @POST
+  @Path("/pendingSegmentVersion")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response registerNewVersionOfPendingSegment(
+      PendingSegmentVersions pendingSegmentVersions,
+      // this field is only for internal purposes, shouldn't be usually set by users
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.WRITE);
+    try {
+      ((StreamAppenderator) appenderator).registerNewVersionOfPendingSegment(
+          pendingSegmentVersions.getBaseSegment(),
+          pendingSegmentVersions.getNewVersion()
+      );
+      return Response.ok().build();
+    }
+    catch (DruidException e) {
+      return Response
+          .status(e.getStatusCode())
+          .entity(new ErrorResponse(e))
+          .build();
+    }
+    catch (Exception e) {
+      log.error(
+          e,
+          "Could not register new version[%s] of pending segment[%s]",
+          pendingSegmentVersions.getNewVersion(), pendingSegmentVersions.getBaseSegment()
+      );
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   public Map<String, Object> doGetRowStats()
@@ -1728,7 +1778,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               sequenceNumbers,
               endOffsets,
               false,
-              exclusiveStartPartitions
+              exclusiveStartPartitions,
+              getTaskLockType()
           );
 
           log.info(

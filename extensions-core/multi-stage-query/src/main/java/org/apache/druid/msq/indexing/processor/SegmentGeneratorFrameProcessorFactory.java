@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
@@ -75,7 +76,7 @@ import java.util.function.Consumer;
 
 @JsonTypeName("segmentGenerator")
 public class SegmentGeneratorFrameProcessorFactory
-    implements FrameProcessorFactory<List<SegmentIdWithShardSpec>, SegmentGeneratorFrameProcessor, DataSegment, Set<DataSegment>>
+    implements FrameProcessorFactory<DataSegment, Set<DataSegment>, List<SegmentIdWithShardSpec>>
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
@@ -112,7 +113,7 @@ public class SegmentGeneratorFrameProcessorFactory
   }
 
   @Override
-  public ProcessorsAndChannels<SegmentGeneratorFrameProcessor, DataSegment> makeProcessors(
+  public ProcessorsAndChannels<DataSegment, Set<DataSegment>> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -151,7 +152,8 @@ public class SegmentGeneratorFrameProcessorFactory
             }
         ));
     final SegmentGenerationProgressCounter segmentGenerationProgressCounter = counters.segmentGenerationProgress();
-    final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper = new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
+    final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper =
+        new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {
@@ -196,30 +198,26 @@ public class SegmentGeneratorFrameProcessorFactory
         }
     );
 
-    return new ProcessorsAndChannels<>(workers, OutputChannels.none());
+    return new ProcessorsAndChannels<>(
+        ProcessorManagers.of(workers)
+                         .withAccumulation(
+                             new HashSet<>(),
+                             (acc, segment) -> {
+                               if (segment != null) {
+                                 acc.add(segment);
+                               }
+
+                               return acc;
+                             }
+                         ),
+        OutputChannels.none()
+    );
   }
 
   @Override
-  public TypeReference<Set<DataSegment>> getAccumulatedResultTypeReference()
+  public TypeReference<Set<DataSegment>> getResultTypeReference()
   {
     return new TypeReference<Set<DataSegment>>() {};
-  }
-
-  @Override
-  public Set<DataSegment> newAccumulatedResult()
-  {
-    return new HashSet<>();
-  }
-
-  @Nullable
-  @Override
-  public Set<DataSegment> accumulateResult(Set<DataSegment> accumulated, DataSegment current)
-  {
-    if (current != null) {
-      accumulated.add(current);
-    }
-
-    return accumulated;
   }
 
   @Nullable

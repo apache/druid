@@ -521,6 +521,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 "dimPostAgg",
                 "market + 'x'",
                 null,
+                null,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -727,6 +728,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,
                 "uniques + 1",
                 null,
+                null,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -780,6 +782,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             new ExpressionPostAggregator(
                 QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,
                 "uniques + 1",
+                null,
                 null,
                 TestExprMacroTable.INSTANCE
             )

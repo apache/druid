@@ -29,6 +29,7 @@ import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
@@ -65,6 +66,7 @@ public class KillCompactionConfigTest
   @Mock
   private MetadataStorageTablesConfig mockConnectorConfig;
 
+  private CoordinatorConfigManager coordinatorConfigManager;
   private KillCompactionConfig killCompactionConfig;
   private CoordinatorRunStats runStats;
 
@@ -74,6 +76,11 @@ public class KillCompactionConfigTest
     runStats = new CoordinatorRunStats();
     Mockito.when(mockConnectorConfig.getConfigTable()).thenReturn("druid_config");
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+    coordinatorConfigManager = new CoordinatorConfigManager(
+        mockJacksonConfigManager,
+        mockConnector,
+        mockConnectorConfig
+    );
   }
 
   @Test
@@ -88,9 +95,7 @@ public class KillCompactionConfigTest
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,
-        mockJacksonConfigManager,
-        mockConnector,
-        mockConnectorConfig
+        coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
@@ -113,9 +118,7 @@ public class KillCompactionConfigTest
         () -> killCompactionConfig = new KillCompactionConfig(
             druidCoordinatorConfig,
             mockSqlSegmentsMetadataManager,
-            mockJacksonConfigManager,
-            mockConnector,
-            mockConnectorConfig
+            coordinatorConfigManager
         )
     );
     Assert.assertEquals(
@@ -151,9 +154,7 @@ public class KillCompactionConfigTest
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,
-        mockJacksonConfigManager,
-        mockConnector,
-        mockConnectorConfig
+        coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockSqlSegmentsMetadataManager);
@@ -240,9 +241,7 @@ public class KillCompactionConfigTest
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,
-        mockJacksonConfigManager,
-        mockConnector,
-        mockConnectorConfig
+        coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
 
@@ -318,9 +317,9 @@ public class KillCompactionConfigTest
         ArgumentMatchers.any())
     ).thenReturn(
         // Return fail result with RetryableException the first three calls to updated set
-        ConfigManager.SetResult.fail(new Exception(), true),
-        ConfigManager.SetResult.fail(new Exception(), true),
-        ConfigManager.SetResult.fail(new Exception(), true),
+        ConfigManager.SetResult.retryableFailure(new Exception()),
+        ConfigManager.SetResult.retryableFailure(new Exception()),
+        ConfigManager.SetResult.retryableFailure(new Exception()),
         // Return success ok on the fourth call to set updated config
         ConfigManager.SetResult.ok()
     );
@@ -334,9 +333,7 @@ public class KillCompactionConfigTest
     killCompactionConfig = new KillCompactionConfig(
         druidCoordinatorConfig,
         mockSqlSegmentsMetadataManager,
-        mockJacksonConfigManager,
-        mockConnector,
-        mockConnectorConfig
+        coordinatorConfigManager
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
 

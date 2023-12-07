@@ -23,22 +23,22 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class SingleStringFirstDimensionVectorAggregator implements VectorAggregator
 {
-  private final BaseLongVectorValueSelector timeSelector;
+  private final VectorValueSelector timeSelector;
   private final SingleValueDimensionVectorSelector valueDimensionVectorSelector;
   private long firstTime;
   private final int maxStringBytes;
   private final boolean useDefault = NullHandling.replaceWithDefault();
 
   public SingleStringFirstDimensionVectorAggregator(
-      BaseLongVectorValueSelector timeSelector,
+      VectorValueSelector timeSelector,
       SingleValueDimensionVectorSelector valueDimensionVectorSelector,
       int maxStringBytes
   )
@@ -57,7 +57,7 @@ public class SingleStringFirstDimensionVectorAggregator implements VectorAggrega
         position + NumericFirstVectorAggregator.NULL_OFFSET,
         useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
     );
-    buf.putLong(position + NumericFirstVectorAggregator.VALUE_OFFSET, 0);
+    buf.putInt(position + NumericFirstVectorAggregator.VALUE_OFFSET, 0);
   }
 
   @Override

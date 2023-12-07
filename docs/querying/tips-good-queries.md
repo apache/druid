@@ -23,7 +23,9 @@ sidebar_label: "Tips for writing good queries"
   ~ under the License.
   -->
 
-This topic includes tips and examples that can help you investigate and improve query performance and accuracy using [Apache Druid SQL](./sql.md). Use this topic as a companion to the Jupyter Notebook tutorial [Learn the basics of Druid SQL](https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/notebooks/03-query/00-using-sql-with-druidapi.ipynb).
+This topic includes tips and examples that can help you investigate and improve query performance and accuracy using [Apache Druid SQL](./sql.md).
+
+For an interactive tutorial on Druid SQL, see [Learn the basics of Druid SQL](https://github.com/implydata/learn-druid/tree/main/notebooks) within the [Learn Druid repo](https://github.com/implydata/learn-druid).
 
 Your ability to effectively query your data depends in large part on the way you've ingested and stored the data in Apache Druid. This document assumes that you've followed the best practices described in [Schema design tips and best practices](../ingestion/schema-design.md#general-tips-and-best-practices) when modeling your data. 
 
@@ -68,7 +70,8 @@ When possible, design your SQL queries in such a way that they match the rules f
 
 Note that TopN queries are approximate in that each data process ranks its top K results and only returns those top K results to the Broker.
 
-You can follow the tutorial [Using TopN approximation in Druid queries](https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/notebooks/03-query/02-approxRanking.ipynb) to work through some examples with approximation turned on and off. The tutorial [Get to know Query view](../tutorials/tutorial-sql-query-view.md) demonstrates running aggregate queries in the Druid console.
+You can follow the tutorial [Using TopN approximation in Druid queries](https://github.com/implydata/learn-druid/tree/main/notebooks) within the [Learn Druid repo](https://github.com/implydata/learn-druid) to work through some examples with approximation turned on and off.
+The tutorial [Get to know Query view](../tutorials/tutorial-sql-query-view.md) demonstrates running aggregate queries in the Druid console.
 
 ### Manually tune your queries
 

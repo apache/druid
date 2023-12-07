@@ -100,7 +100,8 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
         boolean orderingIsAlphanumeric = this.ordering.equals(StringComparators.ALPHANUMERIC);
         Preconditions.checkState(
             alphaNumeric == orderingIsAlphanumeric,
-            "mismatch between alphanumeric and ordering property");
+            "mismatch between alphanumeric and ordering property"
+        );
       }
     }
     this.extractionFn = extractionFn;

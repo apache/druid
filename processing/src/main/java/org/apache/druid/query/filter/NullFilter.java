@@ -114,6 +114,10 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
+    if (!Objects.equals(getColumn(), dimension)) {
+      return null;
+    }
+
     RangeSet<String> retSet = TreeRangeSet.create();
     // Nulls are less than empty String in segments
     retSet.add(Range.lessThan(""));
@@ -265,6 +269,13 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     public Predicate<Object> makeObjectPredicate()
     {
       return Predicates.isNull();
+    }
+
+    @Override
+    public boolean isNullInputUnknown()
+    {
+      // this filter only matches null inputs
+      return false;
     }
 
     @Override

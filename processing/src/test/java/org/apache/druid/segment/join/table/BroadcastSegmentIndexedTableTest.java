@@ -266,14 +266,10 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
       // lets try a few values out
       for (Object val : vals) {
         final IntSortedSet valIndex = valueIndex.find(val);
-        if (val == null) {
-          Assert.assertEquals(0, valIndex.size());
-        } else {
-          Assert.assertTrue(valIndex.size() > 0);
-          final IntBidirectionalIterator rowIterator = valIndex.iterator();
-          while (rowIterator.hasNext()) {
-            Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
-          }
+        Assert.assertTrue(valIndex.size() > 0);
+        final IntBidirectionalIterator rowIterator = valIndex.iterator();
+        while (rowIterator.hasNext()) {
+          Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
         }
       }
       for (Object val : nonmatchingVals) {

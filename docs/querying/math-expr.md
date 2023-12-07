@@ -82,7 +82,7 @@ The following built-in functions are available.
 |concat|concat(expr, expr...) concatenate a list of strings|
 |format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
-|lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.md)|
+|lookup|lookup(expr, lookup-name[,replaceMissingValueWith]) looks up expr in a registered,`replaceMissingValueWith` is an optional constant string [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
 |regexp_like|regexp_like(expr, pattern) returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. |
@@ -235,7 +235,7 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 
 | function | description |
 |---|---|
-| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'` or `'STRING'` to cast values to that type. |
+| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, or `ARRAY<DOUBLE>`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'`, `'STRING'`, `'ARRAY<LONG>'`, `'ARRAY<DOUBLE>'`, or `'ARRAY<STRING>'` to cast values to that type. |
 | json_query(expr, path) | Extract a `COMPLEX<json>` value from `expr` using JSONPath syntax of `path` |
 | json_object(expr1, expr2[, expr3, expr4 ...]) | Construct a `COMPLEX<json>` with alternating 'key' and 'value' arguments|
 | parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|

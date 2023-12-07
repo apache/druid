@@ -102,5 +102,21 @@ public enum EngineFeature
    * that it actually *does* generate correct results in native when the join is processed on the Broker. It is much
    * less likely that MSQ will plan in such a way that generates correct results.
    */
-  ALLOW_BROADCAST_RIGHTY_JOIN;
+  ALLOW_BROADCAST_RIGHTY_JOIN,
+
+  /**
+   * Planner is permitted to use {@link org.apache.druid.sql.calcite.rel.DruidUnionRel} to plan the top level UNION ALL.
+   * This is to dissuade planner from accepting and running the UNION ALL queries that are not supported by engines
+   * (primarily MSQ).
+   *
+   * Due to the nature of the exeuction of the top level UNION ALLs (we run the individual queries and concat the
+   * results), it only makes sense to enable this on engines where the queries return the results synchronously
+   *
+   * Planning queries with top level UNION_ALL leads to undesirable behaviour with asynchronous engines like MSQ.
+   * To enumerate this behaviour for MSQ, the broker attempts to run the individual queries as MSQ queries in succession,
+   * submits the first query correctly, fails on the rest of the queries (due to conflicting taskIds),
+   * and cannot concat the results together (as * the result for broker is the query id). Therefore, we don't get the
+   * correct result back, while the MSQ engine is executing the partial query
+   */
+  ALLOW_TOP_LEVEL_UNION_ALL;
 }

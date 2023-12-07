@@ -21,15 +21,15 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.Period;
@@ -46,7 +46,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
-import java.util.concurrent.Callable;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoordinatorCompactionConfigsResourceTest
@@ -65,10 +64,24 @@ public class CoordinatorCompactionConfigsResourceTest
       null,
       ImmutableMap.of("key", "val")
   );
+  private static final DataSourceCompactionConfig NEW_CONFIG = new DataSourceCompactionConfig(
+      "newDataSource",
+      null,
+      500L,
+      null,
+      new Period(1800),
+      null,
+      new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null),
+      null,
+      null,
+      null,
+      null,
+      ImmutableMap.of("key", "val")
+  );
   private static final byte[] OLD_CONFIG_IN_BYTES = {1, 2, 3};
 
-  private static final CoordinatorCompactionConfig ORIGINAL_CONFIG = CoordinatorCompactionConfig.from(ImmutableList.of(
-      OLD_CONFIG));
+  private static final CoordinatorCompactionConfig ORIGINAL_CONFIG
+      = CoordinatorCompactionConfig.from(ImmutableList.of(OLD_CONFIG));
 
   private static final String DATASOURCE_NOT_EXISTS = "notExists";
 
@@ -113,11 +126,8 @@ public class CoordinatorCompactionConfigsResourceTest
                  )
     ).thenReturn(ImmutableList.of());
     coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(
-        mockJacksonConfigManager,
-        mockConnector,
-        mockConnectorConfig,
-        mockAuditManager,
-        new DefaultObjectMapper()
+        new CoordinatorConfigManager(mockJacksonConfigManager, mockConnector, mockConnectorConfig),
+        mockAuditManager
     );
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
   }
@@ -254,27 +264,62 @@ public class CoordinatorCompactionConfigsResourceTest
   }
 
   @Test
-  public void testUpdateConfigHelperShouldRetryIfRetryableException()
+  public void testUpdateShouldRetryIfRetryableException()
   {
-    MutableInt nunCalled = new MutableInt(0);
-    Callable<ConfigManager.SetResult> callable = () -> {
-      nunCalled.increment();
-      return ConfigManager.SetResult.fail(new Exception(), true);
-    };
-    coordinatorCompactionConfigsResource.updateConfigHelper(callable);
-    Assert.assertEquals(CoordinatorCompactionConfigsResource.UPDATE_NUM_RETRY, (int) nunCalled.getValue());
+    Mockito.when(
+        mockJacksonConfigManager.set(
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.any(),
+            ArgumentMatchers.any(),
+            ArgumentMatchers.any()
+        )
+    ).thenReturn(ConfigManager.SetResult.retryableFailure(new ISE("retryable")));
+
+    coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
+        NEW_CONFIG,
+        "author",
+        "test",
+        mockHttpServletRequest
+    );
+
+    // Verify that the update is retried upto the max number of retries
+    Mockito.verify(
+        mockJacksonConfigManager,
+        Mockito.times(CoordinatorCompactionConfigsResource.UPDATE_NUM_RETRY)
+    ).set(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
   }
 
   @Test
-  public void testUpdateConfigHelperShouldNotRetryIfNotRetryableException()
+  public void testUpdateShouldNotRetryIfNotRetryableException()
   {
-    MutableInt nunCalled = new MutableInt(0);
-    Callable<ConfigManager.SetResult> callable = () -> {
-      nunCalled.increment();
-      return ConfigManager.SetResult.fail(new Exception(), false);
-    };
-    coordinatorCompactionConfigsResource.updateConfigHelper(callable);
-    Assert.assertEquals(1, (int) nunCalled.getValue());
+    Mockito.when(
+        mockJacksonConfigManager.set(
+            ArgumentMatchers.anyString(),
+            ArgumentMatchers.any(),
+            ArgumentMatchers.any(),
+            ArgumentMatchers.any()
+        )
+    ).thenReturn(ConfigManager.SetResult.failure(new ISE("retryable")));
+
+    coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
+        NEW_CONFIG,
+        "author",
+        "test",
+        mockHttpServletRequest
+    );
+
+    // Verify that the update is tried only once
+    Mockito.verify(mockJacksonConfigManager, Mockito.times(1)).set(
+        ArgumentMatchers.anyString(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
   }
 
   @Test

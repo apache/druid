@@ -33,6 +33,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 @SuppressWarnings("ALL")
 public class ParquetToJsonTest
 {
@@ -71,9 +74,64 @@ public class ParquetToJsonTest
   }
 
   @Test
+  public void testConvertedDates() throws Exception
+  {
+    final File tmpDir = tmp.newFolder();
+    try (InputStream in = new BufferedInputStream(ClassLoader.getSystemResourceAsStream("smlTbl.parquet"))) {
+      Files.copy(in, tmpDir.toPath().resolve("smlTbl.parquet"));
+    }
+
+    ParquetToJson.main(new String[]{"--convert-corrupt-dates", tmpDir.toString()});
+
+    DefaultObjectMapper mapper = DefaultObjectMapper.INSTANCE;
+    List<Object> objs = mapper.readerFor(Object.class).readValues(new File(tmpDir, "smlTbl.parquet.json")).readAll();
+
+    Assert.assertEquals(56, objs.size());
+    Assert.assertEquals(
+        ImmutableMap
+            .builder()
+            .put("col_int", 8122)
+            .put("col_bgint", 817200)
+            .put("col_char_2", "IN")
+            .put("col_vchar_52", "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB")
+            .put("col_tmstmp", 1409617682418L)
+            .put("col_dt", 984009600000L)
+            .put("col_booln", false)
+            .put("col_dbl", 12900.48)
+            .put("col_tm", 33109170)
+            .build(),
+        objs.get(0)
+    );
+  }
+
+
+  @Test
   public void testInputValidation()
   {
     Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{}));
     Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{"a", "b"}));
+  }
+
+  @Test
+  public void testEmptyDir() throws Exception
+  {
+    final File tmpDir = tmp.newFolder();
+    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {tmpDir.getAbsolutePath()}));
+  }
+
+  @Test
+  public void testSomeFile() throws Exception
+  {
+    final File file = tmp.newFile();
+    assertTrue(file.exists());
+    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
+  }
+
+  @Test
+  public void testNonExistentFile() throws Exception
+  {
+    final File file = new File(tmp.getRoot(), "nonExistent");
+    assertFalse(file.exists());
+    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
   }
 }

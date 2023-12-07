@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,6 +33,7 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -41,6 +43,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -1109,7 +1112,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setPostAggregatorSpecs(ImmutableList.of(expressionPostAgg("p0", "string_to_array('a,b',',')")))
+                        .setPostAggregatorSpecs(expressionPostAgg("p0", "string_to_array('a,b',',')", ColumnType.STRING))
                         .setDimensions(dimensions(new DefaultDimensionSpec("m1", "_d0", ColumnType.FLOAT)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -1211,7 +1214,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                       ),
                       new CountAggregatorFactory("a1")
                   )
-                  .postAggregators(expressionPostAgg("p0", "string_to_array(\"a0\",',')"))
+                  .postAggregators(expressionPostAgg("p0", "string_to_array(\"a0\",',')", ColumnType.STRING))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         )
@@ -2189,4 +2192,46 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
     );
   }
+
+  @Test
+  public void testMultiValuedFilterOnlyWhenLookupPullsInDuplicates()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT \n"
+            + "  MV_FILTER_ONLY(LOOKUP(dim3,'lookyloo'),ARRAY[null]),count(1) \n"
+            + "FROM druid.foo AS t group by 1\n")
+        .expectedQuery(
+            GroupByQuery.builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    new ListFilteredVirtualColumn(
+                        "v0",
+                        new ExtractionDimensionSpec(
+                            "dim3",
+                            "dim3",
+                            ColumnType.STRING,
+                            new RegisteredLookupExtractionFn(
+                                null,
+                                "lookyloo",
+                                false,
+                                null,
+                                null,
+                                true)),
+                        Sets.newHashSet((String) null),
+                        true))
+                .setDimensions(
+                    dimensions(
+                        new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build())
+        .expectedResults(
+            ImmutableList.of(new Object[] {NullHandling.defaultStringValue(), 7L}))
+        .run();
+
+  }
+
 }
