@@ -88,37 +88,37 @@ public class BasicAuthenticatorResourceTest
   @Test
   public void updateUserCredentialsShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.updateUserCredentials(req, AUTHENTICATOR_NAME, USER_NAME, update, null, null));
+    Assert.assertNotNull(target.updateUserCredentials(req, AUTHENTICATOR_NAME, USER_NAME, update));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void updateUserCredentialsWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.updateUserCredentials(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, update, null, null);
+    target.updateUserCredentials(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, update);
   }
 
   @Test
   public void deleteUserShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.deleteUser(req, AUTHENTICATOR_NAME, USER_NAME, null, null));
+    Assert.assertNotNull(target.deleteUser(req, AUTHENTICATOR_NAME, USER_NAME));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void deleteUserWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.deleteUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, null, null);
+    target.deleteUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME);
   }
 
   @Test
   public void createUserShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.createUser(req, AUTHENTICATOR_NAME, USER_NAME, null, null));
+    Assert.assertNotNull(target.createUser(req, AUTHENTICATOR_NAME, USER_NAME));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void createUserWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.createUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, null, null);
+    target.createUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME);
   }
 
   @Test

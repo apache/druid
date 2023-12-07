@@ -143,7 +143,7 @@ public class SQLMetadataStorageDruidModule implements Module
   {
     PolyBind.createChoice(
         binder,
-        "druid.audit.destination",
+        "druid.audit.manager.type",
         Key.get(AuditManager.class),
         Key.get(SQLAuditManager.class)
     );
@@ -160,7 +160,7 @@ public class SQLMetadataStorageDruidModule implements Module
 
     PolyBind.createChoice(
         binder,
-        "druid.audit.destination",
+        "druid.audit.manager.type",
         Key.get(AuditManagerConfig.class),
         Key.get(SQLAuditManagerConfig.class)
     );

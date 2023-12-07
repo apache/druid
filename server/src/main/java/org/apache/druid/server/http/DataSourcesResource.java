@@ -31,7 +31,6 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.audit.AuditEntry;
-import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
@@ -59,6 +58,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -73,9 +73,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -229,8 +227,6 @@ public class DataSourcesResource
   public Response markSegmentsAsUnused(
       @PathParam("dataSourceName") final String dataSourceName,
       final MarkDataSourceSegmentsPayload payload,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
@@ -257,13 +253,13 @@ public class DataSourcesResource
         );
         auditPayload = Collections.singletonMap("segmentIds", segmentIds);
       }
-      if (auditManager != null && author != null && !author.isEmpty()) {
+      if (auditManager != null) {
         auditManager.doAudit(
             AuditEntry.builder()
                       .key(dataSourceName)
                       .type("segments.markUnused")
                       .payload(auditPayload)
-                      .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+                      .auditInfo(AuthorizationUtils.buildAuditInfo(req))
                       .build()
         );
       }
@@ -348,7 +344,7 @@ public class DataSourcesResource
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
-      return killUnusedSegmentsInInterval(dataSourceName, interval, null, null, req);
+      return killUnusedSegmentsInInterval(dataSourceName, interval, req);
     } else {
       MarkSegments markSegments = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
       return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
@@ -362,8 +358,6 @@ public class DataSourcesResource
   public Response killUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @PathParam("interval") final String interval,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
@@ -379,13 +373,13 @@ public class DataSourcesResource
           overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null),
           true
       );
-      if (auditManager != null && author != null && !author.isEmpty()) {
+      if (auditManager != null) {
         auditManager.doAudit(
             AuditEntry.builder()
                       .key(dataSourceName)
                       .type("segments.killTask")
                       .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
-                      .auditInfo(new AuditInfo(author, comment, req.getRemoteAddr()))
+                      .auditInfo(AuthorizationUtils.buildAuditInfo(req))
                       .build()
         );
       }

@@ -34,9 +34,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -157,9 +155,7 @@ public class BasicAuthenticatorResource
   public Response createUser(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") String userName,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment
+      @PathParam("userName") String userName
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
@@ -167,7 +163,7 @@ public class BasicAuthenticatorResource
     final Response response = handler.createUser(authenticatorName, userName);
 
     if (isSuccess(response)) {
-      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(author, comment, req);
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
       performAudit(authenticatorName, "users.create", Collections.singletonMap("username", userName), auditInfo);
     }
 
@@ -190,16 +186,14 @@ public class BasicAuthenticatorResource
   public Response deleteUser(
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
-      @PathParam("userName") String userName,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment
+      @PathParam("userName") String userName
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.deleteUser(authenticatorName, userName);
 
     if (isSuccess(response)) {
-      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(author, comment, req);
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
       performAudit(authenticatorName, "users.delete", Collections.singletonMap("username", userName), auditInfo);
     }
 
@@ -223,16 +217,14 @@ public class BasicAuthenticatorResource
       @Context HttpServletRequest req,
       @PathParam("authenticatorName") final String authenticatorName,
       @PathParam("userName") String userName,
-      BasicAuthenticatorCredentialUpdate update,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment
+      BasicAuthenticatorCredentialUpdate update
   )
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
 
     if (isSuccess(response)) {
-      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(author, comment, req);
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
       performAudit(authenticatorName, "users.update", Collections.singletonMap("username", userName), auditInfo);
     }
 

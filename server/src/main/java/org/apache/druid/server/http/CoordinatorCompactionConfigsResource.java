@@ -41,9 +41,7 @@ import org.joda.time.Interval;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -96,8 +94,6 @@ public class CoordinatorCompactionConfigsResource
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
       @QueryParam("useAutoScaleSlots") Boolean useAutoScaleSlots,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
@@ -108,15 +104,13 @@ public class CoordinatorCompactionConfigsResource
             maxCompactionTaskSlots,
             useAutoScaleSlots
         );
-    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(author, comment, req));
+    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   public Response addOrUpdateCompactionConfig(
       final DataSourceCompactionConfig newConfig,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
@@ -133,7 +127,7 @@ public class CoordinatorCompactionConfigsResource
     };
     return updateConfigHelper(
         callable,
-        AuthorizationUtils.buildAuditInfo(author, comment, req)
+        AuthorizationUtils.buildAuditInfo(req)
     );
   }
 
@@ -202,8 +196,6 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteCompactionConfig(
       @PathParam("dataSource") String dataSource,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
@@ -220,7 +212,7 @@ public class CoordinatorCompactionConfigsResource
 
       return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values()));
     };
-    return updateConfigHelper(callable, AuthorizationUtils.buildAuditInfo(author, comment, req));
+    return updateConfigHelper(callable, AuthorizationUtils.buildAuditInfo(req));
   }
 
   private Response updateConfigHelper(

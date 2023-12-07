@@ -30,7 +30,7 @@ public class AuditLogger
   }
 
   private static final String MSG_FORMAT
-      = "[%s] User[%s], ip[%s] performed action[%s] on key[%s] with comment[%s]. Payload[%s].";
+      = "[%s] User[%s], identity[%s], ip[%s] performed action[%s] on key[%s] with comment[%s]. Payload[%s].";
 
   private final Level level;
   private final Logger logger = new Logger(AuditLogger.class);
@@ -45,6 +45,7 @@ public class AuditLogger
     Object[] args = {
         entry.getAuditTime(),
         entry.getAuditInfo().getAuthor(),
+        entry.getAuditInfo().getIdentity(),
         entry.getAuditInfo().getIp(),
         entry.getType(),
         entry.getKey(),

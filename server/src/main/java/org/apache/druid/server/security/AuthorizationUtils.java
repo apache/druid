@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 
@@ -113,6 +114,18 @@ public class AuthorizationUtils
         author,
         getAuthenticatedIdentity(request),
         comment,
+        request.getRemoteAddr()
+    );
+  }
+
+  public static AuditInfo buildAuditInfo(HttpServletRequest request)
+  {
+    final String author = request.getHeader(AuditManager.X_DRUID_AUTHOR);
+    final String comment = request.getHeader(AuditManager.X_DRUID_COMMENT);
+    return new AuditInfo(
+        author == null ? "" : author,
+        getAuthenticatedIdentity(request),
+        comment == null ? "" : comment,
         request.getRemoteAddr()
     );
   }

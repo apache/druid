@@ -154,8 +154,6 @@ public class CoordinatorCompactionConfigsResourceTest
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         true,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -199,8 +197,6 @@ public class CoordinatorCompactionConfigsResourceTest
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -252,8 +248,6 @@ public class CoordinatorCompactionConfigsResourceTest
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
         datasourceName,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -277,8 +271,6 @@ public class CoordinatorCompactionConfigsResourceTest
 
     coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         NEW_CONFIG,
-        "author",
-        "test",
         mockHttpServletRequest
     );
 
@@ -308,8 +300,6 @@ public class CoordinatorCompactionConfigsResourceTest
 
     coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         NEW_CONFIG,
-        "author",
-        "test",
         mockHttpServletRequest
     );
 
@@ -357,8 +347,6 @@ public class CoordinatorCompactionConfigsResourceTest
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         true,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -414,8 +402,6 @@ public class CoordinatorCompactionConfigsResourceTest
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), result.getStatus());
@@ -445,8 +431,6 @@ public class CoordinatorCompactionConfigsResourceTest
     String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
         DATASOURCE_NOT_EXISTS,
-        author,
-        comment,
         mockHttpServletRequest
     );
     Assert.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), result.getStatus());

@@ -94,7 +94,6 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -196,8 +195,6 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response taskPost(
       final Task task,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
@@ -228,13 +225,15 @@ public class OverlordResource
             taskQueue.add(task);
 
             // Do an audit only if this API was called by a user and not by internal services
+            final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
+            final String author = auditInfo.getAuthor();
             if (author != null && !author.isEmpty()) {
               auditManager.doAudit(
                   AuditEntry.builder()
                             .key(task.getDataSource())
-                            .type("overlord" + req.getServletPath())
+                            .type("ingest.batch")
                             .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
-                            .auditInfo(AuthorizationUtils.buildAuditInfo(author, comment, req))
+                            .auditInfo(auditInfo)
                             .build()
               );
             }
@@ -555,15 +554,13 @@ public class OverlordResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response setWorkerConfig(
       final WorkerBehaviorConfig workerBehaviorConfig,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
     final SetResult setResult = configManager.set(
         WorkerBehaviorConfig.CONFIG_KEY,
         workerBehaviorConfig,
-        new AuditInfo(author, comment, req.getRemoteAddr())
+        AuthorizationUtils.buildAuditInfo(req)
     );
     if (setResult.isOk()) {
       log.info("Updating Worker configs: %s", workerBehaviorConfig);
