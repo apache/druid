@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,17 +36,5 @@ public class AzureClientFactoryTest
     config.setAccount(ACCOUNT);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient();
     Assert.assertEquals(ACCOUNT, blobServiceClient.getAccountName());
-  }
-
-  @Test
-  public void test_blobContainerClient()
-  {
-    String container = "container";
-    AzureAccountConfig config = new AzureAccountConfig();
-    azureClientFactory = new AzureClientFactory(config);
-    config.setAccount(ACCOUNT);
-    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(container, null);
-    Assert.assertEquals(ACCOUNT, blobContainerClient.getAccountName());
-    Assert.assertEquals(container, blobContainerClient.getBlobContainerName());
   }
 }

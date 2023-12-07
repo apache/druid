@@ -22,12 +22,11 @@ package org.apache.druid.storage.azure;
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 
+import javax.annotation.Nonnull;
 import java.time.Duration;
 
 /**
@@ -47,6 +46,23 @@ public class AzureClientFactory
 
   public BlobServiceClient getBlobServiceClient()
   {
+    return getAuthenticatedBlobServiceClientBuilder().buildClient();
+  }
+
+  public BlobServiceClient getRetriableBlobServiceClient(@Nonnull Integer retryCount)
+  {
+    BlobServiceClientBuilder clientBuilder = getAuthenticatedBlobServiceClientBuilder()
+        .retryOptions(new RetryOptions(
+          new ExponentialBackoffOptions()
+              .setMaxRetries(retryCount)
+              .setBaseDelay(Duration.ofMillis(1000))
+              .setMaxDelay(Duration.ofMillis(60000))
+      ));
+    return clientBuilder.buildClient();
+  }
+
+  private BlobServiceClientBuilder getAuthenticatedBlobServiceClientBuilder()
+  {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
         .endpoint("https://" + config.getAccount() + ".blob.core.windows.net");
 
@@ -60,30 +76,6 @@ public class AzureClientFactory
           .managedIdentityClientId(config.getManagedIdentityClientId());
       clientBuilder.credential(defaultAzureCredentialBuilder.build());
     }
-    return clientBuilder.buildClient();
-  }
-
-  public BlobContainerClient getBlobContainerClient(String containerName, Integer maxRetries)
-  {
-    BlobContainerClientBuilder clientBuilder = new BlobContainerClientBuilder()
-        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net")
-        .containerName(containerName)
-        .retryOptions(new RetryOptions(
-            new ExponentialBackoffOptions()
-                .setMaxRetries(maxRetries != null ? maxRetries : config.getMaxTries())
-                .setBaseDelay(Duration.ofMillis(1000))
-                .setMaxDelay(Duration.ofMillis(60000))
-        ));
-    if (config.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
-    } else if (config.getSharedAccessStorageToken() != null) {
-      clientBuilder.sasToken(config.getSharedAccessStorageToken());
-    } else if (config.getUseAzureCredentialsChain()) {
-      // We might not use the managed identity client id in the credential chain but we can just set it here and it will no-op.
-      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
-          .managedIdentityClientId(config.getManagedIdentityClientId());
-      clientBuilder.credential(defaultAzureCredentialBuilder.build());
-    }
-    return clientBuilder.buildClient();
+    return clientBuilder;
   }
 }

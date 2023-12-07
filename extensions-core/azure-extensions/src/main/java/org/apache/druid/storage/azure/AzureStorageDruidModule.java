@@ -19,13 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.BlobServiceClient;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -137,24 +134,12 @@ public class AzureStorageDruidModule implements DruidModule
     return new AzureClientFactory(config);
   }
 
-  /**
-   * Creates a supplier that lazily initialize {@link BlobServiceClient}.
-   * This is to avoid immediate config validation but defer it until you actually use the client.
-   */
-  @Provides
-  @LazySingleton
-  public Supplier<BlobServiceClient> getBlobServiceClient(final AzureClientFactory azureClientFactory)
-  {
-    return Suppliers.memoize(azureClientFactory::getBlobServiceClient);
-  }
-
   @Provides
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final Supplier<BlobServiceClient> blobServiceClient,
       final AzureClientFactory azureClientFactory
   )
   {
-    return new AzureStorage(blobServiceClient, azureClientFactory);
+    return new AzureStorage(azureClientFactory);
   }
 }

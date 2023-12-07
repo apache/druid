@@ -36,12 +36,11 @@ import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.common.Utility;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -51,7 +50,6 @@ import java.io.OutputStream;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
@@ -73,16 +71,15 @@ public class AzureStorage
    *
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
-  private final Supplier<BlobServiceClient> blobServiceClient;
+  private BlobServiceClient blobServiceClient;
+  private BlobServiceClient nonRetriableBlobServiceClient;
+  private Integer maxAttempts = 0;
   private final AzureClientFactory azureClientFactory;
-  private final ConcurrentHashMap<String, Pair<Integer, BlobContainerClient>> blobContainerClients = new ConcurrentHashMap<>();
 
   public AzureStorage(
-      Supplier<BlobServiceClient> blobServiceClient,
       AzureClientFactory azureClientFactory
   )
   {
-    this.blobServiceClient = blobServiceClient;
     this.azureClientFactory = azureClientFactory;
   }
 
@@ -222,9 +219,22 @@ public class AzureStorage
   }
 
   @VisibleForTesting
-  BlobServiceClient getBlobServiceClient()
+  BlobServiceClient getBlobServiceClient(@Nonnull Integer maxAttempts)
   {
-    return this.blobServiceClient.get();
+    if (this.blobServiceClient == null || maxAttempts > this.maxAttempts) {
+      this.blobServiceClient = this.azureClientFactory.getRetriableBlobServiceClient(maxAttempts);
+      this.maxAttempts = maxAttempts;
+    }
+    return this.blobServiceClient;
+  }
+
+  @VisibleForTesting
+  BlobServiceClient getNonRetriableBlobServiceClient()
+  {
+    if (this.nonRetriableBlobServiceClient == null) {
+      this.nonRetriableBlobServiceClient = this.azureClientFactory.getBlobServiceClient();
+    }
+    return this.nonRetriableBlobServiceClient;
   }
 
   @VisibleForTesting
@@ -246,27 +256,11 @@ public class AzureStorage
   // It has no retry policy and uses its own HttpClient, so building new BlobContainerClients is instant.
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
-    return getBlobServiceClient().createBlobContainerIfNotExists(containerName);
+    return getNonRetriableBlobServiceClient().createBlobContainerIfNotExists(containerName);
   }
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
   {
-    if (maxRetries == null) {
-      return getOrCreateBlobContainerClient(containerName);
-    }
-
-    Pair<Integer, BlobContainerClient> blobContainerClientPair = blobContainerClients.get(containerName);
-    if (blobContainerClientPair != null && blobContainerClientPair.lhs != null && blobContainerClientPair.lhs >= maxRetries) {
-      return blobContainerClientPair.rhs;
-    }
-
-    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(containerName, maxRetries);
-    blobContainerClient.createIfNotExists();
-
-    blobContainerClients.put(
-        containerName,
-        Pair.of(maxRetries, blobContainerClient)
-    );
-    return blobContainerClient;
+    return getBlobServiceClient(maxRetries != null ? maxRetries : 0).createBlobContainerIfNotExists(containerName);
   }
 }

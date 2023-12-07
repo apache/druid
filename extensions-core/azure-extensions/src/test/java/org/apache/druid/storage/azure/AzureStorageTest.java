@@ -28,42 +28,36 @@ import com.azure.storage.blob.models.BlobItemProperties;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
-import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
-import org.easymock.EasyMockSupport;
-import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 
-@RunWith(EasyMockRunner.class)
-public class AzureStorageTest extends EasyMockSupport
+// Using Mockito for the whole test class since azure classes (e.g. BlobContainerClient) are final and can't be mocked with EasyMock
+public class AzureStorageTest
 {
 
   AzureStorage azureStorage;
   BlobServiceClient blobServiceClient = Mockito.mock(BlobServiceClient.class);
   BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
+  AzureClientFactory azureClientFactory = Mockito.mock(AzureClientFactory.class);
 
-  @Mock
-  AzureClientFactory azureClientFactory;
-
-  private final Integer MAX_TRIES = 3;
-
+  private final String CONTAINER = "container";
+  private final String BLOB_NAME = "blobName";
+  private final Integer MAX_ATTEMPTS = 3;
 
   @Before
   public void setup() throws BlobStorageException
   {
-    azureStorage = new AzureStorage(() -> blobServiceClient, azureClientFactory);
+    azureStorage = new AzureStorage(azureClientFactory);
   }
 
   @Test
-  public void testListDir() throws BlobStorageException
+  public void testListDir_retriable() throws BlobStorageException
   {
-    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    BlobItem blobItem = new BlobItem().setName(BLOB_NAME).setProperties(new BlobItemProperties().setContentLength(10L));
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
     supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
     PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
@@ -71,20 +65,16 @@ public class AzureStorageTest extends EasyMockSupport
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
-    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(ArgumentMatchers.anyString());
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getRetriableBlobServiceClient(MAX_ATTEMPTS);
 
-    replayAll();
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir("test", "", null));
-    verifyAll();
+    Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", MAX_ATTEMPTS));
   }
 
   @Test
-  public void testListDir_withMaxAttempts_factoryCreatesNewContainerClient() throws BlobStorageException
+  public void testListDir_nullMaxAttempts() throws BlobStorageException
   {
-    Integer maxAttempts = 5;
-    String containerName = "test";
-    String containerName2 = "test2";
-    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    BlobItem blobItem = new BlobItem().setName(BLOB_NAME).setProperties(new BlobItemProperties().setContentLength(10L));
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
     supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
     PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
@@ -92,21 +82,47 @@ public class AzureStorageTest extends EasyMockSupport
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
-    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName, maxAttempts)).andReturn(blobContainerClient).times(1);
-    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName2, maxAttempts)).andReturn(blobContainerClient).times(1);
-    EasyMock.expect(azureClientFactory.getBlobContainerClient(containerName, maxAttempts + 1)).andReturn(blobContainerClient).times(1);
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getRetriableBlobServiceClient(0);
 
-    replayAll();
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
-    // The second call should not trigger another call to getBlobContainerClient
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts));
-    // Requesting a different container should create another client.
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName2, "", maxAttempts));
-    // Requesting the first container with higher maxAttempts should create another client.
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts + 1));
-    // Requesting the first container with lower maxAttempts should not create another client.
-    Assert.assertEquals(ImmutableList.of("blobName"), azureStorage.listDir(containerName, "", maxAttempts - 1));
-    verifyAll();
+    Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
+  }
+
+  @Test
+  public void testListDir_increasedMaxAttempts() throws BlobStorageException
+  {
+    BlobItem blobItem = new BlobItem().setName(BLOB_NAME).setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    Mockito.doReturn(pagedIterable).when(blobContainerClient).listBlobs(
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getRetriableBlobServiceClient(3);
+
+    BlobItem blobItem2 = new BlobItem().setName("blobName2").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier2 = new SettableSupplier<>();
+    supplier2.set(new TestPagedResponse<>(ImmutableList.of(blobItem2)));
+    PagedIterable<BlobItem> pagedIterable2 = new PagedIterable<>(supplier2);
+    BlobServiceClient blobServiceClient2 = Mockito.mock(BlobServiceClient.class);
+    BlobContainerClient blobContainerClient2 = Mockito.mock(BlobContainerClient.class);
+
+    Mockito.doReturn(pagedIterable2).when(blobContainerClient2).listBlobs(
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Mockito.doReturn(blobContainerClient2).when(blobServiceClient2).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient2).when(azureClientFactory).getRetriableBlobServiceClient(5);
+
+    Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", 3));
+
+    // Should use the same client if maxAttempts has gone down
+    Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", 2));
+
+    // Should use a new client if maxAttempts has gone up
+    Assert.assertEquals(ImmutableList.of("blobName2"), azureStorage.listDir(CONTAINER, "", 5));
   }
 }
 
