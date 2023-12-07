@@ -117,7 +117,7 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null, null);
+    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null, null, null);
   }
 
   /**
@@ -133,6 +133,9 @@ public class SqlSegmentsMetadataQuery
    * @param offset     The offset to use when retrieving matching segments. Note that offset is only applied to a 
    *                   single batch - i.e., when the number of intervals is less than {@link #MAX_INTERVALS_PER_BATCH}.
    *                   For multiple batches, the offset parameter is ignored.
+   * @param orderByStartEnd Specifies the order with which to return the matching segments by start time, end time. A
+   *                        value of less than or equal to 0, specifies a descending order, while a value of greater
+   *                        than 0 specifies an ascending order. A null value indicates that order does not matter.
 
    * Returns a closeable iterator. You should close it when you are done.
    */
@@ -140,10 +143,11 @@ public class SqlSegmentsMetadataQuery
       final String dataSource,
       final Collection<Interval> intervals,
       @Nullable final Integer limit,
-      @Nullable final Integer offset
+      @Nullable final Integer offset,
+      @Nullable final Integer orderByStartEnd
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit, offset);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit, offset, orderByStartEnd);
   }
 
   /**
@@ -231,7 +235,15 @@ public class SqlSegmentsMetadataQuery
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
           Iterators.transform(
-              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, null, null),
+              retrieveSegments(
+                  dataSource,
+                  Collections.singletonList(interval),
+                  IntervalMode.CONTAINS,
+                  true,
+                  null,
+                  null,
+                  null
+              ),
               DataSegment::getId
           )
       );
@@ -367,12 +379,13 @@ public class SqlSegmentsMetadataQuery
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
-      @Nullable final Integer offset
+      @Nullable final Integer offset,
+      @Nullable final Integer orderByStartEnd
   )
   {
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, offset)
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, offset, orderByStartEnd)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -386,7 +399,8 @@ public class SqlSegmentsMetadataQuery
             matchMode,
             used,
             limitPerBatch,
-            null // don't use offset with multiple batches for now. Note added to javadoc.
+            null, // don't use offset with multiple batches for now. Note added to javadoc.
+            orderByStartEnd
         );
         if (limitPerBatch != null) {
           // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
@@ -411,7 +425,8 @@ public class SqlSegmentsMetadataQuery
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
-      @Nullable final Integer offset
+      @Nullable final Integer offset,
+      @Nullable final Integer orderByStartEnd
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -424,9 +439,13 @@ public class SqlSegmentsMetadataQuery
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    if (offset != null) {
-      sb.append(StringUtils.format(" ORDER BY start, %1$send%1$s", connector.getQuoteString()));
-      sb.append(StringUtils.format(connector.getOffsetClause(offset)));
+    if (offset != null || orderByStartEnd != null) {
+      sb.append(StringUtils.format(" ORDER BY start, %1$send%1$s %2$s",
+          connector.getQuoteString(),
+          orderByStartEnd != null && orderByStartEnd <= 0L ? "DESC" : "ASC"));
+      if (offset != null) {
+        sb.append(StringUtils.format(connector.getOffsetClause(offset)));
+      }
     }
     final Query<Map<String, Object>> sql = handle
         .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))

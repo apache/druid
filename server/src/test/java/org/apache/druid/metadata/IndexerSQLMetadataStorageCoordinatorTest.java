@@ -1209,6 +1209,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         null,
+        null,
         null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
@@ -1224,6 +1225,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(),
         null,
+        null,
         null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
@@ -1237,16 +1239,38 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     markAllSegmentsUnused(new HashSet<>(segments));
 
     int offset = 10;
-    final List<DataSegment> expectedSegments = segments.stream()
+    final List<DataSegment> expectedSegmentsAscOrder = segments.stream()
         .skip(offset)
         .collect(Collectors.toList());
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
+    ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(),
         null,
-        offset
+        offset,
+        null
     );
-    Assert.assertEquals(expectedSegments.size(), actualUnusedSegments.size());
-    Assert.assertTrue(expectedSegments.containsAll(actualUnusedSegments));
+    Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
+    Assert.assertTrue(expectedSegmentsAscOrder.containsAll(actualUnusedSegments));
+
+    actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
+        ImmutableList.of(),
+        null,
+        offset,
+        1
+    );
+    Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
+    Assert.assertTrue(expectedSegmentsAscOrder.containsAll(actualUnusedSegments));
+
+    final List<DataSegment> expectedSegmentsDescOrder = new ArrayList<>(expectedSegmentsAscOrder);
+    Collections.reverse(expectedSegmentsDescOrder);
+
+    actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
+        ImmutableList.of(),
+        null,
+        offset,
+        -1
+    );
+    Assert.assertEquals(expectedSegmentsDescOrder.size(), actualUnusedSegments.size());
+    Assert.assertTrue(expectedSegmentsDescOrder.containsAll(actualUnusedSegments));
   }
 
   @Test
@@ -1258,6 +1282,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         segments.size(),
+        null,
         null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
@@ -1274,6 +1299,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
+        null,
         null
     );
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
@@ -1291,7 +1317,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
-        offset
+        offset,
+        null
     );
     Assert.assertEquals(segments.size() - offset, actualUnusedSegments.size());
     // offset used when number of intervals does not require multiple batches
@@ -1309,7 +1336,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
-        offset
+        offset,
+        null
     );
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
     // offset not used when number of intervals requires multiple batches
@@ -1325,6 +1353,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         segments.size() + 1,
+        null,
         null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
@@ -1343,6 +1372,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(outOfRangeInterval),
+        null,
         null,
         null
     );
@@ -3126,7 +3156,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   private ImmutableList<DataSegment> retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
       final List<Interval> intervals,
       final Integer limit,
-      final Integer offset
+      final Integer offset,
+      final Integer orderByStartEnd
   )
   {
     return derbyConnector.inReadOnlyTransaction(
@@ -3138,7 +3169,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                            derbyConnectorRule.metadataTablesConfigSupplier().get(),
                            mapper
                        )
-                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, offset)) {
+                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, offset, orderByStartEnd)) {
             return ImmutableList.copyOf(iterator);
           }
         }

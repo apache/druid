@@ -255,6 +255,7 @@ public class MetadataResourceTest
             ArgumentMatchers.any(),
             ArgumentMatchers.any(),
             ArgumentMatchers.any(),
+            ArgumentMatchers.any(),
             ArgumentMatchers.any());
 
     // test with null datasource name - fails with expected bad datasource name error

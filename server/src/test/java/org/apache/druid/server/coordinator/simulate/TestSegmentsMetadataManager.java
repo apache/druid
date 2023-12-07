@@ -197,7 +197,8 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       String datasource,
       @Nullable Interval interval,
       @Nullable Integer limit,
-      @Nullable Integer offset
+      @Nullable Integer offset,
+      @Nullable Integer orderByStartEnd
   )
   {
     return null;

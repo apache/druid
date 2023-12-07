@@ -687,7 +687,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -956,12 +956,30 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                    .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE));
   }
 
+  /**
+   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
+   * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
+   * unused segments.
+   *
+   * This call does not return any information about realtime segments.
+   *
+   * @param datasource      The name of the datasource
+   * @param interval        The intervals to search over
+   * @param limit           The limit of segments to return
+   * @param offset          The offset to use when retrieving matching segments.
+   * @param orderByStartEnd Specifies the order with which to return the matching segments by start time, end time. A
+   *                        value of less than or equal to 0, specifies a descending order, while a value of greater
+   *                        than 0 specifies an ascending order. A null value indicates that order does not matter.
+
+   * Returns an iterable.
+   */
   @Override
   public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
-      String datasource,
-      @Nullable Interval interval,
-      @Nullable Integer limit,
-      @Nullable Integer offset
+      final String datasource,
+      @Nullable final Interval interval,
+      @Nullable final Integer limit,
+      @Nullable final Integer offset,
+      @Nullable final Integer orderByStartEnd
   )
   {
     return connector.inReadOnlyTransaction(
@@ -974,7 +992,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                   ? Intervals.ONLY_ETERNITY
                   : Collections.singletonList(interval);
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, offset)) {
+                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, offset, orderByStartEnd)) {
             return ImmutableList.copyOf(iterator);
           }
         }

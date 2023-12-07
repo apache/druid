@@ -73,6 +73,7 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
+  private static final int ASCENDING_ORDER_BY_START_END = 1;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -362,7 +363,8 @@ public class MetadataResource
         dataSource,
         theInterval,
         limit,
-        offset
+        offset,
+        ASCENDING_ORDER_BY_START_END
     );
 
     final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(

@@ -141,7 +141,8 @@ public interface SegmentsMetadataManager
       String datasource,
       @Nullable Interval interval,
       @Nullable Integer limit,
-      @Nullable Integer offset
+      @Nullable Integer offset,
+      @Nullable Integer orderByStartEnd
   );
 
   /**
