@@ -84,7 +84,7 @@ There are 7 main parts to a timeseries query:
 |aggregations|See [Aggregations](../querying/aggregations.md)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|no|
 |limit|An integer that limits the number of results. The default is unlimited.|no|
-|context|Can be used to modify query behavior, including [grand totals](#grand-totals) and [NULL filling](#null-filling). See also [Context](../querying/query-context.md) for parameters that apply to all query types.|no|
+|context|Can be used to modify query behavior, including [grand totals](#grand-totals) and [empty bucket values](#empty-bucket-values). See also [Context](../querying/query-context.md) for parameters that apply to all query types.|no|
 
 To pull it all together, the above query would return 2 data points, one for each day between 2012-01-01 and 2012-01-03, from the "sample\_datasource" table. Each data point would be the (long) sum of sample\_fieldName1, the (double) sum of sample\_fieldName2 and the (double) result of sample\_fieldName1 divided by sample\_fieldName2 for the filter set. The output looks like this:
 
@@ -126,11 +126,11 @@ The grand totals row will appear as the last row in the result array, and will h
 row even if the query is run in "descending" mode. Post-aggregations in the grand totals row will be computed based
 upon the grand total aggregations.
 
-## NULL filling
+## Empty bucket values
 
-By default timeseries queries fill empty interior time buckets with NULL.
+By default Druid fills empty interior time buckets in responses to timeseries queries with the default value for the [aggregator function](./sql-aggregations.md).
 For example, if you issue a "day" granularity
-timeseries query for the interval 2012-01-01/2012-01-04, and no data exists for 2012-01-02, you will receive:
+timeseries query for the interval 2012-01-01/2012-01-04 using the SUM aggregator, and no data exists for 2012-01-02, Druid returns:
 
 ```json
 [
@@ -149,7 +149,7 @@ timeseries query for the interval 2012-01-01/2012-01-04, and no data exists for 
 ]
 ```
 
-Time buckets that lie completely outside the data interval are not filled with NULL.
+Time buckets that lie completely outside the data interval are not filled with the default value.
 
 You can disable all NULL filling with the context flag "skipEmptyBuckets".
 In this mode, Druid omits the data point 2012-01-02 from the results.
@@ -169,6 +169,3 @@ For example:
   }
 }
 ```
-
-Prior to Druid 28, Druid filled empty interior time buckets with zero by default.
-You can set `druid.generic.useDefaultValueForNull=true` to retain the legacy behavior, however it will eventually be removed.
