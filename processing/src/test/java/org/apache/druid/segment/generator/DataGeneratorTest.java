@@ -95,7 +95,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
-      log.info("S-ROW: " + row);
       tracker.addRow(row);
     }
     tracker.printStuff();
@@ -160,8 +159,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
-      log.info("U-ROW: " + row);
-
       tracker.addRow(row);
     }
 
@@ -209,8 +206,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 1000000; i++) {
       InputRow row = dataGenerator.nextRow();
-      log.info("N-ROW: " + row);
-
       tracker.addRow(row);
     }
 
