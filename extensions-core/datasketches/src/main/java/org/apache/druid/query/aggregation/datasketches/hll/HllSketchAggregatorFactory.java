@@ -173,6 +173,8 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       public void fold(final ColumnValueSelector selector)
       {
         final HllSketchHolder sketchHolder = (HllSketchHolder) selector.getObject();
+        // sketchHolder can be null here, if the sketch is empty. This is an optimisation done by
+        // HllSketchHolderObjectStrategy. If the holder is null, this should be a no-op.
         if (sketchHolder != null) {
           union.update(sketchHolder.getSketch());
         }
