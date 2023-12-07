@@ -113,6 +113,7 @@ public class AzureStorageTest
         ArgumentMatchers.any(),
         ArgumentMatchers.any()
     );
+
     Mockito.doReturn(blobContainerClient2).when(blobServiceClient2).createBlobContainerIfNotExists(CONTAINER);
     Mockito.doReturn(blobServiceClient2).when(azureClientFactory).getRetriableBlobServiceClient(5);
 

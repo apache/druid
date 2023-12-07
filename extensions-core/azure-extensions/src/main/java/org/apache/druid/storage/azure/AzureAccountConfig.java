@@ -116,4 +116,9 @@ public class AzureAccountConfig
   {
     this.sharedAccessStorageToken = sharedAccessStorageToken;
   }
+
+  public void setUseAzureCredentialsChain(Boolean useAzureCredentialsChain)
+  {
+    this.useAzureCredentialsChain = useAzureCredentialsChain;
+  }
 }

@@ -19,9 +19,16 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.policy.AzureSasCredentialPolicy;
+import com.azure.core.http.policy.BearerTokenAuthenticationPolicy;
 import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.common.StorageSharedKeyCredential;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.net.MalformedURLException;
+import java.net.URL;
 
 public class AzureClientFactoryTest
 {
@@ -29,12 +36,68 @@ public class AzureClientFactoryTest
   private static final String ACCOUNT = "account";
 
   @Test
-  public void test_blobServiceClient()
+  public void test_blobServiceClient_accountName()
   {
     AzureAccountConfig config = new AzureAccountConfig();
     azureClientFactory = new AzureClientFactory(config);
     config.setAccount(ACCOUNT);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient();
     Assert.assertEquals(ACCOUNT, blobServiceClient.getAccountName());
+  }
+
+  @Test
+  public void test_blobServiceClientBuilder_key() throws MalformedURLException
+  {
+    AzureAccountConfig config = new AzureAccountConfig();
+    config.setKey("key");
+    config.setAccount(ACCOUNT);
+    azureClientFactory = new AzureClientFactory(config);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient();
+    StorageSharedKeyCredential storageSharedKeyCredential = StorageSharedKeyCredential.getSharedKeyCredentialFromPipeline(
+        blobServiceClient.getHttpPipeline()
+    );
+    Assert.assertNotNull(storageSharedKeyCredential);
+
+    // Azure doesn't let us look at the key in the StorageSharedKeyCredential so make sure the authorization header generated is what we expect.
+    Assert.assertEquals(
+        new StorageSharedKeyCredential(ACCOUNT, "key").generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of()),
+        storageSharedKeyCredential.generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of())
+    );
+  }
+
+  @Test
+  public void test_blobServiceClientBuilder_sasToken()
+  {
+    AzureAccountConfig config = new AzureAccountConfig();
+    config.setSharedAccessStorageToken("sasToken");
+    config.setAccount(ACCOUNT);
+    azureClientFactory = new AzureClientFactory(config);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient();
+    AzureSasCredentialPolicy azureSasCredentialPolicy = null;
+    for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
+      if (blobServiceClient.getHttpPipeline().getPolicy(i) instanceof AzureSasCredentialPolicy) {
+        azureSasCredentialPolicy = (AzureSasCredentialPolicy) blobServiceClient.getHttpPipeline().getPolicy(i);
+      }
+    }
+
+    Assert.assertNotNull(azureSasCredentialPolicy);
+  }
+
+  @Test
+  public void test_blobServiceClientBuilder_useDefaultCredentialChain()
+  {
+    AzureAccountConfig config = new AzureAccountConfig();
+    config.setUseAzureCredentialsChain(true);
+    config.setAccount(ACCOUNT);
+    azureClientFactory = new AzureClientFactory(config);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient();
+    BearerTokenAuthenticationPolicy bearerTokenAuthenticationPolicy = null;
+    for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
+      if (blobServiceClient.getHttpPipeline().getPolicy(i) instanceof BearerTokenAuthenticationPolicy) {
+        bearerTokenAuthenticationPolicy = (BearerTokenAuthenticationPolicy) blobServiceClient.getHttpPipeline().getPolicy(i);
+      }
+    }
+
+    Assert.assertNotNull(bearerTokenAuthenticationPolicy);
   }
 }
