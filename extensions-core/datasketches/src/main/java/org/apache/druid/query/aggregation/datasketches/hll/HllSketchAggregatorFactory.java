@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringEncodingDefaultUTF16LEJsonIncludeFilter;
@@ -61,6 +62,31 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   private final StringEncoding stringEncoding;
   private final boolean shouldFinalize;
   private final boolean round;
+
+  HllSketchAggregatorFactory(
+      final String name,
+      final String fieldName,
+      @Nullable final Integer lgK,
+      @Nullable final String tgtHllType,
+      @Nullable final StringEncoding stringEncoding,
+      final Boolean shouldFinalize,
+      final boolean round,
+      final int maxLgK
+  )
+  {
+    this(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
+
+    if (this.lgK > maxLgK) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "LgK value [%s] for HLL sketch cannot be greater than [%s]. Reduce the lgK value"
+                              + " or increase the hllMaxLgK property.",
+                              this.lgK,
+                              maxLgK
+                          );
+    }
+  }
 
   HllSketchAggregatorFactory(
       final String name,

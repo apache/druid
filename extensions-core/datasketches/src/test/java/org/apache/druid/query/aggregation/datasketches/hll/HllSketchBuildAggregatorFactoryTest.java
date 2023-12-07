@@ -19,11 +19,13 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,6 +40,7 @@ public class HllSketchBuildAggregatorFactoryTest
   {
     this.jsonMapper = TestHelper.makeJsonMapper().copy();
     jsonMapper.registerModules(new HllSketchModule().getJacksonModules());
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig()));
   }
 
   @Test

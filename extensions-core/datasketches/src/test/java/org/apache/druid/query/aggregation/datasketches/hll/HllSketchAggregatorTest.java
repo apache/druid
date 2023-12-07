@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -79,9 +81,13 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     groupByHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new HllSketchModule().getJacksonModules(), config, groupByFolder
     );
+    groupByHelper.getObjectMapper()
+                 .setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig()));
     timeseriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         new HllSketchModule().getJacksonModules(), timeseriesFolder
     );
+    timeseriesHelper.getObjectMapper()
+                    .setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig()));
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.stringEncoding = stringEncoding;
   }

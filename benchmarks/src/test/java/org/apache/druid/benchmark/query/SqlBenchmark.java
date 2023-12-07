@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctUtf8SqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
@@ -546,16 +547,17 @@ public class SqlBenchmark
   private static DruidOperatorTable createOperatorTable()
   {
     try {
+      final SketchConfig sketchConfig = new SketchConfig();
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
       extractionOperators.add(CalciteTests.INJECTOR.getInstance(QueryLookupOperatorConversion.class));
       final ApproxCountDistinctSqlAggregator countDistinctSqlAggregator =
-          new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
+          new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator(sketchConfig));
       final Set<SqlAggregator> aggregators = new HashSet<>(
           ImmutableList.of(
               new DoublesSketchApproxQuantileSqlAggregator(),
               new DoublesSketchObjectSqlAggregator(),
-              new HllSketchApproxCountDistinctSqlAggregator(),
-              new HllSketchApproxCountDistinctUtf8SqlAggregator(),
+              new HllSketchApproxCountDistinctSqlAggregator(sketchConfig),
+              new HllSketchApproxCountDistinctUtf8SqlAggregator(sketchConfig),
               new ThetaSketchApproxCountDistinctSqlAggregator(),
               new CountSqlAggregator(countDistinctSqlAggregator),
               countDistinctSqlAggregator

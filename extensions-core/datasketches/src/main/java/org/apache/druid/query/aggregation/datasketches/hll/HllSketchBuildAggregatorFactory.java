@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
@@ -31,6 +32,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -62,12 +64,25 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
       @JsonProperty("stringEncoding") @Nullable final StringEncoding stringEncoding,
       @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
-      @JsonProperty("round") final boolean round
+      @JsonProperty("round") final boolean round,
+      @JacksonInject SketchConfig serverConfig
+  )
+  {
+    super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round, serverConfig.getHllMaxLgK());
+  }
+
+  HllSketchBuildAggregatorFactory(
+      String name,
+      String fieldName,
+      Integer lgK,
+      String tgtHllType,
+      StringEncoding stringEncoding,
+      Boolean shouldFinalize,
+      boolean round
   )
   {
     super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
   }
-
 
   @Override
   public ColumnType getIntermediateType()

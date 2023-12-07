@@ -27,6 +27,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -43,6 +44,9 @@ import org.junit.Test;
  */
 public class MSQDataSketchesTest extends MSQTestBase
 {
+
+  private static final SketchConfig SKETCH_CONFIG = new SketchConfig();
+
   @Test
   public void testHavingOnDsHll()
   {
@@ -60,7 +64,7 @@ public class MSQDataSketchesTest extends MSQTestBase
                     .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                     .setAggregatorSpecs(
                         aggregators(
-                            new HllSketchBuildAggregatorFactory("a0", "m1", 12, "HLL_4", null, false, true)
+                            new HllSketchBuildAggregatorFactory("a0", "m1", 12, "HLL_4", null, false, true, SKETCH_CONFIG)
                         )
                     )
                     .setHavingSpec(having(expressionFilter(("(hll_sketch_estimate(\"a0\") > 1)"))))
@@ -113,7 +117,7 @@ public class MSQDataSketchesTest extends MSQTestBase
                     .setAggregatorSpecs(
                         aggregators(
                             new FilteredAggregatorFactory(
-                                new HllSketchBuildAggregatorFactory("a0", "dim2", 12, "HLL_4", null, true, true),
+                                new HllSketchBuildAggregatorFactory("a0", "dim2", 12, "HLL_4", null, true, true, SKETCH_CONFIG),
                                 equality("dim1", "nonexistent", ColumnType.STRING),
                                 "a0"
                             )

@@ -19,12 +19,14 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
+import com.google.inject.Inject;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -46,9 +48,10 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
                          .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
                          .build();
 
-  public HllSketchObjectSqlAggregator()
+  @Inject
+  public HllSketchObjectSqlAggregator(SketchConfig sketchConfig)
   {
-    super(false, HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING);
+    super(false, HllSketchAggregatorFactory.DEFAULT_STRING_ENCODING, sketchConfig);
   }
 
   @Override

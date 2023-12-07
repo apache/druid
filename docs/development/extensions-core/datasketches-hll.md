@@ -51,6 +51,14 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
  The default `lgK` value has proven to be sufficient for most use cases; expect only very negligible improvements in accuracy with `lgK` values over `16` in normal circumstances.
 :::
 
+### Runtime properties
+
+The following runtime properties apply:
+
+|Property| Description| Default |
+|--------|------------|------|
+|`druid.sketch.config.hllMaxLgK`| The maximum possible value of lgK that hll sketches can be created with. Useful to limit the maximum lgK in sketches, to avoid the significant usage of resources used by sketches at higher values of lgK. An exception will be thrown if a query configures a lgK value higher than this. This property needs to be set on the broker and middle-manager/indexer. | 20 |
+
 ### HLLSketchBuild aggregator
 
 ```

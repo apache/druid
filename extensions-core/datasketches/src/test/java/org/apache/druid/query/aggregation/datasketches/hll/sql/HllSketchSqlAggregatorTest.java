@@ -40,6 +40,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.datasketches.SketchConfig;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
@@ -144,6 +145,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           2L
       };
 
+  private static final SketchConfig SKETCH_CONFIG = new SketchConfig();
+
   /**
    * Expected virtual columns for {@link #testHllSketchPostAggsTimeseries()},
    * {@link #testHllSketchPostAggsGroupBy()}, {@link #testHllSketchFilteredAggregatorsTimeseries()}, and
@@ -170,13 +173,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
    */
   private static final List<AggregatorFactory> EXPECTED_PA_AGGREGATORS =
       ImmutableList.of(
-          new HllSketchBuildAggregatorFactory("a0", "dim2", null, null, null, false, true),
-          new HllSketchBuildAggregatorFactory("a1", "m1", null, null, null, false, true),
-          new HllSketchBuildAggregatorFactory("a2", "cnt", null, null, null, false, true),
-          new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, false, true),
-          new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, false, true),
-          new HllSketchBuildAggregatorFactory("a5", "dim2", null, null, null, true, true),
-          new HllSketchBuildAggregatorFactory("a6", "dim2", null, null, StringEncoding.UTF8, true, true)
+          new HllSketchBuildAggregatorFactory("a0", "dim2", null, null, null, false, true, SKETCH_CONFIG),
+          new HllSketchBuildAggregatorFactory("a1", "m1", null, null, null, false, true, SKETCH_CONFIG),
+          new HllSketchBuildAggregatorFactory("a2", "cnt", null, null, null, false, true, SKETCH_CONFIG),
+          new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, false, true, SKETCH_CONFIG),
+          new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, false, true, SKETCH_CONFIG),
+          new HllSketchBuildAggregatorFactory("a5", "dim2", null, null, null, true, true, SKETCH_CONFIG),
+          new HllSketchBuildAggregatorFactory("a6", "dim2", null, null, StringEncoding.UTF8, true, true, SKETCH_CONFIG)
       );
 
   /**
@@ -265,12 +268,12 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .withMetrics(
                     new CountAggregatorFactory("cnt"),
                     new DoubleSumAggregatorFactory("m1", "m1"),
-                    new HllSketchBuildAggregatorFactory("hllsketch_dim1", "dim1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_dim3", "dim3", null, null, null, false, false),
-                    new HllSketchBuildAggregatorFactory("hllsketch_m1", "m1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_f1", "f1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_l1", "l1", null, null, null, false, ROUND),
-                    new HllSketchBuildAggregatorFactory("hllsketch_d1", "d1", null, null, null, false, ROUND)
+                    new HllSketchBuildAggregatorFactory("hllsketch_dim1", "dim1", null, null, null, false, ROUND, new SketchConfig()),
+                    new HllSketchBuildAggregatorFactory("hllsketch_dim3", "dim3", null, null, null, false, false, new SketchConfig()),
+                    new HllSketchBuildAggregatorFactory("hllsketch_m1", "m1", null, null, null, false, ROUND, new SketchConfig()),
+                    new HllSketchBuildAggregatorFactory("hllsketch_f1", "f1", null, null, null, false, ROUND, new SketchConfig()),
+                    new HllSketchBuildAggregatorFactory("hllsketch_l1", "l1", null, null, null, false, ROUND, new SketchConfig()),
+                    new HllSketchBuildAggregatorFactory("hllsketch_d1", "d1", null, null, null, false, ROUND, new SketchConfig())
                 )
                 .withRollup(false)
                 .build()
@@ -302,9 +305,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
                        + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn, using generic A.C.D.
                        + "  COUNT(DISTINCT SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression, using COUNT DISTINCT
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 21, 'HLL_8'),\n" // on native HllSketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 20, 'HLL_8'),\n" // on native HllSketch column
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1),\n" // on native HllSketch column
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, CAST(21 AS BIGINT))\n" // also native column
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, CAST(20 AS BIGINT))\n" // also native column
                        + "FROM druid.foo";
 
     final List<Object[]> expectedResults;
@@ -343,16 +346,16 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new LongSumAggregatorFactory("a0", "cnt"),
-                          new HllSketchBuildAggregatorFactory("a1", "dim2", null, null, null, null, ROUND),
+                          new HllSketchBuildAggregatorFactory("a1", "dim2", null, null, null, null, ROUND, SKETCH_CONFIG),
                           new FilteredAggregatorFactory(
-                              new HllSketchBuildAggregatorFactory("a2", "dim2", null, null, null, null, ROUND),
+                              new HllSketchBuildAggregatorFactory("a2", "dim2", null, null, null, null, ROUND, SKETCH_CONFIG),
                               not(equality("dim2", "", ColumnType.STRING))
                           ),
-                          new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, null, ROUND),
-                          new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, null, ROUND),
-                          new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", null, null, ROUND),
-                          new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, null, ROUND),
-                          new HllSketchMergeAggregatorFactory("a7", "hllsketch_dim1", 21, "HLL_4", null, null, ROUND)
+                          new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, null, ROUND, SKETCH_CONFIG),
+                          new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, null, ROUND, SKETCH_CONFIG),
+                          new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 20, "HLL_8", null, null, ROUND, SKETCH_CONFIG),
+                          new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, null, ROUND, SKETCH_CONFIG),
+                          new HllSketchMergeAggregatorFactory("a7", "hllsketch_dim1", 20, "HLL_4", null, null, ROUND, SKETCH_CONFIG)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -402,7 +405,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                   null,
                                                   null,
                                                   null,
-                                                  ROUND
+                                                  ROUND,
+                                                  SKETCH_CONFIG
                                               )
                                           )
                                       )
@@ -479,7 +483,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             aggregators(
-                                new HllSketchBuildAggregatorFactory("a0", "m1", null, null, null, true, true)
+                                new HllSketchBuildAggregatorFactory("a0", "m1", null, null, null, true, true, SKETCH_CONFIG)
                             )
                         )
                         .setHavingSpec(having(equality("a0", 2L, ColumnType.LONG)))
@@ -728,11 +732,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(
-                      new HllSketchBuildAggregatorFactory("a0", "dim2", null, null, null, true, true),
-                      new HllSketchBuildAggregatorFactory("a1", "m1", null, null, null, true, true),
-                      new HllSketchBuildAggregatorFactory("a2", "v0", null, null, null, true, true),
-                      new HllSketchBuildAggregatorFactory("a3", "v1", null, null, null, true, true),
-                      new HllSketchBuildAggregatorFactory("a4", "dim2", null, null, null, true, true)
+                      new HllSketchBuildAggregatorFactory("a0", "dim2", null, null, null, true, true, SKETCH_CONFIG),
+                      new HllSketchBuildAggregatorFactory("a1", "m1", null, null, null, true, true, SKETCH_CONFIG),
+                      new HllSketchBuildAggregatorFactory("a2", "v0", null, null, null, true, true, SKETCH_CONFIG),
+                      new HllSketchBuildAggregatorFactory("a3", "v1", null, null, null, true, true, SKETCH_CONFIG),
+                      new HllSketchBuildAggregatorFactory("a4", "dim2", null, null, null, true, true, SKETCH_CONFIG)
                   )
                   .postAggregators(
                       new HllSketchToEstimatePostAggregator("p1", new FieldAccessPostAggregator("p0", "a0"), false),
@@ -815,7 +819,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               false,
-                              true
+                              true,
+                              SKETCH_CONFIG
                           )
                       )
                   )
@@ -861,7 +866,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                            null,
                                            null,
                                            null,
-                                           true
+                                           true,
+                                           SKETCH_CONFIG
                                        ),
                                        new HllSketchBuildAggregatorFactory(
                                            "a1",
@@ -870,7 +876,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                            null,
                                            null,
                                            false,
-                                           true
+                                           true,
+                                           SKETCH_CONFIG
                                        )
                                    )
                                )
@@ -907,7 +914,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null,
                                         null,
-                                        true
+                                        true,
+                                        SKETCH_CONFIG
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
@@ -919,7 +927,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null,
                                         false,
-                                        true
+                                        true,
+                                        SKETCH_CONFIG
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
@@ -959,11 +968,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new HllSketchBuildAggregatorFactory("a0", "v0", null, null, null, null, true),
+                                    new HllSketchBuildAggregatorFactory("a0", "v0", null, null, null, null, true, SKETCH_CONFIG),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new HllSketchBuildAggregatorFactory("a1", "v0", null, null, null, null, true),
+                                    new HllSketchBuildAggregatorFactory("a1", "v0", null, null, null, null, true, SKETCH_CONFIG),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
@@ -1181,8 +1190,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true),
-                      new HllSketchMergeAggregatorFactory("a1", "hllsketch_m1", null, null, null, false, true)
+                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true, SKETCH_CONFIG),
+                      new HllSketchMergeAggregatorFactory("a1", "hllsketch_m1", null, null, null, false, true, SKETCH_CONFIG)
                   )
                   .postAggregators(
                       new HllSketchToEstimatePostAggregator(
@@ -1231,8 +1240,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true),
-                      new HllSketchMergeAggregatorFactory("a1", "hllsketch_f1", null, null, null, false, true)
+                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true, SKETCH_CONFIG),
+                      new HllSketchMergeAggregatorFactory("a1", "hllsketch_f1", null, null, null, false, true, SKETCH_CONFIG)
                   )
                   .postAggregators(
                       new HllSketchToEstimatePostAggregator(
