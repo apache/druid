@@ -224,8 +224,7 @@ public class CalciteRulesManager
   public List<Program> programs(final PlannerContext plannerContext)
   {
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
-    List<RelOptRule> hepRules = new ArrayList<RelOptRule>();
-    hepRules.addAll(REDUCTION_RULES);
+    List<RelOptRule> hepRules = new ArrayList<RelOptRule>(REDUCTION_RULES);
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
       hepRules.add(CoreRules.FILTER_INTO_JOIN);
     }
