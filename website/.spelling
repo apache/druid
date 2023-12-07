@@ -246,6 +246,7 @@ aggregators
 ambari
 analytics
 arrayElement
+arrayContainsElement
 assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
