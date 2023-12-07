@@ -329,6 +329,11 @@ public class OutputTypeTest extends InitializedNullHandlingTest
   {
     assertOutputType("array(1, 2, 3)", inspector, ExpressionType.LONG_ARRAY);
     assertOutputType("array(1, 2, 3.0)", inspector, ExpressionType.DOUBLE_ARRAY);
+    assertOutputType(
+        "array(a, b)",
+        inspector,
+        ExpressionTypeFactory.getInstance().ofArray(ExpressionType.STRING_ARRAY)
+    );
 
     assertOutputType("array_length(a)", inspector, ExpressionType.LONG);
     assertOutputType("array_length(b)", inspector, ExpressionType.LONG);

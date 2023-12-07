@@ -58,7 +58,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_TABLE_SCHEMA})
+@Test(groups = {TestNGGroup.QUERY, TestNGGroup.CENTRALIZED_DATASOURCE_SCHEMA})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITUnionQueryTest extends AbstractIndexerTest
 {

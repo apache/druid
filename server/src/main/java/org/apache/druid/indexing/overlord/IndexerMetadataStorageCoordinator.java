@@ -84,7 +84,7 @@ public interface IndexerMetadataStorageCoordinator
   /**
    *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
-   * given data source and interval from the metadata store.
+   * given data source and list of intervals from the metadata store.
    *
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
@@ -92,11 +92,11 @@ public interface IndexerMetadataStorageCoordinator
    * if needed.
    *
    * @param dataSource The data source to query
-   * @param interval The interval to query
+   * @param intervals The list of interval to query
    *
    * @return The DataSegments and the related created_date of segments
    */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals);
 
   /**
    * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
@@ -433,11 +433,12 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Retrieve the segment for a given id from the metadata store. Return null if no such segment exists
    * <br>
-   * If includeUnused is set, this also returns unused segments. Unused segments could be deleted by a kill task at any
-   * time and might lead to unexpected behaviour. This option exists mainly to provide a consistent view of the metadata,
-   * for example, in calls from MSQ controller and worker and would generally not be requrired.
+   * If {@code includeUnused} is set, the segment {@code id} retrieval should also consider the set of unused segments
+   * in the metadata store. Unused segments could be deleted by a kill task at any time and might lead to unexpected behaviour.
+   * This option exists mainly to provide a consistent view of the metadata, for example, in calls from MSQ controller
+   * and worker and would generally not be required.
    *
-   * @param id The segment id
+   * @param id The segment id to retrieve
    *
    * @return DataSegment used segment corresponding to given id
    */

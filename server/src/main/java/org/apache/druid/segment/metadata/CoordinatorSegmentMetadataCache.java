@@ -134,10 +134,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
       if (rowSignature == null) {
-        log.info("RowSignature null for dataSource [%s], implying it no longer exists, all metadata removed.", dataSource);
+        log.info("RowSignature null for dataSource [%s], implying that it no longer exists. All metadata removed.", dataSource);
         tables.remove(dataSource);
-        return;
+        continue;
       }
+
       DataSourceInformation druidTable = new DataSourceInformation(dataSource, rowSignature);
       final DataSourceInformation oldTable = tables.put(dataSource, druidTable);
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {

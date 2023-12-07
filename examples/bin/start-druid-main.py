@@ -362,7 +362,7 @@ def get_physical_memory_linux():
 
 def get_physical_memory_osx():
     p1 = subprocess.Popen(['sysctl', '-a'], stdout=subprocess.PIPE)
-    p2 = subprocess.check_output(['grep', 'hw.memsize'], stdin=p1.stdout)
+    p2 = subprocess.check_output(['grep', 'hw.memsize:'], stdin=p1.stdout)
     p2 = p2.decode('utf-8')
     fields = p2.split(':')
 
@@ -394,7 +394,7 @@ def convert_total_memory_string(memory):
             physical_memory = get_physical_memory()
 
             if physical_memory is None:
-                raise ValueError('Please specify memory argument')
+                raise ValueError('Could not automatically determine memory size. Please explicitly specify the memory argument as --memory=<integer_value><m/g>')
 
             return physical_memory
         elif memory.endswith(MEM_MB_SUFFIX):

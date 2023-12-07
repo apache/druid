@@ -232,7 +232,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     SegmentWriteOutMediumFactory writeOutMediumFactory = TmpFileSegmentWriteOutMediumFactory.instance();
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -256,6 +256,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
       }
       VariantColumnSerializer serializer = new VariantColumnSerializer(
           fileNameBase,
+          expectedTypes.getSingleType() == null ? null : expectedLogicalType,
           expectedTypes.getSingleType() == null ? expectedTypes.getByteValue() : null,
           indexSpec,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
@@ -460,9 +461,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         }
         Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
         if (expectedType.getSingleType() != null) {
-          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory,
-                                                                                                                       false
-          ).get(i));
+          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory, false).get(i));
         }
       }
 

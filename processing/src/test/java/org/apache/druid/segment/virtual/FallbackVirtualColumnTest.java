@@ -489,7 +489,7 @@ public class FallbackVirtualColumnTest
     }
   }
 
-  private static class SameMultiVectorSelector implements MultiValueDimensionVectorSelector
+  public static class SameMultiVectorSelector implements MultiValueDimensionVectorSelector
   {
     @Override
     public int getValueCardinality()
