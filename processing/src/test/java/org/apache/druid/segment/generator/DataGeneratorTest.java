@@ -164,6 +164,7 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
 
     tracker.printStuff();
     tracker.assertTotalRowSize("dimA", 100);
+    // The row size of dimB is 4, dataGenerator will generate 4 value for dimB at one time, so the total size is 400
     tracker.assertTotalRowSize("dimB", 400);
     tracker.assertTotalRowSize("dimC", 100);
     tracker.assertNullable("dimC", true);
