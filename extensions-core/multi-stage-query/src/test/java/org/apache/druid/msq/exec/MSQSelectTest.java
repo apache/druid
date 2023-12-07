@@ -53,6 +53,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -65,8 +66,14 @@ import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.window.WindowFrame;
+import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
+import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -130,12 +137,12 @@ public class MSQSelectTest extends MSQTestBase
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
-        {DEFAULT, DEFAULT_MSQ_CONTEXT}
-//        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
-//        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-//        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
-//        {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
-//        {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
+        {DEFAULT, DEFAULT_MSQ_CONTEXT},
+        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
+        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
+        {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
+        {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
     };
 
     return Arrays.asList(data);
@@ -621,29 +628,47 @@ public class MSQSelectTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
+    final Query groupByQuery = GroupByQuery.builder()
+                                           .setDataSource(CalciteTests.DATASOURCE1)
+                                           .setInterval(querySegmentSpec(Filtration
+                                                                             .eternity()))
+                                           .setGranularity(Granularities.ALL)
+                                           .setDimensions(dimensions(
+                                               new DefaultDimensionSpec(
+                                                   "m1",
+                                                   "d0",
+                                                   ColumnType.FLOAT
+                                               )
+                                           ))
+                                           .setContext(context)
+                                           .build();
+
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "d0")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(groupByQuery),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("d0", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
+        ImmutableList.of(
+            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new WindowOperatorFactory(proc)
+        ),
+        null
+    );
     testSelectQuery()
-        .setSql("select m1,SUM(m1) OVER() cc from foo group by m1")
+        .setSql("select m1,SUM(m1) OVER(PARTITION BY m1) cc from foo group by m1")
         .setExpectedMSQSpec(MSQSpec.builder()
-                                   .query(GroupByQuery.builder()
-                                                      .setDataSource(CalciteTests.DATASOURCE1)
-                                                      .setInterval(querySegmentSpec(Filtration
-                                                                                        .eternity()))
-                                                      .setGranularity(Granularities.ALL)
-                                                      .setDimensions(dimensions(
-                                                          new DefaultDimensionSpec(
-                                                              "cnt",
-                                                              "d0",
-                                                              ColumnType.LONG
-                                                          )
-                                                      ))
-                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
-                                                          "a0")))
-                                                      .setContext(context)
-                                                      .build())
+                                   .query(query)
                                    .columnMappings(
                                        new ColumnMappings(ImmutableList.of(
-                                           new ColumnMapping("d0", "cnt"),
-                                           new ColumnMapping("a0", "cnt1")
+                                           new ColumnMapping("d0", "m1"),
+                                           new ColumnMapping("w0", "cc")
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -659,6 +684,90 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{4.0f, 4.0},
             new Object[]{5.0f, 5.0},
             new Object[]{6.0f, 6.0}
+        ))
+        .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
+  }
+
+  @Test
+  public void testWindowOnFooWithEmptyOver()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    final Query groupByQuery = GroupByQuery.builder()
+                                           .setDataSource(CalciteTests.DATASOURCE1)
+                                           .setInterval(querySegmentSpec(Filtration
+                                                                             .eternity()))
+                                           .setGranularity(Granularities.ALL)
+                                           .setDimensions(dimensions(
+                                               new DefaultDimensionSpec(
+                                                   "m1",
+                                                   "d0",
+                                                   ColumnType.FLOAT
+                                               )
+                                           ))
+                                           .setContext(context)
+                                           .build();
+
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "d0")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(groupByQuery),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("d0", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
+        ImmutableList.of(
+            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new WindowOperatorFactory(proc)
+        ),
+        null
+    );
+    testSelectQuery()
+        .setSql("select m1,SUM(m1) OVER() cc from foo group by m1")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "m1"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 21.0},
+            new Object[]{2.0f, 21.0},
+            new Object[]{3.0f, 21.0},
+            new Object[]{4.0f, 21.0},
+            new Object[]{5.0f, 21.0},
+            new Object[]{6.0f, 21.0}
         ))
         .setQueryContext(context)
         .setExpectedCountersForStageWorkerChannel(

@@ -40,7 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-public abstract class  BaseLeafFrameProcessor implements FrameProcessor<Object>
+public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableInput baseInput;
   private final ResourceHolder<WritableFrameChannel> outputChannelHolder;

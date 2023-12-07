@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,7 +28,6 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
@@ -23,30 +41,24 @@ import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.SegmentToRowsAndColumnsOperator;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowAndColumns;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
@@ -96,6 +108,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
     this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
   }
+
   // deep storage
   @Override
   protected ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException
@@ -118,63 +131,80 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     // Read the frames from the channel
     // convert to FrameRowsAndColumns
 
-   if (inputChannel.canRead()) {
-     Frame f = inputChannel.read();
+    if (inputChannel.canRead()) {
+      Frame f = inputChannel.read();
 
-     // the frame here is row based
-     // frame rows and columns need columnar. discuss with Eric
-     // Action item: need to implement a new rows and columns that accept a row-based frame
+      // the frame here is row based
+      // frame rows and columns need columnar. discuss with Eric
+      // Action item: need to implement a new rows and columns that accept a row-based frame
 
-     // Create a frame rows and columns what would
-     RowBasedFrameRowAndColumns frameRowsAndColumns = new RowBasedFrameRowAndColumns(f, inputFrameReader.signature());
-     Operator op = getOperator(frameRowsAndColumns);
-     //
-     //Operator op = new SegmentToRowsAndColumnsOperator(frameSegment);
-     // On the operator created above add the operators present in the query that we want to chain
+      // Create a frame rows and columns what would
+      RowBasedFrameRowAndColumns frameRowsAndColumns = new RowBasedFrameRowAndColumns(f, inputFrameReader.signature());
+      Operator op = getOperator(frameRowsAndColumns);
+      //
+      //Operator op = new SegmentToRowsAndColumnsOperator(frameSegment);
+      // On the operator created above add the operators present in the query that we want to chain
 
-     for ( OperatorFactory of : query.getOperators()) {
-       op = of.wrap(op);
-     }
+      for (OperatorFactory of : query.getOperators()) {
+        op = of.wrap(op);
+      }
 
-     // Let the operator run
-     // the results that come in the receiver must be pushed to the outout channel
-     // need to transform the output rows and columns back to frame
-     Operator.go(op, new Operator.Receiver()
-     {
-       @Override
-       public Operator.Signal push(RowsAndColumns rac)
-       {
-         //outputFrameChannel.output(rac.toFrame());
-         LazilyDecoratedRowsAndColumns tmpldrc = new LazilyDecoratedRowsAndColumns(rac, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
-         Pair<byte[], RowSignature> pairFrames =  tmpldrc.naiveMaterializeToRowFrames(rac);
-         Frame f = Frame.wrap(pairFrames.lhs);
-         try {
-           Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(f, FrameWithPartition.NO_PARTITION));
-         }
-         catch (IOException e) {
-           throw new RuntimeException(e);
-         }
-         return Operator.Signal.GO;
-       }
+      // Let the operator run
+      // the results that come in the receiver must be pushed to the outout channel
+      // need to transform the output rows and columns back to frame
+      Operator.go(op, new Operator.Receiver()
+      {
+        @Override
+        public Operator.Signal push(RowsAndColumns rac)
+        {
+          //outputFrameChannel.output(rac.toFrame());
+          LazilyDecoratedRowsAndColumns tmpldrc = new LazilyDecoratedRowsAndColumns(
+              rac,
+              null,
+              null,
+              null,
+              OffsetLimit.limit(Integer.MAX_VALUE),
+              null,
+              null
+          );
+          Pair<byte[], RowSignature> pairFrames = tmpldrc.naiveMaterializeToRowFrames(rac);
+          Frame f = Frame.wrap(pairFrames.lhs);
+          try {
+            Iterables.getOnlyElement(outputChannels())
+                     .write(new FrameWithPartition(f, FrameWithPartition.NO_PARTITION));
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          return Operator.Signal.GO;
+        }
 
-       @Override
-       public void completed()
-       {
+        @Override
+        public void completed()
+        {
 
-       }
-     });
+        }
+      });
 
-   } else if (inputChannel.isFinished()) {
-     return ReturnOrAwait.returnObject(Unit.instance());
-   } else {
-     return ReturnOrAwait.awaitAll(inputChannels().size());
-   }
+    } else if (inputChannel.isFinished()) {
+      return ReturnOrAwait.returnObject(Unit.instance());
+    } else {
+      return ReturnOrAwait.awaitAll(inputChannels().size());
+    }
     return ReturnOrAwait.runAgain();
   }
 
   private static Operator getOperator(RowBasedFrameRowAndColumns frameRowsAndColumns)
   {
-    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(frameRowsAndColumns, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
+    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(
+        frameRowsAndColumns,
+        null,
+        null,
+        null,
+        OffsetLimit.limit(Integer.MAX_VALUE),
+        null,
+        null
+    );
     // Create an operator on top of the created rows and columns
     Operator op = new Operator()
     {
