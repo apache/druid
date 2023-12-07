@@ -418,4 +418,116 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
     return Pair.of(frameWriter.toByteArray(), sigBob.build());
   }
+
+
+  @Nullable
+  public Pair<byte[], RowSignature> naiveMaterializeToRowFrames(RowsAndColumns rac)
+  {
+    final int numRows = rac.numRows();
+
+    BitSet rowsToSkip = null;
+
+    if (interval != null) {
+      rowsToSkip = new BitSet(numRows);
+
+      final Column racColumn = rac.findColumn("__time");
+      if (racColumn == null) {
+        // The time column doesn't exist, this means that we have a null column.  A null column when coerced into a
+        // long as is required by the time filter produces all 0s, so either 0 is included and matches all rows or
+        // it's not and we skip all rows.
+        if (!interval.contains(0)) {
+          return null;
+        }
+      } else {
+        final ColumnAccessor accessor = racColumn.toAccessor();
+        for (int i = 0; i < accessor.numRows(); ++i) {
+          rowsToSkip.set(i, !interval.contains(accessor.getLong(i)));
+        }
+      }
+    }
+
+    AtomicInteger rowId = new AtomicInteger(0);
+    final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
+    final ColumnSelectorFactory selectorFactory = csfm.make(rowId);
+
+    if (filter != null) {
+      if (rowsToSkip == null) {
+        rowsToSkip = new BitSet(numRows);
+      }
+
+      final ValueMatcher matcher = filter.makeMatcher(selectorFactory);
+
+      for (; rowId.get() < numRows; rowId.incrementAndGet()) {
+        final int theId = rowId.get();
+        if (rowsToSkip.get(theId)) {
+          continue;
+        }
+
+        if (!matcher.matches(false)) {
+          rowsToSkip.set(theId);
+        }
+      }
+    }
+
+    if (virtualColumns != null) {
+      throw new UOE("Cannot apply virtual columns [%s] with naive apply.", virtualColumns);
+    }
+
+    ArrayList<String> columnsToGenerate = new ArrayList<>();
+    if (viewableColumns != null) {
+      columnsToGenerate.addAll(viewableColumns);
+    } else {
+      columnsToGenerate.addAll(rac.getColumnNames());
+      // When/if we support virtual columns from here, we should auto-add them to the list here as well as they expand
+      // the implicit project when no projection is defined
+    }
+
+    // There is all sorts of sub-optimal things in this code, but we just ignore them for now as it is difficult to
+    // optimally build frames for incremental data processing.  In order to build the frame object here, we must first
+    // materialize everything in memory so that we know how long things are, such that we can allocate a big byte[]
+    // so that the Frame.wrap() call can be given just a big byte[] to do its reading from.
+    //
+    // It would be a bit better if we could just build the per-column byte[] and somehow re-generate a Frame from
+    // that.  But it's also possible that this impedence mis-match is a function of using column-oriented frames and
+    // row-oriented frames are a much more friendly format.  Anyway, this long comment is here because this exploration
+    // is being left as an exercise for the future.
+
+    final RowSignature.Builder sigBob = RowSignature.builder();
+    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
+
+
+    for (String column : columnsToGenerate) {
+      final Column racColumn = rac.findColumn(column);
+      if (racColumn == null) {
+        continue;
+      }
+      sigBob.add(column, racColumn.toAccessor().getType());
+    }
+
+    long remainingRowsToSkip = limit.getOffset();
+    long remainingRowsToFetch = limit.getLimitOrMax();
+
+    final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED,
+        memFactory,
+        sigBob.build(),
+        Collections.emptyList()
+    ).newFrameWriter(selectorFactory);
+
+    rowId.set(0);
+    for (; rowId.get() < numRows && remainingRowsToFetch > 0; rowId.incrementAndGet()) {
+      final int theId = rowId.get();
+      if (rowsToSkip != null && rowsToSkip.get(theId)) {
+        continue;
+      }
+      if (remainingRowsToSkip > 0) {
+        remainingRowsToSkip--;
+        continue;
+      }
+      remainingRowsToFetch--;
+      frameWriter.addSelection();
+    }
+
+    return Pair.of(frameWriter.toByteArray(), sigBob.build());
+  }
 }

@@ -1,8 +1,10 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.ReturnOrAwait;
@@ -11,6 +13,7 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -35,6 +38,7 @@ import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
@@ -116,25 +120,14 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
    if (inputChannel.canRead()) {
      Frame f = inputChannel.read();
-     final FrameSegment frameSegment = new FrameSegment(f, inputFrameReader, SegmentId.dummy("x"));
 
      // the frame here is row based
      // frame rows and columns need columnar. discuss with Eric
      // Action item: need to implement a new rows and columns that accept a row-based frame
+
+     // Create a frame rows and columns what would
      RowBasedFrameRowAndColumns frameRowsAndColumns = new RowBasedFrameRowAndColumns(f, inputFrameReader.signature());
-     LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(frameRowsAndColumns, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
-     // Create an operator on top of the created rows and columns
-     Operator op = new Operator()
-     {
-       @Nullable
-       @Override
-       public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
-       {
-         receiver.push(ldrc);
-         receiver.completed();
-         return continuationObject;
-       }
-     };
+     Operator op = getOperator(frameRowsAndColumns);
      //
      //Operator op = new SegmentToRowsAndColumnsOperator(frameSegment);
      // On the operator created above add the operators present in the query that we want to chain
@@ -152,6 +145,15 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
        public Operator.Signal push(RowsAndColumns rac)
        {
          //outputFrameChannel.output(rac.toFrame());
+         LazilyDecoratedRowsAndColumns tmpldrc = new LazilyDecoratedRowsAndColumns(rac, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
+         Pair<byte[], RowSignature> pairFrames =  tmpldrc.naiveMaterializeToRowFrames(rac);
+         Frame f = Frame.wrap(pairFrames.lhs);
+         try {
+           Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(f, FrameWithPartition.NO_PARTITION));
+         }
+         catch (IOException e) {
+           throw new RuntimeException(e);
+         }
          return Operator.Signal.GO;
        }
 
@@ -168,5 +170,23 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
      return ReturnOrAwait.awaitAll(inputChannels().size());
    }
     return ReturnOrAwait.runAgain();
+  }
+
+  private static Operator getOperator(RowBasedFrameRowAndColumns frameRowsAndColumns)
+  {
+    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(frameRowsAndColumns, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
+    // Create an operator on top of the created rows and columns
+    Operator op = new Operator()
+    {
+      @Nullable
+      @Override
+      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
+      {
+        receiver.push(ldrc);
+        receiver.completed();
+        return continuationObject;
+      }
+    };
+    return op;
   }
 }

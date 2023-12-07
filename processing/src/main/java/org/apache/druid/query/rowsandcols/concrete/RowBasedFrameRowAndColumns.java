@@ -18,7 +18,6 @@ public class RowBasedFrameRowAndColumns implements RowsAndColumns
 {
   private final Frame frame;
   private final RowSignature signature;
-  private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
 
   public RowBasedFrameRowAndColumns(Frame frame, RowSignature signature) {
     this.frame = FrameType.ROW_BASED.ensureType(frame);;

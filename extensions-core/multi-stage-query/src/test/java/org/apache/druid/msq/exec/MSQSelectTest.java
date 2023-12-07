@@ -617,12 +617,12 @@ public class MSQSelectTest extends MSQTestBase
   public void testWindowOnFoo()
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("cnt", ColumnType.LONG)
-                                            .add("cnt1", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
                                             .build();
 
     testSelectQuery()
-        .setSql("select m1,SUM(m1) OVER(PARTITION BY m1) cc from foo group by m1")
+        .setSql("select m1,SUM(m1) OVER() cc from foo group by m1")
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(GroupByQuery.builder()
                                                       .setDataSource(CalciteTests.DATASOURCE1)
@@ -652,7 +652,14 @@ public class MSQSelectTest extends MSQTestBase
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
         .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 1.0},
+            new Object[]{2.0f, 2.0},
+            new Object[]{3.0f, 3.0},
+            new Object[]{4.0f, 4.0},
+            new Object[]{5.0f, 5.0},
+            new Object[]{6.0f, 6.0}
+        ))
         .setQueryContext(context)
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
@@ -661,12 +668,12 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(1).frames(1),
+                .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(1).frames(1),
+                .with().rows(6).frames(1),
             0, 0, "shuffle"
         )
         .verifyResults();
