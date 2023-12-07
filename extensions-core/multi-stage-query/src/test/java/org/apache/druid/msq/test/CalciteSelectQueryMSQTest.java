@@ -28,7 +28,6 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
@@ -203,7 +202,6 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
     testBuilder()
         .queryContext(
             ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true,
                 "sqlJoinAlgorithm", "sortMerge"
             )
         )
