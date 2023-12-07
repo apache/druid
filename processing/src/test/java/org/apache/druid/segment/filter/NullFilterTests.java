@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -41,6 +43,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.Arrays;
+import java.util.Collections;
 
 @RunWith(Enclosed.class)
 public class NullFilterTests
@@ -310,6 +313,19 @@ public class NullFilterTests
 
   public static class NullFilterNonParameterizedTest
   {
+    @Test
+    public void testGetDimensionRangeSet()
+    {
+      final NullFilter filter = new NullFilter("x", null);
+
+      Assert.assertEquals(
+          TreeRangeSet.create(Collections.singleton(Range.lessThan(""))),
+          filter.getDimensionRangeSet("x")
+      );
+
+      Assert.assertNull(filter.getDimensionRangeSet("y"));
+    }
+
     @Test
     public void testSerde() throws JsonProcessingException
     {
