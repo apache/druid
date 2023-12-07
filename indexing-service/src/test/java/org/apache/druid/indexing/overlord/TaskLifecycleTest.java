@@ -482,7 +482,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       default:
         throw new RE("Unknown task storage type [%s]", taskStorageType);
     }
-    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
+    TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox, taskMaster);
     return taskStorage;
   }
 
@@ -612,6 +615,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         .setDefaultRowFlushBoundary(50000)
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .setTmpStorageBytesPerTask(-1L)
+        .enableConcurrentAppendAndReplace()
         .build();
 
     return new TaskToolboxFactory(

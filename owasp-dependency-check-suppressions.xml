@@ -72,21 +72,14 @@
   </suppress>
 
   <suppress>
-    <!--
-      the suppressions here aren't currently applicable, but can be resolved once we update the version
-      -->
+    <!-- Pulled in by io.kubernetes:client-java and kafka_2.13 but not fixed in either place yet -->
+    <!-- jose4j before v0.9.3 allows attackers to set a low iteration count of 1000 or less -->
     <notes><![CDATA[
-   file name: jackson-databind-2.10.5.1.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
-    <!-- CVE-2022-42003 and CVE-2022-42004 are related to UNWRAP_SINGLE_VALUE_ARRAYS which we do not use
-    https://nvd.nist.gov/vuln/detail/CVE-2022-42003
-    https://nvd.nist.gov/vuln/detail/CVE-2022-42004
-     -->
-    <cve>CVE-2022-42003</cve>
-    <cve>CVE-2022-42004</cve>
+    file name: jose4j-0.7.3.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.bitbucket\.b_c/jose4j@.*$</packageUrl>
+    <cve>CVE-2023-31582</cve>
   </suppress>
-
 
   <suppress>
     <!-- Not much for us to do as a user of the client lib, and no patch is available,
@@ -549,14 +542,6 @@
   </suppress>
 
   <suppress>
-    <!-- Suppress avro cves that are only applicable to .NET SDK-->
-    <notes><![CDATA[
-    file name: avro-1.9.2.jar or avro-ipc-jetty-1.9.2.jar
-    ]]></notes>
-    <cve>CVE-2021-43045</cve>
-  </suppress>
-
-  <suppress>
     <!-- False alarm for the Async javascript library (https://github.com/caolan/async) which is a dev dependency for the web console -->
     <notes><![CDATA[
    file name: async-http-client-netty-utils-2.5.3.jar
@@ -760,6 +745,7 @@
     <cve>CVE-2023-37475</cve> <!-- Suppressing since CVE wrongly linked to apache:avro project - https://github.com/jeremylong/DependencyCheck/issues/5843 -->
     <cve>CVE-2023-39410</cve> <!-- This seems to be a legitimate vulnerability. But there is no fix as of yet in Hadoop repo -->
     <cve>CVE-2023-44487</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
+    <cve>CVE-2023-36478</cve> <!-- Occurs in the version of Hadoop used by Jetty, but it hasn't been fixed by Hadoop yet-->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->

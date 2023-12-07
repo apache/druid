@@ -78,7 +78,7 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   @NotNull
   // how long to wait for the jobs to be cleaned up.
-  private Period taskCleanupDelay = new Period("PT1H");
+  private Period taskCleanupDelay = new Period("P2D");
 
   @JsonProperty
   @NotNull

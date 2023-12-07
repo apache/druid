@@ -3,8 +3,12 @@ id: automatic-compaction-api
 title: Automatic compaction API
 sidebar_label: Automatic compaction
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -23,7 +27,7 @@ sidebar_label: Automatic compaction
   ~ under the License.
   -->
 
-This topic describes the status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. You can configure automatic compaction in the Druid web console or API. 
+This topic describes the status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. You can configure automatic compaction in the Druid web console or API.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -37,36 +41,39 @@ The automatic compaction configuration requires only the `dataSource` property. 
 
 Note that this endpoint returns an HTTP `200 OK` message code even if the datasource name does not exist.
 
-#### URL 
+#### URL
 
 <code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction</code>
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully submitted auto compaction configuration* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully submitted auto compaction configuration*
+
+</TabItem>
+</Tabs>
 
 ---
 #### Sample request
 
-The following example creates an automatic compaction configuration for the datasource `wikipedia_hour`, which was ingested with `HOUR` segment granularity. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data. 
+The following example creates an automatic compaction configuration for the datasource `wikipedia_hour`, which was ingested with `HOUR` segment granularity. This automatic compaction configuration performs compaction on `wikipedia_hour`, resulting in compacted segments that represent a day interval of data.
 
-In this example: 
+In this example:
 
 * `wikipedia_hour` is a datasource with `HOUR` segment granularity.
-* `skipOffsetFromLatest` is set to `PT0S`, meaning that no data is skipped. 
+* `skipOffsetFromLatest` is set to `PT0S`, meaning that no data is skipped.
 * `partitionsSpec` is set to the default `dynamic`, allowing Druid to dynamically determine the optimal partitioning strategy.
 * `type` is set to `index_parallel`, meaning that parallel indexing is used.
 * `segmentGranularity` is set to `DAY`, meaning that each compacted segment is a day of data.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="2" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"\
@@ -86,7 +93,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"\
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="3" label="HTTP">
+
 
 ```HTTP
 POST /druid/coordinator/v1/config/compaction HTTP/1.1
@@ -109,7 +118,8 @@ Content-Length: 281
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -118,7 +128,7 @@ A successful request returns an HTTP `200 OK` message code and an empty response
 
 ### Remove automatic compaction configuration
 
-Removes the automatic compaction configuration for a datasource. This updates the compaction status of the datasource to "Not enabled." 
+Removes the automatic compaction configuration for a datasource. This updates the compaction status of the datasource to "Not enabled."
 
 #### URL
 
@@ -126,39 +136,47 @@ Removes the automatic compaction configuration for a datasource. This updates th
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="4" label="200 SUCCESS">
 
-*Successfully deleted automatic compaction configuration* 
 
-<!--404 NOT FOUND-->
+*Successfully deleted automatic compaction configuration*
 
-*Datasource does not have automatic compaction or invalid datasource name* 
+</TabItem>
+<TabItem value="5" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Datasource does not have automatic compaction or invalid datasource name*
+
+</TabItem>
+</Tabs>
 
 ---
 
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="6" label="cURL">
+
 
 ```shell
 curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/wikipedia_hour"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="7" label="HTTP">
+
 
 ```HTTP
 DELETE /druid/coordinator/v1/config/compaction/wikipedia_hour HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -166,9 +184,9 @@ A successful request returns an HTTP `200 OK` message code and an empty response
 
 ### Update capacity for compaction tasks
 
-Updates the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483647. 
+Updates the capacity for compaction tasks. The minimum number of compaction tasks is 1 and the maximum is 2147483647.
 
-Note that while the max compaction tasks can theoretically be set to 2147483647, the practical limit is determined by the available cluster capacity and is capped at 10% of the cluster's total capacity. 
+Note that while the max compaction tasks can theoretically be set to 2147483647, the practical limit is determined by the available cluster capacity and is capped at 10% of the cluster's total capacity.
 
 #### URL
 
@@ -189,38 +207,46 @@ To limit the maximum number of compaction tasks, use the optional query paramete
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="8" label="200 SUCCESS">
 
-*Successfully updated compaction configuration* 
 
-<!--404 NOT FOUND-->
+*Successfully updated compaction configuration*
 
-*Invalid `max` value* 
+</TabItem>
+<TabItem value="9" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid `max` value*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="10" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="11" label="HTTP">
+
 
 ```HTTP
 POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -240,34 +266,40 @@ You can use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompacti
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="12" label="200 SUCCESS">
 
-*Successfully retrieved automatic compaction configurations* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved automatic compaction configurations*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="13" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="14" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/config/compaction HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -383,17 +415,21 @@ Retrieves the automatic compaction configuration for a datasource.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="15" label="200 SUCCESS">
 
-*Successfully retrieved configuration for datasource* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved configuration for datasource*
+
+</TabItem>
+<TabItem value="16" label="404 NOT FOUND">
+
 
 *Invalid datasource or datasource does not have automatic compaction enabled*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
@@ -401,22 +437,26 @@ Retrieves the automatic compaction configuration for a datasource.
 
 The following example retrieves the automatic compaction configuration for datasource `wikipedia_hour`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="17" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/wikipedia_hour"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="18" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/config/compaction/wikipedia_hour HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -476,7 +516,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Retrieves the history of the automatic compaction configuration for a datasource. Returns an empty list if the  datasource does not exist or there is no compaction history for the datasource.
 
 The response contains a list of objects with the following keys:
-* `globalConfig`: A JSON object containing automatic compaction configuration that applies to the entire cluster. 
+* `globalConfig`: A JSON object containing automatic compaction configuration that applies to the entire cluster.
 * `compactionConfig`: A JSON object containing the automatic compaction configuration for the datasource.
 * `auditInfo`: A JSON object containing information about the change made, such as `author`, `comment` or `ip`.
 * `auditTime`: The date and time when the change was made.
@@ -488,45 +528,53 @@ The response contains a list of objects with the following keys:
 #### Query parameters
 * `interval` (optional)
   * Type: ISO-8601
-  * Limits the results within a specified interval. Use `/` as the delimiter for the interval string. 
+  * Limits the results within a specified interval. Use `/` as the delimiter for the interval string.
 * `count` (optional)
   * Type: Int
   * Limits the number of results.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="19" label="200 SUCCESS">
 
-*Successfully retrieved configuration history* 
 
-<!--400 BAD REQUEST-->
+*Successfully retrieved configuration history*
 
-*Invalid `count` value* 
+</TabItem>
+<TabItem value="20" label="400 BAD REQUEST">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid `count` value*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="21" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/wikipedia_hour/history"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="22" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/config/compaction/wikipedia_hour/history HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -644,17 +692,21 @@ Returns the total size of segments awaiting compaction for a given datasource. R
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="23" label="200 SUCCESS">
 
-*Successfully retrieved segment size awaiting compaction* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved segment size awaiting compaction*
 
-*Unknown datasource name or datasource does not have automatic compaction enabled* 
+</TabItem>
+<TabItem value="24" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Unknown datasource name or datasource does not have automatic compaction enabled*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -662,22 +714,26 @@ Returns the total size of segments awaiting compaction for a given datasource. R
 
 The following example retrieves the remaining segments to be compacted for datasource `wikipedia_hour`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="25" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/progress?dataSource=wikipedia_hour"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="26" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/compaction/progress?dataSource=wikipedia_hour HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -720,33 +776,39 @@ The `latestStatus` object has the following properties:
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="27" label="200 SUCCESS">
 
-*Successfully retrieved `latestStatus` object* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved `latestStatus` object*
+
+</TabItem>
+</Tabs>
 
 ---
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="28" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/compaction/status"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="29" label="HTTP">
+
 
 ```HTTP
 GET /druid/coordinator/v1/compaction/status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 

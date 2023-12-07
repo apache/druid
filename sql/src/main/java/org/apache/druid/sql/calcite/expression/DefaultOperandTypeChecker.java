@@ -188,6 +188,7 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
     @Nullable
     private Integer requiredOperandCount;
     private int[] literalOperands;
+    private IntSet notNullOperands = new IntArraySet();
 
     private Builder()
     {
@@ -229,6 +230,12 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
       return this;
     }
 
+    public Builder notNullOperands(final int... notNullOperands)
+    {
+      Arrays.stream(notNullOperands).forEach(this.notNullOperands::add);
+      return this;
+    }
+
     public DefaultOperandTypeChecker build()
     {
       int computedRequiredOperandCount = requiredOperandCount == null ? operandTypes.size() : requiredOperandCount;
@@ -236,16 +243,18 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
           operandNames,
           operandTypes,
           computedRequiredOperandCount,
-          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes.size()),
+          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes.size(), notNullOperands),
           literalOperands
       );
     }
   }
 
-  public static IntSet buildNullableOperands(int requiredOperandCount, int totalOperandCount)
+  public static IntSet buildNullableOperands(int requiredOperandCount, int totalOperandCount, IntSet notNullOperands)
   {
     final IntSet nullableOperands = new IntArraySet();
-    IntStream.range(requiredOperandCount, totalOperandCount).forEach(nullableOperands::add);
+    IntStream.range(requiredOperandCount, totalOperandCount)
+             .filter(i -> !notNullOperands.contains(i))
+             .forEach(nullableOperands::add);
     return nullableOperands;
   }
 }
