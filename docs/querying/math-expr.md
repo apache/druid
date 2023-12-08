@@ -275,13 +275,16 @@ type of the result:
 
 ## IP address functions
 
-For the IPv4 address functions, the `address` argument accepts either an IPv4 dotted-decimal string (e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). Format the `subnet` argument as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").
+For the IPv4 address functions, the `address` argument accepts either an IPv4 dotted-decimal string (e.g. "192.168.0.1") or an IP address represented as a long (e.g. 3232235521). Format the `subnet` argument as an IPv4 address subnet in CIDR notation (e.g. "192.168.0.0/16").
+
+For the IPv6 address function, the `address` argument accepts a semicolon separated string (e.g. "75e9:efa4:29c6:85f6::232c"). The format of the `subnet` argument should be an IPv6 address subnet in CIDR notation (e.g. "75e9:efa4:29c6:85f6::/64").
 
 | function | description |
 | --- | --- |
-| ipv4_match(address, subnet) | Returns 1 if the `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
+| ipv4_match(address, subnet) | Returns 1 if the IPv4 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. Returns `address` if it is already a valid IPv4 integer address.  Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. Returns `address` if it is already a valid IPv4 dotted-decimal string. Returns null if `address` cannot be represented as an IPv4 address.|
+| ipv6_match(address, subnet) | Returns 1 if the IPv6 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv6 address, then 0 is returned.|
 
 ## Other functions
 

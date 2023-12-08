@@ -200,11 +200,14 @@ For the IPv4 address functions, the `address` argument can either be an IPv4 dot
 (e.g., "192.168.0.1") or an IP address represented as an integer (e.g., 3232235521). The `subnet`
 argument should be a string formatted as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").
 
+For the IPv6 address function, the `address` argument accepts a semicolon separated string (e.g. "75e9:efa4:29c6:85f6::232c"). The format of the `subnet` argument should be an IPv6 address subnet in CIDR notation (e.g. "75e9:efa4:29c6:85f6::/64").
+
 |Function|Notes|
 |---|---|
 |`IPV4_MATCH(address, subnet)`|Returns true if the `address` belongs to the `subnet` literal, else false. If `address` is not a valid IPv4 address, then false is returned. This function is more efficient if `address` is an integer instead of a string.|
 |`IPV4_PARSE(address)`|Parses `address` into an IPv4 address stored as an integer . If `address` is an integer that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
 |`IPV4_STRINGIFY(address)`|Converts `address` into an IPv4 address dotted-decimal string. If `address` is a string that is a valid IPv4 address, then it is passed through. Returns null if `address` cannot be represented as an IPv4 address.|
+| IPV6_MATCH(address, subnet) | Returns 1 if the IPv6 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv6 address, then 0 is returned.|
 
 ## Sketch functions
 
