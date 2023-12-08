@@ -71,8 +71,8 @@ public class AzureStorage
    *
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
+  private BlobServiceClient retriableBlobServiceClient;
   private BlobServiceClient blobServiceClient;
-  private BlobServiceClient nonRetriableBlobServiceClient;
   private Integer maxAttempts = 0;
   private final AzureClientFactory azureClientFactory;
 
@@ -120,6 +120,7 @@ public class AzureStorage
 
     try (FileInputStream stream = new FileInputStream(file)) {
       // By default this creates a Block blob, no need to use a specific Block blob client.
+      // We also need to urlEncode the path to handle special characters.
       blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).upload(stream, file.length());
     }
   }
@@ -219,22 +220,22 @@ public class AzureStorage
   }
 
   @VisibleForTesting
-  BlobServiceClient getBlobServiceClient(@Nonnull Integer maxAttempts)
+  BlobServiceClient getRetriableBlobServiceClient(@Nonnull Integer maxAttempts)
   {
-    if (this.blobServiceClient == null || maxAttempts > this.maxAttempts) {
-      this.blobServiceClient = this.azureClientFactory.getRetriableBlobServiceClient(maxAttempts);
+    if (this.retriableBlobServiceClient == null || maxAttempts > this.maxAttempts) {
+      this.retriableBlobServiceClient = this.azureClientFactory.getRetriableBlobServiceClient(maxAttempts);
       this.maxAttempts = maxAttempts;
     }
-    return this.blobServiceClient;
+    return this.retriableBlobServiceClient;
   }
 
   @VisibleForTesting
-  BlobServiceClient getNonRetriableBlobServiceClient()
+  BlobServiceClient getBlobServiceClient()
   {
-    if (this.nonRetriableBlobServiceClient == null) {
-      this.nonRetriableBlobServiceClient = this.azureClientFactory.getBlobServiceClient();
+    if (this.blobServiceClient == null) {
+      this.blobServiceClient = this.azureClientFactory.getBlobServiceClient();
     }
-    return this.nonRetriableBlobServiceClient;
+    return this.blobServiceClient;
   }
 
   @VisibleForTesting
@@ -251,16 +252,14 @@ public class AzureStorage
         Duration.ofMillis(DELTA_BACKOFF_MS)
     );
   }
-
-  // If maxRetries is not specified, use the base BlobServiceClient to generate a BlobContainerClient.
-  // It has no retry policy and uses its own HttpClient, so building new BlobContainerClients is instant.
+  
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
-    return getNonRetriableBlobServiceClient().createBlobContainerIfNotExists(containerName);
+    return getBlobServiceClient().createBlobContainerIfNotExists(containerName);
   }
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
   {
-    return getBlobServiceClient(maxRetries != null ? maxRetries : 0).createBlobContainerIfNotExists(containerName);
+    return getRetriableBlobServiceClient(maxRetries != null ? maxRetries : 0).createBlobContainerIfNotExists(containerName);
   }
 }

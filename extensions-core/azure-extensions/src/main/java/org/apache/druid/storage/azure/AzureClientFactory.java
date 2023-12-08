@@ -30,9 +30,7 @@ import javax.annotation.Nonnull;
 import java.time.Duration;
 
 /**
- * Factory class for generating BlobServiceClient and BlobContainerClient objects. This is necessary instead of using
- * BlobServiceClient.createBlobContainerIfNotExists because sometimes we need different retryOptions on our container
- * clients and Azure doesn't let us override this setting on the default BlobServiceClient.
+ * Factory class for generating BlobServiceClient objects.
  */
 public class AzureClientFactory
 {
@@ -49,6 +47,11 @@ public class AzureClientFactory
     return getAuthenticatedBlobServiceClientBuilder().buildClient();
   }
 
+  /**
+   * Azure doesn't let us override retryConfigs on BlobServiceClient so we need a second instance.
+   * @param retryCount number of retries
+   * @return BlobServiceClient with a custom retryCount
+   */
   public BlobServiceClient getRetriableBlobServiceClient(@Nonnull Integer retryCount)
   {
     BlobServiceClientBuilder clientBuilder = getAuthenticatedBlobServiceClientBuilder()
