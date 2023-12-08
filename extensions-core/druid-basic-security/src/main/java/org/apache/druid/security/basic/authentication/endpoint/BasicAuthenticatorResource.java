@@ -23,7 +23,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
-import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
@@ -161,11 +160,7 @@ public class BasicAuthenticatorResource
     authValidator.validateAuthenticatorName(authenticatorName);
 
     final Response response = handler.createUser(authenticatorName, userName);
-
-    if (isSuccess(response)) {
-      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-      performAudit(authenticatorName, "users.create", Collections.singletonMap("username", userName), auditInfo);
-    }
+    performAudit(authenticatorName, "basicAuth.createUser", userName, req, response);
 
     return response;
   }
@@ -191,11 +186,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.deleteUser(authenticatorName, userName);
-
-    if (isSuccess(response)) {
-      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-      performAudit(authenticatorName, "users.delete", Collections.singletonMap("username", userName), auditInfo);
-    }
+    performAudit(authenticatorName, "basicAuth.deleteUser", userName, req, response);
 
     return response;
   }
@@ -222,11 +213,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
-
-    if (isSuccess(response)) {
-      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-      performAudit(authenticatorName, "users.update", Collections.singletonMap("username", userName), auditInfo);
-    }
+    performAudit(authenticatorName, "basicAuth.updateUserCreds", userName, req, response);
 
     return response;
   }
@@ -278,15 +265,24 @@ public class BasicAuthenticatorResource
     return responseCode >= 200 && responseCode < 300;
   }
 
-  private void performAudit(String authenticatorName, String action, Object payload, AuditInfo auditInfo)
+  private void performAudit(
+      String authenticatorName,
+      String action,
+      String updatedUser,
+      HttpServletRequest request,
+      Response response
+  )
   {
-    auditManager.doAudit(
-        AuditEntry.builder()
-                  .key(authenticatorName)
-                  .type(action)
-                  .auditInfo(auditInfo)
-                  .payload(payload)
-                  .build()
-    );
+    if (isSuccess(response)) {
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(authenticatorName)
+                    .type(action)
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(request))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
+                    .payload(Collections.singletonMap("username", updatedUser))
+                    .build()
+      );
+    }
   }
 }

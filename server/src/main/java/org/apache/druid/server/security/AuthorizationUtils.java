@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 
@@ -127,6 +128,16 @@ public class AuthorizationUtils
         getAuthenticatedIdentity(request),
         comment == null ? "" : comment,
         request.getRemoteAddr()
+    );
+  }
+
+  public static RequestInfo buildRequestInfo(String service, HttpServletRequest request)
+  {
+    return new RequestInfo(
+        service,
+        request.getMethod(),
+        request.getRequestURI(),
+        request.getQueryString()
     );
   }
 

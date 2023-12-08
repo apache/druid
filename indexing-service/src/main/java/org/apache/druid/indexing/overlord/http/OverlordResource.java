@@ -232,6 +232,7 @@ public class OverlordResource
                   AuditEntry.builder()
                             .key(task.getDataSource())
                             .type("ingest.batch")
+                            .request(AuthorizationUtils.buildRequestInfo("overlord", req))
                             .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
                             .auditInfo(auditInfo)
                             .build()

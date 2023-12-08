@@ -31,20 +31,20 @@ public class RequestInfo
 {
   private final String service;
   private final String method;
-  private final String path;
+  private final String uri;
   private final String queryParams;
 
   @JsonCreator
   public RequestInfo(
       @JsonProperty("service") String service,
       @JsonProperty("method") String method,
-      @JsonProperty("path") String path,
+      @JsonProperty("uri") String uri,
       @JsonProperty("queryParams") String queryParams
   )
   {
     this.service = service;
     this.method = method;
-    this.path = path;
+    this.uri = uri;
     this.queryParams = queryParams;
   }
 
@@ -61,9 +61,9 @@ public class RequestInfo
   }
 
   @JsonProperty
-  public String getPath()
+  public String getUri()
   {
-    return path;
+    return uri;
   }
 
   @JsonProperty
@@ -84,14 +84,14 @@ public class RequestInfo
     RequestInfo that = (RequestInfo) o;
     return Objects.equals(this.service, that.service)
            && Objects.equals(this.method, that.method)
-           && Objects.equals(this.path, that.path)
+           && Objects.equals(this.uri, that.uri)
            && Objects.equals(this.queryParams, that.queryParams);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(service, method, path, queryParams);
+    return Objects.hash(service, method, uri, queryParams);
   }
 
   @Override
@@ -100,7 +100,7 @@ public class RequestInfo
     return "RequestInfo{" +
            "service='" + service + '\'' +
            ", method='" + method + '\'' +
-           ", path='" + path + '\'' +
+           ", path='" + uri + '\'' +
            ", queryParams='" + queryParams + '\'' +
            '}';
   }

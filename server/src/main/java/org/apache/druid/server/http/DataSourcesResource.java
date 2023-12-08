@@ -253,16 +253,15 @@ public class DataSourcesResource
         );
         auditPayload = Collections.singletonMap("segmentIds", segmentIds);
       }
-      if (auditManager != null) {
-        auditManager.doAudit(
-            AuditEntry.builder()
-                      .key(dataSourceName)
-                      .type("segments.markUnused")
-                      .payload(auditPayload)
-                      .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                      .build()
-        );
-      }
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(dataSourceName)
+                    .type("markSegmentsAsUnused")
+                    .payload(auditPayload)
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                    .build()
+      );
       return numUpdatedSegments;
     };
     return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
@@ -373,16 +372,15 @@ public class DataSourcesResource
           overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null),
           true
       );
-      if (auditManager != null) {
-        auditManager.doAudit(
-            AuditEntry.builder()
-                      .key(dataSourceName)
-                      .type("segments.killTask")
-                      .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
-                      .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                      .build()
-        );
-      }
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(dataSourceName)
+                    .type("killUnusedSegmentsInInterval")
+                    .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                    .build()
+      );
       return Response.ok().build();
     }
     catch (Exception e) {
