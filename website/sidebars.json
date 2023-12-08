@@ -30,8 +30,22 @@
     ],
     "Design": [
       "design/architecture",
+      {
+        "type": "category",
+        "label": "Services",
+        "items": [
+          "design/coordinator",
+          "design/overlord",
+          "design/broker",
+          "design/router",
+          "design/historical",
+          "design/middlemanager",
+          "design/peons",
+          "design/indexer"
+        ]
+      },
+      "design/storage",
       "design/segments",
-      "design/processes",
       "design/deep-storage",
       "design/metadata-storage",
       "design/zookeeper"
@@ -125,6 +139,7 @@
         ]
       },
       "querying/querying",
+      "querying/query-processing",
       "querying/query-execution",
       "querying/troubleshooting",
       {
