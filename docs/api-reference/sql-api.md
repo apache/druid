@@ -65,7 +65,7 @@ The request body takes the following properties:
 
 * `sqlTypesHeader`: Adds SQL type information in the header. Requires `header` to be set to `true`.
 
-   For compatibility, Druid returns the HTTP header `X-Druid-SQL-Header-Included: yes`, when all of the following conditions are met:
+   For compatibility, Druid returns the HTTP header `X-Druid-SQL-Header-Included: yes` when all of the following conditions are met:
    * The `header` property is set to true.
    * The version of Druid supports `typesHeader` and `sqlTypesHeader`, regardless of whether either property is set.
 
