@@ -389,20 +389,19 @@ public class CoordinatorBasicAuthenticatorResourceTest
 
     response = resource.deleteUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
-/*
+
     response = resource.getUser(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME, "druid");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
 
     response = resource.updateUserCredentials(
-        mockHttpRequest(),
+        mockHttpRequestNoAudit(),
         AUTHENTICATOR_NAME,
         "druid",
         new BasicAuthenticatorCredentialUpdate("helloworld", null)
     );
     Assert.assertEquals(400, response.getStatus());
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
-    */
   }
 
   private HttpServletRequest mockHttpRequestNoAudit()
@@ -427,6 +426,9 @@ public class CoordinatorBasicAuthenticatorResourceTest
         new AuthenticationResult("id", "authorizer", "authBy", Collections.emptyMap())
     ).once();
     EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").once();
+    EasyMock.expect(req.getMethod()).andReturn("GET").once();
+    EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
+    EasyMock.expect(req.getQueryString()).andReturn("a=b").once();
     EasyMock.replay(req);
 
     return req;
