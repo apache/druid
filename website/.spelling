@@ -361,6 +361,7 @@ json_keys
 json_object
 json_paths
 json_query
+json_query_array
 json_value
 karlkfi
 kerberos
