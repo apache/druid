@@ -84,6 +84,7 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.NilExtraInfoHolder;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
+import org.apache.druid.msq.querykit.WindowOperatorQueryFrameProcessorFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleFrameProcessorFactory;
@@ -158,7 +159,7 @@ public class MSQIndexingModule implements DruidModule
         NilExtraInfoHolder.class,
         SortMergeJoinFrameProcessorFactory.class,
         QueryResultFrameProcessorFactory.class,
-
+        WindowOperatorQueryFrameProcessorFactory.class,
         // DataSource classes (note: ExternalDataSource is in MSQSqlModule)
         InputNumberDataSource.class,
 
