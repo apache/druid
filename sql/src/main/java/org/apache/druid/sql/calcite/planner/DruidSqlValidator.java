@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -29,9 +30,13 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeMappingRule;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.run.EngineFeature;
+
+import java.util.Map;
 
 /**
  * Druid extended SQL validator. (At present, it doesn't actually
@@ -78,6 +83,26 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     super.validateCall(call, scope);
+  }
+
+  @Override
+  public SqlTypeMappingRule getTypeMappingRule()
+  {
+    SqlTypeMappingRule base = super.getTypeMappingRule();
+    return new SqlTypeMappingRule()
+    {
+      @Override
+      public Map<SqlTypeName, ImmutableSet<SqlTypeName>> getTypeMapping()
+      {
+        return base.getTypeMapping();
+      }
+
+      @Override
+      public boolean canApplyFrom(SqlTypeName to, SqlTypeName from)
+      {
+        return SqlTypeMappingRule.super.canApplyFrom(to, from);
+      }
+    };
   }
 
   private CalciteContextException buildCalciteContextException(String message, SqlCall call)
