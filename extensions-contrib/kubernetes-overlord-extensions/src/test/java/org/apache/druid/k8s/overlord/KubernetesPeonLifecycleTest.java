@@ -295,7 +295,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(ID, taskStatus.getId());
-    Assert.assertEquals("task status not found", taskStatus.getErrorMsg());
+    Assert.assertEquals("Peon did not report status successfully.", taskStatus.getErrorMsg());
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
@@ -457,7 +457,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     Assert.assertTrue(taskStatus.isFailure());
     Assert.assertEquals(ID, taskStatus.getId());
-    Assert.assertEquals("task status not found", taskStatus.getErrorMsg());
+    Assert.assertEquals("Peon did not report status successfully.", taskStatus.getErrorMsg());
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 
