@@ -55,7 +55,11 @@ public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<
         Preconditions.checkNotNull(value.lhs, "Long in SerializablePairLongString must be non-null");
 
         byteBuffer.putLong(value.lhs);
-        byteBuffer.putInt(rhsBytes.length);
+        if (rhsString == null) {
+          byteBuffer.putInt(-1);
+        } else {
+          byteBuffer.putInt(rhsBytes.length);
+        }
 
         if (rhsBytes.length > 0) {
           byteBuffer.put(rhsBytes);
@@ -83,7 +87,7 @@ public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<
     int stringSize = readOnlyBuffer.getInt();
     String lastString = null;
 
-    if (stringSize > 0) {
+    if (stringSize >= 0) {
       byte[] stringBytes = new byte[stringSize];
 
       readOnlyBuffer.get(stringBytes, 0, stringSize);

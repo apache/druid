@@ -75,7 +75,11 @@ public class SerializablePairLongStringDeltaEncodedStagedSerde implements Staged
           byteBuffer.putLong(delta);
         }
 
-        byteBuffer.putInt(rhsBytes.length);
+        if (rhsString == null) {
+          byteBuffer.putInt(-1);
+        } else {
+          byteBuffer.putInt(rhsBytes.length);
+        }
 
         if (rhsBytes.length > 0) {
           byteBuffer.put(rhsBytes);
@@ -112,7 +116,7 @@ public class SerializablePairLongStringDeltaEncodedStagedSerde implements Staged
     int stringSize = readOnlyBuffer.getInt();
     String lastString = null;
 
-    if (stringSize > 0) {
+    if (stringSize >= 0) {
       byte[] stringBytes = new byte[stringSize];
 
       readOnlyBuffer.get(stringBytes, 0, stringSize);
