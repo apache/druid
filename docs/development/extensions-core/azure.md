@@ -40,5 +40,6 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 |`druid.azure.protocol`|the protocol to use|http or https|https|
 |`druid.azure.maxTries`|Number of tries before canceling an Azure operation.| |3|
 |`druid.azure.maxListingLength`|maximum number of input files matching a given prefix to retrieve at a time| |1024|
+|`druid.azure.endpointSuffix`|the endpoint suffix to use.|Examples: `core.windows.net`, `core.usgovcloudapi.net`|`core.windows.net`|
 
 See [Azure Services](http://azure.microsoft.com/en-us/pricing/free-trial/) for more information.
