@@ -50,7 +50,7 @@ Calculates the arc cosine of a numeric expression.
 
 ## ANY_VALUE
 
-`ANY_VALUE(expr, [maxBytesPerValue])`
+`ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -114,7 +114,7 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 
 `ARRAY[expr1, expr2, ...]`
 
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
+**Function type:** [Array](sql-array-functions.md)
 
 Constructs a SQL ARRAY literal from the expression arguments. The arguments must be of the same type.
 
@@ -769,7 +769,7 @@ Finds whether a string is in a given expression, case-insensitive.
 
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-Returns true if the `address` belongs to the `subnet` literal, else false.
+Returns true if the IPv4 `address` belongs to the `subnet` literal, else false.
 
 ## IPV4_PARSE
 
@@ -786,6 +786,14 @@ Parses `address` into an IPv4 address stored as an integer.
 **Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
 Converts `address` into an IPv4 address in dot-decimal notation.
+
+## IPV6_MATCH
+
+`IPV6_MATCH(address, subnet)`
+
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+
+Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 ## JSON_KEYS
 

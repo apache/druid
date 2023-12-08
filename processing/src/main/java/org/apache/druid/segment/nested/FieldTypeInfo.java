@@ -183,6 +183,10 @@ public class FieldTypeInfo
       if (hasEmptyArray && columnType != null && !columnType.isArray()) {
         return null;
       }
+      // if column only has empty arrays, call it long array
+      if (types == 0x00 && hasEmptyArray) {
+        return ColumnType.LONG_ARRAY;
+      }
       return columnType;
     }
 

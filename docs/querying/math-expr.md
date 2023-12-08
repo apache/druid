@@ -235,7 +235,7 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 
 | function | description |
 |---|---|
-| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'` or `'STRING'` to cast values to that type. |
+| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, or `ARRAY<DOUBLE>`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'`, `'STRING'`, `'ARRAY<LONG>'`, `'ARRAY<DOUBLE>'`, or `'ARRAY<STRING>'` to cast values to that type. |
 | json_query(expr, path) | Extract a `COMPLEX<json>` value from `expr` using JSONPath syntax of `path` |
 | json_object(expr1, expr2[, expr3, expr4 ...]) | Construct a `COMPLEX<json>` with alternating 'key' and 'value' arguments|
 | parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|
@@ -275,13 +275,16 @@ type of the result:
 
 ## IP address functions
 
-For the IPv4 address functions, the `address` argument accepts either an IPv4 dotted-decimal string (e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). Format the `subnet` argument as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").
+For the IPv4 address functions, the `address` argument accepts either an IPv4 dotted-decimal string (e.g. "192.168.0.1") or an IP address represented as a long (e.g. 3232235521). Format the `subnet` argument as an IPv4 address subnet in CIDR notation (e.g. "192.168.0.0/16").
+
+For the IPv6 address function, the `address` argument accepts a semicolon separated string (e.g. "75e9:efa4:29c6:85f6::232c"). The format of the `subnet` argument should be an IPv6 address subnet in CIDR notation (e.g. "75e9:efa4:29c6:85f6::/64").
 
 | function | description |
 | --- | --- |
-| ipv4_match(address, subnet) | Returns 1 if the `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
+| ipv4_match(address, subnet) | Returns 1 if the IPv4 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. Returns `address` if it is already a valid IPv4 integer address.  Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. Returns `address` if it is already a valid IPv4 dotted-decimal string. Returns null if `address` cannot be represented as an IPv4 address.|
+| ipv6_match(address, subnet) | Returns 1 if the IPv6 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv6 address, then 0 is returned.|
 
 ## Other functions
 

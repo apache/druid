@@ -89,10 +89,10 @@ Submitting a query from deep storage uses the same syntax as any other Druid SQL
 
 Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints.
 
-There are additional context parameters for `sql/statements` specifically: 
+Apart from the context parameters mentioned [here](../multi-stage-query/reference.md#context-parameters) there are additional context parameters for `sql/statements`: 
 
    - `executionMode`  (required) determines how query results are fetched. Set this to `ASYNC`. 
-   - `selectDestination` (optional) set to `durableStorage` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
+   - `selectDestination` (optional) set to `durableStorage` instructs Druid to write the results of SELECT queries to durable storage. For result sets with more than 3000 rows, it is highly recommended to use `durableStorage`. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
 The following sample query includes the two additional context parameters that querying from deep storage supports:
 
@@ -182,12 +182,14 @@ Only the user who submitted a query can retrieve the results for the query.
 Use the following endpoint to retrieve results:
 
 ```
-GET https://ROUTER:8888/druid/v2/sql/statements/QUERYID/results?page=PAGENUMBER&size=RESULT_SIZE&timeout=TIMEOUT_MS
+GET https://ROUTER:8888/druid/v2/sql/statements/QUERYID/results?page=PAGENUMBER&resultFormat=FORMAT
 ```
 
 Results are returned in JSON format.
 
-You can use the optional `page`, `size`, and `timeout` parameters to refine your results. You can retrieve the `page` information for your results by fetching the status of the completed query.
+You can use the optional `page` parameter to refine your results, and `resultFormat` parameter to define the format in which the results will be presented. 
+* You can retrieve the `page` information for your results by fetching the status of the completed query.
+* For `resultFormat` the following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. Default value is `object`. More documentation present [here](../api-reference/sql-api.md#request-body). 
 
 When you try to get results for a query from deep storage, you may receive an error that states the query is still running. Wait until the query completes before you try again.
 

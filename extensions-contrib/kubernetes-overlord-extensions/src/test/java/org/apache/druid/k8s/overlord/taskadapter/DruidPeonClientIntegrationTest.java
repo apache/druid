@@ -34,17 +34,18 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
+import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -90,14 +91,7 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient();
-    ServiceEmitter serviceEmitter = new ServiceEmitter("service", "host", null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-      }
-    };
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false, serviceEmitter);
+    peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
     druidNode = new DruidNode(
         "test",
         null,
@@ -182,8 +176,9 @@ public class DruidPeonClientIntegrationTest
     assertEquals(task, taskFromPod);
 
 
-    peonClient.waitForPeonJobCompletion(taskId, 2, TimeUnit.MINUTES);
+    JobResponse jobStatusResult = peonClient.waitForPeonJobCompletion(taskId, 2, TimeUnit.MINUTES);
     thread.join();
+    assertEquals(PeonPhase.SUCCEEDED, jobStatusResult.getPhase());
     // as long as there were no exceptions we are good!
     assertEquals(expectedLogs, actualLogs);
     // cleanup my job

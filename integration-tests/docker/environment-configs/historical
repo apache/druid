@@ -21,7 +21,9 @@ DRUID_SERVICE=historical
 DRUID_LOG_PATH=/shared/logs/historical.log
 
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007
+# Query IT often fails with historical server running out of memory (OOM).
+# Until the issue is resolved, heap size for historical server is increased from 512m to 700m.
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx700m -Xms700m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007
 
 # Druid configs
 druid_host=druid-historical

@@ -29,6 +29,7 @@ APIs
 apache.org
 AvroStorage
 ARN
+ASC
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -43,6 +44,7 @@ Base64
 Base64-encoded
 ByteBuffer
 bottlenecked
+cartesian
 concat
 CIDR
 CORS
@@ -115,6 +117,7 @@ IcebergInputSource
 IETF
 IP
 IPv4
+IPv6
 IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
@@ -244,6 +247,7 @@ aggregators
 ambari
 analytics
 arrayElement
+arrayContainsElement
 assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
@@ -503,6 +507,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+sub-conditions
 subarray
 subnet
 subqueries
@@ -943,6 +948,7 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
@@ -1280,6 +1286,7 @@ numShards
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
 2012-01-01T00
 2012-01-03T00
@@ -1484,10 +1491,20 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
-isnull
 ipv4_stringify
+ipv6_match
+
+# IPv6 Address Example Sections
+75e9
+efa4
+29c6
+85f6
+232c
+
+isnull
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad
@@ -2324,3 +2341,8 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+LAST_VALUE
+markUnused
+markUsed
+segmentId
+aggregateMultipleValues
