@@ -25,10 +25,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.Map;
 import java.util.Set;
@@ -69,10 +66,6 @@ public class RootSchemaProvider implements Provider<DruidSchemaCatalog>
     for (NamedSchema schema : namedSchemas) {
       rootSchema.add(schema.getSchemaName(), schema.getSchema());
     }
-    rootSchema.add(
-        "JSON",
-        relDataTypeFactory -> new RowSignatures.ComplexSqlType(SqlTypeName.OTHER, ColumnType.NESTED_DATA, true)
-    );
     return new DruidSchemaCatalog(rootSchema, ImmutableMap.copyOf(schemasByName));
   }
 }
