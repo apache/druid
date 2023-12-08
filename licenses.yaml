@@ -843,19 +843,6 @@ libraries:
 
 ---
 
-name: kubernetes official java client
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 19.0.0
-libraries:
-  - io.kubernetes: client-java
-  - io.kubernetes: client-java-api
-  - io.kubernetes: client-java-extended
-  - io.kubernetes: client-java-api-fluent
-
----
-
 name: kubernetes fabric java client
 license_category: binary
 module: extensions-contrib/kubernetes-overlord-extensions
@@ -866,13 +853,28 @@ libraries:
 
 ---
 
-name: io.prometheus simpleclient_common
+name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.0
+version: 19.0.0
 libraries:
-  - io.prometheus: simpleclient_common
+  - io.kubernetes: client-java
+  - io.kubernetes: client-java-api
+  - io.kubernetes: client-java-extended
+  - io.kubernetes: client-java-api-fluent
+  - io.kubernetes: client-java-proto
+
+---
+
+name: Swagger
+version: 1.6.2
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger: swagger-core
+  - io.swagger: swagger-models
 
 ---
 
@@ -920,6 +922,16 @@ name: io.swagger swagger-annotations
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
+version: 1.6.11
+libraries:
+  - io.swagger: swagger-annotations
+
+---
+
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
 version: 1.6.2
 libraries:
   - io.swagger: swagger-annotations
@@ -936,15 +948,6 @@ libraries:
 
 ---
 
-name: io.prometheus simpleclient_httpserver
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 0.9.0
-libraries:
-  - io.prometheus: simpleclient_httpserver
-
----
 
 name: org.bitbucket.b_c jose4j
 license_category: binary
@@ -964,6 +967,7 @@ version: 2.2.1
 libraries:
   - org.joda: joda-convert
 
+
 ---
 
 name: com.squareup.okhttp3 okhttp
@@ -973,6 +977,17 @@ license_name: Apache License version 2.0
 version: 4.12.0
 libraries:
   - com.squareup.okhttp3: okhttp
+  - com.squareup.okhttp3: logging-interceptor
+
+---
+
+name: com.squareup.okhttp3 okhttp logging-interceptor
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 4.11.0
+libraries:
+  - com.squareup.okhttp3: logging-interceptor
 
 ---
 
@@ -980,29 +995,26 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.2.0
+version: 3.6.0
 libraries:
   - com.squareup.okio: okio
   - com.squareup.okio: okio-jvm
+
 ---
 
 name: io.prometheus simpleclient
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.0
+version: 0.16.0
 libraries:
   - io.prometheus: simpleclient
+  - io.prometheus: simpleclient_common
+  - io.prometheus: simpleclient_httpserver
+  - io.prometheus: simpleclient_tracer_common
+  - io.prometheus: simpleclient_tracer_otel
+  - io.prometheus: simpleclient_tracer_otel_agent
 
----
-
-name: io.kubernetes client-java-proto
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 11.0.4
-libraries:
-  - io.kubernetes: client-java-proto
 
 ---
 
@@ -1020,70 +1032,76 @@ name: com.flipkart.zjsonpatch zjsonpatch
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.4.11
+version: 0.4.14
 libraries:
   - com.flipkart.zjsonpatch: zjsonpatch
 
 ---
 
-
-name: org.bouncycastle bcprov-jdk15on
+name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: "1.70"
+version: "1.76"
 libraries:
-  - org.bouncycastle: bcprov-jdk15on
-
+  - org.bouncycastle: bcprov-jdk18on
+  - org.bouncycastle: bcprov-ext-jdk18on
+  - org.bouncycastle: bcpkix-jdk18on
+  - org.bouncycastle: bcutil-jdk18on
 ---
 
-name: org.bouncycastle bcprov-ext-jdk15on
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: MIT License
-version: "1.70"
-libraries:
-  - org.bouncycastle: bcprov-ext-jdk15on
-
----
-
-name: org.bouncycastle bcpkix-jdk15on
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: MIT License
-version: "1.70"
-libraries:
-  - org.bouncycastle: bcpkix-jdk15on
-
----
-
-name: org.bouncycastle bcutil-jdk15on
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: MIT License
-version: "1.70"
-libraries:
-  - org.bouncycastle: bcutil-jdk15on
-
----
-
-name: com.squareup.okhttp3 logging-interceptor
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 3.14.9
-libraries:
-  - com.squareup.okhttp3: logging-interceptor
-
----
 
 name: com.github.vladimir-bukhtoyarov bucket4j-core
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 4.10.0
+version: 7.6.0
 libraries:
   - com.github.vladimir-bukhtoyarov: bucket4j-core
+
+---
+
+name: Jetbrains Annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+module: extensions/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 13.0
+libraries:
+  - org.jetbrains: annotations
+
+
+---
+
+name: Jetbrains kotlin-stdlib
+license_category: binary
+module: extensions/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.6.10
+libraries:
+  - org.jetbrains.kotlin: kotlin-stdlib
+
+---
+
+name: Jetbrains kotlin-stdlib common
+license_category: binary
+module: extensions/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.9.10
+libraries:
+  - org.jetbrains.kotlin: kotlin-stdlib-common
+
+---
+name: Jetbrains  jdk7 jdk 8
+license_category: binary
+module: extensions/kubernetes-extensions
+license_name: Apache License version 2.0
+version: 1.8.21
+libraries:
+  - org.jetbrains.kotlin: kotlin-stdlib
+  - org.jetbrains.kotlin: kotlin-stdlib-common
+  - org.jetbrains.kotlin: kotlin-stdlib-jdk7
+  - org.jetbrains.kotlin: kotlin-stdlib-jdk8
 
 ---
 

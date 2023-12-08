@@ -36,6 +36,7 @@
 
   <properties>
     <commons-io.version>2.11.0</commons-io.version>
+    <okio.version>3.4.0</okio.version>
   </properties>
 
   <repositories>
@@ -45,6 +46,17 @@
     </repository>
   </repositories>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- This is an indirect dependency of kafka-protobuf-provider
+      update to address vulnerability in transitive dependency okio  -->
+      <dependency>
+          <groupId>com.squareup.okio</groupId>
+          <artifactId>okio</artifactId>
+          <version>3.4.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
