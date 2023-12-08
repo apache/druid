@@ -289,7 +289,7 @@ Returns a list of server data objects in which each object has the following key
 
 ## Query server
 
-This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section documents the API endpoints for the services that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 ### Broker
 
