@@ -90,6 +90,21 @@ public class NestedFieldTypeInfoTest
   }
 
   @Test
+  public void testOnlyEmptyType()
+  {
+    FieldTypeInfo.MutableTypeSet typeSet = new FieldTypeInfo.MutableTypeSet();
+    Assert.assertNull(typeSet.getSingleType());
+    Assert.assertTrue(typeSet.isEmpty());
+
+    typeSet.addUntypedArray();
+
+    Assert.assertEquals(ColumnType.LONG_ARRAY, typeSet.getSingleType());
+    // no actual types in the type set, only getSingleType
+    Assert.assertEquals(ImmutableSet.of(), FieldTypeInfo.convertToSet(typeSet.getByteValue()));
+    Assert.assertTrue(typeSet.hasUntypedArray());
+  }
+
+  @Test
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(FieldTypeInfo.TypeSet.class)

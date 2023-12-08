@@ -215,4 +215,16 @@ public class JsonInputFormat extends NestedInputFormat
         useJsonNodeReader
     );
   }
+
+  @Override
+  public String toString()
+  {
+    return "JsonInputFormat{" +
+           "featureSpec=" + featureSpec +
+           ", keepNullColumns=" + keepNullColumns +
+           ", lineSplittable=" + lineSplittable +
+           ", assumeNewlineDelimited=" + assumeNewlineDelimited +
+           ", useJsonNodeReader=" + useJsonNodeReader +
+           '}';
+  }
 }

@@ -1228,6 +1228,13 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
     if (processFromRaw) {
+      if (expectedType != null && expectedType.isArray() && ColumnType.NESTED_DATA.equals(expectedType.getElementType())) {
+        // arrays of objects!
+        return ColumnCapabilitiesImpl.createDefault()
+                                     .setType(ColumnType.ofArray(ColumnType.NESTED_DATA))
+                                     .setHasMultipleValues(false)
+                                     .setHasNulls(true);
+      }
       // JSON_QUERY always returns a StructuredData
       return ColumnCapabilitiesImpl.createDefault()
                                    .setType(ColumnType.NESTED_DATA)

@@ -6258,9 +6258,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("cstringArray", ColumnType.STRING_ARRAY)
                     .add("cLongArray", ColumnType.LONG_ARRAY)
                     .add("cDoubleArray", ColumnType.DOUBLE_ARRAY)
-                    .add("cEmptyArray", ColumnType.NESTED_DATA)
+                    .add("cEmptyArray", ColumnType.LONG_ARRAY)
                     .add("cEmptyObj", ColumnType.NESTED_DATA)
-                    .add("cNullArray", ColumnType.NESTED_DATA)
+                    .add("cNullArray", ColumnType.LONG_ARRAY)
                     .add("cEmptyObjectArray", ColumnType.NESTED_DATA)
                     .add("cObjectArray", ColumnType.NESTED_DATA)
                     .add("cnt", ColumnType.LONG)
@@ -6522,5 +6522,219 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .build()
 
     );
+  }
+
+  @Test
+  public void testJsonQueryArrays()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$') FROM druid.arrays")
+        .queryContext(QUERY_CONTEXT_DEFAULT)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(DATA_SOURCE_ARRAYS)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .virtualColumns(
+                          expressionVirtualColumn("v0", "json_query_array(\"arrayObject\",'$')", ColumnType.ofArray(ColumnType.NESTED_DATA))
+                      )
+                      .columns("v0")
+                      .context(QUERY_CONTEXT_DEFAULT)
+                      .legacy(false)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[{\"x\":1000},{\"y\":2000}]"},
+                new Object[]{"[{\"x\":1},{\"x\":2}]"},
+                new Object[]{"[{\"x\":null},{\"x\":2}]"},
+                new Object[]{"[{\"a\":1},{\"b\":2}]"},
+                new Object[]{"[{\"x\":1},{\"x\":2}]"},
+                new Object[]{"[null,{\"x\":2}]"},
+                new Object[]{"[{\"x\":3},{\"x\":4}]"},
+                new Object[]{"[{\"x\":1000},{\"y\":2000}]"},
+                new Object[]{"[{\"x\":1},{\"x\":2}]"},
+                new Object[]{"[{\"x\":null},{\"x\":2}]"},
+                new Object[]{"[{\"a\":1},{\"b\":2}]"},
+                new Object[]{"[{\"x\":1},{\"x\":2}]"},
+                new Object[]{"[null,{\"x\":2}]"},
+                new Object[]{"[{\"x\":3},{\"x\":4}]"}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.ofArray(ColumnType.NESTED_DATA))
+                        .build()
+        )
+        .run();
+  }
+  @Test
+  public void testUnnestJsonQueryArrays()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql("SELECT objects FROM druid.arrays, UNNEST(JSON_QUERY_ARRAY(arrayObject, '$')) as u(objects)")
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                      .dataSource(
+                          UnnestDataSource.create(
+                              TableDataSource.create(DATA_SOURCE_ARRAYS),
+                              expressionVirtualColumn("j0.unnest", "json_query_array(\"arrayObject\",'$')", ColumnType.ofArray(ColumnType.NESTED_DATA)),
+                              null
+                          )
+                      )
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .columns("j0.unnest")
+                      .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                      .legacy(false)
+                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"{\"x\":1000}"},
+                new Object[]{"{\"y\":2000}"},
+                new Object[]{"{\"x\":1}"},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{"{\"x\":null}"},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{"{\"a\":1}"},
+                new Object[]{"{\"b\":2}"},
+                new Object[]{"{\"x\":1}"},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{null},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{"{\"x\":3}"},
+                new Object[]{"{\"x\":4}"},
+                new Object[]{"{\"x\":1000}"},
+                new Object[]{"{\"y\":2000}"},
+                new Object[]{"{\"x\":1}"},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{"{\"x\":null}"},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{"{\"a\":1}"},
+                new Object[]{"{\"b\":2}"},
+                new Object[]{"{\"x\":1}"},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{null},
+                new Object[]{"{\"x\":2}"},
+                new Object[]{"{\"x\":3}"},
+                new Object[]{"{\"x\":4}"}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("objects", ColumnType.NESTED_DATA)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testUnnestJsonQueryArraysJsonValue()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT"
+            + " json_value(objects, '$.x' returning bigint) as x,"
+            + " count(*)"
+            + " FROM druid.arrays, UNNEST(JSON_QUERY_ARRAY(arrayObject, '$')) as u(objects)"
+            + " GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(
+                                UnnestDataSource.create(
+                                    TableDataSource.create(DATA_SOURCE_ARRAYS),
+                                    expressionVirtualColumn("j0.unnest", "json_query_array(\"arrayObject\",'$')", ColumnType.ofArray(ColumnType.NESTED_DATA)),
+                                    null
+                                )
+                            )
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setVirtualColumns(
+                                new NestedFieldVirtualColumn("j0.unnest", "$.x", "v0", ColumnType.LONG)
+                            )
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                                )
+                            )
+                            .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                            .setContext(QUERY_CONTEXT_DEFAULT)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultLongValue(), 10L},
+                new Object[]{1L, 4L},
+                new Object[]{2L, 8L},
+                new Object[]{3L, 2L},
+                new Object[]{4L, 2L},
+                new Object[]{1000L, 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("x", ColumnType.LONG)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testUnnestJsonQueryArraysJsonValueSum()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT"
+            + " sum(json_value(objects, '$.x' returning bigint)) as xs"
+            + " FROM druid.arrays, UNNEST(JSON_QUERY_ARRAY(arrayObject, '$')) as u(objects)"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newTimeseriesQueryBuilder()
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .dataSource(
+                          UnnestDataSource.create(
+                              TableDataSource.create(DATA_SOURCE_ARRAYS),
+                              expressionVirtualColumn("j0.unnest", "json_query_array(\"arrayObject\",'$')", ColumnType.ofArray(ColumnType.NESTED_DATA)),
+                              null
+                          )
+                      )
+                      .virtualColumns(
+                          new NestedFieldVirtualColumn("j0.unnest", "$.x", "v0", ColumnType.LONG)
+                      )
+                      .aggregators(
+                          new LongSumAggregatorFactory("a0", "v0")
+                      )
+                      .context(QUERY_CONTEXT_DEFAULT)
+                      .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{2034L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("xs", ColumnType.LONG)
+                        .build()
+        )
+        .run();
   }
 }

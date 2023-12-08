@@ -320,6 +320,9 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
+      if (!valueType.isArray()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
+      }
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
           eval,

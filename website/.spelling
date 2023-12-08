@@ -117,6 +117,7 @@ IcebergInputSource
 IETF
 IP
 IPv4
+IPv6
 IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
@@ -246,6 +247,7 @@ aggregators
 ambari
 analytics
 arrayElement
+arrayContainsElement
 assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
@@ -359,6 +361,7 @@ json_keys
 json_object
 json_paths
 json_query
+json_query_array
 json_value
 karlkfi
 kerberos
@@ -1489,8 +1492,17 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
-isnull
 ipv4_stringify
+ipv6_match
+
+# IPv6 Address Example Sections
+75e9
+efa4
+29c6
+85f6
+232c
+
+isnull
 java.lang.Math
 java.lang.String
 JNA
