@@ -222,6 +222,7 @@ public class AzureStorage
   @VisibleForTesting
   BlobServiceClient getRetriableBlobServiceClient(@Nonnull Integer maxAttempts)
   {
+    // To avoid keeping a ton of clients in memory, if maxAttempts is specified use a client with at least that many retries configured.
     if (this.retriableBlobServiceClient == null || maxAttempts > this.maxAttempts) {
       this.retriableBlobServiceClient = this.azureClientFactory.getRetriableBlobServiceClient(maxAttempts);
       this.maxAttempts = maxAttempts;
@@ -252,7 +253,7 @@ public class AzureStorage
         Duration.ofMillis(DELTA_BACKOFF_MS)
     );
   }
-  
+
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
     return getBlobServiceClient().createBlobContainerIfNotExists(containerName);
