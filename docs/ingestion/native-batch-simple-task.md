@@ -90,7 +90,7 @@ A sample task is shown below:
     "tuningConfig" : {
       "type" : "index",
       "partitionsSpec": {
-        "type": "single_dim",
+        "type": "hashed",
         "partitionDimension": "country",
         "targetRowsPerSegment": 5000000
       }
