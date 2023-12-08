@@ -20,11 +20,13 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -51,6 +53,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
@@ -91,6 +94,8 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
@@ -101,6 +106,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -396,11 +402,26 @@ public class QueryStackTests
         .build();
     DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
         .ignoreLoadScopes()
+        .addModule(new ExpressionModule())
         .addModule(new SegmentWranglerModule())
-        .addModule(new ExpressionModule());
+        .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED))
+        ;
 
-    // injectorBuilder.addModules(builder.extraModules.toArray(new Module[0]));
-    // injectorBuilder.addModules(new testcac);
+    final LookupExtractorFactoryContainerProvider lookupProvider =
+        LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap());
+
+    final ImmutableList.Builder<Module> modulesBuilder =
+        ImmutableList.<Module>builder()
+//            .add(new JoinableFactoryModule())
+        .add(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
+        ;
+
+    injectorBuilder.addModules(
+        modulesBuilder.build().toArray(new Module[0])
+    );
+
+//     injectorBuilder.addModules(builder.extraModules.toArray(new Module[0]));
+//     injectorBuilder.addModules(new testcac);
     return injectorBuilder.build();
   }
 }
