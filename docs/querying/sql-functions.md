@@ -510,7 +510,7 @@ Rounds down a timestamp by a given time unit.
 
 **Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
 
-Decodes a Base64-encoded string into a [complex type](sql-scalar.md#complex-type-names), where `dataType` represents the complex type and `expr` is the Base64-encoded string to decode.
+Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
 
 ## DECODE_BASE64_UTF8
 
