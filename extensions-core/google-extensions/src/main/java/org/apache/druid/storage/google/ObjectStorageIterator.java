@@ -56,16 +56,11 @@ public class ObjectStorageIterator implements Iterator<GoogleStorageObjectMetada
 
   private void fetchNextPage()
   {
-    try {
-      String currentBucket = currentUri.getAuthority();
-      String currentPrefix = StringUtils.maybeRemoveLeadingSlash(currentUri.getPath());
-      googleStorageObjectPage = storage.list(currentBucket, currentPrefix, maxListingLength, nextPageToken);
-      blobIterator = googleStorageObjectPage.getObjectList().iterator();
-      nextPageToken = googleStorageObjectPage.getNextPageToken();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    String currentBucket = currentUri.getAuthority();
+    String currentPrefix = StringUtils.maybeRemoveLeadingSlash(currentUri.getPath());
+    googleStorageObjectPage = storage.list(currentBucket, currentPrefix, maxListingLength, nextPageToken);
+    blobIterator = googleStorageObjectPage.getObjectList().iterator();
+    nextPageToken = googleStorageObjectPage.getNextPageToken();
   }
 
   @Override

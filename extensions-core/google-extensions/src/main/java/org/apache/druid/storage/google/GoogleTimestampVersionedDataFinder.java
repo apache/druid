@@ -43,34 +43,35 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
   @Override
   public URI getLatestVersion(URI descriptorBase, @Nullable Pattern pattern)
   {
-    try {
-      long mostRecent = Long.MIN_VALUE;
-      URI latest = null;
-      final CloudObjectLocation baseLocation = new CloudObjectLocation(descriptorBase);
-      final GoogleStorageObjectPage googleStorageObjectPage = storage.list(baseLocation.getBucket(), baseLocation.getPath(), MAX_LISTING_KEYS, null);
-      for (GoogleStorageObjectMetadata objectMetadata : googleStorageObjectPage.getObjectList()) {
-        if (GoogleUtils.isDirectoryPlaceholder(objectMetadata)) {
-          continue;
-        }
-        // remove path prefix from file name
-        final CloudObjectLocation objectLocation = new CloudObjectLocation(objectMetadata.getBucket(),
-            objectMetadata.getName()
-        );
-        final String keyString = StringUtils
-            .maybeRemoveLeadingSlash(objectMetadata.getName().substring(baseLocation.getPath().length()));
-        if (pattern != null && !pattern.matcher(keyString).matches()) {
-          continue;
-        }
-        final long latestModified = objectMetadata.getLastUpdateTime();
-        if (latestModified >= mostRecent) {
-          mostRecent = latestModified;
-          latest = objectLocation.toUri(GoogleStorageDruidModule.SCHEME_GS);
-        }
+    long mostRecent = Long.MIN_VALUE;
+    URI latest = null;
+    final CloudObjectLocation baseLocation = new CloudObjectLocation(descriptorBase);
+    final GoogleStorageObjectPage googleStorageObjectPage = storage.list(
+        baseLocation.getBucket(),
+        baseLocation.getPath(),
+        MAX_LISTING_KEYS,
+        null
+    );
+    for (GoogleStorageObjectMetadata objectMetadata : googleStorageObjectPage.getObjectList()) {
+      if (GoogleUtils.isDirectoryPlaceholder(objectMetadata)) {
+        continue;
       }
-      return latest;
+      // remove path prefix from file name
+      final CloudObjectLocation objectLocation = new CloudObjectLocation(
+          objectMetadata.getBucket(),
+          objectMetadata.getName()
+      );
+      final String keyString = StringUtils
+          .maybeRemoveLeadingSlash(objectMetadata.getName().substring(baseLocation.getPath().length()));
+      if (pattern != null && !pattern.matcher(keyString).matches()) {
+        continue;
+      }
+      final long latestModified = objectMetadata.getLastUpdateTime();
+      if (latestModified >= mostRecent) {
+        mostRecent = latestModified;
+        latest = objectLocation.toUri(GoogleStorageDruidModule.SCHEME_GS);
+      }
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    return latest;
   }
 }
