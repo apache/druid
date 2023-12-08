@@ -136,9 +136,8 @@ public class QueryStackTests
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD})
   @BindingAnnotation
-  public static @interface Testrelated
+  public @interface Testrelated
   {
-
   }
 
   public static ClientQuerySegmentWalker createClientQuerySegmentWalker(

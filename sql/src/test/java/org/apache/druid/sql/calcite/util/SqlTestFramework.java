@@ -283,10 +283,9 @@ public class SqlTestFramework
     }
 
     @Override
-    public void beforeNewFrameworkCreateHook() throws Exception
+    public void beforeNewFrameworkCreateHook()
     {
       throw new RuntimeException("Unimplemented!");
-
     }
   }
 

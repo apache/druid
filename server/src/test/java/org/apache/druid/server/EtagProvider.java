@@ -36,18 +36,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public interface EtagProvider
 {
-  static Key<EtagProvider> KEY = Key.get(EtagProvider.class, EtagProvider.Annotation.class);
+  Key<EtagProvider> KEY = Key.get(EtagProvider.class, EtagProvider.Annotation.class);
 
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD})
   @BindingAnnotation
-  static @interface Annotation
+  @interface Annotation
   {
   }
 
   String getEtagFor(Query<?> query);
 
-  static class EmptyEtagProvider implements EtagProvider
+  class EmptyEtagProvider implements EtagProvider
   {
     @Override
     public String getEtagFor(Query<?> query)
@@ -56,7 +56,7 @@ public interface EtagProvider
     }
   }
 
-  static class AlwaysNewEtagProvider implements EtagProvider
+  class AlwaysNewEtagProvider implements EtagProvider
   {
     AtomicInteger etagSerial = new AtomicInteger();
 
@@ -71,7 +71,7 @@ public interface EtagProvider
     }
   }
 
-  static class ProvideEtagBasedOnDatasource implements EtagProvider
+  class ProvideEtagBasedOnDatasource implements EtagProvider
   {
     @Override
     public String getEtagFor(Query<?> query)
