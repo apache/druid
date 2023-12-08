@@ -40,11 +40,26 @@ import java.util.Iterator;
 public class AzureUtils
 {
 
+  public static final String DEFAULT_AZURE_ENDPOINT_SUFFIX = "core.windows.net";
   @VisibleForTesting
   static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
+  public static final String DEFAULT_AZURE_BLOB_STORAGE_ENDPOINT_SUFFIX = "blob." + DEFAULT_AZURE_ENDPOINT_SUFFIX;
+  private final String blobStorageEndpointSuffix;
+
+  /**
+   * Creates an AzureUtils object with the blob storage endpoint suffix.
+   *
+   * @param blobStorageEndpointSuffix the blob storage endpoint, like <code>"blob.core.windows.net"</code>,
+   *                                  <code>"blob.core.chinacloudapi.cn"</code> or
+   *                                  <code>"blob.core.usgovcloudapi.net</code>"
+   */
+  public AzureUtils(String blobStorageEndpointSuffix)
+  {
+    this.blobStorageEndpointSuffix = blobStorageEndpointSuffix;
+  }
 
   // The azure storage hadoop access pattern is:
-  // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
+  // wasb[s]://<containername>@<accountname>.<blobStorageEndpointSuffix>/<path>
   // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
   static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
 
@@ -87,14 +102,14 @@ public class AzureUtils
    * @return a String representing the blob path component of the uri with any leading 'blob.core.windows.net/' string
    * removed characters removed.
    */
-  public static String maybeRemoveAzurePathPrefix(String blobPath)
+  public String maybeRemoveAzurePathPrefix(String blobPath)
   {
-    boolean blobPathIsHadoop = blobPath.contains(AZURE_STORAGE_HOST_ADDRESS);
+    boolean blobPathIsHadoop = blobPath.contains(blobStorageEndpointSuffix);
 
     if (blobPathIsHadoop) {
       // Remove azure's hadoop prefix to match realtime ingestion path
       return blobPath.substring(
-          blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length() + 1);
+          blobPath.indexOf(blobStorageEndpointSuffix) + blobStorageEndpointSuffix.length() + 1);
     } else {
       return blobPath;
     }

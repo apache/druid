@@ -303,6 +303,25 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     );
   }
 
+  @Test
+  public void testGetAzureUtilsWithDefaultProperties()
+  {
+    Properties properties = initializePropertes();
+    AzureUtils utils = makeInjectorWithProperties(properties).getInstance(AzureUtils.class);
+    String outputBlob = utils.maybeRemoveAzurePathPrefix("blob.core.windows.net/container/blob");
+    Assert.assertEquals("container/blob", outputBlob);
+  }
+
+  @Test
+  public void testGetAzureUtilsWithDefaultCustomBlobPath()
+  {
+    Properties properties = initializePropertes();
+    properties.setProperty("druid.azure.endpointSuffix", "core.usgovcloudapi.net");
+    AzureUtils utils = makeInjectorWithProperties(properties).getInstance(AzureUtils.class);
+    String outputBlob = utils.maybeRemoveAzurePathPrefix("blob.core.usgovcloudapi.net/container/blob");
+    Assert.assertEquals("container/blob", outputBlob);
+  }
+
   private Injector makeInjectorWithProperties(final Properties props)
   {
     return Guice.createInjector(
