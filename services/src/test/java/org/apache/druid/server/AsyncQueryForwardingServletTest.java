@@ -571,7 +571,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testNoParseExceptionOnGroupByWithFilteredAggregationOnLookups() throws Exception
   {
-    class TestLookupReferenceManager implements LookupExtractorFactoryContainerProvider {
+    class TestLookupReferenceManager implements LookupExtractorFactoryContainerProvider
+    {
       @Override
       public Set<String> getAllLookupNames()
       {
