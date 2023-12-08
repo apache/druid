@@ -85,6 +85,7 @@
         <avro.version>1.11.3</avro.version>
         <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
              default_config.fmpp
+             sql/src/main/codegen/includes/*
           -->
         <calcite.version>1.35.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>

@@ -19,7 +19,7 @@
 
 /**
  * Parses an INSERT statement. This function is copied from SqlInsert in core/src/main/codegen/templates/Parser.jj,
- * with some minor custom changes.
+ * with some changes to allow a custom error message if an OVERWRITE clause is present.
  */
 SqlNode DruidSqlInsert() :
 {
