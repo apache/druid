@@ -331,14 +331,6 @@
   </suppress>
 
   <suppress>
-    <!-- pac4j-core-3.8.3 -->
-    <notes><![CDATA[
-   file name: pac4j-core-3.8.3.jar
-   ]]></notes>
-    <cve>CVE-2021-44878</cve>
-  </suppress>
-
-  <suppress>
     <!-- package-lock.json?d3-color -->
     <notes><![CDATA[
    file name: d3-color:2.0.0

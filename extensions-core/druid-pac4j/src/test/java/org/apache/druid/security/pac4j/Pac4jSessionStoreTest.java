@@ -27,6 +27,7 @@ import org.pac4j.core.context.Cookie;
 import org.pac4j.core.context.WebContext;
 
 import java.util.Collections;
+import java.util.Objects;
 
 public class Pac4jSessionStoreTest
 {
@@ -54,7 +55,6 @@ public class Pac4jSessionStoreTest
     WebContext webContext2 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext2.getRequestCookies()).andReturn(Collections.singletonList(cookie));
     EasyMock.replay(webContext2);
-
-    Assert.assertEquals("value", sessionStore.get(webContext2, "key"));
+    Assert.assertEquals("value", Objects.requireNonNull(sessionStore.get(webContext2, "key")).orElse(null));
   }
 }
