@@ -71,4 +71,12 @@ public class AuditInfoTest
     Assert.assertEquals(entry, serde);
   }
 
+  @Test
+  public void testRequestInfoEquality() throws IOException
+  {
+    RequestInfo requestInfo = new RequestInfo("overlord", "GET", "/uri", "a=b");
+    RequestInfo deserialized = mapper.readValue(mapper.writeValueAsString(requestInfo), RequestInfo.class);
+    Assert.assertEquals(requestInfo, deserialized);
+  }
+
 }

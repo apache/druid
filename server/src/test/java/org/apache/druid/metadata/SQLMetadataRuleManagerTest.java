@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.audit.AuditSerdeHelper;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -65,7 +65,6 @@ public class SQLMetadataRuleManagerTest
   private AuditManager auditManager;
   private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp()
@@ -75,7 +74,7 @@ public class SQLMetadataRuleManagerTest
     connector.createAuditTable();
     auditManager = new SQLAuditManager(
         new SQLAuditManagerConfig(),
-        null,
+        new AuditSerdeHelper(new SQLAuditManagerConfig(), mapper, mapper),
         connector,
         Suppliers.ofInstance(tablesConfig),
         new NoopServiceEmitter(),
@@ -87,7 +86,7 @@ public class SQLMetadataRuleManagerTest
     ruleManager = new SQLMetadataRuleManager(mapper, managerConfig, tablesConfig, connector, auditManager);
     connector.createSegmentTable();
     publisher = new SQLMetadataSegmentPublisher(
-        jsonMapper,
+        mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         connector
     );

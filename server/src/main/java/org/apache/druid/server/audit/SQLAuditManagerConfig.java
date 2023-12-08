@@ -28,10 +28,10 @@ import org.apache.druid.java.util.common.HumanReadableBytesRange;
 public class SQLAuditManagerConfig implements AuditManagerConfig
 {
   @JsonProperty
-  private final long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
+  private final Long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
 
   @JsonProperty
-  private final boolean includePayloadAsDimensionInMetric = false;
+  private final Boolean includePayloadAsDimensionInMetric = false;
 
   @JsonProperty
   @HumanReadableBytesRange(
@@ -41,7 +41,7 @@ public class SQLAuditManagerConfig implements AuditManagerConfig
   private final HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
 
   @JsonProperty
-  private final boolean skipNullField = false;
+  private final Boolean skipNullField = false;
 
   public long getAuditHistoryMillis()
   {

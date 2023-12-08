@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.HumanReadableBytesRange;
 
 public class LoggingAuditManagerConfig implements AuditManagerConfig
 {
-
   @JsonProperty
   private final AuditLogger.Level logLevel = AuditLogger.Level.INFO;
 
@@ -37,7 +36,7 @@ public class LoggingAuditManagerConfig implements AuditManagerConfig
   private final HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
 
   @JsonProperty
-  private final boolean skipNullField = false;
+  private final Boolean skipNullField = false;
 
   @Override
   public boolean isSkipNullField()

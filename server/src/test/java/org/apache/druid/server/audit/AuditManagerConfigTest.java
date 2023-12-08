@@ -54,7 +54,7 @@ public class AuditManagerConfigTest
   }
 
   @Test
-  public void testDefaultLogAuditConfig()
+  public void testLogAuditConfigWithDefaults()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<AuditManagerConfig> provider = JsonConfigProvider.of(
@@ -76,7 +76,7 @@ public class AuditManagerConfigTest
   }
 
   @Test
-  public void testLogAuditConfig()
+  public void testLogAuditConfigWithOverrides()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<AuditManagerConfig> provider = JsonConfigProvider.of(
@@ -89,7 +89,7 @@ public class AuditManagerConfigTest
     props.setProperty("druid.audit.manager.logLevel", "WARN");
 
     provider.inject(props, injector.getInstance(JsonConfigurator.class));
-    
+
     final AuditManagerConfig config = provider.get();
     Assert.assertTrue(config instanceof LoggingAuditManagerConfig);
 
@@ -97,6 +97,34 @@ public class AuditManagerConfigTest
     Assert.assertFalse(logAuditConfig.isSkipNullField());
     Assert.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
     Assert.assertEquals(AuditLogger.Level.WARN, logAuditConfig.getLogLevel());
+  }
+
+  @Test
+  public void testSqlAuditConfigWithOverrides()
+  {
+    final Injector injector = createInjector();
+    final JsonConfigProvider<AuditManagerConfig> provider = JsonConfigProvider.of(
+        CONFIG_BASE,
+        AuditManagerConfig.class
+    );
+
+    final Properties props = new Properties();
+    props.setProperty("druid.audit.manager.type", "sql");
+    props.setProperty("druid.audit.manager.skipNullField", "true");
+    props.setProperty("druid.audit.manager.maxPayloadSizeBytes", "100");
+    props.setProperty("druid.audit.manager.auditHistoryMillis", "1000");
+    props.setProperty("druid.audit.manager.includePayloadAsDimensionInMetric", "true");
+
+    provider.inject(props, injector.getInstance(JsonConfigurator.class));
+
+    final AuditManagerConfig config = provider.get();
+    Assert.assertTrue(config instanceof SQLAuditManagerConfig);
+
+    final SQLAuditManagerConfig sqlAuditConfig = (SQLAuditManagerConfig) config;
+    Assert.assertTrue(sqlAuditConfig.isSkipNullField());
+    Assert.assertTrue(sqlAuditConfig.isIncludePayloadAsDimensionInMetric());
+    Assert.assertEquals(100, sqlAuditConfig.getMaxPayloadSizeBytes());
+    Assert.assertEquals(1000L, sqlAuditConfig.getAuditHistoryMillis());
   }
 
   private Injector createInjector()
