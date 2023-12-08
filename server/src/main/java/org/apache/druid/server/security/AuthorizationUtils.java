@@ -108,16 +108,16 @@ public class AuthorizationUtils
     }
   }
 
-  public static AuditInfo buildAuditInfo(String author, String comment, HttpServletRequest request)
-  {
-    return new AuditInfo(
-        author,
-        getAuthenticatedIdentity(request),
-        comment,
-        request.getRemoteAddr()
-    );
-  }
-
+  /**
+   * Builds an AuditInfo for the given request by extracting the following from
+   * it:
+   * <ul>
+   * <li>Header {@link AuditManager#X_DRUID_AUTHOR}</li>
+   * <li>Header {@link AuditManager#X_DRUID_COMMENT}</li>
+   * <li>Attribute {@link AuthConfig#DRUID_AUTHENTICATION_RESULT}</li>
+   * <li>IP address using {@link HttpServletRequest#getRemoteAddr()}</li>
+   * </ul>
+   */
   public static AuditInfo buildAuditInfo(HttpServletRequest request)
   {
     final String author = request.getHeader(AuditManager.X_DRUID_AUTHOR);
