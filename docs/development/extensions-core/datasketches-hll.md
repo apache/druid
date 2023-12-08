@@ -57,7 +57,7 @@ The following runtime properties apply:
 
 |Property| Description| Default |
 |--------|------------|------|
-|`druid.sketch.config.hllMaxLgK`| The maximum possible value of lgK that hll sketches can be created with. Useful to limit the maximum lgK in sketches, to avoid the significant usage of resources used by sketches at higher values of lgK. An exception will be thrown if a query configures a lgK value higher than this. This property needs to be set on the broker and middle-manager/indexer. | 20 |
+|`druid.sketch.config.hllMaxLgK`| The maximum possible value of lgK that HLL sketches can be created with. Useful to limit the maximum lgK in sketches, to avoid the significant usage of resources used by sketches at higher values of lgK. An exception will be thrown if a query configures a lgK value higher than this. This property needs to be set on the broker and middle-manager/indexer. | 20 |
 
 ### HLLSketchBuild aggregator
 

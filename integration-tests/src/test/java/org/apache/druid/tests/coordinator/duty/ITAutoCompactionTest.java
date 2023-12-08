@@ -275,7 +275,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
                   null,
                   false,
                   false,
-                  new SketchConfig()
+                  new SketchConfig(15)
               ),
               new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L, null)
           },
