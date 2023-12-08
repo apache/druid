@@ -27,6 +27,7 @@ import org.apache.druid.segment.serde.cell.CellWriter;
 import org.apache.druid.segment.serde.cell.IOIterator;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -53,6 +54,15 @@ public abstract class AbstractSerializablePairLongObjectBufferStore<T extends Se
     serializedStorage.store(pairLongObject);
   }
 
+  /**
+   * each call transfers the temporary buffer into an encoded, block-compessed buffer of the segment. It is ready to be
+   * transferred to a {@link WritableByteChannel}
+   *
+   * @param byteBufferProvider    - provides a ByteBuffer used for block compressed encoding
+   * @param segmentWriteOutMedium - used to create temporary storage
+   * @return encoded buffer ready to be stored
+   * @throws IOException
+   */
   public TransferredBuffer transferToRowWriter(
       ByteBufferProvider byteBufferProvider,
       SegmentWriteOutMedium segmentWriteOutMedium
@@ -61,6 +71,11 @@ public abstract class AbstractSerializablePairLongObjectBufferStore<T extends Se
     AbstractSerializablePairLongObjectColumnHeader<T> columnHeader = createColumnHeader();
     AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<T> deltaEncodedSerde = createDeltaEncodedSerde(columnHeader);
 
+    // try-with-resources will call cellWriter.close() an extra time in the normal case, but it protects against
+    // buffer leaking in the case of an exception (close() is idempotent). In the normal path, close() performs some
+    // finalization of the CellWriter object. We want that object state finalized before creating the TransferredBuffer
+    // as a point of good style (though strictly speaking, it works fine to pass it in before calling close since
+    // TransferredBuffer does not do anything in the constructor with the object)
     try (CellWriter cellWriter = new CellWriter.Builder(segmentWriteOutMedium).setByteBufferProvider(byteBufferProvider)
                                                                               .build()) {
       try (IOIterator<T> bufferIterator = iterator()) {
@@ -78,6 +93,10 @@ public abstract class AbstractSerializablePairLongObjectBufferStore<T extends Se
     }
   }
 
+  // 1. we have overflow in our range || 2. we have only seen null values
+  // in this case, effectively disable delta encoding by using longs and a min value of 0
+  // else we shoudl return columnHeader with delta encding enabled
+  @Nonnull
   public abstract AbstractSerializablePairLongObjectColumnHeader<T> createColumnHeader();
   public abstract AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<T> createDeltaEncodedSerde(AbstractSerializablePairLongObjectColumnHeader<T> columnHeader);
 
@@ -86,6 +105,10 @@ public abstract class AbstractSerializablePairLongObjectBufferStore<T extends Se
     return serializedStorage.iterator();
   }
 
+  /**
+   * contains serialized data that is compressed and delta-encoded (Long)
+   * It's ready to be transferred to a {@link WritableByteChannel}
+   */
   public static class TransferredBuffer implements Serializer
   {
     private final CellWriter cellWriter;

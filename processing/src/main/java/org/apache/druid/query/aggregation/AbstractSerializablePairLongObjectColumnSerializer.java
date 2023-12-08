@@ -31,6 +31,15 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * valid call sequence
+ * <p>
+ * open()+serialize()*(getSerializedSize()|writeTo())*
+ * <p>
+ * getSerializedSize() / writeTo() effectively function as a close call, but each may be called multiple times and has
+ * no effect on one another.
+ */
+@SuppressWarnings("NotNullFieldNotInitialized")
 public abstract class AbstractSerializablePairLongObjectColumnSerializer<T extends SerializablePair<Long, ?>> implements
     GenericColumnSerializer<T>
 {

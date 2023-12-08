@@ -30,6 +30,14 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
+/**
+ * serializes a Long/Object(Number) pair in the context of a column/segment. Uses the minValue to perform delta
+ * encoding/decoding and if the range of the segment fits in an integer (useIntegerDelta), the format is
+ * Integer:Byte:Integer
+ *
+ * otherwise
+ * Long:Integer:bytes
+ */
 public abstract class AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<T extends SerializablePair<Long, ?>> implements
     StagedSerde<T>
 {

@@ -32,6 +32,7 @@ import java.util.Locale;
 
 public abstract class AbstractSerializablePairLongObjectColumnHeader<T extends SerializablePair<Long, ?>>
 {
+  // header size is 4 bytes for word alignment for LZ4 (minmatch) compression
   private static final int HEADER_SIZE_BYTES = 4;
   private static final int USE_INTEGER_MASK = 0x80;
   private static final int VERSION_INDEX = 0;
@@ -74,6 +75,10 @@ public abstract class AbstractSerializablePairLongObjectColumnHeader<T extends S
 
     if (pairClass.isAssignableFrom(SerializablePairLongFloat.class)) {
       return new SerializablePairLongFloatColumnHeader(bytes, minTimestamp);
+    }
+
+    if (pairClass.isAssignableFrom(SerializablePairLongString.class)) {
+      return new SerializablePairLongStringColumnHeader(bytes, minTimestamp);
     }
 
     throw new RE(String.format(Locale.ENGLISH, "Unsupported pairClass type: %s", pairClass.getSimpleName()));

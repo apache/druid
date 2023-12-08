@@ -26,6 +26,9 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
 
+// To maintain parity with the longString pair serde,
+// we have made EXPECTED_VERSION as 3 because it uses the same delta & block encoding technique.
+// 0,1,2 versions for numeric serdes do not exist.
 public abstract class AbstractSerializableLongObjectPairSerde<T extends SerializablePair<Long, ?>> extends
     ComplexMetricSerde
 {

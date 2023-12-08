@@ -46,7 +46,7 @@ public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>> e
   public void fold(ColumnValueSelector selector)
   {
     T newValue = (T) selector.getObject();
-    if (Longs.compare(lastValue.lhs, newValue.lhs) <= 0) {
+    if (Longs.compare(lastValue.lhs, newValue.lhs) < 0) {
       lastValue = newValue;
     }
   }

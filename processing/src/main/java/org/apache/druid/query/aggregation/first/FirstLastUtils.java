@@ -44,7 +44,7 @@ public class FirstLastUtils
     }
 
     if (valueSelector instanceof NilColumnValueSelector) {
-      // Nil column, definitely no SerializablePairLongStrings.
+      // Nil column, definitely no SerializablePairLongObject.
       return false;
     }
 
@@ -55,7 +55,7 @@ public class FirstLastUtils
   }
 
   /**
-   * Returns whether an object *might* contain SerializablePairLongString objects.
+   * Returns whether an object *might* is assignable to/from the pairClass.
    */
   public static boolean objectNeedsFoldCheck(Object obj, Class pairClass)
   {

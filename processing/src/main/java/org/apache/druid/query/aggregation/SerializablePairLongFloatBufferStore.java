@@ -37,9 +37,6 @@ public class SerializablePairLongFloatBufferStore extends AbstractSerializablePa
     SerializablePairLongFloatColumnHeader columnHeader;
 
     if (minValue < maxValue && maxDelta < 0 || minValue > maxValue) {
-      // true iff
-      // 1. we have overflow in our range || 2. we have only seen null values
-      // in this case, effectively disable delta encoding by using longs and a min value of 0
       maxDelta = Long.MAX_VALUE;
       minValue = 0;
     }

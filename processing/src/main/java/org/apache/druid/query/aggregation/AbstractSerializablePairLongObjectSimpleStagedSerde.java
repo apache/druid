@@ -27,8 +27,14 @@ import org.apache.druid.segment.serde.cell.StorableBuffer;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Locale;
 
+/**
+ * serializes a Long/Object pair as
+ * Long:Byte:Object
+ * <p>
+ * or
+ * Long:isNullByte:ObjectBytes
+ */
 public abstract class AbstractSerializablePairLongObjectSimpleStagedSerde<T extends SerializablePair<Long, ?>> implements StagedSerde<T>
 {
 
@@ -55,7 +61,7 @@ public abstract class AbstractSerializablePairLongObjectSimpleStagedSerde<T exte
       @Override
       public void store(ByteBuffer byteBuffer)
       {
-        Preconditions.checkNotNull(value.getLhs(), String.format(Locale.ENGLISH, "Long in %s must be non-null", pairCLass.getSimpleName()));
+        Preconditions.checkNotNull(value.getLhs(), "Long in %s must be non-null", pairCLass.getSimpleName());
         byteBuffer.putLong(value.getLhs());
         if (rhsObject != null) {
           byteBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
