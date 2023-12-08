@@ -181,6 +181,10 @@ public class KafkaEmitter implements Emitter
       }
     }
     catch (Throwable e) {
+      if (e instanceof InterruptedException && e.getMessage() == null) {
+        log.info("Normal exit.");
+        return;
+      }
       log.warn(e, "Exception while getting record from queue or producer send, Events would not be emitted anymore.");
     }
   }
