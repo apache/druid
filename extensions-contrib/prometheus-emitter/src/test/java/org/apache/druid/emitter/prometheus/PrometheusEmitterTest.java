@@ -356,7 +356,34 @@ public class PrometheusEmitterTest
     mockPushGateway.push(anyObject(CollectorRegistry.class), anyString(), anyObject(ImmutableMap.class));
     expectLastCall().atLeastOnce();
     mockPushGateway.delete(anyString(), anyObject(ImmutableMap.class));
+    expectLastCall().once();
+
+    EasyMock.replay(mockPushGateway);
+
+    PrometheusEmitter emitter = new PrometheusEmitter(emitterConfig);
+    emitter.start();
+    emitter.setPushGateway(mockPushGateway);
+    ServiceMetricEvent build = ServiceMetricEvent.builder()
+                                                 .setDimension("task", "index_parallel")
+                                                 .setMetric("task/run/time", 500)
+                                                 .build(ImmutableMap.of("service", "peon", "host", "druid.test.cn"));
+    emitter.emit(build);
+    emitter.flush();
+    emitter.close();
+
+    EasyMock.verify(mockPushGateway);
+  }
+
+  @Test
+  public void testEmitterWithDeleteOnShutdownAndWait() throws IOException
+  {
+    PrometheusEmitterConfig emitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace6", null, 0, "pushgateway", true, true, 60, null, true, 1_000L);
+
+    PushGateway mockPushGateway = mock(PushGateway.class);
+    mockPushGateway.push(anyObject(CollectorRegistry.class), anyString(), anyObject(ImmutableMap.class));
     expectLastCall().atLeastOnce();
+    mockPushGateway.delete(anyString(), anyObject(ImmutableMap.class));
+    expectLastCall().once();
 
     EasyMock.replay(mockPushGateway);
 

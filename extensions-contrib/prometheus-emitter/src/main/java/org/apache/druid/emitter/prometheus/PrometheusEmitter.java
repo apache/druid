@@ -216,12 +216,12 @@ public class PrometheusEmitter implements Emitter
       flush();
 
       try {
-        if (config.getWaitForShutdownDelay() > 0) {
-          Thread.sleep(config.getWaitForShutdownDelay());
+        if (config.getWaitForShutdownDelay().getMillis() > 0) {
+          Thread.sleep(config.getWaitForShutdownDelay().getMillis());
         }
       }
       catch (InterruptedException e) {
-        log.error(e, "Interrupted while waiting for shutdown delay. Deleting metrics now.");
+        log.error(e, "Interrupted while waiting for shutdown delay. Deleting metrics from the push gateway now.");
       }
       finally {
         deletePushGatewayMetrics();
@@ -231,12 +231,12 @@ public class PrometheusEmitter implements Emitter
 
   private void deletePushGatewayMetrics()
   {
-    if (pushGateway != null && config.isPushGatewayDeleteOnShutdown()) {
+    if (pushGateway != null && config.isDeletePushGatewayMetricsOnShutdown()) {
       try {
         pushGateway.delete(config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
       }
       catch (IOException e) {
-        log.error(e, "Unable to delete prometheus metrics from pushGateway");
+        log.error(e, "Unable to delete prometheus metrics from push gateway");
       }
     }
   }

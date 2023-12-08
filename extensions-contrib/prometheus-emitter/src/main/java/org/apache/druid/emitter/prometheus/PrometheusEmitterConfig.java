@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -71,10 +72,10 @@ public class PrometheusEmitterConfig
   private final Map<String, String> extraLabels;
 
   @JsonProperty
-  private final boolean pushGatewayDeleteOnShutdown;
+  private final boolean deletePushGatewayMetricsOnShutdown;
 
   @JsonProperty
-  private final int waitForShutdownDelay;
+  private final Duration waitForShutdownDelay;
 
   @JsonCreator
   public PrometheusEmitterConfig(
@@ -87,8 +88,8 @@ public class PrometheusEmitterConfig
       @JsonProperty("addServiceAsLabel") boolean addServiceAsLabel,
       @JsonProperty("flushPeriod") Integer flushPeriod,
       @JsonProperty("extraLabels") @Nullable Map<String, String> extraLabels,
-      @JsonProperty("pushGatewayDeleteOnShutdown") @Nullable Boolean pushGatewayDeleteOnShutdown,
-      @JsonProperty("waitForShutdownDelay") @Nullable Integer waitForShutdownDelay
+      @JsonProperty("deletePushGatewayMetricsOnShutdown") @Nullable Boolean deletePushGatewayMetricsOnShutdown,
+      @JsonProperty("waitForShutdownDelay") @Nullable Long waitForShutdownDelay
   )
   {
     this.strategy = strategy != null ? strategy : Strategy.exporter;
@@ -111,8 +112,23 @@ public class PrometheusEmitterConfig
     this.addHostAsLabel = addHostAsLabel;
     this.addServiceAsLabel = addServiceAsLabel;
     this.extraLabels = extraLabels != null ? extraLabels : Collections.emptyMap();
-    this.pushGatewayDeleteOnShutdown = pushGatewayDeleteOnShutdown != null && pushGatewayDeleteOnShutdown;
-    this.waitForShutdownDelay = waitForShutdownDelay != null ? waitForShutdownDelay : 0;
+    this.deletePushGatewayMetricsOnShutdown = deletePushGatewayMetricsOnShutdown != null && deletePushGatewayMetricsOnShutdown;
+
+    if (waitForShutdownDelay == null) {
+      this.waitForShutdownDelay = Duration.ZERO;
+    } else if (waitForShutdownDelay >= 0) {
+      this.waitForShutdownDelay = Duration.millis(waitForShutdownDelay);
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              StringUtils.format(
+                                  "Invalid waitForShutdownDelay [%s]. waitForShutdownDelay must be greater than or equal to 0.",
+                                  waitForShutdownDelay
+                              )
+                          );
+    }
+
     // Validate label names early to prevent Prometheus exceptions later.
     for (String key : this.extraLabels.keySet()) {
       if (!PATTERN.matcher(key).matches()) {
@@ -175,12 +191,12 @@ public class PrometheusEmitterConfig
     return extraLabels;
   }
 
-  public boolean isPushGatewayDeleteOnShutdown()
+  public boolean isDeletePushGatewayMetricsOnShutdown()
   {
-    return pushGatewayDeleteOnShutdown;
+    return deletePushGatewayMetricsOnShutdown;
   }
 
-  public int getWaitForShutdownDelay()
+  public Duration getWaitForShutdownDelay()
   {
     return waitForShutdownDelay;
   }
