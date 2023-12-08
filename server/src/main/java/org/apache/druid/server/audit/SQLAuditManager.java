@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
@@ -65,7 +66,7 @@ public class SQLAuditManager implements AuditManager
 
   @Inject
   public SQLAuditManager(
-      SQLAuditManagerConfig config,
+      AuditManagerConfig config,
       AuditSerdeHelper serdeHelper,
       SQLMetadataConnector connector,
       Supplier<MetadataStorageTablesConfig> dbTables,
@@ -79,8 +80,12 @@ public class SQLAuditManager implements AuditManager
     this.emitter = emitter;
     this.jsonMapper = jsonMapper;
     this.serdeHelper = serdeHelper;
-    this.config = config;
     this.resultMapper = new AuditEntryMapper();
+
+    if (!(config instanceof SQLAuditManagerConfig)) {
+      throw DruidException.defensive("Config[%s] is not an instance of SQLAuditManagerConfig", config);
+    }
+    this.config = (SQLAuditManagerConfig) config;
   }
 
   @LifecycleStart

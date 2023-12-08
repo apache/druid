@@ -22,6 +22,7 @@ package org.apache.druid.server.audit;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.error.DruidException;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -38,12 +39,17 @@ public class LoggingAuditManager implements AuditManager
 
   @Inject
   public LoggingAuditManager(
-      LoggingAuditManagerConfig config,
+      AuditManagerConfig config,
       AuditSerdeHelper serdeHelper
   )
   {
     this.serdeHelper = serdeHelper;
-    this.auditLogger = new AuditLogger(config.getLogLevel());
+    if (!(config instanceof LoggingAuditManagerConfig)) {
+      throw DruidException.defensive("Config[%s] is not an instance of LoggingAuditManagerConfig", config);
+    }
+
+    LoggingAuditManagerConfig logAuditConfig = (LoggingAuditManagerConfig) config;
+    this.auditLogger = new AuditLogger(logAuditConfig.getLogLevel());
   }
 
   @Override

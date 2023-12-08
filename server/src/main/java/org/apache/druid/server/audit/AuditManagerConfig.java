@@ -17,8 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.audit;
+package org.apache.druid.server.audit;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SQLAuditManagerConfig.class)
+@JsonSubTypes(value = {
+    @Type(name = "log", value = LoggingAuditManagerConfig.class),
+    @Type(name = "sql", value = SQLAuditManagerConfig.class)
+})
 public interface AuditManagerConfig
 {
   boolean isSkipNullField();

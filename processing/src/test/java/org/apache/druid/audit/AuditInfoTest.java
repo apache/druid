@@ -63,6 +63,7 @@ public class AuditInfoTest
             "testComment",
             "127.0.0.1"
         ),
+        new RequestInfo("overlord", "GET", "/segments", "?abc=1"),
         AuditEntry.Payload.fromString("testPayload"),
         DateTimes.of("2013-01-01T00:00:00Z")
     );

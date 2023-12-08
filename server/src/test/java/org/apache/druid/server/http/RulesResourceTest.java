@@ -85,7 +85,11 @@ public class RulesResourceTest
     AuditEntry entry2 = createAuditEntry(
         DateTimes.of("2013-01-01T00:00:00Z")
     );
-    EasyMock.expect(auditManager.fetchAuditHistory(EasyMock.eq("datasource1"), EasyMock.eq("rules"), EasyMock.eq(theInterval)))
+    EasyMock.expect(auditManager.fetchAuditHistory(
+        EasyMock.eq("datasource1"),
+        EasyMock.eq("rules"),
+        EasyMock.eq(theInterval)
+    ))
             .andReturn(ImmutableList.of(entry1, entry2))
             .once();
     EasyMock.replay(auditManager);
@@ -105,8 +109,8 @@ public class RulesResourceTest
   public void testGetDatasourceRuleHistoryWithWrongCount()
   {
     EasyMock.expect(auditManager.fetchAuditHistory(EasyMock.eq("datasource1"), EasyMock.eq("rules"), EasyMock.eq(-1)))
-        .andThrow(new IllegalArgumentException("Limit must be greater than zero!"))
-        .once();
+            .andThrow(new IllegalArgumentException("Limit must be greater than zero!"))
+            .once();
     EasyMock.replay(auditManager);
 
     RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
@@ -176,8 +180,8 @@ public class RulesResourceTest
   public void testGetAllDatasourcesRuleHistoryWithWrongCount()
   {
     EasyMock.expect(auditManager.fetchAuditHistory(EasyMock.eq("rules"), EasyMock.eq(-1)))
-        .andThrow(new IllegalArgumentException("Limit must be greater than zero!"))
-        .once();
+            .andThrow(new IllegalArgumentException("Limit must be greater than zero!"))
+            .once();
     EasyMock.replay(auditManager);
 
     RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
@@ -198,7 +202,10 @@ public class RulesResourceTest
 
   private AuditEntry createAuditEntry(DateTime auditTime)
   {
-    return new AuditEntry("testKey", "testType", createAuditInfo(), AuditEntry.Payload.fromString("testPayload"), auditTime);
+    return new AuditEntry(
+        "testKey", "testType", createAuditInfo(), null,
+        AuditEntry.Payload.fromString("testPayload"), auditTime
+    );
   }
 
 }

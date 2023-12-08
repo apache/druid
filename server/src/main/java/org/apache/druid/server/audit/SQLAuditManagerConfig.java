@@ -20,7 +20,6 @@
 package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.audit.AuditManagerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 

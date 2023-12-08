@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -37,6 +38,7 @@ public class AuditEntry
   private final String key;
   private final String type;
   private final AuditInfo auditInfo;
+  private final RequestInfo request;
   private final Payload payload;
   private final DateTime auditTime;
 
@@ -45,6 +47,7 @@ public class AuditEntry
       @JsonProperty("key") String key,
       @JsonProperty("type") String type,
       @JsonProperty("auditInfo") AuditInfo authorInfo,
+      @JsonProperty("request") @Nullable RequestInfo requestInfo,
       @JsonProperty("payload") Payload payload,
       @JsonProperty("auditTime") DateTime auditTime
   )
@@ -55,6 +58,7 @@ public class AuditEntry
     this.key = key;
     this.type = type;
     this.auditInfo = authorInfo;
+    this.request = requestInfo;
     this.auditTime = auditTime == null ? DateTimes.nowUtc() : auditTime;
     this.payload = payload == null ? Payload.fromString("") : payload;
   }
@@ -75,6 +79,15 @@ public class AuditEntry
   public AuditInfo getAuditInfo()
   {
     return auditInfo;
+  }
+
+  /**
+   * Details of the REST API request associated with this audit, if any.
+   */
+  @JsonProperty
+  public RequestInfo getRequest()
+  {
+    return request;
   }
 
   /**
@@ -129,6 +142,7 @@ public class AuditEntry
     private String key;
     private String type;
     private AuditInfo auditInfo;
+    private RequestInfo requestInfo;
     private Object payload;
     private String serializedPayload;
 
@@ -157,6 +171,12 @@ public class AuditEntry
       return this;
     }
 
+    public Builder request(RequestInfo requestInfo)
+    {
+      this.requestInfo = requestInfo;
+      return this;
+    }
+
     public Builder serializedPayload(String serializedPayload)
     {
       this.serializedPayload = serializedPayload;
@@ -177,7 +197,7 @@ public class AuditEntry
 
     public AuditEntry build()
     {
-      return new AuditEntry(key, type, auditInfo, new Payload(serializedPayload, payload), auditTime);
+      return new AuditEntry(key, type, auditInfo, requestInfo, new Payload(serializedPayload, payload), auditTime);
     }
   }
 

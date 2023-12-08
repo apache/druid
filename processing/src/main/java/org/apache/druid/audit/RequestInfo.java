@@ -25,56 +25,51 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 /**
- * Contains information about the author who performed an audited operation.
+ * Contains information about a REST API request that was audited.
  */
-public class AuditInfo
+public class RequestInfo
 {
-  private final String author;
-  private final String identity;
-  private final String comment;
-  private final String ip;
+  private final String service;
+  private final String method;
+  private final String path;
+  private final String queryParams;
 
   @JsonCreator
-  public AuditInfo(
-      @JsonProperty("author") String author,
-      @JsonProperty("identity") String identity,
-      @JsonProperty("comment") String comment,
-      @JsonProperty("ip") String ip
+  public RequestInfo(
+      @JsonProperty("service") String service,
+      @JsonProperty("method") String method,
+      @JsonProperty("path") String path,
+      @JsonProperty("queryParams") String queryParams
   )
   {
-    this.author = author;
-    this.identity = identity;
-    this.comment = comment;
-    this.ip = ip;
-  }
-
-  public AuditInfo(String author, String comment, String ip)
-  {
-    this(author, null, comment, ip);
+    this.service = service;
+    this.method = method;
+    this.path = path;
+    this.queryParams = queryParams;
   }
 
   @JsonProperty
-  public String getAuthor()
+  public String getService()
   {
-    return author;
+    return service;
   }
 
   @JsonProperty
-  public String getIdentity()
+  public String getMethod()
   {
-    return identity;
+    return method;
   }
 
   @JsonProperty
-  public String getComment()
+  public String getPath()
   {
-    return comment;
+    return path;
   }
 
   @JsonProperty
-  public String getIp()
+  public String getQueryParams()
   {
-    return ip;
+    return queryParams;
   }
 
   @Override
@@ -86,27 +81,27 @@ public class AuditInfo
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    AuditInfo that = (AuditInfo) o;
-    return Objects.equals(this.author, that.author)
-           && Objects.equals(this.identity, that.identity)
-           && Objects.equals(this.comment, that.comment)
-           && Objects.equals(this.ip, that.ip);
+    RequestInfo that = (RequestInfo) o;
+    return Objects.equals(this.service, that.service)
+           && Objects.equals(this.method, that.method)
+           && Objects.equals(this.path, that.path)
+           && Objects.equals(this.queryParams, that.queryParams);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(author, identity, comment, ip);
+    return Objects.hash(service, method, path, queryParams);
   }
 
   @Override
   public String toString()
   {
-    return "AuditInfo{" +
-           "author='" + author + '\'' +
-           ", identity='" + identity + '\'' +
-           ", comment='" + comment + '\'' +
-           ", ip='" + ip + '\'' +
+    return "RequestInfo{" +
+           "service='" + service + '\'' +
+           ", method='" + method + '\'' +
+           ", path='" + path + '\'' +
+           ", queryParams='" + queryParams + '\'' +
            '}';
   }
 }

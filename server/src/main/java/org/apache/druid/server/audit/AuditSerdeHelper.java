@@ -22,7 +22,6 @@ package org.apache.druid.server.audit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
-import org.apache.druid.audit.AuditManagerConfig;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.java.util.common.StringUtils;
@@ -87,6 +86,7 @@ public class AuditSerdeHelper
         entry.getKey(),
         entry.getType(),
         entry.getAuditInfo(),
+        entry.getRequest(),
         processedPayload,
         entry.getAuditTime()
     );
