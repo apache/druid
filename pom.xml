@@ -2108,9 +2108,14 @@
                                 <exclude>**/test/resources/**/*</exclude> <!-- test data for "old" ITs. -->
                                 <exclude>**/docker/client_tls/*</exclude> <!-- generated files for "old" ITs. -->
                                 <exclude>resources/data/**/*</exclude> <!-- test data for "new" ITs. -->
-                                <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
+                                <exclude>**/*.png</exclude>
+                                <exclude>**/*.log</exclude>
+                                <exclude>**/*.jpg</exclude>
+                                <exclude>**/*.gif</exclude>
+                                <exclude>examples/quickstart/protobuf/metrics.desc</exclude>
+                                <exclude>examples/var/sv/.lock</exclude>
                                 <exclude>**/*.iml</exclude>
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
