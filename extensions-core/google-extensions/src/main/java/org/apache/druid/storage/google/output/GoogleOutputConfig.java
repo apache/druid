@@ -20,6 +20,7 @@
 package org.apache.druid.storage.google.output;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.RetryUtils;
 
@@ -40,10 +41,19 @@ public class GoogleOutputConfig
   private final File tempDir;
 
   @JsonProperty
-  private HumanReadableBytes chunkSize = new HumanReadableBytes("100MiB");
+  private HumanReadableBytes chunkSize;
+
+  private static final HumanReadableBytes DEFAULT_CHUNK_SIZE = new HumanReadableBytes("4MiB");
+
+  // GCS imposed minimum chunk size
+  private static final long GOOGLE_MIN_CHUNK_SIZE_BYTES = new HumanReadableBytes("256KiB").getBytes();
+
+  // Self-imposed max chunk size since this size is allocated per open file consuming significant memory.
+  private static final long GOOGLE_MAX_CHUNK_SIZE_BYTES = new HumanReadableBytes("16MiB").getBytes();
+
 
   @JsonProperty
-  private int maxRetry = RetryUtils.DEFAULT_MAX_TRIES;
+  private int maxRetry;
 
   public GoogleOutputConfig(
       final String bucket,
@@ -56,13 +66,10 @@ public class GoogleOutputConfig
     this.bucket = bucket;
     this.prefix = prefix;
     this.tempDir = tempDir;
+    this.chunkSize = chunkSize != null ? chunkSize : DEFAULT_CHUNK_SIZE;
+    this.maxRetry = maxRetry != null ? maxRetry : RetryUtils.DEFAULT_MAX_TRIES;
 
-    if (chunkSize != null) {
-      this.chunkSize = chunkSize;
-    }
-    if (maxRetry != null) {
-      this.maxRetry = maxRetry;
-    }
+    validateFields();
   }
 
   public String getBucket()
@@ -89,6 +96,19 @@ public class GoogleOutputConfig
   {
     return maxRetry;
   }
+
+  private void validateFields()
+  {
+    if (chunkSize.getBytes() < GOOGLE_MIN_CHUNK_SIZE_BYTES || chunkSize.getBytes() > GOOGLE_MAX_CHUNK_SIZE_BYTES) {
+      throw InvalidInput.exception(
+          "'chunkSize' [%d] bytes to the GoogleConfig should be between [%d] bytes and [%d] bytes",
+          chunkSize.getBytes(),
+          GOOGLE_MIN_CHUNK_SIZE_BYTES,
+          GOOGLE_MAX_CHUNK_SIZE_BYTES
+      );
+    }
+  }
+
 
   @Override
   public boolean equals(Object o)

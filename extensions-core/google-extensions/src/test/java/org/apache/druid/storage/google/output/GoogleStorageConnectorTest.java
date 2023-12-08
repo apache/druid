@@ -50,7 +50,7 @@ public class GoogleStorageConnectorTest
 
   private static final int MAX_LISTING_LEN = 10;
 
-  private static final HumanReadableBytes CHUNK_SIZE = HumanReadableBytes.ZERO;
+  private static final HumanReadableBytes CHUNK_SIZE = new HumanReadableBytes("4MiB");
 
   GoogleStorageConnector googleStorageConnector;
   private final GoogleStorage googleStorage = EasyMock.createMock(GoogleStorage.class);
@@ -107,7 +107,7 @@ public class GoogleStorageConnectorTest
   }
 
   @Test
-  public void testDeleteFiles()
+  public void testDeleteFiles() throws IOException
   {
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();

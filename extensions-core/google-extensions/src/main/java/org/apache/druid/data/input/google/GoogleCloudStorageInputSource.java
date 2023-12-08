@@ -41,7 +41,6 @@ import org.apache.druid.storage.google.GoogleUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Iterator;

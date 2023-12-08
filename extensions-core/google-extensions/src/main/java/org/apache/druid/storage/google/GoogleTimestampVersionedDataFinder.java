@@ -25,7 +25,6 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.net.URI;
 import java.util.regex.Pattern;
 

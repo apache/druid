@@ -29,6 +29,8 @@ import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IOE;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -52,6 +54,8 @@ public class GoogleStorage
    */
   private final Supplier<Storage> storage;
 
+  private final HumanReadableBytes DEFAULT_WRITE_CHUNK_SIZE = new HumanReadableBytes("4MiB");
+
   public GoogleStorage(final Supplier<Storage> storage)
   {
     this.storage = storage;
@@ -64,15 +68,35 @@ public class GoogleStorage
 
   public InputStream getInputStream(final String bucket, final String path) throws IOException
   {
-    return getInputStream(bucket, path, 0, null);
+    return getInputStream(bucket, path, 0, null, null);
   }
 
-  public InputStream getInputStream(final String bucket, final String path, long start) throws IOException
+  public InputStream getInputStream(
+      final String bucket,
+      final String path,
+      long start
+  ) throws IOException
   {
-    return getInputStream(bucket, path, start, null);
+    return getInputStream(bucket, path, start, null, null);
   }
 
-  public InputStream getInputStream(final String bucket, final String path, long start, @Nullable Long length)
+  public InputStream getInputStream(
+      final String bucket,
+      final String path,
+      long start,
+      Long length
+  ) throws IOException
+  {
+    return getInputStream(bucket, path, start, length, null);
+  }
+
+  public InputStream getInputStream(
+      final String bucket,
+      final String path,
+      long start,
+      @Nullable Long length,
+      @Nullable final Integer chunkSize
+  )
       throws IOException
   {
     ReadChannel reader = storage.get().reader(bucket, path);
@@ -80,18 +104,23 @@ public class GoogleStorage
     if (length != null) {
       reader.limit(start + length);
     }
+    if (chunkSize != null) {
+      reader.setChunkSize(chunkSize);
+    }
     // Using default read buffer size (2 MB)
     return Channels.newInputStream(reader);
   }
 
   public OutputStream getObjectOutputStream(
       final String bucket,
-      final String path
-  )
+      final String path,
+      @Nullable final Integer chunkSize
+  ) throws IOException
   {
     WriteChannel writer = storage.get().writer(getBlobInfo(bucket, path));
     // Limit GCS internal write buffer memory to prevent OOM errors
-    writer.setChunkSize(2 * 1024 * 1024);
+    writer.setChunkSize(chunkSize == null ? DEFAULT_WRITE_CHUNK_SIZE.getBytesInInt() : chunkSize);
+
     return Channels.newOutputStream(writer);
   }
 
@@ -110,19 +139,29 @@ public class GoogleStorage
     );
   }
 
-  public void delete(final String bucket, final String path)
+  public void delete(final String bucket, final String path) throws IOException
   {
-    storage.get().delete(bucket, path);
+    if (!storage.get().delete(bucket, path)) {
+      throw new IOE(
+          "Failed deleting google cloud storage object [bucket: %s path: %s]",
+          bucket,
+          path
+      );
+    }
   }
 
   /**
    * Deletes a list of objects in a bucket
+   *
    * @param bucket GCS bucket
    * @param paths  Iterable for absolute paths of objects to be deleted inside the bucket
    */
-  public void batchDelete(final String bucket, final Iterable<String> paths)
+  public void batchDelete(final String bucket, final Iterable<String> paths) throws IOException
   {
-    storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
+    List<Boolean> statuses = storage.get().delete(Iterables.transform(paths, input -> BlobId.of(bucket, input)));
+    if (statuses.contains(false)) {
+      throw new IOE("Failed deleting google cloud storage object(s)");
+    }
   }
 
   public boolean exists(final String bucket, final String path)

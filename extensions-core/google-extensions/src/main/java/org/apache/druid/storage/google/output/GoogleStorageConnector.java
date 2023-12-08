@@ -87,7 +87,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   @Override
   public OutputStream write(String path) throws IOException
   {
-    return storage.getObjectOutputStream(config.getBucket(), objectPath(path));
+    return storage.getObjectOutputStream(config.getBucket(), objectPath(path), config.getChunkSize().getBytesInInt());
   }
 
   @Override
@@ -111,13 +111,13 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   }
 
   @Override
-  public void deleteFiles(Iterable<String> paths)
+  public void deleteFiles(Iterable<String> paths) throws IOException
   {
     storage.batchDelete(config.getBucket(), Iterables.transform(paths, this::objectPath));
   }
 
   @Override
-  public void deleteRecursively(String path)
+  public void deleteRecursively(String path) throws IOException
   {
     final String fullPath = objectPath(path);
     Iterator<GoogleStorageObjectMetadata> storageObjects = GoogleUtils.lazyFetchingStorageObjectsIterator(
