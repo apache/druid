@@ -151,7 +151,8 @@ public @interface SqlTestFrameworkConfig
             .mergeBufferCount(config.numMergeBuffers())
             .withExtraModule(config.resultCache().makeModule());
         framework = builder.build();
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         throw new RuntimeException(e);
       }
     }
