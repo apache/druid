@@ -148,8 +148,6 @@ public class CoordinatorCompactionConfigsResourceTest
 
     double compactionTaskSlotRatio = 0.5;
     int maxCompactionTaskSlots = 9;
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
@@ -193,8 +191,6 @@ public class CoordinatorCompactionConfigsResourceTest
         null,
         ImmutableMap.of("key", "val")
     );
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
         mockHttpServletRequest
@@ -244,8 +240,6 @@ public class CoordinatorCompactionConfigsResourceTest
                  )
     ).thenReturn(originalConfig);
 
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
         datasourceName,
         mockHttpServletRequest
@@ -341,8 +335,6 @@ public class CoordinatorCompactionConfigsResourceTest
 
     double compactionTaskSlotRatio = 0.5;
     int maxCompactionTaskSlots = 9;
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.setCompactionTaskLimit(
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
@@ -427,8 +419,6 @@ public class CoordinatorCompactionConfigsResourceTest
                      ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
                  )
     ).thenReturn(CoordinatorCompactionConfig.empty());
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.deleteCompactionConfig(
         DATASOURCE_NOT_EXISTS,
         mockHttpServletRequest

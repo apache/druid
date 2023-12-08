@@ -160,7 +160,7 @@ public class BasicAuthenticatorResource
     authValidator.validateAuthenticatorName(authenticatorName);
 
     final Response response = handler.createUser(authenticatorName, userName);
-    performAudit(authenticatorName, "basicAuth.createUser", userName, req, response);
+    performAuditIfSuccess(authenticatorName, "basicAuth.createUser", userName, req, response);
 
     return response;
   }
@@ -186,7 +186,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.deleteUser(authenticatorName, userName);
-    performAudit(authenticatorName, "basicAuth.deleteUser", userName, req, response);
+    performAuditIfSuccess(authenticatorName, "basicAuth.deleteUser", userName, req, response);
 
     return response;
   }
@@ -213,7 +213,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
-    performAudit(authenticatorName, "basicAuth.updateUserCreds", userName, req, response);
+    performAuditIfSuccess(authenticatorName, "basicAuth.updateUserCreds", userName, req, response);
 
     return response;
   }
@@ -265,7 +265,7 @@ public class BasicAuthenticatorResource
     return responseCode >= 200 && responseCode < 300;
   }
 
-  private void performAudit(
+  private void performAuditIfSuccess(
       String authenticatorName,
       String action,
       String updatedUser,

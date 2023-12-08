@@ -131,6 +131,9 @@ public class AuthorizationUtils
     );
   }
 
+  /**
+   * Builds a RequestInfo object that can be used for auditing purposes.
+   */
   public static RequestInfo buildRequestInfo(String service, HttpServletRequest request)
   {
     return new RequestInfo(
