@@ -145,7 +145,7 @@
               <artifactId>maven-dependency-plugin</artifactId>
               <version>3.1.1</version>
               <configuration>
-              <!-- analyze incorrectly flags this dependency -->
+              <!-- analyze incorrectly flags this dependency as missing when omitted, and unused when declared -->
                 <ignoredDependencies>io.kubernetes:client-java-api-fluent:jar:19.0.0</ignoredDependencies>
               </configuration>
           </plugin>
