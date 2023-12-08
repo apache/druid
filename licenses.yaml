@@ -1871,14 +1871,14 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.5.10
+version: 3.8.3
 libraries:
   - org.apache.zookeeper: zookeeper
   - org.apache.zookeeper: zookeeper-jute
 notices:
   - zookeeper: |
       Apache ZooKeeper
-      Copyright 2009-2019 The Apache Software Foundation
+      Copyright 2009-2023 The Apache Software Foundation
 
 ---
 
@@ -4299,7 +4299,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.10
+version: 7.23.5
 license_file_path: licenses/bin/@babel-code-frame.MIT
 
 ---
@@ -4319,7 +4319,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.5
+version: 7.23.4
 license_file_path: licenses/bin/@babel-helper-string-parser.MIT
 
 ---
@@ -4329,7 +4329,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.5
+version: 7.22.20
 license_file_path: licenses/bin/@babel-helper-validator-identifier.MIT
 
 ---
@@ -4339,7 +4339,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.10
+version: 7.23.4
 license_file_path: licenses/bin/@babel-highlight.MIT
 
 ---
@@ -4359,7 +4359,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.11
+version: 7.23.5
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
@@ -4598,7 +4598,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 15.7.3
+version: 15.7.11
 license_file_path: licenses/bin/@types-prop-types.MIT
 
 ---
@@ -4608,7 +4608,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 18.2.8
+version: 18.2.42
 license_file_path: licenses/bin/@types-react.MIT
 
 ---
@@ -4618,7 +4618,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 0.16.1
+version: 0.16.8
 license_file_path: licenses/bin/@types-scheduler.MIT
 
 ---
@@ -5056,7 +5056,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Apache Software Foundation
-version: 5.4.2
+version: 5.4.3
 
 ---
 
@@ -5095,7 +5095,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Eli Grey
-version: 2.0.2
+version: 2.0.5
 license_file_path: licenses/bin/file-saver.MIT
 
 ---
@@ -5255,7 +5255,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Christian Zangl
-version: 3.2.1
+version: 3.2.2
 license_file_path: licenses/bin/hjson.MIT
 
 ---
@@ -5457,6 +5457,19 @@ copyright: John-David Dalton
 version: 4.17.21
 license_file_path: licenses/bin/lodash.MIT
 
+---
+
+name: "audience-annotations"
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 0.12.0
+libraries:
+  - org.apache.yetus: audience-annotations
+notices:
+  - audience-annotations: |
+      Apache Yetus
+      Copyright 2008-2022 The Apache Software Foundation
 ---
 
 name: "loose-envify"
@@ -6048,6 +6061,16 @@ license_file_path: licenses/bin/use-sync-external-store.MIT
 
 ---
 
+name: "uuid"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Robert Kieffer and other contributors
+version: 7.0.2
+license_file_path: licenses/bin/uuid.MIT
+
+---
+
 name: "value-equal"
 license_category: binary
 module: web-console
@@ -6083,7 +6106,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Baidu Inc.
-version: 5.4.3
+version: 5.4.4
 license_file_path: licenses/bin/zrender.BSD3
 
 ---
