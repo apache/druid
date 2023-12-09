@@ -162,11 +162,12 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
       ColumnType resultType = aggregator.getResultType();
       ColumnType intermediateType = aggregator.getIntermediateType();
 
-      boolean needsDeserialize = !isResultLevelCache || (fix && !resultType.isPrimitive() && resultType.equals(intermediateType));
+      boolean needsDeserialize = !isResultLevelCache
+          || (fix && !resultType.isPrimitive() && resultType.equals(intermediateType));
 
-      if(needsDeserialize) {
+      if (needsDeserialize) {
         addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
-      }else {
+      } else {
         addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
       }
     }
