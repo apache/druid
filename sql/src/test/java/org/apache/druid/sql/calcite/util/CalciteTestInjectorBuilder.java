@@ -25,6 +25,7 @@ import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 
 /**
@@ -43,7 +44,8 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
         new SegmentWranglerModule(),
         new LookylooModule(),
         new SqlAggregationModule(),
-        new CalciteTestOperatorModule()
+        new CalciteTestOperatorModule(),
+        new CacheTestHelperModule(ResultCacheMode.DISABLED)
     );
   }
 

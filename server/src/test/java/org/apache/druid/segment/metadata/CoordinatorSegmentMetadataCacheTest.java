@@ -1028,7 +1028,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Map<String, Object> queryContext = ImmutableMap.of(
         QueryContexts.PRIORITY_KEY, 5,
-        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false,
+        QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, false
     );
 
     DataSegment segment = newSegment("test", 0);
