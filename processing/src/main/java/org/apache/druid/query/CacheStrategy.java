@@ -159,16 +159,15 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 
       boolean fix = true;
 
-      if (isResultLevelCache) {
-        ColumnType resultType = aggregator.getResultType();
-        ColumnType intermediateType = aggregator.getIntermediateType();
-        if (fix && !resultType.isPrimitive() && resultType.equals(intermediateType)) {
-          addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
-        } else {
-          addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
-        }
-      } else {
+      ColumnType resultType = aggregator.getResultType();
+      ColumnType intermediateType = aggregator.getIntermediateType();
+
+      boolean needsDeserialize = !isResultLevelCache || (fix && !resultType.isPrimitive() && resultType.equals(intermediateType));
+
+      if(needsDeserialize) {
         addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
+      }else {
+        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
       }
     }
   }
