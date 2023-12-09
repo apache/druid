@@ -827,6 +827,14 @@ Returns an array of all paths which refer to literal values in `expr` in JSONPat
 
 Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
 
+## JSON_QUERY_ARRAY
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_QUERY_ARRAY(expr, path)`
+
+Extracts an `ARRAY<COMPLEX<json>>` value from `expr`, at the specified `path`. If value is not an `ARRAY`, it will be translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to allow extracting arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+
 ## JSON_VALUE
 
 **Function type:** [JSON](sql-json-functions.md)
@@ -1283,7 +1291,7 @@ Returns a string formatted in accordance to Java's String.format method.
 
 **Function type:** [Multi-value string](sql-multivalue-string-functions.md)
 
-Converts a string into an array, split by the given delimiter.
+Splits `str1` into an multi-value string on the delimiter specified by `str2`, which is a regular expression.
 
 ## STRLEN
 

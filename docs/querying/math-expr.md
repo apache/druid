@@ -192,7 +192,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_set_add_all(arr1,arr2) | combines the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
-| string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
+| string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2, which is a regular expression |
 
 
 ## Apply functions
