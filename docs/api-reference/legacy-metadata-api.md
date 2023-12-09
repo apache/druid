@@ -248,10 +248,11 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
-`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments?interval={interval}&limit={limit}&offset={offset}`
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments?interval={interval}&limit={limit}&lastSegmentId={lastSegmentId}&sortOrder={sortOrder}`
 
 Returns a list of unused segments for a datasource in the cluster contained within an optionally specified interval.
-Optional parameters for limit, and offset can be given as well, to limit results and enable paginated results.
+Optional parameters for limit, and lastSegmentId can be given as well, to limit results and enable paginated results.
+The reuslts may be sorted in either ASC, or DESC order depending by specifying the sortOrder parameter. 
 
 ## Intervals
 
