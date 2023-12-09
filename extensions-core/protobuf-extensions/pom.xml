@@ -46,17 +46,6 @@
     </repository>
   </repositories>
 
-  <dependencyManagement>
-    <dependencies>
-      <!-- This is an indirect dependency of kafka-protobuf-provider
-      update to address vulnerability in transitive dependency okio  -->
-      <dependency>
-          <groupId>com.squareup.okio</groupId>
-          <artifactId>okio</artifactId>
-          <version>${okio.version}</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
