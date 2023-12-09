@@ -284,7 +284,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new MultipleSpecificSegmentSpec(Collections.singletonList(realtimeSegment1.getId().toDescriptor())),
         new AllColumnIncluderator(),
         false,
-        ImmutableMap.of(QueryContexts.BROKER_PARALLEL_MERGE_KEY, false),
+        ImmutableMap.of(
+            QueryContexts.BROKER_PARALLEL_MERGE_KEY, false,
+            QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY, false
+        ),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
