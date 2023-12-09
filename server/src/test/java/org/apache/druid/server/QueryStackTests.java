@@ -409,7 +409,7 @@ public class QueryStackTests
     final LookupExtractorFactoryContainerProvider lookupProvider = LookupEnabledTestExprMacroTable
         .createTestLookupProvider(Collections.emptyMap());
 
-    final ImmutableList.Builder<Module> modulesBuilder = ImmutableList.<Module> builder()
+    final ImmutableList.Builder<Module> modulesBuilder = ImmutableList.<Module>builder()
         .add(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider));
 
     injectorBuilder.addModules(

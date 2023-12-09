@@ -35,7 +35,6 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -420,12 +419,5 @@ public class AggregatorUtil
                        .put(expressionBytes)
                        .array();
     });
-  }
-
-  public static boolean isFinalized(AggregatorFactory aggregator)
-  {
-     ColumnType resultType = aggregator.getResultType();
-    ColumnType intermediateType = aggregator.getIntermediateType();
-    return resultType.isPrimitive() || resultType.equals(intermediateType);
   }
 }
