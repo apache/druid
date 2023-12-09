@@ -404,24 +404,18 @@ public class QueryStackTests
         .ignoreLoadScopes()
         .addModule(new ExpressionModule())
         .addModule(new SegmentWranglerModule())
-        .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED))
-        ;
+        .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED));
 
-    final LookupExtractorFactoryContainerProvider lookupProvider =
-        LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap());
+    final LookupExtractorFactoryContainerProvider lookupProvider = LookupEnabledTestExprMacroTable
+        .createTestLookupProvider(Collections.emptyMap());
 
-    final ImmutableList.Builder<Module> modulesBuilder =
-        ImmutableList.<Module>builder()
-//            .add(new JoinableFactoryModule())
-        .add(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
-        ;
+    final ImmutableList.Builder<Module> modulesBuilder = ImmutableList.<Module> builder()
+        .add(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider));
 
     injectorBuilder.addModules(
         modulesBuilder.build().toArray(new Module[0])
     );
 
-//     injectorBuilder.addModules(builder.extraModules.toArray(new Module[0]));
-//     injectorBuilder.addModules(new testcac);
     return injectorBuilder.build();
   }
 }
