@@ -127,15 +127,14 @@ public class SqlSegmentsMetadataQuery
    *
    * This call does not return any information about realtime segments.
    *
-   * @param dataSource The name of the datasource
-   * @param intervals  The intervals to search over
-   * @param limit      The limit of segments to return
-   * @param offset     The offset to use when retrieving matching segments. Note that offset is only applied to a 
-   *                   single batch - i.e., when the number of intervals is less than {@link #MAX_INTERVALS_PER_BATCH}.
-   *                   For multiple batches, the offset parameter is ignored.
-   * @param orderByStartEnd Specifies the order with which to return the matching segments by start time, end time. A
-   *                        value of less than or equal to 0, specifies a descending order, while a value of greater
-   *                        than 0 specifies an ascending order. A null value indicates that order does not matter.
+   * @param dataSource    The name of the datasource
+   * @param intervals     The intervals to search over
+   * @param limit         The limit of segments to return
+   * @param lastSegmentId the last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or ASC, or < this segment
+   *                      lexigraphically if sortOrder is DESC.
+   * @param sortOrder     Specifies the order with which to return the matching segments by start time, end time.
+   *                      A null value indicates that order does not matter.
 
    * Returns a closeable iterator. You should close it when you are done.
    */
@@ -143,11 +142,11 @@ public class SqlSegmentsMetadataQuery
       final String dataSource,
       final Collection<Interval> intervals,
       @Nullable final Integer limit,
-      @Nullable final Integer offset,
-      @Nullable final Integer orderByStartEnd
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit, offset, orderByStartEnd);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit, lastSegmentId, sortOrder);
   }
 
   /**
@@ -379,13 +378,13 @@ public class SqlSegmentsMetadataQuery
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
-      @Nullable final Integer offset,
-      @Nullable final Integer orderByStartEnd
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder
   )
   {
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, offset, orderByStartEnd)
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -399,8 +398,8 @@ public class SqlSegmentsMetadataQuery
             matchMode,
             used,
             limitPerBatch,
-            null, // don't use offset with multiple batches for now. Note added to javadoc.
-            orderByStartEnd
+            lastSegmentId,
+            sortOrder
         );
         if (limitPerBatch != null) {
           // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
@@ -425,33 +424,43 @@ public class SqlSegmentsMetadataQuery
       final IntervalMode matchMode,
       final boolean used,
       @Nullable final Integer limit,
-      @Nullable final Integer offset,
-      @Nullable final Integer orderByStartEnd
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
     final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
 
     final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
+    sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource %s");
 
     if (compareAsString) {
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    if (offset != null || orderByStartEnd != null) {
-      sb.append(StringUtils.format(" ORDER BY start, %1$send%1$s %2$s",
+    if (sortOrder != null) {
+      sb.append(StringUtils.format(" ORDER BY start %2$s, %1$send%1$s %2$s",
           connector.getQuoteString(),
-          orderByStartEnd != null && orderByStartEnd <= 0L ? "DESC" : "ASC"));
-      if (offset != null) {
-        sb.append(StringUtils.format(connector.getOffsetClause(offset)));
-      }
+          sortOrder.toString()));
     }
     final Query<Map<String, Object>> sql = handle
-        .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
+        .createQuery(StringUtils.format(
+            sb.toString(),
+            dbTables.getSegmentsTable(),
+            lastSegmentId == null
+                ? ""
+                : StringUtils.format("AND id %s :id",
+                    (sortOrder == null || sortOrder == SortOrder.ASC)
+                        ? ">"
+                        : "<"
+                )
+        ))
         .setFetchSize(connector.getStreamingFetchSize())
         .bind("used", used)
         .bind("dataSource", dataSource);
+    if (lastSegmentId != null) {
+      sql.bind("id", lastSegmentId);
+    }
     if (null != limit) {
       sql.setMaxRows(limit);
     }

@@ -1238,14 +1238,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(2033, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    int offset = 10;
+    String lastSegmentId = segments.get(9).getId().toString();
     final List<DataSegment> expectedSegmentsAscOrder = segments.stream()
-        .skip(offset)
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) > 0)
         .collect(Collectors.toList());
     ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(),
         null,
-        offset,
+        lastSegmentId,
         null
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
@@ -1254,23 +1254,25 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(),
         null,
-        offset,
-        1
+        lastSegmentId,
+        SortOrder.ASC
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
-    Assert.assertTrue(expectedSegmentsAscOrder.containsAll(actualUnusedSegments));
+    Assert.assertEquals(expectedSegmentsAscOrder, actualUnusedSegments);
 
-    final List<DataSegment> expectedSegmentsDescOrder = new ArrayList<>(expectedSegmentsAscOrder);
+    final List<DataSegment> expectedSegmentsDescOrder = segments.stream()
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) < 0)
+        .collect(Collectors.toList());
     Collections.reverse(expectedSegmentsDescOrder);
 
     actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
         ImmutableList.of(),
         null,
-        offset,
-        -1
+        lastSegmentId,
+        SortOrder.DESC
     );
     Assert.assertEquals(expectedSegmentsDescOrder.size(), actualUnusedSegments.size());
-    Assert.assertTrue(expectedSegmentsDescOrder.containsAll(actualUnusedSegments));
+    Assert.assertEquals(expectedSegmentsDescOrder, actualUnusedSegments);
   }
 
   @Test
@@ -1297,7 +1299,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final int requestedLimit = segments.size() - 1;
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
-        segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
         null,
         null
@@ -1313,16 +1315,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     markAllSegmentsUnused(new HashSet<>(segments));
 
     final int requestedLimit = segments.size();
-    final int offset = 5;
+    final String lastSegmentId = segments.get(4).getId().toString();
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
-        segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
-        offset,
+        lastSegmentId,
         null
     );
-    Assert.assertEquals(segments.size() - offset, actualUnusedSegments.size());
-    // offset used when number of intervals does not require multiple batches
-    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().skip(offset).limit(requestedLimit).collect(Collectors.toList())));
+    Assert.assertEquals(segments.size() - 5, actualUnusedSegments.size());
+    Assert.assertEquals(actualUnusedSegments, segments.stream()
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) > 0)
+        .limit(requestedLimit)
+        .collect(Collectors.toList()));
   }
 
   @Test
@@ -1332,16 +1336,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     markAllSegmentsUnused(new HashSet<>(segments));
 
     final int requestedLimit = segments.size() - 1;
-    final int offset = 5;
+    final String lastSegmentId = segments.get(4).getId().toString();
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
-        segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
-        offset,
+        lastSegmentId,
         null
     );
-    Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
-    // offset not used when number of intervals requires multiple batches
-    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+    Assert.assertEquals(requestedLimit - 4, actualUnusedSegments.size());
+    Assert.assertEquals(actualUnusedSegments, segments.stream()
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) > 0)
+        .limit(requestedLimit)
+        .collect(Collectors.toList()));
   }
 
   @Test
@@ -3156,8 +3162,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   private ImmutableList<DataSegment> retrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffset(
       final List<Interval> intervals,
       final Integer limit,
-      final Integer offset,
-      final Integer orderByStartEnd
+      final String lastSegmentId,
+      final SortOrder sortOrder
   )
   {
     return derbyConnector.inReadOnlyTransaction(
@@ -3169,7 +3175,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                            derbyConnectorRule.metadataTablesConfigSupplier().get(),
                            mapper
                        )
-                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, offset, orderByStartEnd)) {
+                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder)) {
             return ImmutableList.copyOf(iterator);
           }
         }

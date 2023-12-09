@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -197,8 +198,8 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       String datasource,
       @Nullable Interval interval,
       @Nullable Integer limit,
-      @Nullable Integer offset,
-      @Nullable Integer orderByStartEnd
+      @Nullable String lastSegmentId,
+      @Nullable SortOrder sortOrder
   )
   {
     return null;

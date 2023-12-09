@@ -31,6 +31,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.DataSourceInformation;
@@ -73,7 +74,6 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
-  private static final int ASCENDING_ORDER_BY_START_END = 1;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -345,7 +345,8 @@ public class MetadataResource
       @PathParam("dataSourceName") final String dataSource,
       @QueryParam("interval") @Nullable String interval,
       @QueryParam("limit") @Nullable Integer limit,
-      @QueryParam("offset") @Nullable Integer offset
+      @QueryParam("lastSegmentId") @Nullable final String lastSegmentId,
+      @QueryParam("sortOrder") @Nullable final String sortOrder
   )
   {
     if (dataSource == null || dataSource.isEmpty()) {
@@ -354,17 +355,16 @@ public class MetadataResource
     if (limit != null && limit < 0) {
       throw InvalidInput.exception("limit must be > 0");
     }
-    if (offset != null && offset < 0) {
-      throw InvalidInput.exception("offset must be > 0");
-    }
+
+    SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
 
     final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
     Iterable<DataSegment> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
         dataSource,
         theInterval,
         limit,
-        offset,
-        ASCENDING_ORDER_BY_START_END
+        lastSegmentId,
+        theSortOrder
     );
 
     final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
@@ -375,7 +375,7 @@ public class MetadataResource
 
     // sort by earliest start interval first, then end interval. DataSegment are sorted in this same order due to
     // how the segment id is generated.
-    final Set<DataSegment> retVal = new TreeSet<>(DataSegment::compareTo);
+    final List<DataSegment> retVal = new ArrayList<>();
     authorizedSegments.iterator().forEachRemaining(retVal::add);
     return Response.status(Response.Status.OK).entity(retVal).build();
   }

@@ -966,8 +966,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * @param datasource      The name of the datasource
    * @param interval        The intervals to search over
    * @param limit           The limit of segments to return
-   * @param offset          The offset to use when retrieving matching segments.
-   * @param orderByStartEnd Specifies the order with which to return the matching segments by start time, end time. A
+   * @param lastSegmentId          The offset to use when retrieving matching segments.
+   * @param sortOrder Specifies the order with which to return the matching segments by start time, end time. A
    *                        value of less than or equal to 0, specifies a descending order, while a value of greater
    *                        than 0 specifies an ascending order. A null value indicates that order does not matter.
 
@@ -978,8 +978,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final String datasource,
       @Nullable final Interval interval,
       @Nullable final Integer limit,
-      @Nullable final Integer offset,
-      @Nullable final Integer orderByStartEnd
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder
   )
   {
     return connector.inReadOnlyTransaction(
@@ -992,7 +992,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                   ? Intervals.ONLY_ETERNITY
                   : Collections.singletonList(interval);
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, offset, orderByStartEnd)) {
+                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, lastSegmentId, sortOrder)) {
             return ImmutableList.copyOf(iterator);
           }
         }
