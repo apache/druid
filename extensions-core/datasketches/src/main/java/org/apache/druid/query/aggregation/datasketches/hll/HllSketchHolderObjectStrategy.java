@@ -45,6 +45,7 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
     return HllSketchAggregatorFactory.COMPARATOR.compare(sketch1, sketch2);
   }
 
+  @Nullable
   @Override
   public HllSketchHolder fromByteBuffer(final ByteBuffer buf, final int size)
   {
