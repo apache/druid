@@ -1163,6 +1163,13 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_to_mv(a)", new String[]{"foo", "bar", "baz", "foobar"});
     assertArrayExpr("array_to_mv(b)", new String[]{"1", "2", "3", "4", "5"});
     assertArrayExpr("array_to_mv(c)", new String[]{"3.1", "4.2", "5.3"});
+    assertArrayExpr("array_to_mv(array(y,z))", new String[]{"2", "3"});
+    // array type is determined by the first array type
+    assertArrayExpr("array_to_mv(array_concat(b,c))", new String[]{"1", "2", "3", "4", "5", "3", "4", "5"});
+    assertArrayExpr(
+        "array_to_mv(array_concat(c,b))",
+        new String[]{"3.1", "4.2", "5.3", "1.0", "2.0", "3.0", "4.0", "5.0"}
+    );
   }
 
   @Test
