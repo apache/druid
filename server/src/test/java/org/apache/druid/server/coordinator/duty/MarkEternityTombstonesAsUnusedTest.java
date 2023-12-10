@@ -494,8 +494,8 @@ public class MarkEternityTombstonesAsUnusedTest
     final CoordinatorRunStats runStats = params.getCoordinatorStats();
     Assert.assertEquals(
         allUsedSegments.size() - expectedUsedSegments.size(),
-        runStats.get(Stats.Segments.ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds1)) +
-        runStats.get(Stats.Segments.ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds2))
+        runStats.get(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds1)) +
+        runStats.get(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, RowKey.of(Dimension.DATASOURCE, ds2))
     );
   }
 }

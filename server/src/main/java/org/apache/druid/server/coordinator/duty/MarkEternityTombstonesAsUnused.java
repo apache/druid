@@ -52,9 +52,9 @@ import java.util.Set;
  * Only infinite-interval tombstones are considered as candidate segments in this duty because they
  * don't honor the preferred segment granularity specified at ingest time to cover an underlying segment with
  * {@link Granularities#ALL} as it can generate too many segments per time chunk and cause an OOM. The infinite-interval
- * tombstones make it hard to append data on the end of a data set that started out with an {@link Granularities#ALL} eternity and then
- * moved to actual time grains, so the compromise is that the coordinator will remove these segments as long as it doesn't overlap any other
- * segment.
+ * tombstones make it hard to append data on the end of a data set that started out with an {@link Granularities#ALL} eternity
+ * and then moved to actual time grains, so the compromise is that the coordinator will remove these segments as long as it
+ * doesn't overlap any other segment.
  * </p>
  * <p>
  * The overlapping condition is necessary as a candidate segment can overlap with an overshadowed segment, and the latter
@@ -84,25 +84,29 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
   {
     DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
 
-    final Map<String, Set<SegmentId>> datasourceToEternityTombstones = determineCandidateTombstones(dataSourcesSnapshot);
+    final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones = 
+        determineNonOvershadowedEternityTombstones(
+        dataSourcesSnapshot
+    );
 
-    if (datasourceToEternityTombstones.size() == 0) {
-      log.debug("No non-overlapping eternity tombstones found.");
+    if (datasourceToNonOvershadowedEternityTombstones.size() == 0) {
+      log.debug("No non-overshadowed eternity tombstones found.");
       return params;
     }
 
-    log.debug("Found [%d] datasource containing non-overlapping eternity tombstones[%s]",
-              datasourceToEternityTombstones.size(), datasourceToEternityTombstones
+    log.debug("Found [%d] datasource containing non-overshadowed eternity tombstones[%s]",
+              datasourceToNonOvershadowedEternityTombstones.size(), datasourceToNonOvershadowedEternityTombstones
     );
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    datasourceToEternityTombstones.forEach((datasource, unusedSegments) -> {
-      RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
-      stats.add(Stats.Segments.ETERNITY_TOMBSTONE, datasourceKey, unusedSegments.size());
-      int unusedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
+    datasourceToNonOvershadowedEternityTombstones.forEach((datasource, nonOvershadowedEternityTombstones) -> {
+      final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
+      stats.add(Stats.Segments.UNNEEDED_ETERNITY_TOMBSTONE, datasourceKey, nonOvershadowedEternityTombstones.size());
+      final int unusedCount = deleteHandler.markSegmentsAsUnused(nonOvershadowedEternityTombstones);
       log.info(
-          "Successfully marked [%d] non-overlapping eternity tombstones of datasource[%s] as unused.",
+          "Successfully marked [%d] non-overshadowed eternity tombstones[%s] of datasource[%s] as unused.",
           unusedCount,
+          nonOvershadowedEternityTombstones,
           datasource
       );
     });
@@ -111,7 +115,8 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
   }
 
   /**
-   * Computes the set of eternity tombstones per datasource using the datasources snapshot. The computation is as follows:
+   * Computes the set of unneeded eternity tombstones per datasource using the datasources snapshot. The computation is
+   * as follows:
    *
    * <li> Determine the set of used and non-overshadowed segments from the used segments' timeline. </li>
    * <li> For each such candidate segment that is a tombstone with an infinite start or end, look at the set of overshadowed
@@ -122,11 +127,11 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
    * </p>
    *
    * @param dataSourcesSnapshot the datasources snapshot for segments timeline
-   * @return the set of candidate tombstones grouped by datasource
+   * @return the set of non-overshadowed eternity tombstones grouped by datasource
    */
-  private Map<String, Set<SegmentId>> determineCandidateTombstones(final DataSourcesSnapshot dataSourcesSnapshot)
+  private Map<String, Set<SegmentId>> determineNonOvershadowedEternityTombstones(final DataSourcesSnapshot dataSourcesSnapshot)
   {
-    final Map<String, Set<SegmentId>> datasourceToDanglingTombstones = new HashMap<>();
+    final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones = new HashMap<>();
 
     dataSourcesSnapshot.getDataSourcesMap().keySet().forEach((datasource) -> {
       final SegmentTimeline usedSegmentsTimeline
@@ -141,7 +146,7 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
 
       if (usedNonOvershadowedSegments.isPresent()) {
         usedNonOvershadowedSegments.get().forEach(candidateSegment -> {
-          if (isTombstoneWithInfiniteStartOrEnd(candidateSegment)) {
+          if (isNewGenerationEternityTombstone(candidateSegment)) {
             boolean overlaps = dataSourcesSnapshot.getOvershadowedSegments().stream()
                                                   .filter(overshadowedSegment ->
                                                               candidateSegment.getDataSource()
@@ -152,7 +157,7 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
                                                                           .overlaps(overshadowedSegment.getInterval())
                                                   );
             if (!overlaps) {
-              datasourceToDanglingTombstones
+              datasourceToNonOvershadowedEternityTombstones
                   .computeIfAbsent(datasource, ds -> new HashSet<>())
                   .add(candidateSegment.getId());
             }
@@ -161,10 +166,10 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
       }
     });
 
-    return datasourceToDanglingTombstones;
+    return datasourceToNonOvershadowedEternityTombstones;
   }
 
-  private boolean isTombstoneWithInfiniteStartOrEnd(final DataSegment segment)
+  private boolean isNewGenerationEternityTombstone(final DataSegment segment)
   {
     return segment.isTombstone() && segment.getShardSpec().getNumCorePartitions() == 0 && (
         DateTimes.MIN.equals(segment.getInterval().getStart()) ||
