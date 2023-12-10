@@ -39,6 +39,17 @@
     <ipaddress.version>5.3.4</ipaddress.version>
     <oshi.version>6.4.4</oshi.version>
   </properties>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+          <groupId>com.fasterxml.jackson</groupId>
+          <artifactId>jackson-bom</artifactId>
+          <version>${core.jackson.version}</version>
+          <scope>import</scope>
+          <type>pom</type>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
