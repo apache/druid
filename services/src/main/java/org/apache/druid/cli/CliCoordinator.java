@@ -43,6 +43,7 @@ import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.DruidBinders;
@@ -157,6 +158,7 @@ public class CliCoordinator extends ServerRunnable
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
   private static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = "druid.centralizedDatasourceSchema.enabled";
+  private static final String SERVERVIEW_TYPE_PROPERTY = "druid.serverview.type";
 
   private Properties properties;
   private boolean beOverlord;
@@ -195,6 +197,12 @@ public class CliCoordinator extends ServerRunnable
     modules.add(JettyHttpClientModule.global());
 
     if (isSegmentMetadataCacheEnabled) {
+      if (!properties.getOrDefault(SERVERVIEW_TYPE_PROPERTY, "http").equals("http")) {
+        throw new RuntimeException(
+            "CentralizedDatasourceSchema feature is incompatible Zookeeper based segment discovery. "
+            + "Please consider switching to http based segment discovery (druid.serverview.type=http) "
+            + "or disable the feature.");
+      }
       modules.add(new CoordinatorSegmentMetadataCacheModule());
       modules.add(new QueryableModule());
     }
