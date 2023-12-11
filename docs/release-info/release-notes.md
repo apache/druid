@@ -28,7 +28,6 @@ Apache Druid 28.0.1 is a patch release that fixes some issues in the Druid 28.0.
 
 ### Notable improvements
 
-* Added default implementation for the `evalDimension` method in the `RowFunction` interface [#15452](https://github.com/apache/druid/pull/15452)
 * Fixed a query caching issue for groupBy queries with multiple post-aggregation metrics [#15402](https://github.com/apache/druid/pull/15402)
 * Fixed an issue with compaction and reindex tasks failing during an upgrade due to the addition of the new task action `RetrieveSegmentsToReplaceAction`, which would not be available on the Overlord during the upgrade [#15430](https://github.com/apache/druid/pull/15430)
 * Fixed an issue with the `NullFilter` filter returning a domain regardless of the input column [#15500](https://github.com/apache/druid/pull/15500)
