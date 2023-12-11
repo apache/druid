@@ -286,11 +286,18 @@ public class MetadataResourceTest
     List<DataSegment> resultList = extractResponseList(response);
     Assert.assertTrue(resultList.isEmpty());
 
-    // test valid datasource with bad limit - fails with expected bad limit message
+    // test valid datasource with bad limit - fails with expected invalid limit message
     DruidExceptionMatcher.invalidInput().expectMessageIs(
         StringUtils.format("Invalid limit[%s] specified. Limit must be > 0", -1)
     ).assertThrowsAndMatches(
         () -> metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, -1, null, null)
+    );
+
+    // test valid datasource with invalid lastSegmentId - fails with expected invalid lastSegmentId message
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        StringUtils.format("Invalid lastSegmentId[%s] specified.", "invalid")
+    ).assertThrowsAndMatches(
+        () -> metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, "invalid", null)
     );
 
     // test valid datasource - returns all unused segments for that datasource
@@ -308,8 +315,8 @@ public class MetadataResourceTest
     Assert.assertEquals(NUM_PARTITIONS * numDays, resultList.size());
     Assert.assertEquals(Arrays.asList(segments[0], segments[1], segments[2], segments[3]), resultList);
 
-    // test valid datasource with interval filter and limit - returns unused segments for that datasource within
-    // interval upto limit
+    // test valid datasource with interval filter limit and last segment id - returns unused segments for that
+    // datasource within interval upto limit starting at last segment id
     int limit = 3;
     response = metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, interval, limit, null, null);
 

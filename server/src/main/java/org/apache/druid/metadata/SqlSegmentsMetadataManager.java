@@ -963,8 +963,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * This call does not return any information about realtime segments.
    *
    * @param datasource      The name of the datasource
-   * @param interval        The intervals to search over
-   * @param limit           The limit of segments to return
+   * @param interval        an optional interval to search over.
+   * @param limit           an optional maximum number of results to return. If none is specified, the results are
+   *                        not limited.
    * @param lastSegmentId an optional last segment id from which to search for results. All segments returned are >
    *                      this segment lexigraphically if sortOrder is null or  {@link SortOrder#ASC}, or < this
    *                      segment lexigraphically if sortOrder is {@link SortOrder#DESC}. If none is specified, no

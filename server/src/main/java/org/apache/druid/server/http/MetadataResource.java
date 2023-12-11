@@ -356,6 +356,10 @@ public class MetadataResource
       throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0", limit);
     }
 
+    if (lastSegmentId != null && SegmentId.tryParse(dataSource, lastSegmentId) == null) {
+      throw InvalidInput.exception("Invalid lastSegmentId[%s] specified.", lastSegmentId);
+    }
+
     SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
 
     final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
@@ -373,8 +377,6 @@ public class MetadataResource
     final Iterable<DataSegment> authorizedSegments =
         AuthorizationUtils.filterAuthorizedResources(req, unusedSegments, raGenerator, authorizerMapper);
 
-    // sort by earliest start interval first, then end interval. DataSegment are sorted in this same order due to
-    // how the segment id is generated.
     final List<DataSegment> retVal = new ArrayList<>();
     authorizedSegments.iterator().forEachRemaining(retVal::add);
     return Response.status(Response.Status.OK).entity(retVal).build();
