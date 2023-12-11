@@ -3231,14 +3231,6 @@ public interface Function extends NamedFunction
     public void validateArguments(List<Expr> args)
     {
       validationHelperCheckArgumentCount(args, 1);
-      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
-
-      if (expr == null) {
-        throw validationFailed(
-            "argument %s should be an identifier expression. Use array() instead",
-            args.get(0).toString()
-        );
-      }
     }
 
     @Nullable
