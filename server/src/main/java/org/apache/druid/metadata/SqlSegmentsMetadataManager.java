@@ -957,19 +957,20 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
-   * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
-   * unused segments.
+   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* an optionally
+   * specified interval. If the interval specified is null, this method will retrieve all unused segments.
    *
    * This call does not return any information about realtime segments.
    *
    * @param datasource      The name of the datasource
    * @param interval        The intervals to search over
    * @param limit           The limit of segments to return
-   * @param lastSegmentId          The offset to use when retrieving matching segments.
-   * @param sortOrder Specifies the order with which to return the matching segments by start time, end time. A
-   *                        value of less than or equal to 0, specifies a descending order, while a value of greater
-   *                        than 0 specifies an ascending order. A null value indicates that order does not matter.
+   * @param lastSegmentId an optional last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or  {@link SortOrder#ASC}, or < this
+   *                      segment lexigraphically if sortOrder is {@link SortOrder#DESC}. If none is specified, no
+   *                      such filter is used.
+   * @param sortOrder an optional order with which to return the matching segments by id, start time, end time. If
+   *                  none is specified, the order of the results is not guarenteed.
 
    * Returns an iterable.
    */

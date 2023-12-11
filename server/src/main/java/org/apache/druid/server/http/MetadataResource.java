@@ -353,7 +353,7 @@ public class MetadataResource
       throw InvalidInput.exception("dataSourceName must be non-empty");
     }
     if (limit != null && limit < 0) {
-      throw InvalidInput.exception("limit must be > 0");
+      throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0", limit);
     }
 
     SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);

@@ -432,28 +432,32 @@ public class SqlSegmentsMetadataQuery
     final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
 
     final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource %s");
+    sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
 
     if (compareAsString) {
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
+    if (lastSegmentId != null) {
+      sb.append(
+          StringUtils.format(
+              " AND id %s :id",
+              (sortOrder == null || sortOrder == SortOrder.ASC)
+                  ? ">"
+                  : "<"
+          )
+      );
+    }
+
     if (sortOrder != null) {
-      sb.append(StringUtils.format(" ORDER BY start %2$s, %1$send%1$s %2$s",
+      sb.append(StringUtils.format(" ORDER BY id %2$s, start %2$s, %1$send%1$s %2$s",
           connector.getQuoteString(),
           sortOrder.toString()));
     }
     final Query<Map<String, Object>> sql = handle
         .createQuery(StringUtils.format(
             sb.toString(),
-            dbTables.getSegmentsTable(),
-            lastSegmentId == null
-                ? ""
-                : StringUtils.format("AND id %s :id",
-                    (sortOrder == null || sortOrder == SortOrder.ASC)
-                        ? ">"
-                        : "<"
-                )
+            dbTables.getSegmentsTable()
         ))
         .setFetchSize(connector.getStreamingFetchSize())
         .bind("used", used)

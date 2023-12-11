@@ -133,14 +133,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   public abstract String getQuoteString();
 
-  /**
-   * @return the string offset clause
-   */
-  public String getOffsetClause(int offset)
-  {
-    return StringUtils.format(" OFFSET %d", offset);
-  }
-
   public String getValidationQuery()
   {
     return "SELECT 1";

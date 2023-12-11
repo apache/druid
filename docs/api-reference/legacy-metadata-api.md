@@ -252,7 +252,11 @@ Return the tiers that a datasource exists in.
 
 Returns a list of unused segments for a datasource in the cluster contained within an optionally specified interval.
 Optional parameters for limit and lastSegmentId can be given as well, to limit results and enable paginated results.
-The results may be sorted in either ASC, or DESC order depending on specifying the sortOrder parameter.
+The results may be sorted in either ASC, or DESC order concerning their id, start, and end time, depending on
+specifying the sortOrder parameter. The default behavior in the absence of all optional parameters is to return all
+unused segments for the given datasource in no guaranteed order.
+
+Example usage: `GET /druid/coordinator/v1/datasources/inline_data/unusedSegments?interval=2023-12-01_2023-12-10&limit=10&lastSegmentId=inline_data_2023-12-03T00%3A00%3A00.000Z_2023-12-04T00%3A00%3A00.000Z_2023-12-09T14%3A16%3A53.738Z&sortOrder=ASC}`
 
 ## Intervals
 

@@ -28,7 +28,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
- * specifies the sort order when doing metadata store queries.
+ * Specifies the sort order when doing metadata store queries.
  */
 public enum SortOrder
 {
@@ -59,7 +59,7 @@ public enum SortOrder
       }
     }
     throw InvalidInput.exception(StringUtils.format(
-        "Unexpected value [%s] for SortOrder. Possible values are: %s",
+        "Unexpected value[%s] for SortOrder. Possible values are: %s",
         value, Arrays.stream(SortOrder.values()).map(SortOrder::toString).collect(Collectors.toList())
     ));
   }

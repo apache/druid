@@ -133,13 +133,13 @@ public interface SegmentsMetadataManager
    * iterates the returned iterable only once rather than several times.
    *
    * @param datasource    the name of the datasource.
-   * @param interval      the interval to search over.
-   * @param limit         the maximum number of results to return.
-   * @param lastSegmentId the last segment id from which to search for results. All segments returned are >
-   *                      this segment lexigraphically if sortOrder is null or ASC, or < this segment
-   *                      lexigraphically if sortOrder is DESC.
-   * @param sortOrder     Specifies the order with which to return the matching segments by start time, end time.
-   *                      A null value indicates that order does not matter.
+   * @param interval      an optional interval to search over. If none is specified, {@link org.apache.druid.java.util.common.Intervals#ETERNITY}
+   * @param limit         an optional maximum number of results to return. If none is specified, the results are not limited.
+   * @param lastSegmentId an optional last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or  {@link SortOrder#ASC}, or < this segment
+   *                      lexigraphically if sortOrder is {@link SortOrder#DESC}. If none is specified, no such filter is used.
+   * @param sortOrder     an optional order with which to return the matching segments by id, start time, end time.
+   *                      If none is specified, the order of the results is not guarenteed.
    */
   Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
       String datasource,

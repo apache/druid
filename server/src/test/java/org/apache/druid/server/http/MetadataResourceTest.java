@@ -28,6 +28,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -287,7 +288,7 @@ public class MetadataResourceTest
 
     // test valid datasource with bad limit - fails with expected bad limit message
     DruidExceptionMatcher.invalidInput().expectMessageIs(
-        "limit must be > 0"
+        StringUtils.format("Invalid limit[%s] specified. Limit must be > 0", -1)
     ).assertThrowsAndMatches(
         () -> metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, -1, null, null)
     );

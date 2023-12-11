@@ -27,7 +27,7 @@ public class SortOrderTest
 {
 
   @Test
-  public void test_asc()
+  public void testAsc()
   {
     Assert.assertEquals(SortOrder.ASC, SortOrder.fromValue("asc"));
     Assert.assertEquals("ASC", SortOrder.fromValue("asc").toString());
@@ -38,7 +38,7 @@ public class SortOrderTest
   }
 
   @Test
-  public void test_desc()
+  public void testDesc()
   {
     Assert.assertEquals(SortOrder.DESC, SortOrder.fromValue("desc"));
     Assert.assertEquals("DESC", SortOrder.fromValue("desc").toString());
@@ -49,10 +49,10 @@ public class SortOrderTest
   }
 
   @Test
-  public void test_invalid()
+  public void testInvalid()
   {
     DruidExceptionMatcher.invalidInput().expectMessageIs(
-        "Unexpected value [bad] for SortOrder. Possible values are: [ASC, DESC]"
+        "Unexpected value[bad] for SortOrder. Possible values are: [ASC, DESC]"
     ).assertThrowsAndMatches(
         () -> SortOrder.fromValue("bad")
     );
