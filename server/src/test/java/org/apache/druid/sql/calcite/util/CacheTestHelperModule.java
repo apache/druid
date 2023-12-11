@@ -34,7 +34,7 @@ public class CacheTestHelperModule extends AbstractModule
   public enum ResultCacheMode
   {
     DISABLED,
-    ENABLE_ISOLATED;
+    ENABLE;
 
     public Module makeModule()
     {
@@ -83,12 +83,18 @@ public class CacheTestHelperModule extends AbstractModule
   {
     cacheConfig = new TestCacheConfig(resultCacheMode);
 
-    if (resultCacheMode == ResultCacheMode.ENABLE_ISOLATED) {
+    switch (resultCacheMode)
+    {
+    case ENABLE:
       etagProvider = new EtagProvider.ProvideEtagBasedOnDatasource();
       cache = MapCache.create(1_000_000L);
-    } else {
+      break;
+    case DISABLED:
       etagProvider = new EtagProvider.EmptyEtagProvider();
       cache = null;
+      break;
+    default:
+      throw new RuntimeException();
     }
   }
 

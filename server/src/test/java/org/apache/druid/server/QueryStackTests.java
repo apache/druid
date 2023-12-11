@@ -20,13 +20,11 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -132,12 +130,6 @@ public class QueryStackTests
   {
     // No instantiation.
   }
-
-  interface TestCacheKey
-  {
-
-  }
-
 
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD})
@@ -400,21 +392,16 @@ public class QueryStackTests
   {
     Injector startupInjector = new StartupInjectorBuilder()
         .build();
-    DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
-        .ignoreLoadScopes()
-        .addModule(new ExpressionModule())
-        .addModule(new SegmentWranglerModule())
-        .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED));
 
     final LookupExtractorFactoryContainerProvider lookupProvider = LookupEnabledTestExprMacroTable
         .createTestLookupProvider(Collections.emptyMap());
 
-    final ImmutableList.Builder<Module> modulesBuilder = ImmutableList.<Module>builder()
-        .add(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider));
-
-    injectorBuilder.addModules(
-        modulesBuilder.build().toArray(new Module[0])
-    );
+    DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
+        .ignoreLoadScopes()
+        .addModule(new ExpressionModule())
+        .addModule(new SegmentWranglerModule())
+        .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED))
+        .addModule(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider));
 
     return injectorBuilder.build();
   }

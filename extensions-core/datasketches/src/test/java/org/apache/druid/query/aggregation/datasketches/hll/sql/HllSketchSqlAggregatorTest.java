@@ -1161,7 +1161,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig(resultCache = ResultCacheMode.ENABLE_ISOLATED)
+  @SqlTestFrameworkConfig(resultCache = ResultCacheMode.ENABLE)
   @Test
   public void testResultCacheWithWindowing()
   {
