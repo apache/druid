@@ -233,7 +233,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                           .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
+                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit, null, null)) {
             return ImmutableList.copyOf(iterator);
           }
         }
