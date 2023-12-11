@@ -157,13 +157,11 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
         throw new ISE("Ran out of objects while reading aggregators from cache!");
       }
 
-      boolean fix = true;
-
       ColumnType resultType = aggregator.getResultType();
       ColumnType intermediateType = aggregator.getIntermediateType();
 
       boolean needsDeserialize = !isResultLevelCache
-          || (fix && !resultType.isPrimitive() && resultType.equals(intermediateType));
+          || (!resultType.isPrimitive() && resultType.equals(intermediateType));
 
       if (needsDeserialize) {
         addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
