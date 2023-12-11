@@ -93,8 +93,6 @@ public class TestHelper
     };
   }
 
-  // Why not use an injected one???????????
-  @Deprecated
   public static ObjectMapper makeJsonMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
@@ -421,7 +419,7 @@ public class TestHelper
           Assert.assertEquals(
               message,
               (Object[]) expectedValue,
-              ExprEval.coerceListToArray((List) actualValue, true).rhs
+              (Object[]) ExprEval.coerceListToArray((List) actualValue, true).rhs
           );
         } else {
           Assert.assertArrayEquals(
