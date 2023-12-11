@@ -37,6 +37,7 @@ import org.apache.druid.sql.calcite.table.DatasourceTable.EffectiveMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import java.util.HashMap;
@@ -44,6 +45,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A catalog resolver that uses the catalog stored on the Druid coordinator.
+ */
 public class LiveCatalogResolver implements CatalogResolver
 {
   private final MetadataCatalog catalog;
@@ -54,6 +58,7 @@ public class LiveCatalogResolver implements CatalogResolver
     this.catalog = catalog;
   }
 
+  @Nullable
   private DatasourceFacade datasourceSpec(String name)
   {
     TableId tableId = TableId.datasource(name);
