@@ -833,7 +833,7 @@ Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
 
 `JSON_QUERY_ARRAY(expr, path)`
 
-Extracts an `ARRAY<COMPLEX<json>>` value from `expr`, at the specified `path`. If value is not an `ARRAY`, it will be translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to allow extracting arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
 
 ## JSON_VALUE
 
