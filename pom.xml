@@ -2129,7 +2129,6 @@
                                 <exclude>.github/workflows/codeql.yml</exclude>
                                 <exclude>.github/workflows/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
-                                <exclude>website/node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
@@ -2175,12 +2174,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-          <id>website-docs</id>
-          <modules>
-            <module>website</module>
-          </modules>
         </profile>
         <profile>
           <id>skip-static-checks</id>
