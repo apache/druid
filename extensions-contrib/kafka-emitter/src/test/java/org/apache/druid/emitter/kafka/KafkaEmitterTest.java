@@ -140,6 +140,8 @@ public class KafkaEmitterTest
     }
     countDownSentEvents.await();
 
+    kafkaEmitter.close();
+
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
