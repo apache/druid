@@ -85,7 +85,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(QueryPlus queryPlus, ResponseContext responseContext)
   {
-    if (mayUseCache(queryPlus)) {
+    if (useResultCache || populateResultCache) {
 
       final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
@@ -100,7 +100,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           responseContext
       );
       String newResultSetId = responseContext.getEntityTag();
-
 
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
@@ -163,14 +162,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
           responseContext
       );
     }
-  }
-
-  private boolean mayUseCache(QueryPlus queryPlus)
-  {
-    if (!query.getDataSource().getAnalysis().isConcreteAndTableBased()) {
-      return false;
-    }
-    return useResultCache || populateResultCache;
   }
 
   @Nullable
