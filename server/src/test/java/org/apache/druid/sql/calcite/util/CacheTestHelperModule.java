@@ -83,18 +83,17 @@ public class CacheTestHelperModule extends AbstractModule
   {
     cacheConfig = new TestCacheConfig(resultCacheMode);
 
-    switch (resultCacheMode)
-    {
-    case ENABLE:
-      etagProvider = new EtagProvider.ProvideEtagBasedOnDatasource();
-      cache = MapCache.create(1_000_000L);
-      break;
-    case DISABLED:
-      etagProvider = new EtagProvider.EmptyEtagProvider();
-      cache = null;
-      break;
-    default:
-      throw new RuntimeException();
+    switch (resultCacheMode) {
+      case ENABLE:
+        etagProvider = new EtagProvider.ProvideEtagBasedOnDatasource();
+        cache = MapCache.create(1_000_000L);
+        break;
+      case DISABLED:
+        etagProvider = new EtagProvider.EmptyEtagProvider();
+        cache = null;
+        break;
+      default:
+        throw new RuntimeException();
     }
   }
 
