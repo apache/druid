@@ -20,8 +20,6 @@
 package org.apache.druid.catalog.model;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -29,7 +27,6 @@ import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class Columns
 {
@@ -49,11 +46,6 @@ public class Columns
   public static final String SQL_FLOAT_ARRAY = "FLOAT ARRAY";
   public static final String SQL_DOUBLE_ARRAY = "DOUBLE ARRAY";
   public static final String SQL_TIMESTAMP = "TIMESTAMP";
-
-  public static final Set<String> NUMERIC_TYPES =
-      ImmutableSet.of(LONG, FLOAT, DOUBLE);
-  public static final Set<String> SCALAR_TYPES =
-      ImmutableSet.of(STRING, LONG, FLOAT, DOUBLE);
 
   public static final Map<String, ColumnType> SQL_TO_DRUID_TYPES =
       new ImmutableMap.Builder<String, ColumnType>()
@@ -84,11 +76,6 @@ public class Columns
   {
   }
 
-  public static boolean isScalar(String type)
-  {
-    return SCALAR_TYPES.contains(StringUtils.toUpperCase(type.trim()));
-  }
-
   public static ColumnType druidType(ColumnSpec spec)
   {
     if (isTimeColumn(spec.name())) {
@@ -116,16 +103,6 @@ public class Columns
     }
     String sqlType = DRUID_TO_SQL_TYPES.get(druidType);
     return sqlType == null ? druidType.asTypeString() : sqlType;
-  }
-
-  public static void validateScalarColumn(String name, String type)
-  {
-    if (type == null) {
-      return;
-    }
-    if (!Columns.isScalar(type)) {
-      throw new IAE("Not a supported Druid type: " + type);
-    }
   }
 
   public static boolean isTimeColumn(String name)
