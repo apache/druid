@@ -38,6 +38,14 @@ public interface AuditManager
    */
   String AUTHOR_DRUID_SYSTEM = "druid_system";
 
+  /**
+   * @return true if the audited event was initiated by the Druid system itself.
+   */
+  default boolean isSystemRequest(AuditInfo auditInfo)
+  {
+    return AUTHOR_DRUID_SYSTEM.equals(auditInfo.getAuthor());
+  }
+
   void doAudit(AuditEntry event);
 
   /**

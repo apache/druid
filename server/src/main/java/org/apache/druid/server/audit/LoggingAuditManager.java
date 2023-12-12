@@ -35,6 +35,7 @@ import java.util.List;
 public class LoggingAuditManager implements AuditManager
 {
   private final AuditLogger auditLogger;
+  private final LoggingAuditManagerConfig managerConfig;
   private final AuditSerdeHelper serdeHelper;
 
   @Inject
@@ -43,19 +44,21 @@ public class LoggingAuditManager implements AuditManager
       AuditSerdeHelper serdeHelper
   )
   {
-    this.serdeHelper = serdeHelper;
     if (!(config instanceof LoggingAuditManagerConfig)) {
       throw DruidException.defensive("Config[%s] is not an instance of LoggingAuditManagerConfig", config);
     }
 
-    LoggingAuditManagerConfig logAuditConfig = (LoggingAuditManagerConfig) config;
-    this.auditLogger = new AuditLogger(logAuditConfig.getLogLevel());
+    this.managerConfig = (LoggingAuditManagerConfig) config;
+    this.serdeHelper = serdeHelper;
+    this.auditLogger = new AuditLogger(managerConfig.getLogLevel());
   }
 
   @Override
   public void doAudit(AuditEntry entry)
   {
-    auditLogger.log(serdeHelper.processAuditEntry(entry));
+    if (managerConfig.isAuditSystemRequests() || !isSystemRequest(entry.getAuditInfo())) {
+      auditLogger.log(serdeHelper.processAuditEntry(entry));
+    }
   }
 
   @Override

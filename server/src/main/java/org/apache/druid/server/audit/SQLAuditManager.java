@@ -136,6 +136,10 @@ public class SQLAuditManager implements AuditManager
   @Override
   public void doAudit(AuditEntry event, Handle handle) throws IOException
   {
+    if (isSystemRequest(event.getAuditInfo()) && !config.isAuditSystemRequests()) {
+      return;
+    }
+
     emitter.emit(createMetricEventBuilder(event).setMetric("config/audit", 1));
 
     final AuditEntry record = serdeHelper.processAuditEntry(event);
