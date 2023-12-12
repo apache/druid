@@ -369,26 +369,7 @@
                 <artifactId>snakeyaml</artifactId>
                 <version>1.33</version>
             </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcprov-jdk15on</artifactId>
-                <version>1.70</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcprov-ext-jdk15on</artifactId>
-                <version>1.70</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcpkix-jdk15on</artifactId>
-                <version>1.70</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcutil-jdk15on</artifactId>
-                <version>1.70</version>
-            </dependency>
+
             <!-- transitive dependency of testng
             this would be resolved by updating
             testng to 7.8.0 -->
@@ -1113,7 +1094,7 @@
             <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
-                <version>3.2.13</version>
+                <version>3.3.4</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
