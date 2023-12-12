@@ -153,7 +153,7 @@ public class FunctionTest extends InitializedNullHandlingTest
           expr.eval(bind);
         });
 
-    assertEquals("Invocation of function 'abs' encountered exception.", e.getMessage());
+    assertEquals("Function[abs] encountered unknown exception.", e.getMessage());
     assertNotNull(e.getCause());
     assertEquals("nested-exception", e.getCause().getMessage());
   }

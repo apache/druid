@@ -191,16 +191,22 @@ class FunctionExpr implements Expr
     try {
       return function.apply(args, bindings);
     }
-    catch (ExpressionValidationException | Types.InvalidCastException | Types.InvalidCastBooleanException e) {
+    catch (ExpressionValidationException e) {
+      // ExpressionValidationException already contain function name
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(e.getMessage());
+    }
+    catch (Types.InvalidCastException | Types.InvalidCastBooleanException e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Function[%s] encountered exception: %s", name, e.getMessage());
     }
     catch (DruidException e) {
       throw e;
     }
     catch (Exception e) {
-      throw DruidException.defensive().build(e, "Invocation of function '%s' encountered exception.", name);
+      throw DruidException.defensive().build(e, "Function[%s] encountered unknown exception.", name);
     }
   }
 
