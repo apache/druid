@@ -210,6 +210,7 @@ public class StreamAppenderatorTester implements AutoCloseable
       }
     };
     appenderator = Appenderators.createRealtime(
+        null,
         schema.getDataSource(),
         schema,
         tuningConfig,

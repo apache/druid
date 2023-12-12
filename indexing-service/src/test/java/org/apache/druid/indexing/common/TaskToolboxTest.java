@@ -115,6 +115,7 @@ public class TaskToolboxTest
         .build();
 
     taskToolbox = new TaskToolboxFactory(
+        null,
         taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,

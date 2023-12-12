@@ -67,6 +67,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -172,6 +173,7 @@ public class StreamAppenderator implements Appenderator
 
   private volatile Throwable persistError;
 
+  private final SegmentLoaderConfig segmentLoaderConfig;
   private final ScheduledExecutorService exec;
 
   /**
@@ -184,6 +186,7 @@ public class StreamAppenderator implements Appenderator
    * Appenderators.
    */
   StreamAppenderator(
+      SegmentLoaderConfig segmentLoaderConfig,
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
@@ -200,6 +203,7 @@ public class StreamAppenderator implements Appenderator
       boolean useMaxMemoryEstimates
   )
   {
+    this.segmentLoaderConfig = segmentLoaderConfig;
     this.myId = id;
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -1412,7 +1416,7 @@ public class StreamAppenderator implements Appenderator
             log.info(
                 "Unannounced segment[%s], scheduling drop in [%d] millisecs",
                 identifier,
-                tuningConfig.getDropSegmentDelayMillis()
+                segmentLoaderConfig.getDropSegmentDelayMillis()
             );
 
             Runnable removeRunnable = () -> {
@@ -1436,14 +1440,18 @@ public class StreamAppenderator implements Appenderator
               log.info("Dropped segment[%s].", identifier);
             };
 
-            // Keep the segments in the cache and sinkTimeline for dropSegmentDelay after unannouncing the segments
-            // This way, in transit queries which still see the segments in this peon would be able to query the
-            // segments and not throw NullPtr exceptions.
-            exec.schedule(
-                removeRunnable,
-                tuningConfig.getDropSegmentDelayMillis(),
-                TimeUnit.MILLISECONDS
-            );
+            if (segmentLoaderConfig == null) {
+              removeRunnable.run();
+            } else {
+              // Keep the segments in the cache and sinkTimeline for dropSegmentDelay after unannouncing the segments
+              // This way, in transit queries which still see the segments in this peon would be able to query the
+              // segments and not throw NullPtr exceptions.
+              exec.schedule(
+                  removeRunnable,
+                  segmentLoaderConfig.getDropSegmentDelayMillis(),
+                  TimeUnit.MILLISECONDS
+              );
+            }
 
             return null;
           }
