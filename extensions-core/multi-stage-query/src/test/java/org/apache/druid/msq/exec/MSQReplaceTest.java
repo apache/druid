@@ -685,6 +685,58 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
+  public void testReplaceAllOverEternitySegment()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    // Create a datasegment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.ETERNITY)
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    testIngestQuery().setSql(" REPLACE INTO foo "
+                             + "OVERWRITE ALL "
+                             + "SELECT __time, m1 "
+                             + "FROM foo "
+                             + "WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-03' "
+                             + "PARTITIONED BY MONTH")
+                     .setExpectedDataSource("foo")
+                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Collections.singletonList(Intervals.ETERNITY))
+                     .setExpectedTombstoneIntervals(
+                         ImmutableSet.of(
+                             Intervals.of("%s/%s", Intervals.ETERNITY.getStart(), "2000-01-01"),
+                             Intervals.of("%s/%s", "2000-02-01", Intervals.ETERNITY.getEnd())
+                         )
+                     )
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                         "foo",
+                         Intervals.of("2000-01-01T/P1M"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, 1.0f},
+                             new Object[]{946771200000L, 2.0f}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @Test
   public void testReplaceOnFoo1Range()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -985,7 +1037,9 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedTombstoneIntervals(
                          ImmutableSet.of(
-                             Intervals.of("2001-04-01/2002-01-01")
+                             Intervals.of("2001-04-01/P3M"),
+                             Intervals.of("2001-07-01/P3M"),
+                             Intervals.of("2001-10-01/P3M")
                          )
                      )
                      .setExpectedResultRows(expectedResults)

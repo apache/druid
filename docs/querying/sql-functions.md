@@ -50,7 +50,7 @@ Calculates the arc cosine of a numeric expression.
 
 ## ANY_VALUE
 
-`ANY_VALUE(expr, [maxBytesPerValue])`
+`ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
 
 **Function type:** [Aggregation](sql-aggregations.md)
 
@@ -114,7 +114,7 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 
 `ARRAY[expr1, expr2, ...]`
 
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
+**Function type:** [Array](sql-array-functions.md)
 
 Constructs a SQL ARRAY literal from the expression arguments. The arguments must be of the same type.
 

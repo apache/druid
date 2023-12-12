@@ -320,12 +320,16 @@ Join datasources allow you to do a SQL-style join of two datasources. Stacking j
 you to join arbitrarily many datasources.
 
 In Druid {{DRUIDVERSION}}, joins in native queries are implemented with a broadcast hash-join algorithm. This means
-that all datasources other than the leftmost "base" datasource must fit in memory. It also means that the join condition
-must be an equality. This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup),
-[inline](#inline), and [query](#query) datasources.
+that all datasources other than the leftmost "base" datasource must fit in memory. In native queries, the join condition
+must be an equality. In SQL, any join condition is accepted, but only equalities of a certain form
+(see [Joins in SQL](#joins-in-sql)) execute efficiently as part of a native join. For other kinds of conditions, planner will try
+to re-arrange condition such that some of the sub-conditions are evaluated as a filter on top of join and other 
+sub-conditions are left out in the join condition. In worst case scenario, SQL will execute the join condition as a 
+cross join (cartesian product) plus a filter.
 
-Refer to the [Query execution](query-execution.md#join) page for more details on how queries are executed when you
-use join datasources.
+This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
+[query](#query) datasources. Refer to the [Query execution](query-execution.md#join) page for more details on how
+queries are executed when you use join datasources.
 
 #### Joins in SQL
 
@@ -335,21 +339,23 @@ SQL joins take the form:
 <o1> [ INNER | LEFT [OUTER] ] JOIN <o2> ON <condition>
 ```
 
-The condition must involve only equalities, but functions are okay, and there can be multiple equalities ANDed together.
-Conditions like `t1.x = t2.x`, or `LOWER(t1.x) = t2.x`, or `t1.x = t2.x AND t1.y = t2.y` can all be handled. Conditions
-like `t1.x <> t2.x` cannot currently be handled.
+Any condition is accepted, but only certain kinds of conditions execute efficiently
+as a native join. The condition must be a single clause like the following, or an `AND` of clauses involving at
+least one of the following:
 
-Note that Druid SQL is less rigid than what native join datasources can handle. In cases where a SQL query does
-something that is not allowed as-is with a native join datasource, Druid SQL will generate a subquery. This can have
-a substantial effect on performance and scalability, so it is something to watch out for. Some examples of when the
-SQL layer will generate subqueries include:
+- Equality between fields of the same type on each side, like `t1 JOIN t2 ON t1.x = t2.x`.
+- Equality between a function call on one side, and a field on the other side, like `t1 JOIN t2 ON LOWER(t1.x) = t2.x`.
+- The equality operator may be `=` (which does not match nulls) or `IS NOT DISTINCT FROM` (which does match nulls).
 
-- Joining a regular Druid table to itself, or to another regular Druid table. The native join datasource can accept
-a table on the left-hand side, but not the right, so a subquery is needed.
+In other cases, Druid will either insert a subquery below the join, or will use a cross join (cartesian product)
+followed by a filter. Joins executed in these ways may run into resource or performance constraints. To determine
+if your query is using one of these execution paths, run `EXPLAIN PLAN FOR <query>` and look for the following:
 
-- Join conditions where the expressions on either side are of different types.
+- `query` type datasources under the `left` or `right` key of your `join` datasource.
+- `join` type datasource with `condition` set to `"1"` (cartesian product) followed by a `filter` that encodes the
+  condition you provided.
 
-- Join conditions where the right-hand expression is not a direct column access.
+In these cases, you may be able to improve the performance of your query by rewriting it.
 
 For more information about how Druid translates SQL to native queries, refer to the
 [Druid SQL](sql-translation.md) documentation.

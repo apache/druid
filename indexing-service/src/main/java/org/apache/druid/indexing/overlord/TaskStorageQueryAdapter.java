@@ -48,12 +48,14 @@ public class TaskStorageQueryAdapter
 {
   private final TaskStorage storage;
   private final TaskLockbox taskLockbox;
+  private final Optional<TaskQueue> taskQueue;
 
   @Inject
-  public TaskStorageQueryAdapter(TaskStorage storage, TaskLockbox taskLockbox)
+  public TaskStorageQueryAdapter(TaskStorage storage, TaskLockbox taskLockbox, TaskMaster taskMaster)
   {
     this.storage = storage;
     this.taskLockbox = taskLockbox;
+    this.taskQueue = taskMaster.getTaskQueue();
   }
 
   public List<Task> getActiveTasks()
@@ -104,6 +106,12 @@ public class TaskStorageQueryAdapter
 
   public Optional<Task> getTask(final String taskid)
   {
+    if (taskQueue.isPresent()) {
+      Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
+      if (activeTask.isPresent()) {
+        return activeTask;
+      }
+    }
     return storage.getTask(taskid);
   }
 

@@ -272,6 +272,11 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertArrayEquals(new Object[]{"1", "2", "3"}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+
+    expr = Parser.parse("json_value(nester, array_offset(json_paths(nester), 0))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) eval.value());
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
   }
 
   @Test
@@ -316,6 +321,11 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     expr = Parser.parse("json_query(long, '$')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(1234L, eval.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_query(nester, array_offset(json_paths(nester), 0))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(NESTER.get("x"), eval.value());
     Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
   }
 

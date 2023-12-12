@@ -57,6 +57,7 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -371,7 +372,8 @@ public class MaterializedViewSupervisor implements Supervisor
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
         getMaxCreateDateAndBaseSegments(
-            metadataStorageCoordinator.retrieveUsedSegmentsAndCreatedDates(spec.getBaseDataSource(), Intervals.ETERNITY)
+            metadataStorageCoordinator.retrieveUsedSegmentsAndCreatedDates(spec.getBaseDataSource(),
+                                                                           Collections.singletonList(Intervals.ETERNITY))
         );
     // baseSegments are used to create HadoopIndexTask
     Map<Interval, List<DataSegment>> baseSegments = baseSegmentsSnapshot.rhs;

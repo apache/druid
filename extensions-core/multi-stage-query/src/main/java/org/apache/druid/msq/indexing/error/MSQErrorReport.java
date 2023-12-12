@@ -28,9 +28,9 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.msq.statistics.TooManyBucketsException;
 import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
