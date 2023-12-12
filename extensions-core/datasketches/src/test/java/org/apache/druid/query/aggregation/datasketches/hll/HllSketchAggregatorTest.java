@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.datasketches.hll.HllSketch;
@@ -106,6 +107,33 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
       }
     }
     return constructors;
+  }
+
+  @Test
+  public void testHllSketchLimit() throws Exception
+  {
+    AggregationTestHelper ingestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        new HllSketchModule().getJacksonModules(), new GroupByQueryConfig(), groupByFolder
+    );
+    ingestHelper.getObjectMapper()
+                 .setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig(2)));
+
+    Assert.assertThrows(
+        "LgK value [%s] for HLL sketch cannot be greater than [%s]. Reduce the lgK value or increase the runtime property druid.sketch.config.hllMaxLgK",
+        ValueInstantiationException.class,
+        () -> ingestHelper.createIndexAndRunQueryOnSegment(
+            new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
+            buildParserJson(
+                Arrays.asList("dim", "multiDim"),
+                Arrays.asList("timestamp", "dim", "multiDim", "sketch")
+            ),
+            buildAggregatorJson("HLLSketchMerge", "sketch", !ROUND, stringEncoding),
+            0, // minTimestamp
+            Granularities.NONE,
+            200, // maxRowCount
+            buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND, stringEncoding)
+        )
+    );
   }
 
   @Test

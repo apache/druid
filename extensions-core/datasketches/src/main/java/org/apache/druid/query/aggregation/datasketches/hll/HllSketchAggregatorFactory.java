@@ -81,7 +81,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               "LgK value [%s] for HLL sketch cannot be greater than [%s]. Reduce the lgK value"
-                              + " or increase the hllMaxLgK property.",
+                              + " or increase the runtime property druid.sketch.config.hllMaxLgK",
                               this.lgK,
                               maxLgK
                           );
