@@ -37,6 +37,7 @@ import java.util.Optional;
 public class Pac4jSessionStoreTest
 {
   private static final String COOKIE_PASSPHRASE = "test-cookie-passphrase";
+  
   @Test
   public void testSetAndGet()
   {
