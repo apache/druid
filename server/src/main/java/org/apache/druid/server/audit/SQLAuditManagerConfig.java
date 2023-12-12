@@ -19,7 +19,9 @@
 
 package org.apache.druid.server.audit;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 
@@ -28,20 +30,34 @@ import org.apache.druid.java.util.common.HumanReadableBytesRange;
 public class SQLAuditManagerConfig implements AuditManagerConfig
 {
   @JsonProperty
-  private final Long auditHistoryMillis = 7 * 24 * 60 * 60 * 1000L; // 1 WEEK
+  private final long auditHistoryMillis;
 
   @JsonProperty
-  private final Boolean includePayloadAsDimensionInMetric = false;
+  private final boolean includePayloadAsDimensionInMetric;
 
   @JsonProperty
   @HumanReadableBytesRange(
       min = -1,
       message = "maxPayloadSizeBytes must either be -1 (for disabling the check) or a non negative number"
   )
-  private final HumanReadableBytes maxPayloadSizeBytes = HumanReadableBytes.valueOf(-1);
+  private final HumanReadableBytes maxPayloadSizeBytes;
 
   @JsonProperty
-  private final Boolean skipNullField = false;
+  private final boolean skipNullField;
+
+  @JsonCreator
+  public SQLAuditManagerConfig(
+      @JsonProperty("maxPayloadSizeBytes") HumanReadableBytes maxPayloadSizeBytes,
+      @JsonProperty("skipNullField") Boolean skipNullField,
+      @JsonProperty("auditHistoryMillis") Long auditHistoryMillis,
+      @JsonProperty("includePayloadAsDimensionInMetric") Boolean includePayloadAsDimensionInMetric
+  )
+  {
+    this.maxPayloadSizeBytes = Configs.valueOrDefault(maxPayloadSizeBytes, HumanReadableBytes.valueOf(-1));
+    this.skipNullField = Configs.valueOrDefault(skipNullField, false);
+    this.auditHistoryMillis = Configs.valueOrDefault(auditHistoryMillis, 7 * 24 * 60 * 60 * 1000L);
+    this.includePayloadAsDimensionInMetric = Configs.valueOrDefault(includePayloadAsDimensionInMetric, false);
+  }
 
   public long getAuditHistoryMillis()
   {

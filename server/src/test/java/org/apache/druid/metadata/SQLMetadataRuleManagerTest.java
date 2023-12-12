@@ -72,9 +72,11 @@ public class SQLMetadataRuleManagerTest
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createAuditTable();
+
+    final SQLAuditManagerConfig auditManagerConfig = new SQLAuditManagerConfig(null, null, null, null);
     auditManager = new SQLAuditManager(
-        new SQLAuditManagerConfig(),
-        new AuditSerdeHelper(new SQLAuditManagerConfig(), mapper, mapper),
+        auditManagerConfig,
+        new AuditSerdeHelper(auditManagerConfig, mapper, mapper),
         connector,
         Suppliers.ofInstance(tablesConfig),
         new NoopServiceEmitter(),
