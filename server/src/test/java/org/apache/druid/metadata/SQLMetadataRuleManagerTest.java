@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata;
 
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
@@ -73,7 +72,7 @@ public class SQLMetadataRuleManagerTest
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createAuditTable();
 
-    final SQLAuditManagerConfig auditManagerConfig = new SQLAuditManagerConfig(null, null, null, null);
+    final SQLAuditManagerConfig auditManagerConfig = new SQLAuditManagerConfig(null, null, null, null, null);
     auditManager = new SQLAuditManager(
         auditManagerConfig,
         new AuditSerdeHelper(auditManagerConfig, mapper, mapper),

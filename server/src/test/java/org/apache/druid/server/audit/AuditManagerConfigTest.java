@@ -47,6 +47,7 @@ public class AuditManagerConfigTest
     Assert.assertTrue(config instanceof SQLAuditManagerConfig);
 
     final SQLAuditManagerConfig sqlAuditConfig = (SQLAuditManagerConfig) config;
+    Assert.assertFalse(sqlAuditConfig.isAuditSystemRequests());
     Assert.assertFalse(sqlAuditConfig.isSkipNullField());
     Assert.assertFalse(sqlAuditConfig.isIncludePayloadAsDimensionInMetric());
     Assert.assertEquals(-1, sqlAuditConfig.getMaxPayloadSizeBytes());
@@ -70,6 +71,7 @@ public class AuditManagerConfigTest
     Assert.assertTrue(config instanceof LoggingAuditManagerConfig);
 
     final LoggingAuditManagerConfig logAuditConfig = (LoggingAuditManagerConfig) config;
+    Assert.assertFalse(logAuditConfig.isAuditSystemRequests());
     Assert.assertFalse(logAuditConfig.isSkipNullField());
     Assert.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
     Assert.assertEquals(AuditLogger.Level.INFO, logAuditConfig.getLogLevel());
@@ -87,6 +89,7 @@ public class AuditManagerConfigTest
     final Properties props = new Properties();
     props.setProperty("druid.audit.manager.type", "log");
     props.setProperty("druid.audit.manager.logLevel", "WARN");
+    props.setProperty("druid.audit.manager.auditSystemRequests", "true");
 
     provider.inject(props, injector.getInstance(JsonConfigurator.class));
 
@@ -94,6 +97,7 @@ public class AuditManagerConfigTest
     Assert.assertTrue(config instanceof LoggingAuditManagerConfig);
 
     final LoggingAuditManagerConfig logAuditConfig = (LoggingAuditManagerConfig) config;
+    Assert.assertTrue(logAuditConfig.isAuditSystemRequests());
     Assert.assertFalse(logAuditConfig.isSkipNullField());
     Assert.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
     Assert.assertEquals(AuditLogger.Level.WARN, logAuditConfig.getLogLevel());

@@ -66,7 +66,7 @@ public class SQLAuditManagerTest
     serviceEmitter = new StubServiceEmitter("audit-test", "localhost");
     connector = derbyConnectorRule.getConnector();
     connector.createAuditTable();
-    auditManager = createAuditManager(new SQLAuditManagerConfig(null, null, null, null));
+    auditManager = createAuditManager(new SQLAuditManagerConfig(null, null, null, null, null));
   }
 
   private SQLAuditManager createAuditManager(SQLAuditManagerConfig config)
@@ -85,7 +85,7 @@ public class SQLAuditManagerTest
   public void testAuditMetricEventWithPayload() throws IOException
   {
     SQLAuditManager auditManager = createAuditManager(
-        new SQLAuditManagerConfig(null, null, null, true)
+        new SQLAuditManagerConfig(null, null, null, null, true)
     );
 
     final AuditEntry entry = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
@@ -231,7 +231,7 @@ public class SQLAuditManagerTest
   public void testCreateAuditEntryWithPayloadOverSkipPayloadLimit() throws IOException
   {
     final SQLAuditManager auditManager = createAuditManager(
-        new SQLAuditManagerConfig(HumanReadableBytes.valueOf(10), null, null, null)
+        new SQLAuditManagerConfig(null, HumanReadableBytes.valueOf(10), null, null, null)
     );
 
     final AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
@@ -253,7 +253,7 @@ public class SQLAuditManagerTest
   public void testCreateAuditEntryWithPayloadUnderSkipPayloadLimit() throws IOException
   {
     SQLAuditManager auditManager = createAuditManager(
-        new SQLAuditManagerConfig(HumanReadableBytes.valueOf(500), null, null, null)
+        new SQLAuditManagerConfig(null, HumanReadableBytes.valueOf(500), null, null, null)
     );
 
     final AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
@@ -268,7 +268,7 @@ public class SQLAuditManagerTest
   public void testCreateAuditEntryWithSkipNullsInPayload() throws IOException
   {
     final SQLAuditManager auditManagerSkipNull = createAuditManager(
-        new SQLAuditManagerConfig(null, true, null, null)
+        new SQLAuditManagerConfig(null, null, true, null, null)
     );
 
     AuditInfo auditInfo = new AuditInfo("testAuthor", "testIdentity", "testComment", "127.0.0.1");

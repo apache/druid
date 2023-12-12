@@ -45,14 +45,19 @@ public class SQLAuditManagerConfig implements AuditManagerConfig
   @JsonProperty
   private final boolean skipNullField;
 
+  @JsonProperty
+  private final boolean auditSystemRequests;
+
   @JsonCreator
   public SQLAuditManagerConfig(
+      @JsonProperty("auditSystemRequests") Boolean auditSystemRequests,
       @JsonProperty("maxPayloadSizeBytes") HumanReadableBytes maxPayloadSizeBytes,
       @JsonProperty("skipNullField") Boolean skipNullField,
       @JsonProperty("auditHistoryMillis") Long auditHistoryMillis,
       @JsonProperty("includePayloadAsDimensionInMetric") Boolean includePayloadAsDimensionInMetric
   )
   {
+    this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, false);
     this.maxPayloadSizeBytes = Configs.valueOrDefault(maxPayloadSizeBytes, HumanReadableBytes.valueOf(-1));
     this.skipNullField = Configs.valueOrDefault(skipNullField, false);
     this.auditHistoryMillis = Configs.valueOrDefault(auditHistoryMillis, 7 * 24 * 60 * 60 * 1000L);
@@ -81,4 +86,9 @@ public class SQLAuditManagerConfig implements AuditManagerConfig
     return skipNullField;
   }
 
+  @Override
+  public boolean isAuditSystemRequests()
+  {
+    return auditSystemRequests;
+  }
 }

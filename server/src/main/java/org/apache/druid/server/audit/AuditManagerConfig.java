@@ -33,4 +33,6 @@ public interface AuditManagerConfig
   boolean isSkipNullField();
 
   long getMaxPayloadSizeBytes();
+
+  boolean isAuditSystemRequests();
 }

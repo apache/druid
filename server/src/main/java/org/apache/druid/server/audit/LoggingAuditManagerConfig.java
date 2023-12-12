@@ -40,14 +40,19 @@ public class LoggingAuditManagerConfig implements AuditManagerConfig
   @JsonProperty
   private final boolean skipNullField;
 
+  @JsonProperty
+  private final boolean auditSystemRequests;
+
   @JsonCreator
   public LoggingAuditManagerConfig(
       @JsonProperty("logLevel") AuditLogger.Level logLevel,
+      @JsonProperty("auditSystemRequests") Boolean auditSystemRequests,
       @JsonProperty("maxPayloadSizeBytes") HumanReadableBytes maxPayloadSizeBytes,
       @JsonProperty("skipNullField") Boolean skipNullField
   )
   {
     this.logLevel = Configs.valueOrDefault(logLevel, AuditLogger.Level.INFO);
+    this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, false);
     this.maxPayloadSizeBytes = Configs.valueOrDefault(maxPayloadSizeBytes, HumanReadableBytes.valueOf(-1));
     this.skipNullField = Configs.valueOrDefault(skipNullField, false);
   }
@@ -62,6 +67,12 @@ public class LoggingAuditManagerConfig implements AuditManagerConfig
   public long getMaxPayloadSizeBytes()
   {
     return maxPayloadSizeBytes.getBytes();
+  }
+
+  @Override
+  public boolean isAuditSystemRequests()
+  {
+    return auditSystemRequests;
   }
 
   public AuditLogger.Level getLogLevel()
