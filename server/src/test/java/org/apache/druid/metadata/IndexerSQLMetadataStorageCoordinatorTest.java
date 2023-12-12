@@ -1206,12 +1206,73 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+        null,
+        null,
         null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingNoIntervalsNoLimitAndNoLastSegmentId() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+        ImmutableList.of(),
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(segments.size(), actualUnusedSegments.size());
+    Assert.assertTrue(segments.containsAll(actualUnusedSegments));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingNoIntervalsAndNoLimitAndNoLastSegmentId() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(2033, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    String lastSegmentId = segments.get(9).getId().toString();
+    final List<DataSegment> expectedSegmentsAscOrder = segments.stream()
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) > 0)
+        .collect(Collectors.toList());
+    ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+        ImmutableList.of(),
+        null,
+        lastSegmentId,
+        null
+    );
+    Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
+    Assert.assertTrue(expectedSegmentsAscOrder.containsAll(actualUnusedSegments));
+
+    actualUnusedSegments = retrieveUnusedSegments(
+        ImmutableList.of(),
+        null,
+        lastSegmentId,
+        SortOrder.ASC
+    );
+    Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
+    Assert.assertEquals(expectedSegmentsAscOrder, actualUnusedSegments);
+
+    final List<DataSegment> expectedSegmentsDescOrder = segments.stream()
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) < 0)
+        .collect(Collectors.toList());
+    Collections.reverse(expectedSegmentsDescOrder);
+
+    actualUnusedSegments = retrieveUnusedSegments(
+        ImmutableList.of(),
+        null,
+        lastSegmentId,
+        SortOrder.DESC
+    );
+    Assert.assertEquals(expectedSegmentsDescOrder.size(), actualUnusedSegments.size());
+    Assert.assertEquals(expectedSegmentsDescOrder, actualUnusedSegments);
   }
 
   @Test
@@ -1220,9 +1281,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
-        segments.size()
+        segments.size(),
+        null,
+        null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
@@ -1235,12 +1298,56 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     markAllSegmentsUnused(new HashSet<>(segments));
 
     final int requestedLimit = segments.size() - 1;
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
-        segments.stream().limit(requestedLimit).map(DataSegment::getInterval).collect(Collectors.toList()),
-        requestedLimit
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+        requestedLimit,
+        null,
+        null
     );
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
     Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsInSingleBatchLimitAndOffsetInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(2034, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int requestedLimit = segments.size();
+    final String lastSegmentId = segments.get(4).getId().toString();
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+        requestedLimit,
+        lastSegmentId,
+        null
+    );
+    Assert.assertEquals(segments.size() - 5, actualUnusedSegments.size());
+    Assert.assertEquals(actualUnusedSegments, segments.stream()
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) > 0)
+        .limit(requestedLimit)
+        .collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffsetInRange() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final int requestedLimit = segments.size() - 1;
+    final String lastSegmentId = segments.get(4).getId().toString();
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+        segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+        requestedLimit,
+        lastSegmentId,
+        null
+    );
+    Assert.assertEquals(requestedLimit - 4, actualUnusedSegments.size());
+    Assert.assertEquals(actualUnusedSegments, segments.stream()
+        .filter(s -> s.getId().toString().compareTo(lastSegmentId) > 0)
+        .limit(requestedLimit)
+        .collect(Collectors.toList()));
   }
 
   @Test
@@ -1249,9 +1356,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
-        segments.size() + 1
+        segments.size() + 1,
+        null,
+        null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(actualUnusedSegments.containsAll(segments));
@@ -1267,8 +1376,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(segments.stream()
                               .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         ImmutableList.of(outOfRangeInterval),
+        null,
+        null,
         null
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
@@ -3048,21 +3159,23 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     return segments;
   }
 
-  private ImmutableList<DataSegment> retrieveUnusedSegmentsUsingMultipleIntervalsAndLimit(
+  private ImmutableList<DataSegment> retrieveUnusedSegments(
       final List<Interval> intervals,
-      final Integer limit
+      final Integer limit,
+      final String lastSegmentId,
+      final SortOrder sortOrder
   )
   {
     return derbyConnector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(
-                                               handle,
-                                               derbyConnector,
-                                               derbyConnectorRule.metadataTablesConfigSupplier().get(),
-                                               mapper
-                                           )
-                                           .retrieveUnusedSegments(DS.WIKI, intervals, limit)) {
+                           handle,
+                           derbyConnector,
+                           derbyConnectorRule.metadataTablesConfigSupplier().get(),
+                           mapper
+                       )
+                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder)) {
             return ImmutableList.copyOf(iterator);
           }
         }

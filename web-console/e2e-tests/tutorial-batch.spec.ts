@@ -56,7 +56,7 @@ describe('Tutorial: Loading a file', () => {
   });
 
   it('Loads data from local disk', async () => {
-    const testName = 'load-data-from-local-disk-';
+    const testName = 'load-data-from-local-disk';
     const datasourceName = testName + ALL_SORTS_OF_CHARS + new Date().toISOString();
     const dataLoader = new DataLoader({
       page: page,

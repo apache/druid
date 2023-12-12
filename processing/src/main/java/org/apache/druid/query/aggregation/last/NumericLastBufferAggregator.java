@@ -19,11 +19,12 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -33,8 +34,7 @@ import java.nio.ByteBuffer;
  * This could probably share a base type with
  * {@link org.apache.druid.query.aggregation.first.NumericFirstBufferAggregator} ...
  */
-public abstract class NumericLastBufferAggregator<TSelector extends BaseNullableColumnValueSelector>
-    implements BufferAggregator
+public abstract class NumericLastBufferAggregator implements BufferAggregator
 {
   static final int NULL_OFFSET = Long.BYTES;
   static final int VALUE_OFFSET = NULL_OFFSET + Byte.BYTES;
@@ -42,12 +42,14 @@ public abstract class NumericLastBufferAggregator<TSelector extends BaseNullable
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final BaseLongColumnValueSelector timeSelector;
 
-  final TSelector valueSelector;
+  final ColumnValueSelector valueSelector;
+  final boolean needsFoldCheck;
 
-  public NumericLastBufferAggregator(BaseLongColumnValueSelector timeSelector, TSelector valueSelector)
+  public NumericLastBufferAggregator(BaseLongColumnValueSelector timeSelector, ColumnValueSelector valueSelector, boolean needsFoldCheck)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
+    this.needsFoldCheck = needsFoldCheck;
   }
 
   /**
@@ -58,18 +60,27 @@ public abstract class NumericLastBufferAggregator<TSelector extends BaseNullable
   /**
    * Place the primitive value in the buffer at the position of {@link #VALUE_OFFSET}
    */
-  abstract void putValue(ByteBuffer buf, int position);
+  abstract void putValue(ByteBuffer buf, int position, ColumnValueSelector valueSelector);
+
+  abstract void putValue(ByteBuffer buf, int position, Number value);
 
   boolean isValueNull(ByteBuffer buf, int position)
   {
     return buf.get(position + NULL_OFFSET) == NullHandling.IS_NULL_BYTE;
   }
 
-  void updateTimeWithValue(ByteBuffer buf, int position, long time)
+  void updateTimeWithValue(ByteBuffer buf, int position, long time, ColumnValueSelector valueSelector)
   {
     buf.putLong(position, time);
     buf.put(position + NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-    putValue(buf, position + VALUE_OFFSET);
+    putValue(buf, position + VALUE_OFFSET, valueSelector);
+  }
+
+  void updateTimeWithValue(ByteBuffer buf, int position, long time, Number value)
+  {
+    buf.putLong(position, time);
+    buf.put(position + NULL_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
+    putValue(buf, position + VALUE_OFFSET, value);
   }
 
   void updateTimeWithNull(ByteBuffer buf, int position, long time)
@@ -92,11 +103,29 @@ public abstract class NumericLastBufferAggregator<TSelector extends BaseNullable
     if (timeSelector.isNull()) {
       return;
     }
-    long time = timeSelector.getLong();
+
     long lastTime = buf.getLong(position);
+    if (needsFoldCheck) {
+      final Object object = valueSelector.getObject();
+      if (object instanceof SerializablePair) {
+        final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) object;
+
+        if (inPair.lhs >= lastTime) {
+          if (inPair.rhs == null) {
+            updateTimeWithNull(buf, position, inPair.lhs);
+          } else {
+            updateTimeWithValue(buf, position, inPair.lhs, inPair.rhs);
+          }
+        }
+        return;
+      }
+    }
+
+    long time = timeSelector.getLong();
+
     if (time >= lastTime) {
       if (useDefault || !valueSelector.isNull()) {
-        updateTimeWithValue(buf, position, time);
+        updateTimeWithValue(buf, position, time, valueSelector);
       } else {
         updateTimeWithNull(buf, position, time);
       }
