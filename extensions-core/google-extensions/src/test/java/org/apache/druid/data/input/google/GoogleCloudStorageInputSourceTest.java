@@ -503,7 +503,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
                   .verify();
   }
 
-  private static void addExpectedPrefixObjects(URI prefix, List<URI> uris)
+  private static void addExpectedPrefixObjects(URI prefix, List<URI> uris) throws IOException
   {
     final String bucket = prefix.getAuthority();
 

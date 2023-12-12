@@ -126,7 +126,7 @@ public class GoogleStorageConnectorTest
   }
 
   @Test
-  public void testListDir()
+  public void testListDir() throws IOException
   {
     GoogleStorageObjectMetadata objectMetadata1 = new GoogleStorageObjectMetadata(
         BUCKET,

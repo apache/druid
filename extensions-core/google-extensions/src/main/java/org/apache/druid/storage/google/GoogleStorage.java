@@ -177,7 +177,7 @@ public class GoogleStorage
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.SIZE));
     if (blob == null) {
-      throw new IOE("Failed fetching size for google cloud storage object [bucket: %s, path: %s]", bucket, path);
+      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s]", bucket, path);
     }
     return blob.getSize();
   }
@@ -185,8 +185,8 @@ public class GoogleStorage
   public String version(final String bucket, final String path) throws IOException
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
-    if (blob == null){
-      throw new IOE("Failed fetching version for google cloud storage object [bucket: %s, path: %s]", bucket, path);
+    if (blob == null) {
+      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s]", bucket, path);
     }
     return blob.getGeneratedId();
   }
@@ -204,7 +204,7 @@ public class GoogleStorage
       @Nullable final String prefix,
       @Nullable final Long pageSize,
       @Nullable final String pageToken
-  )
+  ) throws IOException
   {
     List<Storage.BlobListOption> options = new ArrayList<>();
 
@@ -221,6 +221,11 @@ public class GoogleStorage
     }
 
     Page<Blob> blobPage = storage.get().list(bucket, options.toArray(new Storage.BlobListOption[0]));
+
+    if (blobPage == null) {
+      throw new IOE("Failed fetching google cloud storage object [bucket: %s, prefix: %s]", bucket, prefix);
+    }
+
 
     List<GoogleStorageObjectMetadata> googleStorageObjectMetadataList =
         blobPage.streamValues()
