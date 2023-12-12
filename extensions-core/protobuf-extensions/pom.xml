@@ -54,7 +54,6 @@
           <groupId>com.squareup.okio</groupId>
           <artifactId>okio</artifactId>
           <version>${okio.version}</version>
-          <scope>provided</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
