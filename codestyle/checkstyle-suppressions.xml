@@ -24,54 +24,13 @@
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 
 <suppressions>
-  <!-- See http://checkstyle.sourceforge.net/config_filters.html#SuppressionFilter for examples -->
+  <!-- See https://checkstyle.org/filters/suppressionfilter.html for examples -->
 
   <!-- Code copied from TestNG to apply a bugfix -->
   <suppress checks="AvoidStaticImport" files="[\\/]org[\\/]testng[\\/]" />
 
-  <suppress checks="LocalFinalVariableName" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="SingleSpaceSeparator" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="LocalVariableName" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="AvoidStaticImport" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="ImportOrder" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="RedundantImport" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="UnusedImports" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="EmptyStatement" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="Regexp" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="WhitespaceAfter" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="ModifierOrder" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="RedundantModifier" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="OneStatementPerLine" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="RightCurly" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="MethodName" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="NeedBraces" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="WhitespaceAround" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="Header" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="EmptyLineSeparator" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="LeftCurly" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="Indentation" files="[\\/]target[\\/]generated-sources[\\/]" />
-  <suppress checks="ConstantName" files="[\\/]target[\\/]generated-sources[\\/]" />
-
-  <suppress checks="Header" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="NeedBraces" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="UnusedImports" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="AvoidStarImport" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="FileTabCharacter" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="ConstantName" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="WhitespaceAfter" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="WhitespaceAround" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="ParenPad" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="SingleSpaceSeparator" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="NoWhitespaceBefore" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="NoWhitespaceAfter" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="LeftCurly" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="RightCurly" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="Indentation" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="ModifierOrder" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="RedundantImport" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="OneStatementPerLine" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="ImportOrder" files="[\\/]target[\\/]generated-test-sources[\\/]" />
-  <suppress checks="EmptyLineSeparator" files="[\\/]target[\\/]generated-test-sources[\\/]" />
+  <suppress checks=".*" files="[\\/]target[\\/]generated-sources[\\/]" />
+  <suppress checks=".*" files="[\\/]target[\\/]generated-test-sources[\\/]" />
 
   <suppress checks="Indentation" files="ProtoTestEventWrapper.java" />
   <suppress checks="Regexp" id="argumentLineBreaking" files="ProtoTestEventWrapper.java" />
