@@ -43,9 +43,6 @@ import java.util.Map;
  */
 public abstract class ExprEval<T>
 {
-  private static ExprEval __true = ExprEval.of(Evals.asLong(true));
-  private static ExprEval __false = ExprEval.of(Evals.asLong(false));
-
   /**
    * Deserialize an expression stored in a bytebuffer, e.g. for an agg.
    *
@@ -379,7 +376,7 @@ public abstract class ExprEval<T>
    */
   public static ExprEval ofLongBoolean(boolean value)
   {
-    return value ? __true : __false;
+    return value ? LongExprEval.TRUE : LongExprEval.FALSE;
   }
 
   public static ExprEval ofComplex(ExpressionType outputType, @Nullable Object value)
@@ -925,6 +922,8 @@ public abstract class ExprEval<T>
 
   private static class LongExprEval extends NumericExprEval
   {
+    private static final LongExprEval TRUE = new LongExprEval(Evals.asLong(true));
+    private static final LongExprEval FALSE = new LongExprEval(Evals.asLong(false));
     private static final LongExprEval OF_NULL = new LongExprEval(null);
 
     private LongExprEval(@Nullable Number value)
