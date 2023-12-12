@@ -113,7 +113,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             if (Intervals.ETERNITY.getStart().equals(segment.getInterval().getStart())
                 || Intervals.ETERNITY.getEnd().equals(segment.getInterval().getEnd())) {
               // This is to prevent the coordinator from crashing as raised in https://github.com/apache/druid/issues/13208
-              log.warn("Cannot compact datasource[%s] containing segments with partial-ETERNITY segments", dataSource);
+              log.warn("Cannot compact datasource[%s] containing segments with partial-ETERNITY intervals", dataSource);
               return;
             }
             for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
