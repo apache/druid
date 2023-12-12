@@ -841,7 +841,7 @@
                                         <argument>-l</argument>
                                         <argument>${settings.localRepository}</argument>
                                         <argument>-h</argument>
-                                        <argument>org.apache.hadoop:hadoop-client:2.8.5</argument>
+                                        <argument>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-datasketches</argument>
                                         <argument>-c</argument>
