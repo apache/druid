@@ -131,6 +131,5 @@ public class CreateTables extends GuiceRunnable
     dbConnector.createAuditTable();
     dbConnector.createSupervisorsTable();
     dbConnector.createSegmentSchemaTable();
-    dbConnector.createSegmentSchemaMappingTable();
   }
 }

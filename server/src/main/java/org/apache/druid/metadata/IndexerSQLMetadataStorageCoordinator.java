@@ -131,7 +131,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     connector.createSegmentTable();
     connector.createUpgradeSegmentsTable();
     connector.createSegmentSchemaTable();
-    connector.createSegmentSchemaMappingTable();
   }
 
   @Override

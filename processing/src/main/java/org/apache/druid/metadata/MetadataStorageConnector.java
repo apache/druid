@@ -92,6 +92,4 @@ public interface MetadataStorageConnector
   void deleteAllRecords(String tableName);
 
   void createSegmentSchemaTable();
-
-  void createSegmentSchemaMappingTable();
 }
