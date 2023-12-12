@@ -432,7 +432,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     for (Interval lookupInterval : filteredInterval) {
       if (Intervals.ETERNITY.getStart().equals(lookupInterval.getStart())
           || Intervals.ETERNITY.getEnd().equals(lookupInterval.getEnd())) {
-        log.warn("Cannot compact datasource[%s] since interval start or end coincides with ETERNITY.", dataSourceName);
+        log.warn("Cannot compact datasource[%s] since interval[%s] coincides with ETERNITY.", dataSourceName, lookupInterval);
         return Collections.emptyList();
       }
       final List<DataSegment> segments = timeline
