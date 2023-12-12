@@ -20,11 +20,11 @@
 package org.apache.druid.client;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,21 +38,17 @@ public class SegmentLoadInfo implements Overshadowable<SegmentLoadInfo>
   {
     Preconditions.checkNotNull(segment, "segment");
     this.segment = segment;
-    this.servers = new HashSet<>();
+    this.servers = Sets.newConcurrentHashSet();
   }
 
   public boolean addServer(DruidServerMetadata server)
   {
-    synchronized (this) {
-      return servers.add(server);
-    }
+    return servers.add(server);
   }
 
   public boolean removeServer(DruidServerMetadata server)
   {
-    synchronized (this) {
-      return servers.remove(server);
-    }
+    return servers.remove(server);
   }
 
   public boolean isEmpty()
