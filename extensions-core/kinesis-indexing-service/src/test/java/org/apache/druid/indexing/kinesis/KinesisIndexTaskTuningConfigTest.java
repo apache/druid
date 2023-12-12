@@ -162,8 +162,7 @@ public class KinesisIndexTaskTuningConfigTest
         500,
         500,
         6000,
-        new Period("P3D"),
-        TuningConfig.DEFAULT_DROP_SEGMENT_DELAY
+        new Period("P3D")
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -222,8 +221,7 @@ public class KinesisIndexTaskTuningConfigTest
         500,
         500,
         6000,
-        new Period("P3D"),
-        TuningConfig.DEFAULT_DROP_SEGMENT_DELAY
+        new Period("P3D")
     );
 
     String serialized = mapper.writeValueAsString(new TestModifiedKinesisIndexTaskTuningConfig(base, "loool"));
@@ -311,7 +309,6 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         10,
-        null,
         null,
         null,
         null,

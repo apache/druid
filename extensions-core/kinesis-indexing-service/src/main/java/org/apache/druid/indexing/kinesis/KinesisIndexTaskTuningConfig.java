@@ -90,8 +90,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer maxRecordsPerPoll,
-      @Nullable Period intermediateHandoffPeriod,
-      @Nullable Long dropSegmentDelayMillis
+      @Nullable Period intermediateHandoffPeriod
   )
   {
     super(
@@ -114,8 +113,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        dropSegmentDelayMillis
+        maxSavedParseExceptions
     );
     this.recordBufferSize = recordBufferSize;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout == null
@@ -156,8 +154,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
-      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
-      @JsonProperty("dropSegmentDelayMillis") @Nullable Long dropSegmentDelayMillis
+      @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod
   )
   {
     this(
@@ -185,8 +182,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
-        intermediateHandoffPeriod,
-        dropSegmentDelayMillis
+        intermediateHandoffPeriod
     );
   }
 
@@ -274,8 +270,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPollConfigured(),
-        getIntermediateHandoffPeriod(),
-        getDropSegmentDelayMillis()
+        getIntermediateHandoffPeriod()
     );
   }
 
@@ -338,7 +333,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", maxRecordsPerPoll=" + maxRecordsPerPoll +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
-           ", dropSegmentDelayMillis=" + getDropSegmentDelayMillis() +
            '}';
   }
 }

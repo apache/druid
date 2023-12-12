@@ -51,8 +51,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @Nullable Period intermediateHandoffPeriod,
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
-      @Nullable Integer maxSavedParseExceptions,
-      @Nullable Long dropSegmentDelayMillis
+      @Nullable Integer maxSavedParseExceptions
   )
   {
     super(
@@ -75,8 +74,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        dropSegmentDelayMillis
+        maxSavedParseExceptions
     );
   }
 
@@ -99,8 +97,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
-      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("dropSegmentDelayMillis") @Nullable Long dropSegmentDelayMillis
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     this(
@@ -122,8 +119,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         intermediateHandoffPeriod,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions,
-        dropSegmentDelayMillis
+        maxSavedParseExceptions
     );
   }
 
@@ -149,8 +145,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getIntermediateHandoffPeriod(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions(),
-        getDropSegmentDelayMillis()
+        getMaxSavedParseExceptions()
     );
   }
 
@@ -176,7 +171,6 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
-           ", dropSegmentDelayMillis=" + getDropSegmentDelayMillis() +
            '}';
   }
 

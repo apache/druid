@@ -74,7 +74,6 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
-        null,
         null
     );
   }
@@ -110,8 +109,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
-      @JsonProperty("useListShards") Boolean useListShards,
-      @JsonProperty("dropSegmentDelayMillis") Long dropSegmentDelayMillis
+      @JsonProperty("useListShards") Boolean useListShards
   )
   {
     super(
@@ -139,8 +137,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
-        intermediateHandoffPeriod,
-        dropSegmentDelayMillis
+        intermediateHandoffPeriod
     );
 
     this.workerThreads = workerThreads;
@@ -271,8 +268,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxParseExceptions(),
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPollConfigured(),
-        getIntermediateHandoffPeriod(),
-        getDropSegmentDelayMillis()
+        getIntermediateHandoffPeriod()
     );
   }
 }
