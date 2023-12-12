@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
@@ -66,8 +67,8 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 15)
-@Measurement(iterations = 30)
+@Warmup(iterations = 3, time = 3 )
+@Measurement(iterations = 5, time = 3)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class ExpressionSelectorBenchmark
@@ -451,6 +452,104 @@ public class ExpressionSelectorBenchmark
 
     blackhole.consume(results);
   }
+
+  @Benchmark
+  public void caseSearched1(Blackhole blackhole)
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "v",
+                    "case_searched(s == 'asd' || isnull(s) || s == 'xxx', 1, s == 'foo' || s == 'bar', 2, 3)",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            )
+        ),
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = cursors
+        .map(cursor -> {
+          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          consumeLong(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
+
+    blackhole.consume(results);
+  }
+
+  @Benchmark
+  public void caseSearched2(Blackhole blackhole)
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "v",
+                    "case_searched(s == 'asd' || isnull(s) || n == 1, 1, n == 2, 2, 3)",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            )
+        ),
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = cursors
+        .map(cursor -> {
+          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          consumeLong(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
+
+    blackhole.consume(results);
+  }
+
+  @Benchmark
+  public void caseSearchedWithLookup(Blackhole blackhole)
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "v",
+                    "case_searched(lookup(s, 'lookyloo') == 'asd' || isnull(s) || n == 1, 1, lookup(s, 'lookyloo') == 'x', 2, 3)",
+                    ColumnType.LONG,
+                    LookupEnabledTestExprMacroTable.INSTANCE
+                )
+            )
+        ),
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = cursors
+        .map(cursor -> {
+          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          consumeLong(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
+
+    blackhole.consume(results);
+  }
+
+
 
   private void consumeDimension(final Cursor cursor, final DimensionSelector selector, final Blackhole blackhole)
   {
