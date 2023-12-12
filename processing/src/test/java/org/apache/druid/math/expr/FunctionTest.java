@@ -609,19 +609,17 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     );
     for (Pair<String, String> argAndType : invalidArguments) {
-      try {
-        assertExpr(StringUtils.format("round(d, %s)", argAndType.lhs), null);
-        Assert.fail("Did not throw IllegalArgumentException");
-      }
-      catch (ExpressionValidationException e) {
-        Assert.assertEquals(
-            StringUtils.format(
-                "Function[round] second argument should be a LONG but got %s instead",
-                argAndType.rhs
-            ),
-            e.getMessage()
-        );
-      }
+      Throwable t = Assert.assertThrows(
+          DruidException.class,
+          () -> assertExpr(StringUtils.format("round(d, %s)", argAndType.lhs), null)
+      );
+      Assert.assertEquals(
+          StringUtils.format(
+              "Function[round] second argument should be a LONG but got %s instead",
+              argAndType.rhs
+          ),
+          t.getMessage()
+      );
     }
   }
 
@@ -639,13 +637,11 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("greatest(1, 'A')", "A");
 
     // Invalid types
-    try {
-      assertExpr("greatest(1, ['A'])", null);
-      Assert.fail("Did not throw IllegalArgumentException");
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals("Function[greatest] does not accept ARRAY<STRING> types", e.getMessage());
-    }
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("greatest(1, ['A'])", null)
+    );
+    Assert.assertEquals("Function[greatest] does not accept ARRAY<STRING> types", t.getMessage());
 
     // Null handling
     assertExpr("greatest()", null);
@@ -667,13 +663,11 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("least(1, 'A')", "1");
 
     // Invalid types
-    try {
-      assertExpr("least(1, [2, 3])", null);
-      Assert.fail("Did not throw IllegalArgumentException");
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals("Function[least] does not accept ARRAY<LONG> types", e.getMessage());
-    }
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("least(1, [2, 3])", null)
+    );
+    Assert.assertEquals("Function[least] does not accept ARRAY<LONG> types", t.getMessage());
 
     // Null handling
     assertExpr("least()", null);
@@ -770,102 +764,76 @@ public class FunctionTest extends InitializedNullHandlingTest
       );
     }
 
-    try {
-      //x = "foo"
-      Parser.parse("human_readable_binary_byte_format(1024, x)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
+    // x = "foo"
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> Parser.parse("human_readable_binary_byte_format(1024, x)", ExprMacroTable.nil()).eval(bestEffortBindings)
+    );
+    Assert.assertEquals(
+        "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got STRING instead",
+        t.getMessage()
+    );
+    //of = 0F
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> Parser.parse("human_readable_binary_byte_format(1024, of)", ExprMacroTable.nil()).eval(bestEffortBindings)
+    );
+    Assert.assertEquals(
+        "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got DOUBLE instead",
+        t.getMessage()
+    );
 
-      //must not go to here
-      Assert.assertTrue(false);
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got STRING instead",
-          e.getMessage()
-      );
-    }
-
-    try {
       //of = 0F
-      Parser.parse("human_readable_binary_byte_format(1024, of)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
-
-      //must not go to here
-      Assert.assertTrue(false);
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got DOUBLE instead",
-          e.getMessage()
-      );
-    }
-
-    try {
-      //of = 0F
-      Parser.parse("human_readable_binary_byte_format(1024, nonexist)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
-
-      //must not go to here
-      Assert.assertTrue(false);
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got STRING instead",
-          e.getMessage()
-      );
-    }
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> Parser.parse("human_readable_binary_byte_format(1024, nonexist)", ExprMacroTable.nil()).eval(bestEffortBindings)
+    );
+    Assert.assertEquals(
+        "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got STRING instead",
+        t.getMessage()
+    );
   }
 
   @Test
   public void testSizeFormatInvalidPrecision()
   {
-    try {
-      Parser.parse("human_readable_binary_byte_format(1024, maxLong)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
-      Assert.assertTrue(false);
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] given precision[9223372036854775807] must be in the range of [0,3]",
-          e.getMessage()
-      );
-    }
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> Parser.parse("human_readable_binary_byte_format(1024, maxLong)", ExprMacroTable.nil())
+                    .eval(bestEffortBindings)
+    );
 
-    try {
-      Parser.parse("human_readable_binary_byte_format(1024, minLong)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
-      Assert.assertTrue(false);
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] given precision[-9223372036854775808] must be in the range of [0,3]",
-          e.getMessage()
-      );
-    }
+    Assert.assertEquals(
+        "Function[human_readable_binary_byte_format] given precision[9223372036854775807] must be in the range of [0,3]",
+        t.getMessage()
+    );
 
-    try {
-      Parser.parse("human_readable_binary_byte_format(1024, -1)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
-      Assert.assertTrue(false);
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] given precision[-1] must be in the range of [0,3]",
-          e.getMessage()
-      );
-    }
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> Parser.parse("human_readable_binary_byte_format(1024, minLong)", ExprMacroTable.nil()).eval(bestEffortBindings)
+    );
+    Assert.assertEquals(
+        "Function[human_readable_binary_byte_format] given precision[-9223372036854775808] must be in the range of [0,3]",
+        t.getMessage()
+    );
 
-    try {
-      Parser.parse("human_readable_binary_byte_format(1024, 4)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
-      Assert.assertTrue(false);
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[human_readable_binary_byte_format] given precision[4] must be in the range of [0,3]",
-          e.getMessage()
-      );
-    }
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> Parser.parse("human_readable_binary_byte_format(1024, -1)", ExprMacroTable.nil()).eval(bestEffortBindings)
+    );
+    Assert.assertEquals(
+        "Function[human_readable_binary_byte_format] given precision[-1] must be in the range of [0,3]",
+        t.getMessage()
+    );
+
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> Parser.parse("human_readable_binary_byte_format(1024, 4)", ExprMacroTable.nil()).eval(bestEffortBindings)
+    );
+    Assert.assertEquals(
+        "Function[human_readable_binary_byte_format] given precision[4] must be in the range of [0,3]",
+        t.getMessage()
+    );
   }
 
   @Test
@@ -923,16 +891,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("bitwiseComplement(null)", null);
 
     // data truncation
-    try {
-      assertExpr("bitwiseComplement(461168601842738800000000000000.000000)", null);
-      Assert.fail("Did not throw IllegalArgumentException");
-    }
-    catch (ExpressionValidationException e) {
-      Assert.assertEquals(
-          "Function[bitwiseComplement] Possible data truncation, param [461168601842738800000000000000.000000] is out of LONG value range",
-          e.getMessage()
-      );
-    }
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("bitwiseComplement(461168601842738800000000000000.000000)", null)
+    );
+    Assert.assertEquals(
+        "Function[bitwiseComplement] Possible data truncation, param [461168601842738800000000000000.000000] is out of LONG value range",
+        t.getMessage()
+    );
 
     // doubles are cast
     assertExpr("bitwiseOr(2.345, 1)", 3L);

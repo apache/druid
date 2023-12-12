@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -190,7 +191,12 @@ class FunctionExpr implements Expr
     try {
       return function.apply(args, bindings);
     }
-    catch (DruidException | ExpressionValidationException e) {
+    catch (ExpressionValidationException | Types.InvalidCastException | Types.InvalidCastBooleanException e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(e.getMessage());
+    }
+    catch (DruidException e) {
       throw e;
     }
     catch (Exception e) {

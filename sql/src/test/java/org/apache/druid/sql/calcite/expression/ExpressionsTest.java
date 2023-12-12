@@ -30,8 +30,8 @@ import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -65,7 +65,9 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -73,7 +75,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
 
-public class ExpressionsTest extends ExpressionTestBase
+public class ExpressionsTest extends CalciteTestBase
 {
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
@@ -100,28 +102,31 @@ public class ExpressionsTest extends ExpressionTestBase
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
-      .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
-      .put("a", 10)
-      .put("b", 25)
-      .put("p", 3)
-      .put("x", 2.25)
-      .put("y", 3.0)
-      .put("z", -2.25)
-      .put("o", 0)
-      .put("nan", Double.NaN)
-      .put("inf", Double.POSITIVE_INFINITY)
-      .put("-inf", Double.NEGATIVE_INFINITY)
-      .put("fnan", Float.NaN)
-      .put("finf", Float.POSITIVE_INFINITY)
-      .put("-finf", Float.NEGATIVE_INFINITY)
-      .put("s", "foo")
-      .put("hexstr", "EF")
-      .put("intstr", "-100")
-      .put("spacey", "  hey there  ")
-      .put("newliney", "beep\nboop")
-      .put("tstr", "2000-02-03 04:05:06")
-      .put("dstr", "2000-02-03")
-      .build();
+                                                                  .put(
+                                                                      "t",
+                                                                      DateTimes.of("2000-02-03T04:05:06").getMillis()
+                                                                  )
+                                                                  .put("a", 10)
+                                                                  .put("b", 25)
+                                                                  .put("p", 3)
+                                                                  .put("x", 2.25)
+                                                                  .put("y", 3.0)
+                                                                  .put("z", -2.25)
+                                                                  .put("o", 0)
+                                                                  .put("nan", Double.NaN)
+                                                                  .put("inf", Double.POSITIVE_INFINITY)
+                                                                  .put("-inf", Double.NEGATIVE_INFINITY)
+                                                                  .put("fnan", Float.NaN)
+                                                                  .put("finf", Float.POSITIVE_INFINITY)
+                                                                  .put("-finf", Float.NEGATIVE_INFINITY)
+                                                                  .put("s", "foo")
+                                                                  .put("hexstr", "EF")
+                                                                  .put("intstr", "-100")
+                                                                  .put("spacey", "  hey there  ")
+                                                                  .put("newliney", "beep\nboop")
+                                                                  .put("tstr", "2000-02-03 04:05:06")
+                                                                  .put("dstr", "2000-02-03")
+                                                                  .build();
 
   private ExpressionTestHelper testHelper;
 
@@ -1255,23 +1260,26 @@ public class ExpressionsTest extends ExpressionTestBase
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
     if (!NullHandling.sqlCompatible()) {
-      expectException(
-          ExpressionValidationException.class,
-          "Function[round] first argument should be a LONG or DOUBLE but got STRING instead"
+      Throwable t = Assert.assertThrows(
+          DruidException.class,
+          () -> testHelper.testExpression(
+              roundFunction,
+              testHelper.makeInputRef("s"),
+              DruidExpression.ofExpression(
+                  ColumnType.STRING,
+                  DruidExpression.functionCall("round"),
+                  ImmutableList.of(
+                      DruidExpression.ofColumn(ColumnType.STRING, "s")
+                  )
+              ),
+              NullHandling.sqlCompatible() ? null : "IAE Exception"
+          )
+      );
+      Assert.assertEquals(
+          "Function[round] first argument should be a LONG or DOUBLE but got STRING instead",
+          t.getMessage()
       );
     }
-    testHelper.testExpression(
-        roundFunction,
-        testHelper.makeInputRef("s"),
-        DruidExpression.ofExpression(
-            ColumnType.STRING,
-            DruidExpression.functionCall("round"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.STRING, "s")
-            )
-        ),
-        NullHandling.sqlCompatible() ? null : "IAE Exception"
-    );
   }
 
   @Test
@@ -1279,26 +1287,26 @@ public class ExpressionsTest extends ExpressionTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    expectException(
-        ExpressionValidationException.class,
-        "Function[round] second argument should be a LONG but got STRING instead"
-    );
-    testHelper.testExpressionString(
-        roundFunction,
-        ImmutableList.of(
-            testHelper.makeInputRef("x"),
-            testHelper.makeLiteral("foo")
-        ),
-        DruidExpression.ofExpression(
-            ColumnType.FLOAT,
-            DruidExpression.functionCall("round"),
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpressionString(
+            roundFunction,
             ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
-                DruidExpression.ofStringLiteral("foo")
-            )
-        ),
-        "IAE Exception"
+                testHelper.makeInputRef("x"),
+                testHelper.makeLiteral("foo")
+            ),
+            DruidExpression.ofExpression(
+                ColumnType.FLOAT,
+                DruidExpression.functionCall("round"),
+                ImmutableList.of(
+                    DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
+                    DruidExpression.ofStringLiteral("foo")
+                )
+            ),
+            "IAE Exception"
+        )
     );
+    Assert.assertEquals("Function[round] second argument should be a LONG but got STRING instead", t.getMessage());
   }
 
   @Test
@@ -2237,23 +2245,22 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalReverseWithWrongType()
   {
-    expectException(
-        ExpressionValidationException.class,
-        "Function[reverse] needs a STRING argument but got LONG instead"
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpression(
+            new ReverseOperatorConversion().calciteOperator(),
+            testHelper.makeInputRef("a"),
+            DruidExpression.ofExpression(
+                ColumnType.STRING,
+                DruidExpression.functionCall("reverse"),
+                ImmutableList.of(
+                    DruidExpression.ofColumn(ColumnType.LONG, "a")
+                )
+            ),
+            null
+        )
     );
-
-    testHelper.testExpression(
-        new ReverseOperatorConversion().calciteOperator(),
-        testHelper.makeInputRef("a"),
-        DruidExpression.ofExpression(
-            ColumnType.STRING,
-            DruidExpression.functionCall("reverse"),
-            ImmutableList.of(
-                DruidExpression.ofColumn(ColumnType.LONG, "a")
-            )
-        ),
-        null
-    );
+    Assert.assertEquals("Function[reverse] needs a STRING argument but got LONG instead", t.getMessage());
   }
 
   @Test
@@ -2313,38 +2320,39 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRightWithNegativeNumber()
   {
-    expectException(
-        ExpressionValidationException.class,
-        "Function[right] needs a positive integer as the second argument"
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpressionString(
+            new RightOperatorConversion().calciteOperator(),
+            ImmutableList.of(
+                testHelper.makeInputRef("s"),
+                testHelper.makeLiteral(-1)
+            ),
+            makeExpression("right(\"s\",-1)"),
+            null
+        )
     );
-
-    testHelper.testExpressionString(
-        new RightOperatorConversion().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("s"),
-            testHelper.makeLiteral(-1)
-        ),
-        makeExpression("right(\"s\",-1)"),
-        null
-    );
+    Assert.assertEquals("Function[right] needs a positive integer as the second argument", t.getMessage());
   }
 
   @Test
   public void testAbnormalRightWithWrongType()
   {
-    expectException(
-        ExpressionValidationException.class,
-        "Function[right] needs a STRING as first argument and a LONG as second argument"
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpressionString(
+            new RightOperatorConversion().calciteOperator(),
+            ImmutableList.of(
+                testHelper.makeInputRef("s"),
+                testHelper.makeInputRef("s")
+            ),
+            makeExpression("right(\"s\",\"s\")"),
+            null
+        )
     );
-
-    testHelper.testExpressionString(
-        new RightOperatorConversion().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("s"),
-            testHelper.makeInputRef("s")
-        ),
-        makeExpression("right(\"s\",\"s\")"),
-        null
+    Assert.assertEquals(
+        "Function[right] needs a STRING as first argument and a LONG as second argument",
+        t.getMessage()
     );
   }
 
@@ -2405,38 +2413,39 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalLeftWithNegativeNumber()
   {
-    expectException(
-        ExpressionValidationException.class,
-        "Function[left] needs a postive integer as second argument"
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpressionString(
+            new LeftOperatorConversion().calciteOperator(),
+            ImmutableList.of(
+                testHelper.makeInputRef("s"),
+                testHelper.makeLiteral(-1)
+            ),
+            makeExpression("left(\"s\",-1)"),
+            null
+        )
     );
-
-    testHelper.testExpressionString(
-        new LeftOperatorConversion().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("s"),
-            testHelper.makeLiteral(-1)
-        ),
-        makeExpression("left(\"s\",-1)"),
-        null
-    );
+    Assert.assertEquals("Function[left] needs a postive integer as second argument", t.getMessage());
   }
 
   @Test
   public void testAbnormalLeftWithWrongType()
   {
-    expectException(
-        ExpressionValidationException.class,
-        "Function[left] needs a STRING as first argument and a LONG as second argument"
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpressionString(
+            new LeftOperatorConversion().calciteOperator(),
+            ImmutableList.of(
+                testHelper.makeInputRef("s"),
+                testHelper.makeInputRef("s")
+            ),
+            makeExpression("left(\"s\",\"s\")"),
+            null
+        )
     );
-
-    testHelper.testExpressionString(
-        new LeftOperatorConversion().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("s"),
-            testHelper.makeInputRef("s")
-        ),
-        makeExpression("left(\"s\",\"s\")"),
-        null
+    Assert.assertEquals(
+        "Function[left] needs a STRING as first argument and a LONG as second argument",
+        t.getMessage()
     );
   }
 
@@ -2477,19 +2486,21 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testAbnormalRepeatWithWrongType()
   {
-    expectException(
-        ExpressionValidationException.class,
-        "Function[repeat] needs a STRING as first argument and a LONG as second argument"
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> testHelper.testExpressionString(
+            new RepeatOperatorConversion().calciteOperator(),
+            ImmutableList.of(
+                testHelper.makeInputRef("s"),
+                testHelper.makeInputRef("s")
+            ),
+            makeExpression("repeat(\"s\",\"s\")"),
+            null
+        )
     );
-
-    testHelper.testExpressionString(
-        new RepeatOperatorConversion().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("s"),
-            testHelper.makeInputRef("s")
-        ),
-        makeExpression("repeat(\"s\",\"s\")"),
-        null
+    Assert.assertEquals(
+        "Function[repeat] needs a STRING as first argument and a LONG as second argument",
+        t.getMessage()
     );
   }
 
@@ -2528,7 +2539,8 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testOperatorConversionsDruidUnaryDoubleFn()
   {
     testHelper.testExpressionString(
-        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble")
+                           .calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("a")
         ),
@@ -2537,7 +2549,8 @@ public class ExpressionsTest extends ExpressionTestBase
     );
 
     testHelper.testExpressionString(
-        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble")
+                           .calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("x")
         ),
@@ -2546,7 +2559,8 @@ public class ExpressionsTest extends ExpressionTestBase
     );
 
     testHelper.testExpressionString(
-        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble").calciteOperator(),
+        OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble")
+                           .calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s")
         ),
