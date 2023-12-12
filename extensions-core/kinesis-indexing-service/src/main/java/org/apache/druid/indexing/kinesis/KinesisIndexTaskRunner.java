@@ -135,21 +135,32 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
       if (!shardResetMap.isEmpty()) {
         for (Map.Entry<StreamPartition<String>, String> partitionToReset : shardResetMap.entrySet()) {
-          log.warn("Starting sequence number [%s] is no longer available for partition [%s]",
+          log.warn("Starting sequenceNumber[%s] is no longer available for partition[%s].",
                    partitionToReset.getValue(),
-                   partitionToReset.getKey().getPartitionId()
+                   partitionToReset.getKey()
           );
         }
         if (task.getTuningConfig().isResetOffsetAutomatically()) {
-          log.info("Attempting to reset offsets for [%d] partitions.", shardResetMap.size());
+          log.info(
+              "Attempting to reset offsets for [%d] partitions with ids[%s].",
+              shardResetMap.size(),
+              shardResetMap.keySet()
+          );
           try {
             sendResetRequestAndWait(shardResetMap, toolbox);
           }
           catch (IOException e) {
-            throw new ISE(e, "Exception while attempting to automatically reset sequences");
+            throw new ISE(
+                e,
+                "Exception while attempting to automatically reset sequences for partitions[%s]",
+                shardResetMap.keySet()
+            );
           }
         } else {
-          throw new ISE("Sequence numbers are unavailable but automatic offset reset is disabled.");
+          throw new ISE(
+              "Automatic offset reset is disabled, but there are partitions with unavailable sequence numbers [%s].",
+              shardResetMap
+          );
         }
       }
     }
@@ -194,5 +205,4 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       return null;
     }
   }
-
 }
