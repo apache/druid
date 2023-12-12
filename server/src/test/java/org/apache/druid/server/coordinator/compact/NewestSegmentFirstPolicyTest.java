@@ -1637,6 +1637,70 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
+  public void testSkipFirstHalfEternityToDefault()
+  {
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               null
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                                            new DataSegment(
+                                                DATA_SOURCE,
+                                                new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")),
+                                                "0",
+                                                new HashMap<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new NumberedShardSpec(0, 0),
+                                                0,
+                                                100)
+                                        )
+            )
+        ),
+        Collections.emptyMap()
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testSkipSecondHalfOfEternityToDefault()
+  {
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               null
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(
+                                            new DataSegment(
+                                                DATA_SOURCE,
+                                                new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX),
+                                                "0",
+                                                new HashMap<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new NumberedShardSpec(0, 0),
+                                                0,
+                                                100)
+                                        )
+            )
+        ),
+        Collections.emptyMap()
+    );
+
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
   public void testSkipAllToAllGranularity()
   {
     CompactionSegmentIterator iterator = policy.reset(
