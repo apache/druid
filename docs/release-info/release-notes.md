@@ -91,6 +91,8 @@ This section contains detailed release notes separated by areas.
 
 ### Extensions
 
+- Datasketches extension has a new runtime parameter `druid.sketch.config.hllMaxLgK`, which configures the maximum allowed value of lgK for HLL sketches.
+
 ### Documentation improvements
 
 ## Upgrade notes and incompatible changes

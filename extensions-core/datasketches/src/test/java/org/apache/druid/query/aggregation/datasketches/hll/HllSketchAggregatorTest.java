@@ -82,12 +82,12 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         new HllSketchModule().getJacksonModules(), config, groupByFolder
     );
     groupByHelper.getObjectMapper()
-                 .setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig()));
+                 .setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig(21)));
     timeseriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         new HllSketchModule().getJacksonModules(), timeseriesFolder
     );
     timeseriesHelper.getObjectMapper()
-                    .setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig()));
+                    .setInjectableValues(new InjectableValues.Std().addValue(SketchConfig.class, new SketchConfig(21)));
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.stringEncoding = stringEncoding;
   }
