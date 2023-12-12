@@ -109,9 +109,12 @@ abstract class ConstantExpr<T> implements Expr
  */
 class BigIntegerExpr extends ConstantExpr<BigInteger>
 {
+  private ExprEval expr;
+
   public BigIntegerExpr(BigInteger value)
   {
     super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
+    expr = ExprEval.ofLong(value.longValueExact());
   }
 
   @Override
@@ -125,7 +128,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
   {
     // Eval succeeds if the BigInteger is in long range.
     // Callers that need to process out-of-long-range values, like UnaryMinusExpr, must use getLiteralValue().
-    return ExprEval.ofLong(value.longValueExact());
+    return expr;
   }
 
   @Override
@@ -157,9 +160,13 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
 
 class LongExpr extends ConstantExpr<Long>
 {
+  private ExprEval expr;
+
+
   LongExpr(Long value)
   {
     super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
+    expr = ExprEval.ofLong(value);
   }
 
   @Override
@@ -171,7 +178,7 @@ class LongExpr extends ConstantExpr<Long>
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.ofLong(value);
+    return expr;
   }
 
   @Override
@@ -323,9 +330,12 @@ class NullDoubleExpr extends ConstantExpr<Double>
 
 class StringExpr extends ConstantExpr<String>
 {
+  private ExprEval expr;
+
   StringExpr(@Nullable String value)
   {
     super(ExpressionType.STRING, NullHandling.emptyToNullIfNeeded(value));
+    expr = ExprEval.of(value);
   }
 
   @Override
@@ -337,7 +347,7 @@ class StringExpr extends ConstantExpr<String>
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.of(value);
+    return expr;
   }
 
   @Override
