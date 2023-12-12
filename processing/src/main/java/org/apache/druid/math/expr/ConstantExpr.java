@@ -109,12 +109,9 @@ abstract class ConstantExpr<T> implements Expr
  */
 class BigIntegerExpr extends ConstantExpr<BigInteger>
 {
-  private ExprEval expr;
-
   public BigIntegerExpr(BigInteger value)
   {
     super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
-    expr = ExprEval.ofLong(value.longValueExact());
   }
 
   @Override
@@ -128,7 +125,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
   {
     // Eval succeeds if the BigInteger is in long range.
     // Callers that need to process out-of-long-range values, like UnaryMinusExpr, must use getLiteralValue().
-    return expr;
+    return ExprEval.ofLong(value.longValueExact());
   }
 
   @Override
@@ -160,8 +157,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
 
 class LongExpr extends ConstantExpr<Long>
 {
-  private ExprEval expr;
-
+  final ExprEval expr;
 
   LongExpr(Long value)
   {
@@ -247,9 +243,12 @@ class NullLongExpr extends ConstantExpr<Long>
 
 class DoubleExpr extends ConstantExpr<Double>
 {
+  final ExprEval expr;
+
   DoubleExpr(Double value)
   {
     super(ExpressionType.DOUBLE, Preconditions.checkNotNull(value, "value"));
+    expr = ExprEval.ofDouble(value);
   }
 
   @Override
@@ -261,7 +260,7 @@ class DoubleExpr extends ConstantExpr<Double>
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.ofDouble(value);
+    return expr;
   }
 
   @Override
@@ -330,7 +329,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
 
 class StringExpr extends ConstantExpr<String>
 {
-  private ExprEval expr;
+  final ExprEval expr;
 
   StringExpr(@Nullable String value)
   {
@@ -474,15 +473,18 @@ class ArrayExpr extends ConstantExpr<Object[]>
 
 class ComplexExpr extends ConstantExpr<Object>
 {
+  final ExprEval expr;
+
   protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
   {
     super(outputType, value);
+    expr = ExprEval.ofComplex(outputType, value);
   }
 
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return ExprEval.ofComplex(outputType, value);
+    return expr;
   }
 
   @Override
