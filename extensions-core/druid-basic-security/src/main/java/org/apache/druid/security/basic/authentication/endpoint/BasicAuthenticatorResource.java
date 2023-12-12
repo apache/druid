@@ -273,7 +273,7 @@ public class BasicAuthenticatorResource
       Response response
   )
   {
-    if (isSuccess(response)) {
+    if (updatedUser != null && isSuccess(response)) {
       auditManager.doAudit(
           AuditEntry.builder()
                     .key(authenticatorName)

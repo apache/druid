@@ -367,7 +367,7 @@ public class SQLMetadataRuleManagerTest
 
   private AuditInfo createAuditInfo(String comment)
   {
-    return new AuditInfo("test", comment, "127.0.0.1");
+    return new AuditInfo("test", "id", comment, "127.0.0.1");
   }
 
 }

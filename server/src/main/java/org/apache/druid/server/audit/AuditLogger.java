@@ -30,7 +30,7 @@ public class AuditLogger
   }
 
   private static final String MSG_FORMAT
-      = "User[%s], identity[%s], IP[%s] performed action[%s] on key[%s] with comment[%s]. Request[%s], payload[%s].";
+      = "User[%s], identity[%s], IP[%s] performed action[%s] on key[%s] with comment[%s], request[%s], payload[%s].";
 
   private final Level level;
   private final Logger logger = new Logger(AuditLogger.class);

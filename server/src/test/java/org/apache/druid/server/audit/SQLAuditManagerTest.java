@@ -299,7 +299,7 @@ public class SQLAuditManagerTest
         }
     );
 
-    AuditInfo auditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
+    AuditInfo auditInfo = new AuditInfo("testAuthor", "testIdentity", "testComment", "127.0.0.1");
 
     final Map<String, String> payloadMap = new TreeMap<>();
     payloadMap.put("version", "x");

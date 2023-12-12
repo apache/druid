@@ -224,20 +224,15 @@ public class OverlordResource
           try {
             taskQueue.add(task);
 
-            // Do an audit only if this API was called by a user and not by internal services
-            final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
-            final String author = auditInfo.getAuthor();
-            if (author != null && !author.isEmpty()) {
-              auditManager.doAudit(
-                  AuditEntry.builder()
-                            .key(task.getDataSource())
-                            .type("ingest.batch")
-                            .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                            .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
-                            .auditInfo(auditInfo)
-                            .build()
-              );
-            }
+            auditManager.doAudit(
+                AuditEntry.builder()
+                          .key(task.getDataSource())
+                          .type("task")
+                          .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                          .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
+                          .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                          .build()
+            );
 
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }

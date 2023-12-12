@@ -48,11 +48,6 @@ public class AuditInfo
     this.ip = ip;
   }
 
-  public AuditInfo(String author, String comment, String ip)
-  {
-    this(author, null, comment, ip);
-  }
-
   @JsonProperty
   public String getAuthor()
   {

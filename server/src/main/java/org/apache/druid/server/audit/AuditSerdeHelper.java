@@ -44,7 +44,7 @@ public class AuditSerdeHelper
   private static final String PAYLOAD_TRUNCATED_MSG =
       "Payload truncated as it exceeds 'druid.audit.manager.maxPayloadSizeBytes'";
   private static final String SERIALIZE_ERROR_MSG =
-      "Error serializing payload";
+      "Error serializing payload. Check logs for details.";
   private static final Logger log = new Logger(AuditSerdeHelper.class);
 
   private final ObjectMapper jsonMapper;

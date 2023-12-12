@@ -65,6 +65,7 @@ public class JacksonConfigManagerTest
     TestConfig val = new TestConfig("version", "string", 3);
     AuditInfo auditInfo = new AuditInfo(
         "testAuthor",
+        "testIdentity",
         "testComment",
         "127.0.0.1"
     );

@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -47,7 +47,7 @@ public class AuditEntry
       @JsonProperty("key") String key,
       @JsonProperty("type") String type,
       @JsonProperty("auditInfo") AuditInfo authorInfo,
-      @JsonProperty("request") @Nullable RequestInfo requestInfo,
+      @JsonProperty("request") RequestInfo request,
       @JsonProperty("payload") Payload payload,
       @JsonProperty("auditTime") DateTime auditTime
   )
@@ -58,7 +58,7 @@ public class AuditEntry
     this.key = key;
     this.type = type;
     this.auditInfo = authorInfo;
-    this.request = requestInfo;
+    this.request = request;
     this.auditTime = auditTime == null ? DateTimes.nowUtc() : auditTime;
     this.payload = payload == null ? Payload.fromString("") : payload;
   }
@@ -128,13 +128,14 @@ public class AuditEntry
            && Objects.equals(this.key, that.key)
            && Objects.equals(this.type, that.type)
            && Objects.equals(this.auditInfo, that.auditInfo)
+           && Objects.equals(this.request, that.request)
            && Objects.equals(this.payload, that.payload);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(key, type, auditInfo, payload, auditTime);
+    return Objects.hash(key, type, auditInfo, request, payload, auditTime);
   }
 
   public static class Builder
@@ -197,6 +198,13 @@ public class AuditEntry
 
     public AuditEntry build()
     {
+      if (payload != null && serializedPayload != null) {
+        throw DruidException.defensive(
+            "Either payload[%s] or serializedPayload[%s] must be specified, not both.",
+            payload, serializedPayload
+        );
+      }
+
       return new AuditEntry(key, type, auditInfo, requestInfo, new Payload(serializedPayload, payload), auditTime);
     }
   }
