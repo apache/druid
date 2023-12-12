@@ -84,6 +84,7 @@ public class GoogleStorageDruidModule implements DruidModule
   {
     LOG.info("Configuring GoogleStorageDruidModule...");
 
+    JsonConfigProvider.bind(binder, "druid.google", GoogleInputDataConfig.class);
     JsonConfigProvider.bind(binder, "druid.google", GoogleAccountConfig.class);
 
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(GoogleDataSegmentPusher.class)

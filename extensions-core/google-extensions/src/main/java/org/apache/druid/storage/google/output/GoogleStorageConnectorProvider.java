@@ -38,13 +38,13 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
 {
 
   @JacksonInject
-  final GoogleStorage googleStorage;
-  final GoogleInputDataConfig googleInputDataConfig;
+  GoogleStorage googleStorage;
+
+  @JacksonInject
+  GoogleInputDataConfig googleInputDataConfig;
 
   @JsonCreator
   public GoogleStorageConnectorProvider(
-      @JacksonInject GoogleStorage storage,
-      @JacksonInject GoogleInputDataConfig inputDataConfig,
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
       @JsonProperty(value = "tempDir", required = true) File tempDir,
@@ -53,9 +53,6 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   )
   {
     super(bucket, prefix, tempDir, chunkSize, maxRetry);
-    googleStorage = storage;
-    googleInputDataConfig = inputDataConfig;
-
   }
 
   @Override
@@ -63,4 +60,5 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   {
     return new GoogleStorageConnector(this, googleStorage, googleInputDataConfig);
   }
+
 }
