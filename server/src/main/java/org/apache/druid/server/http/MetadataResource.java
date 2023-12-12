@@ -364,11 +364,7 @@ public class MetadataResource
   }
 
   /**
-<<<<<<< HEAD
-   * API to fetch {@link DataSourceInformation} for the specified dataSources.
-=======
    * API to fetch {@link DataSourceInformation} for the specified datasources.
->>>>>>> upstream/master
    *
    * @param dataSources list of dataSources to be queried
    * @return information including schema details for the specified datasources
