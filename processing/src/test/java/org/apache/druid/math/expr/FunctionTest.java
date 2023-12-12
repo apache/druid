@@ -148,10 +148,12 @@ public class FunctionTest extends InitializedNullHandlingTest
         throw new RuntimeException("nested-exception");
       }
     };
-    DruidException e = Assert.assertThrows(DruidException.class,
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
         () -> {
           expr.eval(bind);
-        });
+        }
+    );
 
     assertEquals("Function[abs] encountered unknown exception.", e.getMessage());
     assertNotNull(e.getCause());
@@ -581,19 +583,17 @@ public class FunctionTest extends InitializedNullHandlingTest
       if (NullHandling.sqlCompatible()) {
         assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
       } else {
-        try {
-          assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null);
-          Assert.fail("Did not throw IllegalArgumentException");
-        }
-        catch (ExpressionValidationException e) {
-          Assert.assertEquals(
-              StringUtils.format(
-                  "Function[round] first argument should be a LONG or DOUBLE but got %s instead",
-                  argAndType.rhs
-              ),
-              e.getMessage()
-          );
-        }
+        Throwable t = Assert.assertThrows(
+            DruidException.class,
+            () -> assertExpr(StringUtils.format("round(%s)", argAndType.lhs), null)
+        );
+        Assert.assertEquals(
+            StringUtils.format(
+                "Function[round] first argument should be a LONG or DOUBLE but got %s instead",
+                argAndType.rhs
+            ),
+            t.getMessage()
+        );
       }
     }
   }
@@ -748,19 +748,16 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testSizeForatInvalidArgumentType()
   {
-    try {
+    if (NullHandling.replaceWithDefault()) {
       //x = "foo"
-      Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
-            .eval(bestEffortBindings);
-
-      // for sqlCompatible, function above returns null and goes here
-      // but for non-sqlCompatible, it must not go to here
-      Assert.assertTrue(NullHandling.sqlCompatible() ? true : false);
-    }
-    catch (ExpressionValidationException e) {
+      Throwable t = Assert.assertThrows(
+          DruidException.class,
+          () -> Parser.parse("human_readable_binary_byte_format(x)", ExprMacroTable.nil())
+                      .eval(bestEffortBindings)
+      );
       Assert.assertEquals(
           "Function[human_readable_binary_byte_format] needs a number as its first argument but got STRING instead",
-          e.getMessage()
+          t.getMessage()
       );
     }
 
@@ -783,10 +780,11 @@ public class FunctionTest extends InitializedNullHandlingTest
         t.getMessage()
     );
 
-      //of = 0F
+    //of = 0F
     t = Assert.assertThrows(
         DruidException.class,
-        () -> Parser.parse("human_readable_binary_byte_format(1024, nonexist)", ExprMacroTable.nil()).eval(bestEffortBindings)
+        () -> Parser.parse("human_readable_binary_byte_format(1024, nonexist)", ExprMacroTable.nil())
+                    .eval(bestEffortBindings)
     );
     Assert.assertEquals(
         "Function[human_readable_binary_byte_format] needs a LONG as its second argument but got STRING instead",
@@ -810,7 +808,8 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     t = Assert.assertThrows(
         DruidException.class,
-        () -> Parser.parse("human_readable_binary_byte_format(1024, minLong)", ExprMacroTable.nil()).eval(bestEffortBindings)
+        () -> Parser.parse("human_readable_binary_byte_format(1024, minLong)", ExprMacroTable.nil())
+                    .eval(bestEffortBindings)
     );
     Assert.assertEquals(
         "Function[human_readable_binary_byte_format] given precision[-9223372036854775808] must be in the range of [0,3]",
@@ -941,7 +940,10 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testDecodeBase64UTF()
   {
     assertExpr("decode_base64_utf8('aGVsbG8=')", "hello");
-    assertExpr("decode_base64_utf8('V2hlbiBhbiBvbmlvbiBpcyBjdXQsIGNlcnRhaW4gKGxhY2hyeW1hdG9yKSBjb21wb3VuZHMgYXJlIHJlbGVhc2VkIGNhdXNpbmcgdGhlIG5lcnZlcyBhcm91bmQgdGhlIGV5ZXMgKGxhY3JpbWFsIGdsYW5kcykgdG8gYmVjb21lIGlycml0YXRlZC4=')", "When an onion is cut, certain (lachrymator) compounds are released causing the nerves around the eyes (lacrimal glands) to become irritated.");
+    assertExpr(
+        "decode_base64_utf8('V2hlbiBhbiBvbmlvbiBpcyBjdXQsIGNlcnRhaW4gKGxhY2hyeW1hdG9yKSBjb21wb3VuZHMgYXJlIHJlbGVhc2VkIGNhdXNpbmcgdGhlIG5lcnZlcyBhcm91bmQgdGhlIGV5ZXMgKGxhY3JpbWFsIGdsYW5kcykgdG8gYmVjb21lIGlycml0YXRlZC4=')",
+        "When an onion is cut, certain (lachrymator) compounds are released causing the nerves around the eyes (lacrimal glands) to become irritated."
+    );
     assertExpr("decode_base64_utf8('eyJ0ZXN0IjogMX0=')", "{\"test\": 1}");
     assertExpr("decode_base64_utf8('')", NullHandling.sqlCompatible() ? "" : null);
   }
@@ -1005,6 +1007,7 @@ public class FunctionTest extends InitializedNullHandlingTest
       Assert.assertEquals(happiness, Parser.parse(StringUtils.format("%s(1,2)", tea), exprMacroTable));
     }
   }
+
   @Test
   public void testComplexDecodeNull()
   {
