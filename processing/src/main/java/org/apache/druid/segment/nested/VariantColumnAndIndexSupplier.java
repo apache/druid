@@ -320,6 +320,9 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
+      if (!valueType.isArray()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
+      }
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
           eval,
@@ -384,19 +387,19 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
-          final int id = dictionary.indexOf(ids) + arrayOffset;
+          final int localId = dictionary.indexOf(ids);
           if (includeUnknown) {
-            if (id < 0) {
+            if (localId < 0) {
               return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
             }
             return bitmapResultFactory.unionDimensionValueBitmaps(
-                ImmutableList.of(getBitmap(id), nullValueBitmap)
+                ImmutableList.of(getBitmap(localId + arrayOffset), nullValueBitmap)
             );
           }
-          if (id < 0) {
+          if (localId < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
-          return bitmapResultFactory.wrapDimensionValue(getBitmap(id));
+          return bitmapResultFactory.wrapDimensionValue(getBitmap(localId + arrayOffset));
         }
       };
     }
@@ -404,20 +407,24 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
   private class VariantArrayElementIndexes implements ArrayElementIndexes
   {
-
     @Nullable
     @Override
     public BitmapColumnIndex containsValue(@Nullable Object value, TypeSignature<ValueType> elementValueType)
     {
+      // this column doesn't store nested arrays, bail out if checking if we contain an array
+      if (elementValueType.isArray()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
+      }
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(elementValueType), value);
+
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
           eval,
-          ExpressionType.fromColumnTypeStrict(logicalType.getElementType())
+          ExpressionType.fromColumnTypeStrict(logicalType.isArray() ? logicalType.getElementType() : logicalType)
       );
       if (castForComparison == null) {
         return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
-      Indexed elements;
+      final Indexed elements;
       final int elementOffset;
       switch (logicalType.getElementType().getType()) {
         case STRING:

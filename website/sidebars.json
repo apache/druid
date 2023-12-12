@@ -30,8 +30,22 @@
     ],
     "Design": [
       "design/architecture",
+      {
+        "type": "category",
+        "label": "Services",
+        "items": [
+          "design/coordinator",
+          "design/overlord",
+          "design/broker",
+          "design/router",
+          "design/historical",
+          "design/middlemanager",
+          "design/peons",
+          "design/indexer"
+        ]
+      },
+      "design/storage",
       "design/segments",
-      "design/processes",
       "design/deep-storage",
       "design/metadata-storage",
       "design/zookeeper"
@@ -114,6 +128,7 @@
           "querying/sql-operators",
           "querying/sql-scalar",
           "querying/sql-aggregations",
+          "querying/sql-window-functions",
           "querying/sql-array-functions",
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
@@ -124,6 +139,7 @@
         ]
       },
       "querying/querying",
+      "querying/query-processing",
       "querying/query-execution",
       "querying/troubleshooting",
       {
@@ -277,6 +293,10 @@
     ],
     "Misc": [
       "misc/papers-and-talks"
+    ],
+    "Release info": [
+      "release-info/release-notes",
+      "release-info/upgrade-notes"
     ]
-      }
+  }
 }

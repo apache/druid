@@ -30,23 +30,36 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 /**
+ *
  */
 public class SinkTest extends InitializedNullHandlingTest
 {
@@ -291,5 +304,71 @@ public class SinkTest extends InitializedNullHandlingTest
         ImmutableMap.of("field1", "value5", "dedupColumn", "v1")
     ), false).getRowCount();
     Assert.assertTrue(rows == -2);
+  }
+
+  @Test
+  public void testAcquireSegmentReferences_empty()
+  {
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Sink.acquireSegmentReferences(Collections.emptyList(), Function.identity(), false)
+    );
+  }
+
+  @Test
+  public void testAcquireSegmentReferences_two() throws IOException
+  {
+    final List<FireHydrant> hydrants = twoHydrants();
+    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, Function.identity(), false);
+    Assert.assertNotNull(references);
+    Assert.assertEquals(2, references.size());
+    Assert.assertEquals(0, references.get(0).getHydrantNumber());
+    Assert.assertFalse(references.get(0).isImmutable());
+    Assert.assertEquals(1, references.get(1).getHydrantNumber());
+    Assert.assertTrue(references.get(1).isImmutable());
+    CloseableUtils.closeAll(references);
+  }
+
+  @Test
+  public void testAcquireSegmentReferences_two_skipIncremental() throws IOException
+  {
+    final List<FireHydrant> hydrants = twoHydrants();
+    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, Function.identity(), true);
+    Assert.assertNotNull(references);
+    Assert.assertEquals(1, references.size());
+    Assert.assertEquals(1, references.get(0).getHydrantNumber());
+    Assert.assertTrue(references.get(0).isImmutable());
+    CloseableUtils.closeAll(references);
+  }
+
+  @Test
+  public void testAcquireSegmentReferences_twoWithOneSwappedToNull()
+  {
+    // One segment has been swapped out. (Happens when sinks are being closed.)
+    final List<FireHydrant> hydrants = twoHydrants();
+    hydrants.get(1).swapSegment(null);
+
+    final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, Function.identity(), false);
+    Assert.assertNull(references);
+  }
+
+  /**
+   * Generate one in-memory hydrant, one not-in-memory hydrant.
+   */
+  private static List<FireHydrant> twoHydrants()
+  {
+    final SegmentId segmentId = SegmentId.dummy("foo");
+    return Arrays.asList(
+        new FireHydrant(EasyMock.createMock(IncrementalIndex.class), 0, segmentId),
+        new FireHydrant(
+            new RowBasedSegment<>(
+                segmentId,
+                Sequences.empty(),
+                RowAdapters.standardRow(),
+                RowSignature.empty()
+            ),
+            1
+        )
+    );
   }
 }

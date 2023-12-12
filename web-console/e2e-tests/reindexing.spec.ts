@@ -60,7 +60,7 @@ describe('Reindexing from Druid', () => {
   });
 
   it('Reindex datasource from dynamic to range partitions', async () => {
-    const testName = 'reindex-dynamic-to-range-';
+    const testName = 'reindex-dynamic-to-range';
     const datasourceName = testName + new Date().toISOString();
     const interval = '2015-09-12/2015-09-13';
     const dataConnector = new ReindexDataConnector(page, {

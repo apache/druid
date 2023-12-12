@@ -24,10 +24,12 @@ import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -346,6 +348,22 @@ public class HllSketchAggregatorFactoryTest
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testFoldWithNullObject()
+  {
+    TestHllSketchAggregatorFactory factory = new TestHllSketchAggregatorFactory(
+        NAME,
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        !ROUND
+    );
+    AggregateCombiner aggregateCombiner = factory.makeAggregateCombiner();
+    TestObjectColumnSelector objectColumnSelector = new TestObjectColumnSelector(new Object[] {null});
+    aggregateCombiner.fold(objectColumnSelector);
   }
 
   private static boolean isToStringField(Field field)

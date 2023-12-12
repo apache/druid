@@ -3231,14 +3231,6 @@ public interface Function extends NamedFunction
     public void validateArguments(List<Expr> args)
     {
       validationHelperCheckArgumentCount(args, 1);
-      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
-
-      if (expr == null) {
-        throw validationFailed(
-            "argument %s should be an identifier expression. Use array() instead",
-            args.get(0).toString()
-        );
-      }
     }
 
     @Nullable
@@ -3327,11 +3319,11 @@ public interface Function extends NamedFunction
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExpressionType type = ExpressionType.LONG;
+      ExpressionType type = null;
       for (Expr arg : args) {
-        type = ExpressionTypeConversion.function(type, arg.getOutputType(inspector));
+        type = ExpressionTypeConversion.leastRestrictiveType(type, arg.getOutputType(inspector));
       }
-      return ExpressionType.asArrayType(type);
+      return type == null ? null : ExpressionTypeFactory.getInstance().ofArray(type);
     }
 
     /**
