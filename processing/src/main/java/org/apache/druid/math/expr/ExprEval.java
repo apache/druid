@@ -43,9 +43,6 @@ import java.util.Map;
  */
 public abstract class ExprEval<T>
 {
-  private static ExprEval __true = ExprEval.of(Evals.asLong(true));
-  private static ExprEval __false = ExprEval.of(Evals.asLong(false));
-
   /**
    * Deserialize an expression stored in a bytebuffer, e.g. for an agg.
    *
@@ -366,7 +363,7 @@ public abstract class ExprEval<T>
       case DOUBLE:
         return ExprEval.of(Evals.asDouble(value));
       case LONG:
-        return ofLongBoolean(value);
+        return ExprEval.of(Evals.asLong(value));
       case STRING:
         return ExprEval.of(String.valueOf(value));
       default:
@@ -379,7 +376,7 @@ public abstract class ExprEval<T>
    */
   public static ExprEval ofLongBoolean(boolean value)
   {
-    return value ? __true : __false;
+    return ExprEval.of(Evals.asLong(value));
   }
 
   public static ExprEval ofComplex(ExpressionType outputType, @Nullable Object value)

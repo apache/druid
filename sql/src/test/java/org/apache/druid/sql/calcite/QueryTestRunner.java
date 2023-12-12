@@ -657,18 +657,8 @@ public class QueryTestRunner
         verifySteps.add(new VerifyPrepareSignature(execStep));
       }
     } else {
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
-      runSteps.add(new ExecuteQuery(builder));
+      BaseExecuteQuery execStep = new ExecuteQuery(builder);
+      runSteps.add(execStep);
       if (!builder.customRunners.isEmpty()) {
         for (QueryRunStepFactory factory : builder.customRunners) {
           runSteps.add(factory.make(builder, (BaseExecuteQuery) runSteps.get(runSteps.size() - 1)));
@@ -713,10 +703,8 @@ public class QueryTestRunner
    */
   public void run()
   {
-    for(int i=0;i<100;i++) {
-      for (QueryRunStep runStep : runSteps) {
-        runStep.run();
-      }
+    for (QueryRunStep runStep : runSteps) {
+      runStep.run();
     }
     for (QueryVerifyStep verifyStep : verifySteps) {
       verifyStep.verify();
