@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.easymock.IExpectationSetters;
+import org.joda.time.DateTime;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +37,7 @@ import java.util.Map;
 
 public class GoogleTestUtils extends EasyMockSupport
 {
-  private static final org.joda.time.DateTime NOW = DateTimes.nowUtc();
+  private static final DateTime NOW = DateTimes.nowUtc();
   private static final byte[] CONTENT =
       StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
 

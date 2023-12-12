@@ -41,6 +41,7 @@ import org.apache.druid.storage.google.GoogleUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Iterator;
@@ -135,7 +136,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
       }
 
       @Override
-      public long getObjectSize(CloudObjectLocation location)
+      public long getObjectSize(CloudObjectLocation location) throws IOException
       {
         final GoogleStorageObjectMetadata storageObject = storage.getMetadata(location.getBucket(), location.getPath());
         return getSize(storageObject);

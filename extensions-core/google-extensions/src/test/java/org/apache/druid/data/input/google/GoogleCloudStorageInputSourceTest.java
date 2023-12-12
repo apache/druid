@@ -209,7 +209,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testWithUrisSplit()
+  public void testWithUrisSplit() throws IOException
   {
     EasyMock.reset(STORAGE);
 
@@ -255,7 +255,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testWithUrisGlob()
+  public void testWithUrisGlob() throws IOException
   {
     GoogleStorageObjectMetadata objectMetadata = new GoogleStorageObjectMetadata(
         BUCKET,
@@ -503,7 +503,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
                   .verify();
   }
 
-  private static void addExpectedPrefixObjects(URI prefix, List<URI> uris) throws IOException
+  private static void addExpectedPrefixObjects(URI prefix, List<URI> uris)
   {
     final String bucket = prefix.getAuthority();
 

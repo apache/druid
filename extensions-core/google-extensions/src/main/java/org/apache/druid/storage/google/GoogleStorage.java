@@ -115,7 +115,7 @@ public class GoogleStorage
       final String bucket,
       final String path,
       @Nullable final Integer chunkSize
-  ) throws IOException
+  )
   {
     WriteChannel writer = storage.get().writer(getBlobInfo(bucket, path));
     // Limit GCS internal write buffer memory to prevent OOM errors
@@ -127,9 +127,12 @@ public class GoogleStorage
   public GoogleStorageObjectMetadata getMetadata(
       final String bucket,
       final String path
-  )
+  ) throws IOException
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.values()));
+    if (blob == null) {
+      throw new IOE("Failed fetching google cloud storage object [bucket: %s, path: %s]", bucket, path);
+    }
     return new GoogleStorageObjectMetadata(
         blob.getBucket(),
         blob.getName(),
@@ -166,20 +169,25 @@ public class GoogleStorage
 
   public boolean exists(final String bucket, final String path)
   {
-
     Blob blob = storage.get().get(bucket, path);
     return blob != null;
   }
 
-  public long size(final String bucket, final String path)
+  public long size(final String bucket, final String path) throws IOException
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.SIZE));
+    if (blob == null) {
+      throw new IOE("Failed fetching size for google cloud storage object [bucket: %s, path: %s]", bucket, path);
+    }
     return blob.getSize();
   }
 
-  public String version(final String bucket, final String path)
+  public String version(final String bucket, final String path) throws IOException
   {
     Blob blob = storage.get().get(bucket, path, Storage.BlobGetOption.fields(Storage.BlobField.GENERATION));
+    if (blob == null){
+      throw new IOE("Failed fetching version for google cloud storage object [bucket: %s, path: %s]", bucket, path);
+    }
     return blob.getGeneratedId();
   }
 

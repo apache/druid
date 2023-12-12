@@ -85,7 +85,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
   }
 
   @Override
-  public OutputStream write(String path) throws IOException
+  public OutputStream write(String path)
   {
     return storage.getObjectOutputStream(config.getBucket(), objectPath(path), config.getChunkSize().getBytesInInt());
   }
