@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -59,11 +60,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
-import org.openjdk.jmh.runner.options.TimeValue;
-
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -78,6 +74,7 @@ public class ExpressionSelectorBenchmark
 {
   static {
     NullHandling.initializeForTests();
+    ExpressionProcessing.initializeForTests();
   }
 
   @Param({"1000000"})
@@ -487,20 +484,4 @@ public class ExpressionSelectorBenchmark
       cursor.advance();
     }
   }
-
-  public static void main(String... args) throws Exception {
-    Options opt = new OptionsBuilder()
-        .include(ExpressionSelectorBenchmark.class.getSimpleName())
-        .warmupIterations(1) // number of times the warmup iteration should take place
-        .measurementIterations(2) //number of times the actual iteration should take place
-//        .timeout(TimeValue.milliseconds(100))
-        .measurementTime(TimeValue.milliseconds(1000))
-        .measurementIterations(5)
-        .measurementBatchSize(10)
-        .forks(1)
-//        .jvmArgs("-Xmx8g", "-Xms8g", "-XX:MaxDirectMemorySize=512M")
-        .build();
-    new Runner(opt).run();
-  }
-
 }
