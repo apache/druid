@@ -36,10 +36,11 @@ import java.util.Optional;
 
 public class Pac4jSessionStoreTest
 {
+  private static final String COOKIE_PASSPHRASE = "test-cookie-passphrase";
   @Test
   public void testSetAndGet()
   {
-    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore("test-cookie-passphrase");
+    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
 
     WebContext webContext1 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext1.getScheme()).andReturn("https");
@@ -66,7 +67,7 @@ public class Pac4jSessionStoreTest
   @Test
   public void testSetAndGetClearUserProfile()
   {
-    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore("test-cookie-passphrase");
+    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
 
     WebContext webContext1 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext1.getScheme()).andReturn("https");
@@ -97,7 +98,7 @@ public class Pac4jSessionStoreTest
   @Test
   public void testSetAndGetClearUserMultipleProfile()
   {
-    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore("test-cookie-passphrase");
+    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
 
     WebContext webContext1 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext1.getScheme()).andReturn("https");
