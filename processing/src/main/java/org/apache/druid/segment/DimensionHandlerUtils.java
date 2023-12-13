@@ -43,7 +43,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -441,28 +440,6 @@ public final class DimensionHandlerUtils
 
   private static Object[] coerceToObjectWithCoercionFunction(Object obj, Function<Object, Object> coercionFunction)
   {
-//    if (obj == null) {
-//      return null;
-//    }
-//    if (obj instanceof List) {
-//      return convertToComparableList((List) obj, convertFunction);
-//    }
-//    if (obj instanceof ComparableList) {
-//      return convertToComparableList(((ComparableList) obj).getDelegate(), convertFunction);
-//    }
-//    if (obj instanceof Object[]) {
-//      final List<T> delegateList = new ArrayList<>();
-//      for (Object eachObj : (Object[]) obj) {
-//        delegateList.add(convertFunction.apply(eachObj));
-//      }
-//      return new ComparableList(delegateList);
-//    }
-//    throw new ISE(
-//        "Unable to convert object of type[%s] to [%s]",
-//        obj.getClass().getName(),
-//        ComparableList.class.getName()
-//    );
-
     if (obj == null) {
       return null;
     }

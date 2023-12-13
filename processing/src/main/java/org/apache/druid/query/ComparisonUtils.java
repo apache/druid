@@ -1,17 +1,33 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.query;
 
-import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
 
 public class ComparisonUtils
 {
@@ -77,7 +93,7 @@ public class ComparisonUtils
       for (int index = 0; index < minSize; ++index) {
         Object lhsElement = lhs[index];
         Object rhsElement = rhs[index];
-        int cmp = elementComparator.compare((T) lhsElement, (T) rhsElement);
+        int cmp = elementComparator.compare(coerceElement(lhsElement), coerceElement(rhsElement));
         if (cmp != 0) {
           return cmp;
         }
@@ -89,6 +105,25 @@ public class ComparisonUtils
         return -1;
       }
       return 1;
+    }
+
+    protected T coerceElement(Object element)
+    {
+      return (T) element;
+    }
+  }
+
+  public static class NumericListComparatorForStringElementComparator extends ListComparator<String>
+  {
+    public NumericListComparatorForStringElementComparator(@Nullable StringComparator stringComparator)
+    {
+      super(stringComparator == null ? StringComparators.NUMERIC : stringComparator);
+    }
+
+    @Override
+    protected String coerceElement(Object element)
+    {
+      return String.valueOf(element);
     }
   }
 }

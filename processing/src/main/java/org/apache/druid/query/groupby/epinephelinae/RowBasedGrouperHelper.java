@@ -74,8 +74,6 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.ValueMatchers;
@@ -1056,14 +1054,18 @@ public class RowBasedGrouperHelper
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.STRING_ARRAY)) {
           final Object[] lhs = DimensionHandlerUtils.coerceToStringArray(key1.getKey()[i]);
           final Object[] rhs = DimensionHandlerUtils.coerceToStringArray(key2.getKey()[i]);
-          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i-dimStart)).compare(lhs, rhs);
+          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i - dimStart)).compare(lhs, rhs);
         } else if (fieldTypes.get(i - dimStart).equals(ColumnType.LONG_ARRAY)
                    || fieldTypes.get(i - dimStart).equals(ColumnType.DOUBLE_ARRAY)) {
-          final Object[] lhs = DimensionHandlerUtils.convertToList(key1.getKey()[i],
-                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
-          final Object[] rhs = DimensionHandlerUtils.convertToList(key2.getKey()[i],
-                                                                         fieldTypes.get(i - dimStart).getElementType().getType());
-          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i-dimStart)).compare(lhs, rhs);
+          final Object[] lhs = DimensionHandlerUtils.convertToList(
+              key1.getKey()[i],
+              fieldTypes.get(i - dimStart).getElementType().getType()
+          );
+          final Object[] rhs = DimensionHandlerUtils.convertToList(
+              key2.getKey()[i],
+              fieldTypes.get(i - dimStart).getElementType().getType()
+          );
+          cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i - dimStart)).compare(lhs, rhs);
         } else {
           cmp = ComparisonUtils.getComparatorForType(fieldTypes.get(i - dimStart))
                                .compare(key1.getKey()[i], key2.getKey()[i]);
@@ -1118,16 +1120,10 @@ public class RowBasedGrouperHelper
         if (fieldType.isNumeric()
             && (comparator.equals(StringComparators.NUMERIC) || comparator.equals(StringComparators.NATURAL))) {
           // use natural comparison
-          if (fieldType.is(ValueType.DOUBLE)) {
-            // sometimes doubles can become floats making the round trip from serde, make sure to coerce them both
-            // to double
-            cmp = Comparators.<Comparable>naturalNullsFirst().compare(
-                lhs != null ? ((Number) lhs).doubleValue() : null,
-                rhs != null ? ((Number) rhs).doubleValue() : null
-            );
-          } else {
-            cmp = Comparators.<Comparable>naturalNullsFirst().compare((Comparable) lhs, (Comparable) rhs);
-          }
+          cmp = ComparisonUtils.getComparatorForType(fieldType).compare(
+              DimensionHandlerUtils.convertObjectToType(lhs, fieldType),
+              DimensionHandlerUtils.convertObjectToType(rhs, fieldType)
+          );
         } else if (fieldType.equals(ColumnType.STRING_ARRAY)) {
           cmp = new ComparisonUtils.ListComparator<String>(
               comparator == null ? StringComparators.LEXICOGRAPHIC : comparator
@@ -1137,13 +1133,10 @@ public class RowBasedGrouperHelper
           );
         } else if (fieldType.equals(ColumnType.LONG_ARRAY)
                    || fieldType.equals(ColumnType.DOUBLE_ARRAY)) {
-
-          cmp = ComparableList.compareWithComparator(
-              comparator,
-              DimensionHandlerUtils.convertToList(lhs, fieldType.getElementType().getType()),
-              DimensionHandlerUtils.convertToList(rhs, fieldType.getElementType().getType())
+          cmp = ComparisonUtils.getComparatorForType(fieldType).compare(
+              DimensionHandlerUtils.convertObjectToType(lhs, fieldType),
+              DimensionHandlerUtils.convertObjectToType(rhs, fieldType)
           );
-
         } else {
           cmp = comparator.compare(
               DimensionHandlerUtils.convertObjectToString(lhs),
@@ -1183,11 +1176,11 @@ public class RowBasedGrouperHelper
     private final List<String> dictionary;
     private final Object2IntMap<String> reverseDictionary;
 
-    private final List<ComparableStringArray> arrayDictionary;
-    private final Object2IntMap<ComparableStringArray> reverseArrayDictionary;
+    private final List<Object[]> arrayDictionary;
+    private final Object2IntMap<Object[]> reverseArrayDictionary;
 
-    private final List<ComparableList> listDictionary;
-    private final Object2IntMap<ComparableList> reverseListDictionary;
+    private final List<Object[]> listDictionary;
+    private final Object2IntMap<Object[]> reverseListDictionary;
 
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
@@ -1524,12 +1517,9 @@ public class RowBasedGrouperHelper
       {
         this.keyBufferPosition = keyBufferPosition;
         this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            ComparableList.compareWithComparator(
-                stringComparator,
-                listDictionary.get(lhsBuffer.getInt(lhsPosition
-                                                    + keyBufferPosition)),
-                listDictionary.get(rhsBuffer.getInt(rhsPosition
-                                                    + keyBufferPosition))
+            new ComparisonUtils.NumericListComparatorForStringElementComparator(stringComparator).compare(
+                listDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                listDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
       }
 
@@ -1542,7 +1532,7 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        final ComparableList comparableList = (ComparableList) key.getKey()[idx];
+        final Object[] comparableList = (Object[]) key.getKey()[idx];
         int id = reverseDictionary.getInt(comparableList);
         if (id == DimensionDictionary.ABSENT_VALUE_ID) {
           id = listDictionary.size();
@@ -1578,13 +1568,11 @@ public class RowBasedGrouperHelper
       {
         this.keyBufferPosition = keyBufferPosition;
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            ComparableStringArray.compareWithComparator(
-                stringComparator,
-                arrayDictionary.get(lhsBuffer.getInt(lhsPosition
-                                                     + keyBufferPosition)),
-                arrayDictionary.get(rhsBuffer.getInt(rhsPosition
-                                                     + keyBufferPosition))
-            );
+            new ComparisonUtils.ListComparator<String>(stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
+                .compare(
+                    arrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                    arrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+                );
       }
 
       @Override
@@ -1596,7 +1584,7 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        ComparableStringArray comparableStringArray = (ComparableStringArray) key.getKey()[idx];
+        Object[] comparableStringArray = (Object[]) key.getKey()[idx];
         final int id = addToArrayDictionary(comparableStringArray);
         if (id < 0) {
           return false;
@@ -1617,7 +1605,7 @@ public class RowBasedGrouperHelper
         return bufferComparator;
       }
 
-      private int addToArrayDictionary(final ComparableStringArray s)
+      private int addToArrayDictionary(final Object[] s)
       {
         int idx = reverseArrayDictionary.getInt(s);
         if (idx == DimensionDictionary.ABSENT_VALUE_ID) {

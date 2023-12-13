@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.TopNSequence;
+import org.apache.druid.query.ComparisonUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -49,8 +50,6 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -439,17 +438,20 @@ public class DefaultLimitSpec implements LimitSpec
     if (columnType.isArray()) {
       final ValueType elementType = columnType.getElementType().getType();
       if (columnType.getElementType().isNumeric()) {
-        arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableList.compareWithComparator(
-            comparator,
-            DimensionHandlerUtils.convertToList(o1, elementType),
-            DimensionHandlerUtils.convertToList(o2, elementType)
-        );
+        arrayComparator = (o1, o2) ->
+            new ComparisonUtils.NumericListComparatorForStringElementComparator(comparator)
+                .compare(
+                    DimensionHandlerUtils.convertToList(o1, elementType),
+                    DimensionHandlerUtils.convertToList(o2, elementType)
+                );
       } else if (columnType.getElementType().equals(ColumnType.STRING)) {
-        arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableStringArray.compareWithComparator(
-            comparator,
-            DimensionHandlerUtils.coerceToStringArray(o1),
-            DimensionHandlerUtils.coerceToStringArray(o2)
-        );
+        arrayComparator = (o1, o2) ->
+            new ComparisonUtils.ListComparator<String>(
+                comparator == null ? StringComparators.LEXICOGRAPHIC : comparator)
+                .compare(
+                    DimensionHandlerUtils.coerceToStringArray(o1),
+                    DimensionHandlerUtils.coerceToStringArray(o2)
+                );
       } else {
         throw new ISE("Cannot create comparator for array type %s.", columnType.toString());
       }
