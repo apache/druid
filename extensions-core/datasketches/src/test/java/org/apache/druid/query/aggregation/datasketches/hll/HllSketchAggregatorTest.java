@@ -110,7 +110,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testHllSketchLimit() throws Exception
+  public void testHllSketchLimit()
   {
     AggregationTestHelper ingestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new HllSketchModule().getJacksonModules(), new GroupByQueryConfig(), groupByFolder
