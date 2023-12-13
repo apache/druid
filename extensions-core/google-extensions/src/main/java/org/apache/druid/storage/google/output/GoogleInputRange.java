@@ -77,4 +77,15 @@ public class GoogleInputRange
   {
     return Objects.hash(start, size, bucket, path);
   }
+
+  @Override
+  public String toString()
+  {
+    return "GoogleInputRange{" +
+           "start=" + start +
+           ", size=" + size +
+           ", bucket='" + bucket + '\'' +
+           ", path='" + path + '\'' +
+           '}';
+  }
 }
