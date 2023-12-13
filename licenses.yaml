@@ -5459,19 +5459,6 @@ license_file_path: licenses/bin/lodash.MIT
 
 ---
 
-name: "audience-annotations"
-license_category: binary
-module: core
-license_name: Apache License version 2.0
-version: 0.12.0
-libraries:
-  - org.apache.yetus: audience-annotations
-notices:
-  - audience-annotations: |
-      Apache Yetus
-      Copyright 2008-2022 The Apache Software Foundation
----
-
 name: "loose-envify"
 license_category: binary
 module: web-console
