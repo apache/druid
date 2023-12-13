@@ -29,11 +29,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public interface WindowFrame
+public class WindowFrame
 {
   public static WindowFrame unbounded()
   {
-    return new WindowFrame1(PeerType.ROWS, true, 0, true, 0, null);
+    return new WindowFrame(PeerType.ROWS, true, 0, true, 0, null);
   }
 
   @SuppressWarnings("unused")
@@ -43,7 +43,6 @@ public interface WindowFrame
     RANGE
   }
 
-  static class WindowFrame1 implements WindowFrame {
   // Will likely need to add the order by columns to also be able to deal with RANGE peer type.
   private final PeerType peerType;
   private final boolean lowerUnbounded;
@@ -53,7 +52,7 @@ public interface WindowFrame
   private final List<ColumnWithDirection> orderBy;
 
   @JsonCreator
-  public WindowFrame1(
+  public WindowFrame(
       @JsonProperty("peerType") PeerType peerType,
       @JsonProperty("lowUnbounded") boolean lowerUnbounded,
       @JsonProperty("lowOffset") int lowerOffset,
@@ -112,10 +111,10 @@ public interface WindowFrame
     if (this == o) {
       return true;
     }
-    if (!(o instanceof WindowFrame1)) {
+    if (!(o instanceof WindowFrame)) {
       return false;
     }
-    WindowFrame1 that = (WindowFrame1) o;
+    WindowFrame that = (WindowFrame) o;
     return lowerUnbounded == that.lowerUnbounded
            && lowerOffset == that.lowerOffset
            && upperUnbounded == that.upperUnbounded
@@ -145,7 +144,7 @@ public interface WindowFrame
 
   public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    return new WindowFrame1(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
+    return new WindowFrame(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
   }
 
   public List<String> getOrderByColNames()
@@ -170,6 +169,5 @@ public interface WindowFrame
       return maxRows;
     }
     return Math.min(maxRows, upperOffset);
-  }
   }
 }
