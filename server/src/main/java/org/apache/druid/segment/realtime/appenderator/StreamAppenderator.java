@@ -1618,21 +1618,20 @@ public class StreamAppenderator implements Appenderator
     private final DataSegmentAnnouncer announcer;
     private final ScheduledExecutorService scheduledExecutorService;
     private final String taskId;
-    private final boolean enabled;
     private Map<SegmentId, Pair<RowSignature, Integer>> previousSinkSignatureMap = new HashMap<>();
 
     SinkSchemaAnnouncer()
     {
       this.announcer = StreamAppenderator.this.segmentAnnouncer;
       this.taskId = StreamAppenderator.this.myId;
-      this.enabled = centralizedDatasourceSchemaConfig.isEnabled()
+      boolean enabled = centralizedDatasourceSchemaConfig.isEnabled()
                      && centralizedDatasourceSchemaConfig.announceRealtimeSegmentSchema();
-      this.scheduledExecutorService = ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d");
+      this.scheduledExecutorService = enabled ? ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d") : null;
     }
 
     private void start()
     {
-      if (enabled) {
+      if (scheduledExecutorService != null) {
         scheduledExecutorService.scheduleAtFixedRate(
             this::computeAndAnnounce,
             SCHEMA_PUBLISH_DELAY_MILLIS,
@@ -1644,7 +1643,7 @@ public class StreamAppenderator implements Appenderator
 
     private void stop()
     {
-      if (enabled) {
+      if (scheduledExecutorService != null) {
         announcer.unannouceTask(taskId);
         scheduledExecutorService.shutdown();
       }
