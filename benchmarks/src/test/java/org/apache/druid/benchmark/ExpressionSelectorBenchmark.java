@@ -67,7 +67,7 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 3, time = 3 )
+@Warmup(iterations = 3, time = 3)
 @Measurement(iterations = 10, time = 3)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -527,7 +527,57 @@ public class ExpressionSelectorBenchmark
             ImmutableList.of(
                 new ExpressionVirtualColumn(
                     "v",
-                    "case_searched(lookup(s, 'lookyloo') == 'asd' || isnull(s) || n == 1, 1, lookup(s, 'lookyloo') == 'x', 2, 3)",
+                    "case_searched(n == 1001, -1, "
+                        + "lookup(s, 'lookyloo') == 'asd1', 1, "
+                        + "lookup(s, 'lookyloo') == 'asd2', 2, "
+                        + "lookup(s, 'lookyloo') == 'asd3', 3, "
+                        + "lookup(s, 'lookyloo') == 'asd4', 4, "
+                        + "lookup(s, 'lookyloo') == 'asd5', 5, "
+                        + "-2)",
+                    ColumnType.LONG,
+                    LookupEnabledTestExprMacroTable.INSTANCE
+                )
+            )
+        ),
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    final List<?> results = cursors
+        .map(cursor -> {
+          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+          consumeLong(cursor, selector, blackhole);
+          return null;
+        })
+        .toList();
+
+    blackhole.consume(results);
+  }
+
+  @Benchmark
+  public void caseSearchedWithLookup2(Blackhole blackhole)
+  {
+    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
+        null,
+        index.getDataInterval(),
+        VirtualColumns.create(
+            ImmutableList.of(
+                new ExpressionVirtualColumn(
+                    "ll",
+                    "lookup(s, 'lookyloo')",
+                    ColumnType.STRING,
+                    LookupEnabledTestExprMacroTable.INSTANCE
+                ),
+                new ExpressionVirtualColumn(
+                    "v",
+                    "case_searched(n == 1001, -1, "
+                        + "ll == 'asd1', 1, "
+                        + "ll == 'asd2', 2, "
+                        + "ll == 'asd3', 3, "
+                        + "ll == 'asd4', 4, "
+                        + "ll == 'asd5', 5, "
+                        + "-2)",
                     ColumnType.LONG,
                     LookupEnabledTestExprMacroTable.INSTANCE
                 )
