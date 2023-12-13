@@ -123,7 +123,7 @@ public class PrometheusEmitterConfig
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(
-                                  "Invalid waitForShutdownDelay [%s]. waitForShutdownDelay must be greater than or equal to 0.",
+                                  "Invalid value for waitForShutdownDelay[%s] specified, waitForShutdownDelay must be >= 0.",
                                   waitForShutdownDelay
                               )
                           );

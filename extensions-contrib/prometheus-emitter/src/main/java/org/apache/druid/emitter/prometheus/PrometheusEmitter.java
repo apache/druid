@@ -217,6 +217,7 @@ public class PrometheusEmitter implements Emitter
 
       try {
         if (config.getWaitForShutdownDelay().getMillis() > 0) {
+          log.info("Waiting [%s]ms before deleting metrics from the push gateway.", config.getWaitForShutdownDelay().getMillis());
           Thread.sleep(config.getWaitForShutdownDelay().getMillis());
         }
       }
