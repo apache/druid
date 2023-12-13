@@ -364,11 +364,6 @@
                 <artifactId>json-smart</artifactId>
                 <version>2.4.11</version>
             </dependency>
-            <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>1.33</version>
-            </dependency>
 
             <!-- transitive dependency of testng
             this would be resolved by updating

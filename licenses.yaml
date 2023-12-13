@@ -1022,7 +1022,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.33
+version: 2.2
 libraries:
   - org.yaml: snakeyaml
 
@@ -2871,6 +2871,18 @@ license_name: Apache License version 2.0
 libraries:
   - io.confluent: kafka-schema-registry-client
   - io.confluent: common-utils
+
+---
+
+name: org.yaml snakeyaml
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.0
+libraries:
+  - org.yaml: snakeyaml
+
+
 
 ---
 

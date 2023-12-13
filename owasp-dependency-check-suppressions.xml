@@ -275,14 +275,40 @@
   </suppress>
 
   <suppress>
-    <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
-    <!-- We need to update several other components to move to Snakeyaml 2.0 to address CVE-2022-1471 -->
-    <!-- Snakeyaml 1.33 added to dependencyManagement in main pom file -->
+    <!-- The main use of snakeyaml in Druid is coming in test scope from:
+     com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:jar:2.12.7
+     (version 1.27)
+     The contrib extension: druid-cassandra-storage uses version 1.6 in compile
+     scope
+     The integration tests use version 1.27 in compile scope.
+     Previous pinning of version to 1.33 forced the usage of the version across
+     all the modules, downgrading the version for some of them.
+     The removal of the pin in the main POM allows the modules choose which version
+     to be used, enabling the users to disable contrib extensions and use the
+     CVE free version of Snakeyaml in core extensions.
+      -->
+
     <notes><![CDATA[
-    file name: snakeyaml-1.33.jar
+    file name:  snakeyaml-1.27.jar
     ]]></notes>
+    <!-- Snakeyaml is used only in test scope in Druid core with trusted inputs -->
     <cve>CVE-2022-1471</cve>
+    <cve>CVE-2022-25857</cve>
     <!-- false positive -->
+    <cve>CVE-2023-2251</cve>
+    <cve>CVE-2022-3064</cve>
+  </suppress>
+
+  <suppress>
+    <!-- This is for contrib extension for which dependency-check is disabled
+    restoring this data for accuracy -->
+    <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
+    <notes><![CDATA[
+    file name: snakeyaml-1.6.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.yaml/snakeyaml@1.6$</packageUrl>
+    <cve>CVE-2017-18640</cve>
+    <cve>CVE-2022-25857</cve>
     <cve>CVE-2023-2251</cve>
     <cve>CVE-2022-3064</cve>
   </suppress>
