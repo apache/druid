@@ -26,6 +26,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
@@ -1164,7 +1165,7 @@ public class MSQReplaceTest extends MSQTestBase
            .when(testTaskActionClient)
            .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
 
-    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
                          "REPLACE INTO foo1"
                          + " OVERWRITE WHERE __time >= TIMESTAMP '2016-06-29' AND __time < TIMESTAMP '2016-07-03'"
@@ -1201,7 +1202,7 @@ public class MSQReplaceTest extends MSQTestBase
            .when(testTaskActionClient)
            .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
 
-    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
                          "REPLACE INTO foo1"
                          + " OVERWRITE WHERE __time >= TIMESTAMP '2016-05-25' AND __time < TIMESTAMP '2016-06-03'"
@@ -1238,7 +1239,7 @@ public class MSQReplaceTest extends MSQTestBase
            .when(testTaskActionClient)
            .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
 
-    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
     testIngestQuery().setSql(
                          "REPLACE INTO foo1"
                          + " OVERWRITE ALL"
@@ -1255,6 +1256,118 @@ public class MSQReplaceTest extends MSQTestBase
                      .verifyResults();
   }
 
+
+  @Test
+  public void testEmptyReplaceAllWithAllGrainOverFiniteIntervalSegment()
+  {
+    // Create a finite-interval segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2016-06-01T/2016-09-01T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2016-06-01T/2016-09-01T")))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceAllWithAllGrainOverEternitySegment()
+  {
+    // Create a segment spanning eternity
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.ETERNITY)
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceAllWithAllGrainOverHalfEternitySegment()
+  {
+    // Create a segment spanning half-eternity
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(new Interval(DateTimes.of("2000"), DateTimes.MAX))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedResultRows(ImmutableList.of())
+                     .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyReplaceLimitQuery()
+  {
+    // A limit query which results in 0 rows being inserted -- do nothing.
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1, COUNT(*) AS cnt"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+  }
 
   @Test
   public void testEmptyReplaceIntervalOverEternitySegment()

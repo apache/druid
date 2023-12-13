@@ -275,12 +275,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   )
                   .build();
 
-  public static final Map<String, Object> EMPTY_INSERT_DISABLED_MSQ_CONTEXT =
+  public static final Map<String, Object> FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT,
-                      false
+                      true
                   )
                   .build();
 
