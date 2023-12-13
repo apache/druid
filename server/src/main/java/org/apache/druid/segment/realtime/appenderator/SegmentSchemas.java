@@ -179,8 +179,8 @@ public class SegmentSchemas
   @Override
   public String toString()
   {
-    return "SegmentsSchema{" +
-           ", segmentSchemas=" + segmentSchemaList +
+    return "SegmentSchemas{" +
+           "segmentSchemaList=" + segmentSchemaList +
            '}';
   }
 }
