@@ -392,6 +392,9 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
     {
+      if (!matchValue.isArray()) {
+        return Predicates.alwaysFalse();
+      }
       if (arrayType == null) {
         // fall back to per row detection if input array type is unknown
         return typeDetectingArrayPredicateSupplier.get();

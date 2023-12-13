@@ -215,7 +215,7 @@ public class DruidJoinRule extends RelOptRule
     if (postJoinFilter != null) {
       relBuilder = relBuilder.filter(postJoinFilter);
     }
-
+    relBuilder.convert(join.getRowType(), false);
     call.transformTo(relBuilder.build());
   }
 

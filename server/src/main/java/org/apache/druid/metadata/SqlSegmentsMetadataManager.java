@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -686,7 +687,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -953,6 +954,51 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
     return Optional.fromNullable(usedSegmentsTimeline)
                    .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE));
+  }
+
+  /**
+   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* an optionally
+   * specified interval. If the interval specified is null, this method will retrieve all unused segments.
+   *
+   * This call does not return any information about realtime segments.
+   *
+   * @param datasource      The name of the datasource
+   * @param interval        an optional interval to search over.
+   * @param limit           an optional maximum number of results to return. If none is specified, the results are
+   *                        not limited.
+   * @param lastSegmentId an optional last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or  {@link SortOrder#ASC}, or < this
+   *                      segment lexigraphically if sortOrder is {@link SortOrder#DESC}. If none is specified, no
+   *                      such filter is used.
+   * @param sortOrder an optional order with which to return the matching segments by id, start time, end time. If
+   *                  none is specified, the order of the results is not guarenteed.
+
+   * Returns an iterable.
+   */
+  @Override
+  public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+      final String datasource,
+      @Nullable final Interval interval,
+      @Nullable final Integer limit,
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder
+  )
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final SqlSegmentsMetadataQuery queryTool =
+              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper);
+
+          final List<Interval> intervals =
+              interval == null
+                  ? Intervals.ONLY_ETERNITY
+                  : Collections.singletonList(interval);
+          try (final CloseableIterator<DataSegment> iterator =
+                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, lastSegmentId, sortOrder)) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
   }
 
   @Override

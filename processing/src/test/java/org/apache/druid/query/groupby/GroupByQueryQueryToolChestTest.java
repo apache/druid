@@ -47,6 +47,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.query.aggregation.SerializablePairLongFloat;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
@@ -960,9 +963,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   {
     switch (valueType) {
       case LONG:
+        return new SerializablePairLongLong(123L, (long) dimValue);
       case DOUBLE:
+        return new SerializablePairLongDouble(123L, (double) dimValue);
       case FLOAT:
-        return new SerializablePair<>(123L, dimValue);
+        return new SerializablePairLongFloat(123L, (float) dimValue);
       case STRING:
         return new SerializablePairLongString(123L, (String) dimValue);
       default:

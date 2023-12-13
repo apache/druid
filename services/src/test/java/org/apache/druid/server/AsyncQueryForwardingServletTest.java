@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -54,6 +55,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.BaseJettyTest;
@@ -105,9 +113,12 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Deflater;
@@ -557,9 +568,66 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     verifyServletCallsForQuery(query, true, false, hostFinder, properties, true);
   }
 
-  /**
-   * Verifies that the Servlet calls the right methods the right number of times.
-   */
+  @Test
+  public void testNoParseExceptionOnGroupByWithFilteredAggregationOnLookups() throws Exception
+  {
+    class TestLookupReferenceManager implements LookupExtractorFactoryContainerProvider
+    {
+      @Override
+      public Set<String> getAllLookupNames()
+      {
+        return null;
+      }
+
+      @Override
+      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+      {
+        return Optional.empty();
+      }
+    }
+
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("foo")
+              .intervals("2000/P1D")
+              .aggregators(
+                  Collections.singletonList(
+                      new FilteredAggregatorFactory(
+                          new StringAnyAggregatorFactory("stringAny", "col", 1024, true),
+                          new SelectorDimFilter(
+                              "test",
+                              "1",
+                              new RegisteredLookupExtractionFn(
+                                  new TestLookupReferenceManager(),
+                                  "somelookup",
+                                  false,
+                                  null,
+                                  null,
+                                  false
+                              )
+                          ),
+                          "agg"
+                      )))
+              .granularity(Granularities.ALL)
+              .context(ImmutableMap.of("queryId", "dummy"))
+              .build();
+
+    final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
+    EasyMock.expect(hostFinder.pickServer(query)).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
+    EasyMock.replay(hostFinder);
+
+    final ObjectMapper jsonMapper =
+        TestHelper.makeJsonMapper()
+                  .registerModules(new LookupModule().getJacksonModules())
+                  .setInjectableValues(
+                      new InjectableValues.Std().addValue(
+                          LookupExtractorFactoryContainerProvider.class,
+                          new TestLookupReferenceManager()
+                      )
+                  );
+    verifyServletCallsForQuery(query, false, false, hostFinder, new Properties(), false, jsonMapper);
+  }
+
   private void verifyServletCallsForQuery(
       Object query,
       boolean isNativeSql,
@@ -569,7 +637,22 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       boolean isFailure
   ) throws Exception
   {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    verifyServletCallsForQuery(query, isNativeSql, isJDBCSql, hostFinder, properties, isFailure, TestHelper.makeJsonMapper());
+  }
+
+  /**
+   * Verifies that the Servlet calls the right methods the right number of times.
+   */
+  private void verifyServletCallsForQuery(
+      Object query,
+      boolean isNativeSql,
+      boolean isJDBCSql,
+      QueryHostFinder hostFinder,
+      Properties properties,
+      boolean isFailure,
+      ObjectMapper jsonMapper
+  ) throws Exception
+  {
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonMapper.writeValueAsBytes(query));
     final ServletInputStream servletInputStream = new ServletInputStream()
     {

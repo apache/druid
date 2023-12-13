@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -34,14 +36,17 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
   static final int NULL_OFFSET = Long.BYTES;
   static final int VALUE_OFFSET = NULL_OFFSET + Byte.BYTES;
   final VectorValueSelector valueSelector;
+  final VectorObjectSelector objectSelector;
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final VectorValueSelector timeSelector;
   private long lastTime;
 
-  public NumericLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+
+  NumericLastVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector, VectorObjectSelector objectSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
+    this.objectSelector = objectSelector;
     lastTime = Long.MIN_VALUE;
   }
 
@@ -56,13 +61,23 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
+    if (timeSelector == null) {
+      return;
+    }
+
     final long[] timeVector = timeSelector.getLongVector();
-    final boolean[] nullValueVector = valueSelector.getNullVector();
+    Object[] objectsWhichMightBeNumeric = null;
+    boolean[] nullValueVector = null;
     boolean nullAbsent = false;
+
+    if (objectSelector != null) {
+      objectsWhichMightBeNumeric = objectSelector.getObjectVector();
+    } else if (valueSelector != null) {
+      nullValueVector = valueSelector.getNullVector();
+    }
+
     lastTime = buf.getLong(position);
-    //check if nullVector is found or not
-    // the nullVector is null if no null values are found
-    // set the nullAbsent flag accordingly
+
     if (nullValueVector == null) {
       nullAbsent = true;
     }
@@ -79,14 +94,25 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
       }
     }
 
-    //find the first non-null value
-    final long latestTime = timeVector[index];
-    if (latestTime >= lastTime) {
-      lastTime = latestTime;
-      if (useDefault || nullValueVector == null || !nullValueVector[index]) {
-        updateTimeWithValue(buf, position, lastTime, index);
-      } else {
-        updateTimeWithNull(buf, position, lastTime);
+    if (objectsWhichMightBeNumeric != null) {
+      final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[index];
+      if (inPair.lhs != null && inPair.lhs >= lastTime) {
+        lastTime = inPair.lhs;
+        if (useDefault || inPair.rhs != null) {
+          updateTimeWithValue(buf, position, lastTime, index);
+        } else {
+          updateTimeWithNull(buf, position, lastTime);
+        }
+      }
+    } else {
+      final long latestTime = timeVector[index];
+      if (latestTime >= lastTime) {
+        lastTime = latestTime;
+        if (useDefault || nullValueVector == null || !nullValueVector[index]) {
+          updateTimeWithValue(buf, position, lastTime, index);
+        } else {
+          updateTimeWithNull(buf, position, lastTime);
+        }
       }
     }
   }
@@ -113,19 +139,45 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
+    if (timeSelector == null) {
+      return;
+    }
 
-    boolean[] nulls = useDefault ? null : valueSelector.getNullVector();
-    long[] timeVector = timeSelector.getLongVector();
+    final long[] timeVector = timeSelector.getLongVector();
+    Object[] objectsWhichMightBeNumeric = null;
+    boolean[] nulls = null;
+
+    if (objectSelector != null) {
+      objectsWhichMightBeNumeric = objectSelector.getObjectVector();
+    } else if (valueSelector != null) {
+      nulls = useDefault ? null : valueSelector.getNullVector();
+    }
+
+
 
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long lastTime = buf.getLong(position);
-      if (timeVector[row] >= lastTime) {
-        if (useDefault || nulls == null || !nulls[row]) {
-          updateTimeWithValue(buf, position, timeVector[row], row);
-        } else {
-          updateTimeWithNull(buf, position, timeVector[row]);
+
+      if (objectsWhichMightBeNumeric != null) {
+        final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[row];
+        if (useDefault || inPair != null) {
+          if (inPair.lhs != null && inPair.lhs >= lastTime) {
+            if (inPair.rhs != null) {
+              updateTimeWithValue(buf, position, inPair.lhs, row);
+            } else {
+              updateTimeWithNull(buf, position, inPair.lhs);
+            }
+          }
+        }
+      } else {
+        if (timeVector[row] >= lastTime) {
+          if (useDefault || nulls == null || !nulls[row]) {
+            updateTimeWithValue(buf, position, timeVector[row], row);
+          } else {
+            updateTimeWithNull(buf, position, timeVector[row]);
+          }
         }
       }
     }
@@ -136,7 +188,7 @@ public abstract class NumericLastVectorAggregator implements VectorAggregator
    * @param buf         byte buffer storing the byte array representation of the aggregate
    * @param position    offset within the byte buffer at which the current aggregate value is stored
    * @param time        the time to be updated in the buffer as the last time
-   * @param index       the index of the vectorized vector which is the last value
+   * @param index       he index of the vectorized vector which is the last value
    */
   void updateTimeWithValue(ByteBuffer buf, int position, long time, int index)
   {
