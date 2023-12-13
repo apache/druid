@@ -35,6 +35,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- snakeyaml explicitly pinned to version 1.33 as it is
+            a transitive dependency of:
+            com.netflix.astyanax:astyanax:jar -> g.apache.cassandra:cassandra-all:jar
+            please remove this pin after the update of astyanax, see comment below
+             -->
             <dependency>
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
