@@ -34,9 +34,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
@@ -155,22 +153,6 @@ public class Filters
         new DefaultBitmapResultFactory(selector.getBitmapFactory()),
         false
     );
-  }
-
-  public static boolean supportsSelectivityEstimation(
-      Filter filter,
-      String dimension,
-      ColumnSelector columnSelector,
-      ColumnIndexSelector indexSelector
-  )
-  {
-    if (filter.getBitmapColumnIndex(indexSelector) != null) {
-      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
-      if (columnHolder != null) {
-        return columnHolder.getCapabilities().hasMultipleValues().isFalse();
-      }
-    }
-    return false;
   }
 
   @Nullable

@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -69,18 +68,6 @@ public interface Filter
   {
     throw new UOE("Filter[%s] cannot vectorize", getClass().getName());
   }
-
-  /**
-   * Indicates whether this filter supports selectivity estimation.
-   * A filter supports selectivity estimation if it supports bitmap index and
-   * the dimension which the filter evaluates does not have multi values.
-   *
-   * @param columnSelector Object to check the dimension has multi values.
-   * @param indexSelector  Object used to retrieve bitmap indexes
-   *
-   * @return true if this Filter supports selectivity estimation, false otherwise.
-   */
-  boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector);
 
   /**
    * Returns true if this filter can produce a vectorized matcher from its "makeVectorMatcher" method.

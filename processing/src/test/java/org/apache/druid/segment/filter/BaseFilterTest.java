@@ -67,7 +67,6 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -822,12 +821,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-      {
-        return false;
-      }
-
-      @Override
       public Set<String> getRequiredColumns()
       {
         return Collections.emptySet();
@@ -895,12 +888,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       public Set<String> getRequiredColumns()
       {
         return null;
-      }
-
-      @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-      {
-        return false;
       }
 
       @Nullable
