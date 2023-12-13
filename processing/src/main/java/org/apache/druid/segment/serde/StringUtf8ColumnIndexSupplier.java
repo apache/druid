@@ -62,6 +62,10 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
   private final ColumnConfig columnConfig;
   private final int numRows;
 
+  /**
+   * Legacy constructor which always uses bitmap indexes, sparing no expense (ignores the configurable range and
+   * predicate indexes thresholds on {@link ColumnConfig}, in favor of using {@link ColumnConfig#ALWAYS_USE_INDEXES}).
+   */
   public StringUtf8ColumnIndexSupplier(
       BitmapFactory bitmapFactory,
       Supplier<TIndexed> utf8Dictionary,
@@ -77,7 +81,7 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
           Supplier<TIndexed> utf8Dictionary,
           @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
           @Nullable ImmutableRTree indexedTree,
-          @Nullable ColumnConfig columnConfig,
+          ColumnConfig columnConfig,
           int numRows
   )
   {

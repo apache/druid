@@ -319,12 +319,27 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
 
+        final int numRows;
         if (hasMultipleValues) {
           rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
           rSingleValuedColumn = null;
+          // wtb: better way to have number of rows in segment, maybe just passed into all the read methods
+          try (ColumnarMultiInts throwAway = rMultiValuedColumn.get()) {
+            numRows = throwAway.size();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         } else {
           rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
           rMultiValuedColumn = null;
+          // wtb: better way to have number of rows in segment, maybe just passed into all the read methods
+          try (ColumnarInts throwAway = rSingleValuedColumn.get()) {
+            numRows = throwAway.size();
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         }
 
         final boolean hasNulls = dictionarySupplier.get().get(0) == null;
@@ -360,7 +375,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
                   bitmapSerdeFactory.getBitmapFactory(),
                   dictionarySupplier,
                   rBitmaps,
-                  rSpatialIndex
+                  rSpatialIndex,
+                  columnConfig,
+                  numRows
               ),
               rBitmaps != null,
               rSpatialIndex != null
