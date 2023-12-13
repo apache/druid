@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.google;
 
+import java.util.Objects;
+
 public class GoogleStorageObjectMetadata
 {
   final String bucket;
@@ -58,5 +60,37 @@ public class GoogleStorageObjectMetadata
   public Long getLastUpdateTime()
   {
     return lastUpdateTime;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    GoogleStorageObjectMetadata that = (GoogleStorageObjectMetadata) o;
+    return Objects.equals(bucket, that.bucket)
+           && Objects.equals(name, that.name)
+           && Objects.equals(size, that.size);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(bucket, name, size);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GoogleStorageObjectMetadata{" +
+           "bucket='" + bucket + '\'' +
+           ", name='" + name + '\'' +
+           ", size=" + size +
+           ", lastUpdateTime=" + lastUpdateTime +
+           '}';
   }
 }
