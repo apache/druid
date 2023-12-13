@@ -2711,7 +2711,7 @@ public class ControllerImpl implements Controller
           }
 
           final StageId shuffleStageId = new StageId(queryDef.getQueryId(), shuffleStageNumber);
-          Boolean isShuffleStageOutputEmpty = queryKernel.isStageOutputEmpty(shuffleStageId);
+          final Boolean isShuffleStageOutputEmpty = queryKernel.isStageOutputEmpty(shuffleStageId);
 
           if (!isFailOnEmptyInsertEnabled && Boolean.TRUE.equals(isShuffleStageOutputEmpty)) {
             throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
@@ -2828,7 +2828,7 @@ public class ControllerImpl implements Controller
           stageRuntimesForLiveReports.compute(
               queryKernel.getStageDefinition(stageId).getStageNumber(),
               (k, currentValue) -> {
-                if (currentValue != null && currentValue.getEnd().equals(DateTimes.MAX)) {
+                if (currentValue.getEnd().equals(DateTimes.MAX)) {
                   return new Interval(currentValue.getStart(), DateTimes.nowUtc());
                 } else {
                   return currentValue;

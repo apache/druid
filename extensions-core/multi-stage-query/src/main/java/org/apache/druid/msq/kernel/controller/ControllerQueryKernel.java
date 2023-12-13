@@ -792,10 +792,10 @@ public class ControllerQueryKernel
   @Nullable
   public Boolean isStageOutputEmpty(final StageId stageId)
   {
-    CompleteKeyStatisticsInformation completeKeyStatisticsInformation = getCompleteKeyStatisticsInformation(stageId);
-    if (completeKeyStatisticsInformation == null || !completeKeyStatisticsInformation.isComplete()) {
+    final CompleteKeyStatisticsInformation completeKeyStatistics = getCompleteKeyStatisticsInformation(stageId);
+    if (completeKeyStatistics == null || !completeKeyStatistics.isComplete()) {
       return null;
     }
-    return completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().size() == 0;
+    return completeKeyStatistics.getTimeSegmentVsWorkerMap().size() == 0;
   }
 }
