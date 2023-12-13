@@ -26,7 +26,7 @@ title: "Release notes"
 
 Apache Druid 28.0.1 is a patch release that fixes some issues in the Druid 28.0.0 release.
 
-### Notable improvements
+### Bug fixes
 
 * Fixed a query caching issue for groupBy queries with multiple post-aggregation metrics [#15402](https://github.com/apache/druid/pull/15402)
 * Fixed an issue with compaction and reindex tasks failing during an upgrade due to the addition of the new task action `RetrieveSegmentsToReplaceAction`, which would not be available on the Overlord during the upgrade [#15430](https://github.com/apache/druid/pull/15430)
