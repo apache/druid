@@ -504,6 +504,23 @@ Returns the current timestamp in the connection's time zone.
 
 Rounds down a timestamp by a given time unit.
 
+## DECODE_BASE64_COMPLEX
+
+`DECODE_BASE64_COMPLEX(dataType, expr)`
+
+**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+
+Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
+
+## DECODE_BASE64_UTF8
+
+`DECODE_BASE64_UTF8(expr)`
+
+**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+
+
+Decodes a Base64-encoded string into a UTF-8 encoded string.
+
 ## DEGREES
 
 `DEGREES(<NUMERIC>)`
@@ -826,6 +843,14 @@ Returns an array of all paths which refer to literal values in `expr` in JSONPat
 `JSON_QUERY(expr, path)`
 
 Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
+
+## JSON_QUERY_ARRAY
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_QUERY_ARRAY(expr, path)`
+
+Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
 
 ## JSON_VALUE
 
@@ -1283,7 +1308,7 @@ Returns a string formatted in accordance to Java's String.format method.
 
 **Function type:** [Multi-value string](sql-multivalue-string-functions.md)
 
-Converts a string into an array, split by the given delimiter.
+Splits `str1` into an multi-value string on the delimiter specified by `str2`, which is a regular expression.
 
 ## STRLEN
 
