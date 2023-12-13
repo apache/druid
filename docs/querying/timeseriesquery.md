@@ -128,7 +128,7 @@ upon the grand total aggregations.
 
 ## Empty bucket values
 
-By default Druid fills empty interior time buckets in the results of timeseries queries with the default value for the [aggregator function](./sql-aggregations.md).
+By default, Druid fills empty interior time buckets in the results of timeseries queries with the default value for the [aggregator function](./sql-aggregations.md).
 For example, if you issue a "day" granularity
 timeseries query for the interval 2012-01-01/2012-01-04 using the SUM aggregator, and no data exists for 2012-01-02, Druid returns:
 
