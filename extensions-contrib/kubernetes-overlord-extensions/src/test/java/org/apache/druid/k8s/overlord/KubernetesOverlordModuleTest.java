@@ -34,34 +34,34 @@ import static org.mockito.Mockito.when;
 public class KubernetesOverlordModuleTest
 {
 
-    @Mock
-    private Provider<RemoteTaskRunnerFactory> parentProvider;
-    @Mock
-    private KubernetesAndWorkerTaskRunnerConfig runnerConfig;
-    @Mock
-    private RemoteTaskRunnerFactory remoteTaskRunnerFactory;
+  @Mock
+  private Provider<RemoteTaskRunnerFactory> parentProvider;
+  @Mock
+  private KubernetesAndWorkerTaskRunnerConfig runnerConfig;
+  @Mock
+  private RemoteTaskRunnerFactory remoteTaskRunnerFactory;
 
-    private KubernetesOverlordModule module;
+  private KubernetesOverlordModule module;
 
-    @Before
-    public void setUp()
-    {
-        MockitoAnnotations.initMocks(this);
-        module = new KubernetesOverlordModule();
-    }
+  @Before
+  public void setUp()
+  {
+    MockitoAnnotations.initMocks(this);
+    module = new KubernetesOverlordModule();
+  }
 
-    @Test
-    public void test_provideNullRemoteTaskRunner_withHttpRunnerType()
-    {
-        when(runnerConfig.getWorkerType()).thenReturn(HttpRemoteTaskRunnerFactory.TYPE_NAME);
-        assertNull(module.provideRemoteTaskRunnerFactory(parentProvider, runnerConfig));
-    }
+  @Test
+  public void test_provideNullRemoteTaskRunner_withHttpRunnerType()
+  {
+    when(runnerConfig.getWorkerType()).thenReturn(HttpRemoteTaskRunnerFactory.TYPE_NAME);
+    assertNull(module.provideRemoteTaskRunnerFactory(parentProvider, runnerConfig));
+  }
 
-    @Test
-    public void test_provideRemoteTaskRunner_withRemoteRunnerType()
-    {
-        when(runnerConfig.getWorkerType()).thenReturn(RemoteTaskRunnerFactory.TYPE_NAME);
-        when(parentProvider.get()).thenReturn(remoteTaskRunnerFactory);
-        assertSame(remoteTaskRunnerFactory, module.provideRemoteTaskRunnerFactory(parentProvider, runnerConfig));
-    }
+  @Test
+  public void test_provideRemoteTaskRunner_withRemoteRunnerType()
+  {
+    when(runnerConfig.getWorkerType()).thenReturn(RemoteTaskRunnerFactory.TYPE_NAME);
+    when(parentProvider.get()).thenReturn(remoteTaskRunnerFactory);
+    assertSame(remoteTaskRunnerFactory, module.provideRemoteTaskRunnerFactory(parentProvider, runnerConfig));
+  }
 }
