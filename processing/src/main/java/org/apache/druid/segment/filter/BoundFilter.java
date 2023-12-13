@@ -170,15 +170,6 @@ public class BoundFilter implements Filter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        return Math.min(
-            1.0,
-            rangeIndex.estimateSelectivity(totalRows) + nullBitmap.estimateSelectivity(totalRows)
-        );
-      }
-
-      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         return bitmapResultFactory.union(

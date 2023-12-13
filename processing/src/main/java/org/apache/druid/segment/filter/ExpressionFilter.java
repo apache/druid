@@ -241,13 +241,6 @@ public class ExpressionFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(final ColumnIndexSelector indexSelector)
-  {
-    // Selectivity estimation not supported.
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public Set<String> getRequiredColumns()
   {
     return bindingDetails.get().getRequiredBindings();

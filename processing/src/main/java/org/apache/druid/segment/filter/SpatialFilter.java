@@ -91,13 +91,6 @@ public class SpatialFilter implements Filter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        // selectivity estimation for multi-value columns is not implemented yet.
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);
@@ -127,13 +120,6 @@ public class SpatialFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    // selectivity estimation for multi-value columns is not implemented yet.
-    throw new UnsupportedOperationException();
   }
 
   @Override

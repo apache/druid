@@ -56,12 +56,6 @@ public class FalseFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    return 0;
-  }
-
-  @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     return ConstantMatcherType.ALL_FALSE.asValueMatcher();

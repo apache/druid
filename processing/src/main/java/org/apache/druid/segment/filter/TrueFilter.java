@@ -101,12 +101,6 @@ public class TrueFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    return 1;
-  }
-
-  @Override
   public String toString()
   {
     return "true";

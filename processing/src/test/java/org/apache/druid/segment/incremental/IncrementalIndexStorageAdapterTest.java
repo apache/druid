@@ -640,12 +640,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     }
 
     @Override
-    public double estimateSelectivity(ColumnIndexSelector indexSelector)
-    {
-      return 1;
-    }
-
-    @Override
     public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
     {
       return Filters.makeValueMatcher(

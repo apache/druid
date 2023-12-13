@@ -154,12 +154,6 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

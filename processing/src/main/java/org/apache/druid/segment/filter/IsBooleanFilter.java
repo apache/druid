@@ -80,12 +80,6 @@ public class IsBooleanFilter implements Filter
         }
 
         @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return 1. - baseFilter.estimateSelectivity(selector);
-        }
-
-        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (isTrue) {

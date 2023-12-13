@@ -833,12 +833,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         return Collections.emptySet();
       }
 
-      @Override
-      public double estimateSelectivity(ColumnIndexSelector indexSelector)
-      {
-        return 1.0;
-      }
-
       @Nullable
       @Override
       public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
@@ -907,12 +901,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
       {
         return false;
-      }
-
-      @Override
-      public double estimateSelectivity(ColumnIndexSelector indexSelector)
-      {
-        return 1.0;
       }
 
       @Nullable

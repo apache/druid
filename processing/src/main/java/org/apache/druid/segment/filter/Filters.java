@@ -52,7 +52,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -172,20 +171,6 @@ public class Filters
       }
     }
     return false;
-  }
-
-  public static double estimateSelectivity(
-      final Iterator<ImmutableBitmap> bitmaps,
-      final long totalNumRows
-  )
-  {
-    long numMatchedRows = 0;
-    while (bitmaps.hasNext()) {
-      final ImmutableBitmap bitmap = bitmaps.next();
-      numMatchedRows += bitmap.size();
-    }
-
-    return Math.min(1, (double) numMatchedRows / totalNumRows);
   }
 
   @Nullable
