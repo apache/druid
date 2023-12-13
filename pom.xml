@@ -2108,7 +2108,7 @@
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
                                 <exclude>.github/workflows/codeql.yml</exclude>
-                                <exclude>.github/workflows/codeql-config.yml</exclude>
+                                <exclude>.github/config/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
