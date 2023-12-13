@@ -4452,7 +4452,7 @@ libraries:
 
 name: Google Storage Client Library For Java
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache-2.0
 version: 2.29.1
 libraries:
@@ -4462,7 +4462,7 @@ libraries:
 
 name: Google Cloud Storage API
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
 version: 2.20.0
 libraries:
@@ -4473,7 +4473,7 @@ libraries:
 
 name: gax
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
 version: 2.37.0
 libraries:
@@ -4485,7 +4485,7 @@ libraries:
 
 name: grpc-api
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 2.29.1-alpha
 libraries:
@@ -4497,7 +4497,7 @@ libraries:
 
 name: grpc-io
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 1.59.0
 libraries:
@@ -4516,7 +4516,7 @@ libraries:
 
 name: proto-google-common-protos
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 2.28.0
 libraries:
@@ -4526,7 +4526,7 @@ libraries:
 
 name: proto-google-iam-v1
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 1.23.0
 libraries:
@@ -4536,7 +4536,7 @@ libraries:
 
 name: google-auth
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
 version: 1.20.0
 libraries:
@@ -4547,7 +4547,7 @@ libraries:
 
 name: google-auto-value
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 1.10.4
 libraries:
@@ -4557,7 +4557,7 @@ libraries:
 
 name: google-cloud
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 2.27.0
 libraries:
@@ -4569,7 +4569,7 @@ libraries:
 
 name: listenablefuture
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 9999.0-empty-to-avoid-conflict-with-guava
 libraries:
@@ -4579,7 +4579,7 @@ libraries:
 
 name: google-http-client
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 1.43.3
 libraries:
@@ -4591,7 +4591,7 @@ libraries:
 
 name: google-protobuf
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
 version: 3.24.4
 libraries:
@@ -4601,7 +4601,7 @@ libraries:
 
 name: google-grpc
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 1.59.0
 libraries:
@@ -4611,7 +4611,7 @@ libraries:
 
 name: io-opencensus
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 0.31.1
 libraries:
@@ -4622,7 +4622,7 @@ libraries:
 
 name: conscrypt-openjdk-uber
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
 version: 2.5.2
 libraries:
@@ -4632,7 +4632,7 @@ libraries:
 
 name: threetenbp
 license_category: binary
-module: druid-google-extensions
+module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
 version: 1.6.8
 libraries:

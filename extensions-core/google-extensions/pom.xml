@@ -52,7 +52,6 @@
             <artifactId>google-cloud-storage</artifactId>
             <version>${com.google.cloud.storage.version}</version>
         </dependency>
-
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
