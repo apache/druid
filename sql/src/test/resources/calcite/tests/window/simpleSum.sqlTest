@@ -2,12 +2,11 @@ type: "operatorValidation"
 
 sql: |
   SELECT
-    --case when countryIsoCode = 'a' then 'channel' else 'asd' end,
-    case when countryIsoCode = 'a' or lookup(channel,'lookyloo') = 'x' then channel else 'asd' end,
-    --case when countryIsoCode = 'a' then cityName          when countryIsoCode ='x' then countryName         else 'asd' end,
-    SUM(delta) c
-  FROM wikipedia
-  GROUP BY 1
+    FLOOR(__time TO DAY) t,
+    SUM(cnt) c,
+    SUM(SUM(cnt)) OVER (ORDER BY FLOOR(__time TO DAY)) cc
+  FROM foo
+  GROUP BY FLOOR(__time TO DAY)
 
 expectedOperators:
   - { type: "naivePartition", partitionColumns: [ ] }
