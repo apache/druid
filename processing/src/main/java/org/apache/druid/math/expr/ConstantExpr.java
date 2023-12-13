@@ -157,7 +157,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
 
 class LongExpr extends ConstantExpr<Long>
 {
-  final ExprEval expr;
+  private final ExprEval expr;
 
   LongExpr(Long value)
   {
@@ -243,7 +243,7 @@ class NullLongExpr extends ConstantExpr<Long>
 
 class DoubleExpr extends ConstantExpr<Double>
 {
-  final ExprEval expr;
+  private final ExprEval expr;
 
   DoubleExpr(Double value)
   {
@@ -329,7 +329,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
 
 class StringExpr extends ConstantExpr<String>
 {
-  final ExprEval expr;
+  private final ExprEval expr;
 
   StringExpr(@Nullable String value)
   {
@@ -473,7 +473,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
 
 class ComplexExpr extends ConstantExpr<Object>
 {
-  final ExprEval expr;
+  private final ExprEval expr;
 
   protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
   {
