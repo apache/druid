@@ -40,6 +40,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -65,7 +66,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 0, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 0, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -91,7 +92,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 1, false, 2, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 1, false, 2, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -117,7 +118,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 2, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 2, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -143,7 +144,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 2, false, 0, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 2, false, 0, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -169,7 +170,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 7, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 7, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -197,7 +198,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 1, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 1, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -225,7 +226,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 0, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 0, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -253,7 +254,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 1, false, 7, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 1, false, 7, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -281,7 +282,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 7, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 7, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -309,7 +310,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 7, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 0, false, 7, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -337,7 +338,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 0, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 5, false, 0, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new DoubleMaxAggregatorFactory("maxFromInt", "intCol"),
@@ -371,7 +372,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null),
         new AggregatorFactory[]{
             new LongSumAggregatorFactory("sumFromLong", "intCol"),
             new LongSumAggregatorFactory("sumFromDouble", "doubleCol"),
@@ -409,7 +410,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0, null),
         new AggregatorFactory[]{
             new LongMaxAggregatorFactory("cummMax", "intCol"),
             new DoubleSumAggregatorFactory("cummSum", "doubleCol")
@@ -443,7 +444,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     FramedOnHeapAggregatable agger = FramedOnHeapAggregatable.fromRAC(rac);
 
     final RowsAndColumns results = agger.aggregateAll(
-        new WindowFrame(WindowFrame.PeerType.ROWS, false, 0, true, 0, null),
+        newWindowFrame(WindowFrame.PeerType.ROWS, false, 0, true, 0, null),
         new AggregatorFactory[]{
             new LongMaxAggregatorFactory("cummMax", "intCol"),
             new DoubleSumAggregatorFactory("cummSum", "doubleCol")
@@ -476,7 +477,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   @Test
   public void testRangeB1()
   {
-    WindowFrame frame = new WindowFrame(
+    WindowFrame frame = newWindowFrame(
         PeerType.RANGE,
         false,
         1,
@@ -495,7 +496,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   @Test
   public void testRangeA1()
   {
-    WindowFrame frame = new WindowFrame(
+    WindowFrame frame = newWindowFrame(
         PeerType.RANGE,
         false,
         0,
@@ -514,7 +515,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   @Test
   public void testRangeB1A1()
   {
-    WindowFrame frame = new WindowFrame(
+    WindowFrame frame = newWindowFrame(
         PeerType.RANGE,
         false,
         1,
@@ -534,7 +535,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   @Test
   public void testRangeB1A1_2()
   {
-    WindowFrame frame = new WindowFrame(
+    WindowFrame frame = newWindowFrame(
         PeerType.RANGE,
         false,
         1,
@@ -553,7 +554,7 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
   @Test
   public void testRangeB1A2()
   {
-    WindowFrame frame = new WindowFrame(
+    WindowFrame frame = newWindowFrame(
         PeerType.RANGE,
         false,
         1,
@@ -569,6 +570,26 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     simpleWindowingTest(frame, c1Vals, c2Vals, resVals);
   }
 
+
+  private WindowFrame newWindowFrame(PeerType range, boolean b, int i, boolean c, int j,
+      List<ColumnWithDirection> singletonList)
+  {
+    return (range == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
+        : newWindowFrameRange(b, i, c, j, singletonList));
+  }
+
+  private WindowFrame newWindowFrameRange(boolean b, int i, boolean c, int j,
+      List<ColumnWithDirection> singletonList)
+  {
+    throw new RuntimeException();
+
+  }
+  private WindowFrame newWindowFrameRows( boolean b, int i, boolean c, int j,
+      List<ColumnWithDirection> singletonList)
+  {
+    throw new RuntimeException();
+
+  }
 
   private void simpleWindowingTest(WindowFrame frame, int[] c1Vals, int[] c2Vals, int[] resVals)
   {
