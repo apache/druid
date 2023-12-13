@@ -49,7 +49,7 @@ public class GoogleStorageTest
   static final String BUCKET = "bucket";
   static final String PATH = "/path";
   static final long SIZE = 100;
-  static final OffsetDateTime UPDATE_TIME = OffsetDateTime.now();
+  static final OffsetDateTime UPDATE_TIME = OffsetDateTime.MIN;
 
   @Before
   public void setUp()
@@ -210,12 +210,12 @@ public class GoogleStorageTest
     final String bucket1 = "BUCKET_1";
     final String path1 = "PATH_1";
     final long size1 = 7;
-    final OffsetDateTime updateTime1 = OffsetDateTime.now();
+    final OffsetDateTime updateTime1 = OffsetDateTime.MIN;
 
     final String bucket2 = "BUCKET_2";
     final String path2 = "PATH_2";
     final long size2 = 9;
-    final OffsetDateTime updateTime2 = OffsetDateTime.now();
+    final OffsetDateTime updateTime2 = OffsetDateTime.MIN;
 
     final String nextPageToken = "TOKEN";
 
