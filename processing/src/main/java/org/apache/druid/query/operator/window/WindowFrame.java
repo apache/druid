@@ -66,6 +66,45 @@ public class WindowFrame
   private static WindowFrame newWindowFrameRows( boolean b, int i, boolean c, int j,
       List<ColumnWithDirection> singletonList)
   {
+    if(true) {
+      System.out.println("asd");
+    }else {
+      System.out.println("xxx");
+
+    }
+    if(1==2) {
+      System.out.println("asd2");
+    }else {
+      System.out.println("xxx2");
+
+    }
+    if(PeerType.ROWS == PeerType.ROWS) {
+      System.out.println("asd2");
+    }else {
+      System.out.println("xxx2");
+
+    }
+    if(PeerType.ROWS == PeerType.RANGE) {
+      System.out.println("asd2");
+    }else {
+      System.out.println("xxx2");
+
+    }
+    if(WindowFrame.PeerType.ROWS == PeerType.ROWS) {
+      System.out.println("asd2");
+    }else {
+      System.out.println("xxx2");
+
+    }
+    if(WindowFrame.PeerType.ROWS == PeerType.RANGE) {
+      System.out.println("asd2");
+    }else {
+      System.out.println("xxx2");
+
+    }
+
+
+
     return new WindowFrame(PeerType.ROWS, b, i, c, j, singletonList);
 
   }
