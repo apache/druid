@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.operator.ColumnWithDirection;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -50,6 +49,26 @@ public class WindowFrame
   private final boolean upperUnbounded;
   private final int upperOffset;
   private final List<ColumnWithDirection> orderBy;
+
+  public static WindowFrame newWindowFrame(PeerType range, boolean b, int i, boolean c, int j,
+      List<ColumnWithDirection> singletonList)
+  {
+    return range == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
+        : newWindowFrameRange(b, i, c, j, singletonList);
+  }
+
+  private static WindowFrame newWindowFrameRange(boolean b, int i, boolean c, int j,
+      List<ColumnWithDirection> singletonList)
+  {
+    return new WindowFrame(PeerType.RANGE, b, i, c, j, singletonList);
+
+  }
+  private static WindowFrame newWindowFrameRows( boolean b, int i, boolean c, int j,
+      List<ColumnWithDirection> singletonList)
+  {
+    return new WindowFrame(PeerType.ROWS, b, i, c, j, singletonList);
+
+  }
 
   @JsonCreator
   public WindowFrame(

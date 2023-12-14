@@ -40,9 +40,9 @@ import org.junit.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import static org.apache.druid.query.operator.window.WindowFrame.*;
 
 public class FramedOnHeapAggregatableTest extends SemanticTestBase
 {
@@ -570,26 +570,6 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     simpleWindowingTest(frame, c1Vals, c2Vals, resVals);
   }
 
-
-  private WindowFrame newWindowFrame(PeerType range, boolean b, int i, boolean c, int j,
-      List<ColumnWithDirection> singletonList)
-  {
-    return (range == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
-        : newWindowFrameRange(b, i, c, j, singletonList));
-  }
-
-  private WindowFrame newWindowFrameRange(boolean b, int i, boolean c, int j,
-      List<ColumnWithDirection> singletonList)
-  {
-    throw new RuntimeException();
-
-  }
-  private WindowFrame newWindowFrameRows( boolean b, int i, boolean c, int j,
-      List<ColumnWithDirection> singletonList)
-  {
-    throw new RuntimeException();
-
-  }
 
   private void simpleWindowingTest(WindowFrame frame, int[] c1Vals, int[] c2Vals, int[] resVals)
   {
