@@ -24,12 +24,10 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class ArrayLongGroupByColumnSelectorStrategy extends ArrayNumericGroupByColumnSelectorStrategy<Long>

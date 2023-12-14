@@ -1668,7 +1668,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   {
     if (!vectorize) {
       // cannot add exact class cast message due to discrepancies between various JDK versions
-      expectedException.expect(ISE.class);
+      expectedException.expect(RuntimeException.class);
     }
 
     cannotVectorize();
@@ -1786,11 +1786,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testVirtualColumnNumericTypeAsStringArray()
   {
-    if (!vectorize) {
-      // cannot add exact class cast message due to discrepancies between various JDK versions
-      expectedException.expect(RuntimeException.class);
-    }
-
     cannotVectorize();
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -1805,12 +1800,44 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             new DefaultDimensionSpec("v0", "alias", ColumnType.STRING_ARRAY
             )
         )
-
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
+    List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1049.738585"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"109.705815"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"110.931934"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"112.987027"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"113.446008"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"114.290141"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1144.342401"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"118.57034"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"119.922742"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1193.556278"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"120.134704"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"121.583581"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1234.247546"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"126.411364"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1314.839715"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1321.375057"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"135.301506"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"135.885094"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"144.507368"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1447.34116"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"147.425935"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"1522.043733"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"158.747224"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"166.016049"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"78.622547"}, "rows", 1L),
+        makeRow(query, "2011-04-01", "alias", new Object[]{"97.387433"}, "rows", 1L)
+    );
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        results,
+        "virtual-column-numeric-type-as-string-array"
+    );
   }
 
   @Test

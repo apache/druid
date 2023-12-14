@@ -476,7 +476,7 @@ public class NestedGroupByArrayQueryTest
           Assert.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
         } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.FLOAT)).orElse(false)) {
           Assert.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
-        } else if (rowSignature.getColumnType(j).map(t -> t.isArray()).orElse(false)){
+        } else if (rowSignature.getColumnType(j).map(t -> t.isArray()).orElse(false)) {
           Assert.assertArrayEquals((Object[]) expected.get(i)[j], (Object[]) resultRow[j]);
         } else {
           Assert.assertEquals(expected.get(i)[j], resultRow[j]);
