@@ -91,29 +91,54 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
+  /**
+   * Handles population/creation of new RAC columns.
+   */
+  static class ResultPopulator {
+
+    private final Object[][] results ;
+    private final AggregatorFactory[] aggFactories;
+
+    public ResultPopulator(AggregatorFactory[] aggFactories, int numRows)
+    {
+      this.aggFactories = aggFactories;
+      results = new Object[aggFactories.length][numRows];
+    }
+
+    public void write(Interval outputRows, Object[] values)
+    {
+      for (int col = 0; col < values.length; col++) {
+        Arrays.fill(results[col], outputRows.a, outputRows.b, values[col]);
+      }
+    }
+
+    public void appendTo(AppendableRowsAndColumns rac)
+    {
+      for (int i = 0; i < aggFactories.length; ++i) {
+        rac.addColumn(
+            aggFactories[i].getName(),
+            new ObjectArrayColumn(results[i], aggFactories[i].getIntermediateType())
+        );
+      }
+    }
+  }
+
   private RowsAndColumns computeRangeAggregates(
       AggregatorFactory[] aggFactories,
       WindowFrame frame)
   {
-    RangeIteratorForWindow iter = new RangeIteratorForWindow(rac, frame);
-
-    int numRows = rac.numRows();
-    Object[][] results = new Object[aggFactories.length][numRows];
-
-    AggIntervalCursor cell = new AggIntervalCursor(rac, aggFactories);
-
-    for (AggRange xRange : iter) {
-
-      cell.moveTo(xRange.inputRows);
-      // TODO: if(xRange.outputRows.a ==0 && xRange.outputRows.b == numRows) { return Const };
-
-      // note: would be better with results.setX()?
-      cell.setOutputs(results, xRange.outputRows);
+    GroupIteratorForWindowFrame rangeIterator = new GroupIteratorForWindowFrame(rac, frame);
+    ResultPopulator resultRac = new ResultPopulator(aggFactories, rac.numRows());
+    AggIntervalCursor aggCursor = new AggIntervalCursor(rac, aggFactories);
+    for (AggRange xRange : rangeIterator) {
+      aggCursor.moveTo(xRange.inputRows);
+      resultRac.write(xRange.outputRows, aggCursor.getValues());
     }
-    return makeReturnRAC(aggFactories, results);
+    resultRac.appendTo(rac);
+    return rac;
   }
 
-  static class RangeIteratorForWindow implements Iterable<AggRange>
+  static class GroupIteratorForWindowFrame implements Iterable<AggRange>
   {
     private final int[] rangeToRowId;
     private final int numRows;
@@ -121,7 +146,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     private final int lowerOffset;
     private final int upperOffset;
 
-    public RangeIteratorForWindow(RowsAndColumns rac, WindowFrame frame)
+    public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame)
     {
       assert (frame.getPeerType() == PeerType.RANGE);
       rangeToRowId = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
@@ -277,6 +302,16 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
 
       newAggregators();
+    }
+
+    public Object[] getValues()
+    {
+
+      Object[] values = new Object[aggFactories.length];
+      for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
+        values[aggIdx] = aggregators[aggIdx].get();
+      }
+      return values;
     }
 
     private void newAggregators()
