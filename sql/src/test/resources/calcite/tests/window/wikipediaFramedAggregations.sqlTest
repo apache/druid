@@ -15,7 +15,7 @@ expectedOperators:
     processor:
       type: "framedAgg"
       frame:
-          type: "range"
+          type: "group"
           lowerOffset: 3
           upperOffset: 2
           orderBy: [ {column: "d1", direction: ASC} ]

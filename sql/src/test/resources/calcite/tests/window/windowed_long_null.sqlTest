@@ -31,7 +31,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { type: range, upperOffset: 0, orderBy: [{ column: l1, direction: ASC }] }
+      frame: { type: group, upperOffset: 0, orderBy: [{ column: l1, direction: ASC }] }
       aggregations:
         - { type: "longMin", name: "w1", fieldName: "l2" }
 

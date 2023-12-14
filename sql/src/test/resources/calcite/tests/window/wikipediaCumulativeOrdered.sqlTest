@@ -39,7 +39,7 @@ expectedOperators:
         - { "type": "cumeDist", "group": [ "a0" ], "outputColumn": "w9" }
         - type: "framedAgg"
           frame:
-            type: range
+            type: group
             upperOffset: 0
             orderBy:
               - column: a0

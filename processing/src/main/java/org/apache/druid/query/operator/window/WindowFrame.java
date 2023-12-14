@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "rows", value = WindowFrame.Rows.class),
-    @JsonSubTypes.Type(name = "range", value = WindowFrame.Groups.class),
+    @JsonSubTypes.Type(name = "group", value = WindowFrame.Groups.class),
 })
 public class WindowFrame
 {

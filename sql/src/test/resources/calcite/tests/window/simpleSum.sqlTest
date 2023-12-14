@@ -14,7 +14,7 @@ expectedOperators:
     processor:
       type: "framedAgg"
       frame:
-          type: range
+          type: group
           upperOffset: 0
           orderBy: [ {column: "d0", direction: ASC} ]
       aggregations:
