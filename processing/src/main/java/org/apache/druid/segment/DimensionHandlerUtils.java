@@ -464,7 +464,7 @@ public final class DimensionHandlerUtils
       return retVal;
     }
     throw new ISE(
-        "Unable to convert object of type[%s] to Object[]",
+        "Unable to convert object of type[%s] to type Object[]",
         obj.getClass().getName()
     );
 

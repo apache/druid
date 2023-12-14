@@ -50,7 +50,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -453,9 +452,9 @@ public class NestedGroupByArrayQueryTest
         groupQuery,
         ImmutableList.of(
             new Object[]{null, 4L},
-            new Object[]{new ComparableList<>(Collections.emptyList()), 18L},
-            new Object[]{new ComparableList<>(Collections.singletonList(null)), 4L},
-            new Object[]{new ComparableList<>(Arrays.asList(null, null)), 2L}
+            new Object[]{new Object[]{}, 18L},
+            new Object[]{new Object[]{null}, 4L},
+            new Object[]{new Object[]{null, null}, 2L}
         )
     );
   }

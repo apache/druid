@@ -1532,12 +1532,12 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        final Object[] comparableList = (Object[]) key.getKey()[idx];
-        int id = reverseDictionary.getInt(comparableList);
+        final Object[] listArray = (Object[]) key.getKey()[idx];
+        int id = reverseDictionary.getInt(listArray);
         if (id == DimensionDictionary.ABSENT_VALUE_ID) {
           id = listDictionary.size();
-          reverseListDictionary.put(comparableList, id);
-          listDictionary.add(comparableList);
+          reverseListDictionary.put(listArray, id);
+          listDictionary.add(listArray);
         }
         keyBuffer.putInt(id);
         return true;

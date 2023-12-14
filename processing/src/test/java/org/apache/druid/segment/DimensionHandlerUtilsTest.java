@@ -192,19 +192,16 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
     assertArrayCases(LONG_OBJECT_ARRAY, ValueType.LONG);
 
     Assert.assertThrows(
-        "Unable to convert object of type[Long] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1L, ValueType.LONG)
     );
 
     Assert.assertThrows(
-        "Unable to convert object of type[Long] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1L, ValueType.ARRAY)
     );
 
     Assert.assertThrows(
-        "Unable to convert object of type[Long] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1L, ValueType.STRING)
     );
@@ -229,19 +226,16 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
     assertArrayCases(FLOAT_OBJECT_ARRAY, ValueType.FLOAT);
 
     Assert.assertThrows(
-        "Unable to convert object of type[Float] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1.0F, ValueType.FLOAT)
     );
 
     Assert.assertThrows(
-        "Unable to convert object of type[Float] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1.0F, ValueType.ARRAY)
     );
 
     Assert.assertThrows(
-        "Unable to convert object of type[Float] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1.0F, ValueType.STRING)
     );
@@ -266,19 +260,16 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
     assertArrayCases(DOUBLE_OBJECT_ARRAY, ValueType.DOUBLE);
 
     Assert.assertThrows(
-        "Unable to convert object of type[Double] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1.0D, ValueType.DOUBLE)
     );
 
     Assert.assertThrows(
-        "Unable to convert object of type[Double] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1.0D, ValueType.ARRAY)
     );
 
     Assert.assertThrows(
-        "Unable to convert object of type[Double] to [ComparableList]",
         ISE.class,
         () -> DimensionHandlerUtils.convertToList(1.0D, ValueType.STRING)
     );
@@ -315,25 +306,24 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
     );
 
     Assert.assertThrows(
-        "Unable to convert object of type[String] to [ComparablComparableStringArray]",
         ISE.class,
         () -> DimensionHandlerUtils.coerceToStringArray("1")
     );
   }
 
-  private static void assertArrayCases(Object[] expectedComparableList, ValueType elementType)
+  private static void assertArrayCases(Object[] expectedObject, ValueType elementType)
   {
-    Assert.assertArrayEquals(expectedComparableList, DimensionHandlerUtils.convertToList(new Object[]{1L, 2L}, elementType));
-    Assert.assertArrayEquals(expectedComparableList, DimensionHandlerUtils.convertToList(new Long[]{1L, 2L}, elementType));
+    Assert.assertArrayEquals(expectedObject, DimensionHandlerUtils.convertToList(new Object[]{1L, 2L}, elementType));
+    Assert.assertArrayEquals(expectedObject, DimensionHandlerUtils.convertToList(new Long[]{1L, 2L}, elementType));
     Assert.assertArrayEquals(
-        expectedComparableList,
+        expectedObject,
         DimensionHandlerUtils.convertToList(new String[]{"1.0", "2.0"}, elementType)
     );
     Assert.assertArrayEquals(
-        expectedComparableList,
+        expectedObject,
         DimensionHandlerUtils.convertToList(new Double[]{1.0, 2.0}, elementType)
     );
-    Assert.assertArrayEquals(expectedComparableList, DimensionHandlerUtils.convertToList(new Float[]{1F, 2F}, elementType));
+    Assert.assertArrayEquals(expectedObject, DimensionHandlerUtils.convertToList(new Float[]{1F, 2F}, elementType));
   }
 
   private static class TestDimensionSchema extends DimensionSchema
