@@ -48,9 +48,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 {
   private final AppendableRowsAndColumns rac;
 
-  public DefaultFramedOnHeapAggregatable(
-      AppendableRowsAndColumns rac
-  )
+  public DefaultFramedOnHeapAggregatable(AppendableRowsAndColumns rac)
   {
     this.rac = rac;
   }
