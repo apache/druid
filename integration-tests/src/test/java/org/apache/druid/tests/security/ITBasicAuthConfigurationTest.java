@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
@@ -32,10 +33,12 @@ import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
@@ -80,7 +83,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        getHttpClient(User.ADMIN),
         "datasourceOnlyUser",
         "helloworld",
         "datasourceOnlyRole",
@@ -92,7 +94,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceAndContextParamsUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        getHttpClient(User.ADMIN),
         "datasourceAndContextParamsUser",
         "helloworld",
         "datasourceAndContextParamsRole",
@@ -104,7 +105,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceAndSysTableUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        getHttpClient(User.ADMIN),
         "datasourceAndSysUser",
         "helloworld",
         "datasourceAndSysRole",
@@ -116,7 +116,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupDatasourceAndSysAndStateUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        getHttpClient(User.ADMIN),
         "datasourceWithStateUser",
         "helloworld",
         "datasourceWithStateRole",
@@ -128,7 +127,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   protected void setupSysTableAndStateOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(
-        getHttpClient(User.ADMIN),
         "stateOnlyUser",
         "helloworld",
         "stateOnlyRole",
@@ -141,7 +139,6 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   {
     // create a new user+role that can read /status
     createUserAndRoleWithPermissions(
-        getHttpClient(User.ADMIN),
         "druid",
         "helloworld",
         "druidrole",
@@ -153,14 +150,14 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       HttpUtil.makeRequest(
           getHttpClient(User.ADMIN),
           HttpMethod.POST,
-          config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid" + i,
+          getBaseUrl() + "/authentication/db/basic/users/druid" + i,
           null
       );
 
       HttpUtil.makeRequest(
           getHttpClient(User.ADMIN),
           HttpMethod.POST,
-          config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid" + i,
+          getBaseUrl() + "/authorization/db/basic/users/druid" + i,
           null
       );
 
@@ -171,14 +168,14 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
     HttpUtil.makeRequest(
         getHttpClient(User.ADMIN),
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authentication/db/basic/users/druid99/credentials",
+        getBaseUrl() + "/authentication/db/basic/users/druid99/credentials",
         jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
     );
 
     HttpUtil.makeRequest(
         getHttpClient(User.ADMIN),
         HttpMethod.POST,
-        config.getCoordinatorUrl() + "/druid-ext/basic-security/authorization/db/basic/users/druid99/roles/druidrole",
+        getBaseUrl() + "/authorization/db/basic/users/druid99/roles/druidrole",
         null
     );
 
@@ -231,74 +228,51 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   private void createUserAndRoleWithPermissions(
-      HttpClient adminClient,
       String user,
       String password,
       String role,
       List<ResourceAction> permissions
   ) throws Exception
   {
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authentication/db/basic/users/%s",
-            config.getCoordinatorUrl(),
-            user
-        ),
-        null
-    );
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authentication/db/basic/users/%s/credentials",
-            config.getCoordinatorUrl(),
-            user
-        ),
-        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate(password, 5000))
-    );
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/users/%s",
-            config.getCoordinatorUrl(),
-            user
-        ),
-        null
-    );
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/roles/%s",
-            config.getCoordinatorUrl(),
-            role
-        ),
-        null
-    );
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/users/%s/roles/%s",
-            config.getCoordinatorUrl(),
-            user,
-            role
-        ),
-        null
-    );
-    byte[] permissionsBytes = jsonMapper.writeValueAsBytes(permissions);
-    HttpUtil.makeRequest(
-        adminClient,
-        HttpMethod.POST,
-        StringUtils.format(
-            "%s/druid-ext/basic-security/authorization/db/basic/roles/%s/permissions",
-            config.getCoordinatorUrl(),
-            role
-        ),
-        permissionsBytes
-    );
+    final HttpClient adminClient = getHttpClient(User.ADMIN);
+
+    // Setup authentication by creating user and password
+    doPost(adminClient, null, "/authentication/db/basic/users/%s", user);
+
+    final BasicAuthenticatorCredentialUpdate payload = new BasicAuthenticatorCredentialUpdate(password, 5000);
+    doPost(adminClient, payload, "/authentication/db/basic/users/%s/credentials", user);
+
+    // Setup authorization by assigning a role to the user
+    doPost(adminClient, null, "/authorization/db/basic/users/%s", user);
+    doPost(adminClient, null, "/authorization/db/basic/roles/%s", role);
+    doPost(adminClient, null, "/authorization/db/basic/users/%s/roles/%s", user, role);
+    doPost(adminClient, permissions, "/authorization/db/basic/roles/%s/permissions", role);
+  }
+
+  private void doPost(
+      HttpClient httpClient,
+      Object payload,
+      String pathFormat,
+      Object... pathParams
+  ) throws IOException
+  {
+    byte[] payloadBytes = payload == null ? null : jsonMapper.writeValueAsBytes(payload);
+    String url = getBaseUrl() + StringUtils.format(pathFormat, pathParams);
+
+    StatusResponseHolder responseHolder
+        = HttpUtil.makeRequest(httpClient, HttpMethod.POST, url, payloadBytes);
+
+    HttpResponseStatus status = responseHolder.getStatus();
+    if (status.getCode() < 200 || status.getCode() >= 300) {
+      LOG.info(
+          "Post request to url[%s] returned status[%s], content[%s]",
+          url, status, responseHolder.getContent()
+      );
+    }
+  }
+
+  private String getBaseUrl()
+  {
+    return config.getCoordinatorUrl() + "/druid-ext/basic-security";
   }
 }

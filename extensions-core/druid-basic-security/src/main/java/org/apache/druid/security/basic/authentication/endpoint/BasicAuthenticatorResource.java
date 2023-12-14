@@ -160,7 +160,7 @@ public class BasicAuthenticatorResource
     authValidator.validateAuthenticatorName(authenticatorName);
 
     final Response response = handler.createUser(authenticatorName, userName);
-    performAuditIfSuccess(authenticatorName, "basicAuth.createUser", userName, req, response);
+    performAuditIfSuccess(authenticatorName, userName, req, response);
 
     return response;
   }
@@ -186,7 +186,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.deleteUser(authenticatorName, userName);
-    performAuditIfSuccess(authenticatorName, "basicAuth.deleteUser", userName, req, response);
+    performAuditIfSuccess(authenticatorName, userName, req, response);
 
     return response;
   }
@@ -213,7 +213,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
-    performAuditIfSuccess(authenticatorName, "basicAuth.updateUserCreds", userName, req, response);
+    performAuditIfSuccess(authenticatorName, userName, req, response);
 
     return response;
   }
@@ -267,7 +267,6 @@ public class BasicAuthenticatorResource
 
   private void performAuditIfSuccess(
       String authenticatorName,
-      String action,
       String updatedUser,
       HttpServletRequest request,
       Response response
@@ -277,7 +276,7 @@ public class BasicAuthenticatorResource
       auditManager.doAudit(
           AuditEntry.builder()
                     .key(authenticatorName)
-                    .type(action)
+                    .type("basicAuthentication")
                     .auditInfo(AuthorizationUtils.buildAuditInfo(request))
                     .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
                     .payload(Collections.singletonMap("username", updatedUser))
