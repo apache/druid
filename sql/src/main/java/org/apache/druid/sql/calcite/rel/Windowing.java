@@ -356,54 +356,32 @@ public class Windowing
 
     public WindowFrame getWindowFrame()
     {
-      if(true) {
-        System.out.println("asd");
-      }else {
-        System.out.println("xxx");
-
-      }
-      if(1==2) {
-        System.out.println("asd2");
-      }else {
-        System.out.println("xxx2");
-
-      }
-      if(PeerType.ROWS == PeerType.ROWS) {
-        System.out.println("asd2");
-      }else {
-        System.out.println("xxx2");
-
-      }
-      if(PeerType.ROWS == PeerType.RANGE) {
-        System.out.println("asd2");
-      }else {
-        System.out.println("xxx2");
-
-      }
-      if(WindowFrame.PeerType.ROWS == PeerType.ROWS) {
-        System.out.println("asd2");
-      }else {
-        System.out.println("xxx2");
-
-      }
-      if(WindowFrame.PeerType.ROWS == PeerType.RANGE) {
-        System.out.println("asd2");
-      }else {
-        System.out.println("xxx2");
-
-      }
-
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
-      return new WindowFrame(
-          group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
-          group.lowerBound.isUnbounded(),
-          figureOutOffset(group.lowerBound),
-          group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound),
-          group.isRows ? null : getOrdering()
-      );
+      boolean isRows = group.isRows;
+      if (isRows) {
+        PeerType peerType = isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE;
+        return new WindowFrame(
+            peerType,
+            group.lowerBound.isUnbounded(),
+            figureOutOffset(group.lowerBound),
+            group.upperBound.isUnbounded(),
+            figureOutOffset(group.upperBound),
+            isRows ? null : getOrdering()
+        );
+
+      } else {
+        PeerType peerType = isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE;
+        return new WindowFrame(
+            peerType,
+            group.lowerBound.isUnbounded(),
+            figureOutOffset(group.lowerBound),
+            group.upperBound.isUnbounded(),
+            figureOutOffset(group.upperBound),
+            isRows ? null : getOrdering()
+        );
+      }
     }
 
     private int figureOutOffset(RexWindowBound bound)

@@ -32,7 +32,7 @@ public class WindowFrame
 {
   public static WindowFrame unbounded()
   {
-    return new WindowFrame(PeerType.ROWS, true, 0, true, 0, null);
+    return newWindowFrame(PeerType.ROWS, true, 0, true, 0, null);
   }
 
   @SuppressWarnings("unused")
@@ -202,7 +202,7 @@ public class WindowFrame
 
   public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    return new WindowFrame(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
+    return newWindowFrame(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
   }
 
   public List<String> getOrderByColNames()
