@@ -195,12 +195,12 @@ class FunctionExpr implements Expr
       // ExpressionValidationException already contain function name
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(e.getMessage());
+                          .build(e, e.getMessage());
     }
     catch (Types.InvalidCastException | Types.InvalidCastBooleanException e) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Function[%s] encountered exception: %s", name, e.getMessage());
+                          .build(e, "Function[%s] encountered exception: %s", name, e.getMessage());
     }
     catch (DruidException e) {
       throw e;
