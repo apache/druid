@@ -30,8 +30,6 @@ public interface BitmapColumnIndex
 {
   ColumnIndexCapabilities getIndexCapabilities();
 
-  double estimateSelectivity(int totalRows);
-
   /**
    * Compute a bitmap result wrapped with the {@link BitmapResultFactory} representing the rows matched by this index.
    *

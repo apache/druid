@@ -17,22 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.storage.google.output;
 
-public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
+
+public class GoogleInputRangeTest
 {
-  // This value comes from an experiment.
-  // See the discussion at https://github.com/apache/druid/pull/3792#issuecomment-268331804.
-  private static final double BITMAP_INTERSECT_COST = 7.425;
-  private static final ConciseBitmapDecisionHelper INSTANCE = new ConciseBitmapDecisionHelper();
-
-  public static ConciseBitmapDecisionHelper instance()
+  @Test
+  public void testEquals()
   {
-    return INSTANCE;
-  }
-
-  private ConciseBitmapDecisionHelper()
-  {
-    super(BITMAP_INTERSECT_COST);
+    EqualsVerifier.forClass(GoogleInputRange.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

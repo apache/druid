@@ -56,7 +56,6 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.CloserRule;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -640,12 +639,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     }
 
     @Override
-    public double estimateSelectivity(ColumnIndexSelector indexSelector)
-    {
-      return 1;
-    }
-
-    @Override
     public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
     {
       return Filters.makeValueMatcher(
@@ -653,12 +646,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           "billy",
           new DictionaryRaceTestFilterDruidPredicateFactory()
       );
-    }
-
-    @Override
-    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-    {
-      return true;
     }
 
     @Override

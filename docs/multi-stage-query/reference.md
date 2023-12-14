@@ -356,7 +356,7 @@ SQL-based ingestion supports using durable storage to store intermediate files t
 
 ### Durable storage configurations
 
-Durable storage is supported on Amazon S3 storage and Microsoft's Azure Blob Storage. 
+Durable storage is supported on Amazon S3 storage, Microsoft's Azure Blob Storage and Google Cloud Storage. 
 There are common configurations that control the behavior regardless of which storage service you use. Apart from these common configurations, there are a few properties specific to S3 and to Azure.
 
 Common properties to configure the behavior of durable storage
@@ -364,16 +364,16 @@ Common properties to configure the behavior of durable storage
 |Parameter          | Required | Description          | Default | 
 |--|--|--|
 |`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
-|`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3 and `azure` for Azure | n/a |
+|`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3, `azure` for Azure and `google` for Google | n/a |
 |`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data  | n/a |
 |`druid.msq.intermediate.storage.maxRetry` |  No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 10 |
 |`druid.msq.intermediate.storage.chunkSize` | No | Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 100MiB | 
 
-To use S3 for durable storage, you also need to configure the following properties:
+To use S3 or Google for durable storage, you also need to configure the following properties:
 
 |Parameter          | Required | Description  | Default |
 |-------------------|----------------------------------------|----------------------| --|
-|`druid.msq.intermediate.storage.bucket` | Yes | The S3 bucket where the files are uploaded to and download from | n/a |
+|`druid.msq.intermediate.storage.bucket` | Yes | The S3 or Google bucket where the files are uploaded to and download from | n/a |
 |`druid.msq.intermediate.storage.prefix` | Yes | Path prepended to all the paths uploaded to the bucket to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well.  | n/a | 
 
 To use Azure for durable storage, you also need to configure the following properties:

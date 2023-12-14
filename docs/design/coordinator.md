@@ -61,7 +61,7 @@ org.apache.druid.cli.Main server coordinator
 
 Segments can be automatically loaded and dropped from the cluster based on a set of rules. For more information on rules, see [Rule Configuration](../operations/rule-configuration.md).
 
-## Cleaning up segments
+### Clean up overshadowed segments
 
 On each run, the Coordinator compares the set of used segments in the database with the segments served by some
 Historical nodes in the cluster. The Coordinator sends requests to Historical nodes to unload unused segments or segments
@@ -69,6 +69,13 @@ that are removed from the database.
 
 Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are
 marked as unused. During the next Coordinator's run, they will be unloaded from Historical nodes in the cluster.
+
+### Clean up non-overshadowed eternity tombstone segments
+
+On each run, the Coordinator determines and cleans up unneeded eternity tombstone segments for each datasource. These segments must fit all the following criteria:
+- It is a tombstone segment that starts at -INF or ends at INF (for example, a tombstone with an interval of `-146136543-09-08T08:23:32.096Z/2000-01-01` or `2020-01-01/146140482-04-24T15:36:27.903Z` or `-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z`)
+- It does not overlap with any overshadowed segment
+- It has 0 core partitions
 
 ## Segment availability
 

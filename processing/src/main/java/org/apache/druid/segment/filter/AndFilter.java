@@ -115,17 +115,6 @@ public class AndFilter implements BooleanFilter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        // Estimate selectivity with attribute value independence assumption
-        double selectivity = 1.0;
-        for (final Filter filter : filters) {
-          selectivity *= filter.estimateSelectivity(selector);
-        }
-        return selectivity;
-      }
-
-      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());

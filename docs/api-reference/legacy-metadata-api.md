@@ -248,6 +248,16 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments?interval={interval}&limit={limit}&lastSegmentId={lastSegmentId}&sortOrder={sortOrder}`
+
+Returns a list of unused segments for a datasource in the cluster contained within an optionally specified interval.
+Optional parameters for limit and lastSegmentId can be given as well, to limit results and enable paginated results.
+The results may be sorted in either ASC, or DESC order concerning their id, start, and end time, depending on
+specifying the sortOrder parameter. The default behavior in the absence of all optional parameters is to return all
+unused segments for the given datasource in no guaranteed order.
+
+Example usage: `GET /druid/coordinator/v1/datasources/inline_data/unusedSegments?interval=2023-12-01_2023-12-10&limit=10&lastSegmentId=inline_data_2023-12-03T00%3A00%3A00.000Z_2023-12-04T00%3A00%3A00.000Z_2023-12-09T14%3A16%3A53.738Z&sortOrder=ASC}`
+
 ## Intervals
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in `2016-06-27_2016-06-28`.

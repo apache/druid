@@ -19,41 +19,48 @@
 
 package org.apache.druid.query.aggregation.first;
 
+import com.google.common.primitives.Longs;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
-import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-public class StringFirstAggregateCombiner extends ObjectAggregateCombiner<SerializablePairLongString>
+public class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
 {
-  private SerializablePairLongString firstValue;
+  private T firstValue;
+  private final Class<T> pairClass;
+
+  public GenericFirstAggregateCombiner(Class<T> pairClass)
+  {
+    this.pairClass = pairClass;
+  }
 
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    firstValue = (SerializablePairLongString) selector.getObject();
+    firstValue = (T) selector.getObject();
   }
 
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    SerializablePairLongString newValue = (SerializablePairLongString) selector.getObject();
-    if (StringFirstAggregatorFactory.TIME_COMPARATOR.compare(firstValue, newValue) > 0) {
+    T newValue = (T) selector.getObject();
+    if (Longs.compare(firstValue.lhs, newValue.lhs) > 0) {
       firstValue = newValue;
     }
   }
 
   @Nullable
   @Override
-  public SerializablePairLongString getObject()
+  public T getObject()
   {
     return firstValue;
   }
 
   @Override
-  public Class<SerializablePairLongString> classOfObject()
+  public Class<T> classOfObject()
   {
-    return SerializablePairLongString.class;
+    return pairClass;
   }
 }
