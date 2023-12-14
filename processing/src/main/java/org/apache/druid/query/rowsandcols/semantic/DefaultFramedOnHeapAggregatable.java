@@ -284,41 +284,36 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
   /**
    * Handles computations of aggregates for an {@link Interval}.
+   *
+   * Provides aggregates computed for a given {@link Interval}.
+   * It could try to leverage earlier calculations internally if possible.
    */
   static class AggIntervalCursor
   {
     private AggregatorFactory[] aggFactories;
-    Interval currentRows = new Interval(0, 0);
     private final AtomicInteger rowIdProvider;
     private final ColumnSelectorFactory columnSelectorFactory;
+
+    /** Current range the aggregators contain value for */
+    private Interval currentRows = new Interval(0, 0);
     private final Aggregator[] aggregators;
 
     AggIntervalCursor(AppendableRowsAndColumns rac, AggregatorFactory[] aggFactories)
     {
       this.aggFactories = aggFactories;
       aggregators = new Aggregator[aggFactories.length];
-
       rowIdProvider = new AtomicInteger(0);
       columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
-
       newAggregators();
     }
 
     public Object[] getValues()
     {
-
       Object[] values = new Object[aggFactories.length];
       for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
         values[aggIdx] = aggregators[aggIdx].get();
       }
       return values;
-    }
-
-    private void newAggregators()
-    {
-      for (int i = 0; i < aggFactories.length; i++) {
-        aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
-      }
     }
 
     /**
@@ -340,13 +335,10 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       currentRows = newRows;
     }
 
-    public void setOutputs(Object[][] results, Interval outputRows)
+    private void newAggregators()
     {
-      for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
-        Object aggValue = aggregators[aggIdx].get();
-        for (int rowIdx = outputRows.a; rowIdx < outputRows.b; rowIdx++) {
-          results[aggIdx][rowIdx] = aggValue;
-        }
+      for (int i = 0; i < aggFactories.length; i++) {
+        aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
       }
     }
 
@@ -358,6 +350,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       }
     }
   }
+
   private AppendableRowsAndColumns computeUnboundedAggregates(AggregatorFactory[] aggFactories)
   {
     Aggregator[] aggs = new Aggregator[aggFactories.length];
