@@ -238,23 +238,27 @@ public class WindowFrame
     return upperOffset;
   }
 
-  static class WindowFrameRows extends WindowFrame {
+  static class WindowFrameRows extends WindowFrame
+  {
 
     public WindowFrameRows(Integer lowerOffset, Integer upperOffset)
     {
       super(
-          PeerType.ROWS, lowerOffset == null, coalesce(lowerOffset, -1), upperOffset == null, coalesce(upperOffset, -1), null
+          PeerType.ROWS, lowerOffset == null, coalesce(lowerOffset, 0), upperOffset == null, coalesce(upperOffset, 0),
+          null
       );
     }
   }
 
-  static class WindowFrameGroups extends WindowFrame {
+  static class WindowFrameGroups extends WindowFrame
+  {
 
-    public WindowFrameGroups(PeerType peerType, Integer lowerOffset, Integer upperOffset, List<ColumnWithDirection> orderby )
+    public WindowFrameGroups(PeerType peerType, Integer lowerOffset, Integer upperOffset,
+        List<ColumnWithDirection> orderby)
     {
       super(
-          PeerType.RANGE, lowerOffset == null, coalesce(lowerOffset, -1), upperOffset == null,
-          coalesce(upperOffset, -1), orderby
+          PeerType.RANGE, lowerOffset == null, coalesce(lowerOffset, 0), upperOffset == null,
+          coalesce(upperOffset, 0), orderby
       );
     }
   }
