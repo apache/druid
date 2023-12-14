@@ -5418,7 +5418,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
   @DrillTest("aggregates/winFnQry_81")
   @Test
   public void test_aggregates_winFnQry_81()
