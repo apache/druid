@@ -374,15 +374,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       {
         final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
         final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int globalId = stringDictionary.indexOf(StringUtils.toUtf8ByteBuffer(value));
-          if (globalId < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(localDictionary.indexOf(globalId)).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -664,22 +655,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
 
         final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
         final FixedIndexed<Long> longDictionary = globalLongDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (longValue == null) {
-            if (inputNull) {
-              return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          final int globalId = longDictionary.indexOf(longValue);
-          if (globalId < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(localDictionary.indexOf(globalId + adjustLongId)).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -924,22 +899,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       {
         final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
         final FixedIndexed<Double> doubleDictionary = globalDoubleDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (doubleValue == null) {
-            if (inputNull) {
-              return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          final int globalId = doubleDictionary.indexOf(doubleValue);
-          if (globalId < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
