@@ -113,8 +113,8 @@ public class GroupByRules
         }
       } else {
         final boolean doesMatch = existingAggregation.getAggregatorFactories().stream().allMatch(
-            factory -> factory instanceof FilteredAggregatorFactory
-                       && ((FilteredAggregatorFactory) factory).getFilter().equals(filter)
+            factory -> factory instanceof FilteredAggregatorFactory &&
+                       ((FilteredAggregatorFactory) factory).getFilter().equals(filter)
         );
 
         if (doesMatch) {

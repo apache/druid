@@ -194,8 +194,8 @@ public class ColumnMappings
   @Override
   public String toString()
   {
-    return "ColumnMappings{"
-           + "mappings=" + mappings
-           + '}';
+    return "ColumnMappings{" +
+           "mappings=" + mappings +
+           '}';
   }
 }

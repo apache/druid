@@ -108,10 +108,10 @@ public class DatasourceTable extends DruidTable
     @Override
     public String toString()
     {
-      return "DatasourceMetadata{"
-             + "dataSource=" + tableDataSource
-             + ", rowSignature=" + getRowSignature()
-             + '}';
+      return "DatasourceMetadata{" +
+             "dataSource=" + tableDataSource +
+             ", rowSignature=" + getRowSignature() +
+             '}';
     }
   }
 
@@ -177,8 +177,8 @@ public class DatasourceTable extends DruidTable
   {
     // Don't include the row signature: it is the same as in
     // physicalMetadata.
-    return "DruidTable{"
-           + physicalMetadata
-           + '}';
+    return "DruidTable{" +
+           physicalMetadata +
+           '}';
   }
 }

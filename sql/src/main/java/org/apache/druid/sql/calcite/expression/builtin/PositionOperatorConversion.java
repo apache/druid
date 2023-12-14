@@ -54,12 +54,12 @@ public class PositionOperatorConversion implements SqlOperatorConversion
         rexNode,
         druidExpressions -> DruidExpression.ofExpression(
             ColumnType.LONG,
-            args -> {
+            (args) -> {
               final DruidExpression fromIndexExpression;
               if (args.size() > 2) {
                 fromIndexExpression = DruidExpression.ofExpression(
                     ColumnType.LONG,
-                    _args -> StringUtils.format("(%s - 1)", _args.get(2).getExpression()),
+                    (_args) -> StringUtils.format("(%s - 1)", _args.get(2).getExpression()),
                     args
                 );
               } else {

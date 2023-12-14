@@ -253,8 +253,8 @@ public class Projection
       final DruidExpression expression = expressions.get(i);
 
       final RelDataType dataType = project.getRowType().getFieldList().get(i).getType();
-      if (expression.isDirectColumnAccess()
-          && Objects.equals(
+      if (expression.isDirectColumnAccess() &&
+          Objects.equals(
               inputRowSignature.getColumnType(expression.getDirectColumn()).orElse(null),
               Calcites.getColumnTypeForRelDataType(dataType)
           )
@@ -347,9 +347,9 @@ public class Projection
       return false;
     }
     Projection that = (Projection) o;
-    return Objects.equals(postAggregators, that.postAggregators)
-           && Objects.equals(virtualColumns, that.virtualColumns)
-           && Objects.equals(outputRowSignature, that.outputRowSignature);
+    return Objects.equals(postAggregators, that.postAggregators) &&
+           Objects.equals(virtualColumns, that.virtualColumns) &&
+           Objects.equals(outputRowSignature, that.outputRowSignature);
   }
 
   @Override
@@ -361,10 +361,10 @@ public class Projection
   @Override
   public String toString()
   {
-    return "PostSortingExpressions{"
-           + "postAggregators=" + postAggregators
-           + ", virtualColumns=" + virtualColumns
-           + ", outputRowSignature=" + outputRowSignature
-           + '}';
+    return "PostSortingExpressions{" +
+           "postAggregators=" + postAggregators +
+           ", virtualColumns=" + virtualColumns +
+           ", outputRowSignature=" + outputRowSignature +
+           '}';
   }
 }

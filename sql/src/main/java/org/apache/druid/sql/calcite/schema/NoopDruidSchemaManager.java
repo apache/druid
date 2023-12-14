@@ -29,7 +29,7 @@ public class NoopDruidSchemaManager implements DruidSchemaManager
 {
   public static final String TYPE = "noop";
 
-  private static final ConcurrentMap<String, DruidTable> MAP = new ConcurrentHashMap<>();
+  private static ConcurrentMap<String, DruidTable> MAP = new ConcurrentHashMap<>();
 
   @Override
   public Map<String, DruidTable> getTables()

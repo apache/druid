@@ -382,8 +382,8 @@ public class DruidMeta extends MetaImpl
     }
     // BasicSecurityAuthenticationException is not visible here.
     String className = t.getClass().getSimpleName();
-    if (t instanceof ForbiddenException
-        || "BasicSecurityAuthenticationException".equals(className)) {
+    if (t instanceof ForbiddenException ||
+        "BasicSecurityAuthenticationException".equals(className)) {
       throw new AvaticaRuntimeException(
           t.getMessage(),
           ErrorResponse.UNAUTHORIZED_ERROR_CODE,

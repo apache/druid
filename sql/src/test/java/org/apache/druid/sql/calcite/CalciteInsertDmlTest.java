@@ -371,9 +371,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     }
     testIngestionQuery()
         .sql(
-            "INSERT INTO dst SELECT * FROM %s\n"
-            + "  (x VARCHAR, y VARCHAR, z BIGINT)\n"
-            + "PARTITIONED BY ALL TIME",
+            "INSERT INTO dst SELECT * FROM %s\n" +
+            "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+            "PARTITIONED BY ALL TIME",
             extern
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -415,9 +415,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       throw new RuntimeException(e);
     }
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT * FROM %s\n"
-             + "  (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME",
+        .sql("INSERT INTO dst SELECT * FROM %s\n" +
+             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME",
              extern
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -458,9 +458,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       throw new RuntimeException(e);
     }
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT * FROM %s\n"
-             + "  (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME",
+        .sql("INSERT INTO dst SELECT * FROM %s\n" +
+             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME",
              extern
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -510,9 +510,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       throw new RuntimeException(e);
     }
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT * FROM %s\n"
-             + "  (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME",
+        .sql("INSERT INTO dst SELECT * FROM %s\n" +
+             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME",
              extern
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -552,9 +552,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       throw new RuntimeException(e);
     }
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT * FROM %s\n"
-             + "  (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME",
+        .sql("INSERT INTO dst SELECT * FROM %s\n" +
+             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME",
              extern
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)

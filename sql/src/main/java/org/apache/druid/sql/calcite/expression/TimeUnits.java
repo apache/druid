@@ -51,7 +51,4 @@ public class TimeUnits
   {
     return PERIOD_MAP.get(timeUnitRange);
   }
-
-  private TimeUnits() {
-  }
 }

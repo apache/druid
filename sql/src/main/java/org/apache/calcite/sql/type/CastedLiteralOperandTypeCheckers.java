@@ -156,7 +156,4 @@ public class CastedLiteralOperandTypeCheckers
         throw DruidException.defensive("Expected a literal or a cast on the literal. Found [%s] instead", node.getKind());
     }
   }
-
-  private CastedLiteralOperandTypeCheckers() {
-  }
 }

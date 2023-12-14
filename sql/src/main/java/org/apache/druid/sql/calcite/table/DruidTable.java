@@ -121,9 +121,9 @@ public abstract class DruidTable implements TranslatableTable
   @Override
   public String toString()
   {
-    return "DruidTable{"
-           + "dataSource=" + getDataSource()
-           + ", rowSignature=" + rowSignature
-           + '}';
+    return "DruidTable{" +
+           "dataSource=" + getDataSource() +
+           ", rowSignature=" + rowSignature +
+           '}';
   }
 }

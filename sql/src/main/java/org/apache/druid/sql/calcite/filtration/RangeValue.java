@@ -85,9 +85,9 @@ public class RangeValue implements Comparable<RangeValue>
   @Override
   public String toString()
   {
-    return "RangeValue{"
-           + "value=" + value
-           + ", matchValueType=" + matchValueType
-           + '}';
+    return "RangeValue{" +
+           "value=" + value +
+           ", matchValueType=" + matchValueType +
+           '}';
   }
 }

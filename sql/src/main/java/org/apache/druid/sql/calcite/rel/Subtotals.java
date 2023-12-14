@@ -104,8 +104,8 @@ public class Subtotals
   @Override
   public String toString()
   {
-    return "Subtotals{"
-           + "subtotals=" + subtotals
-           + '}';
+    return "Subtotals{" +
+           "subtotals=" + subtotals +
+           '}';
   }
 }

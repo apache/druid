@@ -80,8 +80,8 @@ public class DruidExternTableMacro extends DruidUserDefinedTableMacro
     // this covers case where named parameters are used.
     for (SqlNode sqlNode : call.getOperandList()) {
       if (sqlNode instanceof SqlCall) {
-        String argumentName = ((SqlCall) sqlNode).getOperandList().size() > 1
-                             ? ((SqlCall) sqlNode).getOperandList().get(1).toString()
+        String argumentName = ((SqlCall) sqlNode).getOperandList().size() > 1 ?
+                             ((SqlCall) sqlNode).getOperandList().get(1).toString()
                              : null;
         if (ExternalOperatorConversion.INPUT_SOURCE_PARAM.equals(argumentName)) {
           return ((NlsString) ((SqlCharStringLiteral) ((SqlCall) call.getOperandList().get(0))

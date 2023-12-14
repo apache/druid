@@ -58,7 +58,7 @@ public class VirtualColumnRegistry
   private final Map<String, ExpressionAndTypeHint> virtualColumnsByName;
   private final String virtualColumnPrefix;
   private int virtualColumnCounter;
-  private final boolean forceExpressionVirtualColumns;
+  private boolean forceExpressionVirtualColumns;
 
   private VirtualColumnRegistry(
       RowSignature baseRowSignature,
@@ -350,8 +350,8 @@ public class VirtualColumnRegistry
         return false;
       }
       ExpressionAndTypeHint expressionAndTypeHint = (ExpressionAndTypeHint) o;
-      return Objects.equals(typeHint, expressionAndTypeHint.typeHint)
-             && Objects.equals(expression, expressionAndTypeHint.expression);
+      return Objects.equals(typeHint, expressionAndTypeHint.typeHint) &&
+             Objects.equals(expression, expressionAndTypeHint.expression);
     }
 
     @Override

@@ -107,7 +107,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   private static final int WAIT_TIMEOUT_SECS = 6;
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private BrokerSegmentMetadataCache runningSchema;
-  private final CountDownLatch buildTableLatch = new CountDownLatch(1);
+  private CountDownLatch buildTableLatch = new CountDownLatch(1);
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
   private CountDownLatch refreshLatch = new CountDownLatch(1);
 
@@ -523,7 +523,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     Assert.assertEquals(6, segments.size());
     // find the only segment with datasource "foo2"
     final DataSegment existingSegment = segments.stream()
-                                                .filter(segment -> "foo2".equals(segment.getDataSource()))
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
     Assert.assertNotNull(existingSegment);
@@ -551,7 +551,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     segmentsMetadata = schema.getSegmentMetadataSnapshot();
     // get the only segment with datasource "foo2"
     final DataSegment currentSegment = segments.stream()
-                                               .filter(segment -> "foo2".equals(segment.getDataSource()))
+                                               .filter(segment -> segment.getDataSource().equals("foo2"))
                                                .findFirst()
                                                .orElse(null);
     final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
@@ -574,7 +574,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
-                                                .filter(segment -> "foo2".equals(segment.getDataSource()))
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
     Assert.assertNotNull(segmentToRemove);
@@ -647,7 +647,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
-                                                .filter(segment -> "foo2".equals(segment.getDataSource()))
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
     Assert.assertNotNull(segmentToRemove);
@@ -728,7 +728,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     Assert.assertEquals(6, segments.size());
     // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
-                                                .filter(segment -> "foo".equals(segment.getDataSource()))
+                                                .filter(segment -> segment.getDataSource().equals("foo"))
                                                 .findFirst()
                                                 .orElse(null);
     Assert.assertNotNull(segmentToRemove);

@@ -98,9 +98,9 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
               rightExpr.map(
                   simpleExtraction -> null,
                   expression ->
-                    rightRexNode.isA(SqlKind.LITERAL)
-                    ? StringUtils.format("'P%sM'", RexLiteral.value(rightRexNode))
-                    : StringUtils.format("concat('P', %s, 'M')", expression)
+                    rightRexNode.isA(SqlKind.LITERAL) ?
+                    StringUtils.format("'P%sM'", RexLiteral.value(rightRexNode)) :
+                    StringUtils.format("concat('P', %s, 'M')", expression)
               ),
               DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(direction > 0 ? 1 : -1)),
               DruidExpression.ofStringLiteral(plannerContext.getTimeZone().getID())
@@ -111,7 +111,7 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
       // Period is a value in milliseconds. Ignore time zone.
       return DruidExpression.ofExpression(
           outputType,
-          args -> StringUtils.format(
+          (args) -> StringUtils.format(
               "(%s %s %s)",
               args.get(0).getExpression(),
               direction > 0 ? "+" : "-",
@@ -119,10 +119,10 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
           ),
           ImmutableList.of(leftExpr, rightExpr)
       );
-    } else if ((leftRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP
-        || leftRexNode.getType().getFamily() == SqlTypeFamily.DATE)
-        && (rightRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP
-        || rightRexNode.getType().getFamily() == SqlTypeFamily.DATE)) {
+    } else if ((leftRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
+        leftRexNode.getType().getFamily() == SqlTypeFamily.DATE) &&
+        (rightRexNode.getType().getFamily() == SqlTypeFamily.TIMESTAMP ||
+        rightRexNode.getType().getFamily() == SqlTypeFamily.DATE)) {
       // Calcite represents both TIMESTAMP - INTERVAL and TIMESTAMPDIFF (TIMESTAMP - TIMESTAMP)
       // with a MINUS_DATE operator, so we must tell which case we're in by checking the type of
       // the second argument.
@@ -140,7 +140,7 @@ public abstract class TimeArithmeticOperatorConversion implements SqlOperatorCon
       } else {
         return DruidExpression.ofExpression(
             outputType,
-            args -> StringUtils.format(
+            (args) -> StringUtils.format(
                 "(%s %s %s)",
                 args.get(0).getExpression(),
                 "-",

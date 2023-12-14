@@ -409,13 +409,13 @@ public class DruidJoinRule extends RelOptRule
     @Override
     public String toString()
     {
-      return "ConditionAnalysis{"
-             + "numLeftFields=" + numLeftFields
-             + ", equalitySubConditions=" + equalitySubConditions
-             + ", literalSubConditions=" + literalSubConditions
-             + ", unsupportedSubConditions=" + unsupportedOnSubConditions
-             + ", rightColumns=" + rightColumns
-             + '}';
+      return "ConditionAnalysis{" +
+             "numLeftFields=" + numLeftFields +
+             ", equalitySubConditions=" + equalitySubConditions +
+             ", literalSubConditions=" + literalSubConditions +
+             ", unsupportedSubConditions=" + unsupportedOnSubConditions +
+             ", rightColumns=" + rightColumns +
+             '}';
     }
   }
 
@@ -595,11 +595,11 @@ public class DruidJoinRule extends RelOptRule
     @Override
     public String toString()
     {
-      return "RexEquality{"
-             + "left=" + left
-             + ", right=" + right
-             + ", kind=" + kind
-             + '}';
+      return "RexEquality{" +
+             "left=" + left +
+             ", right=" + right +
+             ", kind=" + kind +
+             '}';
     }
   }
 }

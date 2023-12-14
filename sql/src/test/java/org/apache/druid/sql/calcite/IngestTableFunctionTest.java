@@ -178,9 +178,9 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     try {
       return StringUtils.format(
-          "TABLE(extern(inputSource => %s,\n"
-          + "             inputFormat => %s,\n"
-          + "             signature => %s))",
+          "TABLE(extern(inputSource => %s,\n" +
+          "             inputFormat => %s,\n" +
+          "             signature => %s))",
           Calcites.escapeStringLiteral(queryJsonMapper.writeValueAsString(externalDataSource.getInputSource())),
           Calcites.escapeStringLiteral(queryJsonMapper.writeValueAsString(externalDataSource.getInputFormat())),
           Calcites.escapeStringLiteral(queryJsonMapper.writeValueAsString(externalDataSource.getSignature()))
@@ -223,13 +223,13 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testHttpFn()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT x, y, z\n"
-             + "FROM TABLE(http(userName => 'bob',\n"
-             + "                password => 'secret',\n"
-             + "                uris => ARRAY['http://foo.com/bar.csv'],\n"
-             + "                format => 'csv'))\n"
-             + "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME")
+        .sql("INSERT INTO dst SELECT x, y, z\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+             "                password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -267,18 +267,18 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .add("isRobot", ColumnType.STRING)
         .build();
     testIngestionQuery()
-        .sql("INSERT INTO w000\n"
-             + "SELECT\n"
-             + "  TIME_PARSE(\"timestamp\") AS __time,\n"
-             + "  isRobot\n"
-             + "FROM TABLE(http(\n"
-             + "  userName => 'bob',\n"
-             + "  password => 'secret',\n"
-             + "  uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],\n"
-             + "  format => 'csv'\n"
-             + "  )\n"
-             + ") EXTEND (\"timestamp\" VARCHAR, isRobot VARCHAR)\n"
-             + "PARTITIONED BY HOUR")
+        .sql("INSERT INTO w000\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(\"timestamp\") AS __time,\n" +
+             "  isRobot\n" +
+             "FROM TABLE(http(\n" +
+             "  userName => 'bob',\n" +
+             "  password => 'secret',\n" +
+             "  uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],\n" +
+             "  format => 'csv'\n" +
+             "  )\n" +
+             ") EXTEND (\"timestamp\" VARCHAR, isRobot VARCHAR)\n" +
+             "PARTITIONED BY HOUR")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("w000", expectedSig)
         .expectResources(dataSourceWrite("w000"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -300,27 +300,27 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
     skipVectorize();
 
     final String query =
-        "EXPLAIN PLAN FOR\n"
-        + "INSERT INTO dst SELECT x, y, z\n"
-        + "FROM TABLE(http(userName => 'bob',\n"
-        + "                password => 'secret',\n"
-        + "                uris => ARRAY['http://foo.com/bar.csv'],\n"
-        + "                format => 'csv'))\n"
-        + "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n"
-        + "PARTITIONED BY ALL TIME";
-    final String explanation = "[{"
-        + "\"query\":{\"queryType\":\"scan\","
-        + "\"dataSource\":{\"type\":\"external\","
-        + "\"inputSource\":{\"type\":\"http\",\"uris\":[\"http://foo.com/bar.csv\"],\"httpAuthenticationUsername\":\"bob\",\"httpAuthenticationPassword\":{\"type\":\"default\",\"password\":\"secret\"}},"
-        + "\"inputFormat\":{\"type\":\"csv\",\"columns\":[\"x\",\"y\",\"z\"]},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]},"
-        + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
-        + "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"legacy\":false,"
-        + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\","
-        + "\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\","
-        + "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
-        + "\"granularity\":{\"type\":\"all\"}},"
-        + "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}],"
-        + "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
+        "EXPLAIN PLAN FOR\n" +
+        "INSERT INTO dst SELECT x, y, z\n" +
+        "FROM TABLE(http(userName => 'bob',\n" +
+        "                password => 'secret',\n" +
+        "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+        "                format => 'csv'))\n" +
+        "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+        "PARTITIONED BY ALL TIME";
+    final String explanation = "[{" +
+        "\"query\":{\"queryType\":\"scan\"," +
+        "\"dataSource\":{\"type\":\"external\"," +
+        "\"inputSource\":{\"type\":\"http\",\"uris\":[\"http://foo.com/bar.csv\"],\"httpAuthenticationUsername\":\"bob\",\"httpAuthenticationPassword\":{\"type\":\"default\",\"password\":\"secret\"}}," +
+        "\"inputFormat\":{\"type\":\"csv\",\"columns\":[\"x\",\"y\",\"z\"]},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}," +
+        "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]}," +
+        "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"legacy\":false," +
+        "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"," +
+        "\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\"," +
+        "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}," +
+        "\"granularity\":{\"type\":\"all\"}}," +
+        "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]," +
+        "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":{\"type\":\"all\"}}";
 
@@ -340,14 +340,14 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testExplainHttpFnUnauthorized()
   {
     final String query =
-        "EXPLAIN PLAN FOR\n"
-        + "INSERT INTO dst SELECT x, y, z\n"
-        + "FROM TABLE(http(userName => 'bob',\n"
-        + "                password => 'secret',\n"
-        + "                uris => ARRAY['http://foo.com/bar.csv'],\n"
-        + "                format => 'csv'))\n"
-        + "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n"
-        + "PARTITIONED BY ALL TIME";
+        "EXPLAIN PLAN FOR\n" +
+        "INSERT INTO dst SELECT x, y, z\n" +
+        "FROM TABLE(http(userName => 'bob',\n" +
+        "                password => 'secret',\n" +
+        "                uris => ARRAY['http://foo.com/bar.csv'],\n" +
+        "                format => 'csv'))\n" +
+        "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+        "PARTITIONED BY ALL TIME";
     didTest = true; // Else the framework will complain
     testBuilder()
         .plannerConfig(PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN)
@@ -365,15 +365,15 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testHttpFnWithParameters()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n"
-             + "FROM TABLE(http(userName => 'bob',\n"
-            + "                 password => 'secret',\n"
-             + "                uris => ?,\n"
-             + "                format => 'csv'))\n"
-             + "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME")
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+            "                 password => 'secret',\n" +
+             "                uris => ?,\n" +
+             "                format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .parameters(Collections.singletonList(new SqlParameter(SqlType.ARRAY, new String[]{"http://foo.com/bar.csv"})))
+        .parameters(Collections.singletonList(new SqlParameter(SqlType.ARRAY, new String[] {"http://foo.com/bar.csv"})))
         .expectTarget("dst", httpDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
@@ -411,13 +411,13 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                     .build()
         );
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n"
-             + "FROM TABLE(http(userName => 'bob',\n"
-            + "                 password => 'secret',\n"
-             + "                uris => ARRAY['http://foo.com/bar.json'],\n"
-             + "                format => 'json'))\n"
-             + "     EXTEND (x VARCHAR, y VARCHAR, z TYPE('COMPLEX<json>'), a VARCHAR ARRAY, b BIGINT ARRAY, c FLOAT ARRAY, d DOUBLE ARRAY)\n"
-             + "PARTITIONED BY ALL TIME")
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+            "                 password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.json'],\n" +
+             "                format => 'json'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z TYPE('COMPLEX<json>'), a VARCHAR ARRAY, b BIGINT ARRAY, c FLOAT ARRAY, d DOUBLE ARRAY)\n" +
+             "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -502,10 +502,10 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testInlineExternWithExtend()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n"
-             + "  FROM %s\n"
-             + "  %s\n"
-             + "  PARTITIONED BY ALL TIME",
+        .sql("INSERT INTO dst SELECT *\n" +
+             "  FROM %s\n" +
+             "  %s\n" +
+             "  PARTITIONED BY ALL TIME",
              externSqlByNameNoSig(externalDataSource),
              externClauseFromSig(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -531,11 +531,11 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testInlineFn()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n"
-             + "FROM TABLE(inline(data => ARRAY['a,b,1', 'c,d,2'],\n"
-             + "                  format => 'csv'))\n"
-             + "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME")
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(inline(data => ARRAY['a,b,1', 'c,d,2'],\n" +
+             "                  format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -597,11 +597,11 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testLocalFilesFn()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n"
-             + "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n"
-             + "                  format => 'csv'))\n"
-             + "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME")
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n" +
+             "                  format => 'csv'))\n" +
+             "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -625,11 +625,11 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testLocalFnOmitExtend()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT *\n"
-             + "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n"
-             + "                  format => 'csv'))\n"
-             + "     (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "PARTITIONED BY ALL TIME")
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n" +
+             "                  format => 'csv'))\n" +
+             "     (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -652,13 +652,13 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testLocalFnWithAlias()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst\n"
-             + "SELECT myTable.x, myTable.y, myTable.z\n"
-             + "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n"
-             + "                  format => 'csv'))\n"
-             + "     (x VARCHAR, y VARCHAR, z BIGINT)\n"
-             + "     As myTable\n"
-             + "PARTITIONED BY ALL TIME"
+        .sql("INSERT INTO dst\n" +
+             "SELECT myTable.x, myTable.y, myTable.z\n" +
+             "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n" +
+             "                  format => 'csv'))\n" +
+             "     (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+             "     As myTable\n" +
+             "PARTITIONED BY ALL TIME"
          )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
@@ -682,13 +682,13 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testLocalFnNotNull()
   {
     testIngestionQuery()
-        .sql("INSERT INTO dst\n"
-             + "SELECT myTable.x, myTable.y, myTable.z\n"
-             + "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n"
-             + "                  format => 'csv'))\n"
-             + "     (x VARCHAR NOT NULL, y VARCHAR NOT NULL, z BIGINT NOT NULL)\n"
-             + "     As myTable\n"
-             + "PARTITIONED BY ALL TIME"
+        .sql("INSERT INTO dst\n" +
+             "SELECT myTable.x, myTable.y, myTable.z\n" +
+             "FROM TABLE(localfiles(files => ARRAY['/tmp/foo.csv', '/tmp/bar.csv'],\n" +
+             "                  format => 'csv'))\n" +
+             "     (x VARCHAR NOT NULL, y VARCHAR NOT NULL, z BIGINT NOT NULL)\n" +
+             "     As myTable\n" +
+             "PARTITIONED BY ALL TIME"
          )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())

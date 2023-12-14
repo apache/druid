@@ -149,8 +149,8 @@ public class OffsetLimit
       return false;
     }
     OffsetLimit that = (OffsetLimit) o;
-    return Objects.equals(offset, that.offset)
-           && Objects.equals(limit, that.limit);
+    return Objects.equals(offset, that.offset) &&
+           Objects.equals(limit, that.limit);
   }
 
   @Override
@@ -162,10 +162,10 @@ public class OffsetLimit
   @Override
   public String toString()
   {
-    return "OffsetLimit{"
-           + "offset=" + offset
-           + ", limit=" + limit
-           + '}';
+    return "OffsetLimit{" +
+           "offset=" + offset +
+           ", limit=" + limit +
+           '}';
   }
 
   public org.apache.druid.query.operator.OffsetLimit toOperatorOffsetLimit()

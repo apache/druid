@@ -142,11 +142,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{3L, 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{2L, 1L}
         )
     );
@@ -449,13 +449,13 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"", "a"},
             new Object[]{"1", "a"},
             new Object[]{"def", "abc"}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"", "a"},
             new Object[]{"2", ""},
             new Object[]{"1", "a"},
@@ -555,8 +555,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
-                            useDefault
-                            ? aggregators(
+                            useDefault ?
+                            aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
                                 new DoubleSumAggregatorFactory("_a2:sum", "a0"),
@@ -713,11 +713,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                           .setContext(queryContext)
                           .build()
           ),
-          NullHandling.replaceWithDefault()
-          ? ImmutableList.of(
+          NullHandling.replaceWithDefault() ?
+          ImmutableList.of(
               new Object[]{3L, 1L}
-          )
-          : ImmutableList.of(
+          ) :
+          ImmutableList.of(
               new Object[]{2L, 1L}
           )
       );

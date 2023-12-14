@@ -107,7 +107,4 @@ public class OperatorFactoryBuilders
   {
     return new WindowFramedAggregateProcessor(window, aggregations);
   }
-
-  private OperatorFactoryBuilders() {
-  }
 }

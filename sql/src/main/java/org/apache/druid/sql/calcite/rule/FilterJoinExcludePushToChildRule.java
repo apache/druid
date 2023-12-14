@@ -315,8 +315,8 @@ public abstract class FilterJoinExcludePushToChildRule<C extends FilterJoinRule.
       List<RexNode> operands = ((RexCall) isNotNullFilter).getOperands();
       boolean canDrop = false;
       for (Pair<RexNode, RexNode> equalityFilterOperands : equalityFilters) {
-        if ((equalityFilterOperands.lhs != null && equalityFilterOperands.lhs.equals(operands.get(0)))
-            || (equalityFilterOperands.rhs != null && equalityFilterOperands.rhs.equals(operands.get(0)))) {
+        if ((equalityFilterOperands.lhs != null && equalityFilterOperands.lhs.equals(operands.get(0))) ||
+            (equalityFilterOperands.rhs != null && equalityFilterOperands.rhs.equals(operands.get(0)))) {
           canDrop = true;
           break;
         }

@@ -345,14 +345,11 @@ public class SqlResults
     @Override
     public String toString()
     {
-      return "Context{"
-             + "timeZone=" + timeZone
-             + ", serializeComplexValues=" + serializeComplexValues
-             + ", stringifyArrays=" + stringifyArrays
-             + '}';
+      return "Context{" +
+             "timeZone=" + timeZone +
+             ", serializeComplexValues=" + serializeComplexValues +
+             ", stringifyArrays=" + stringifyArrays +
+             '}';
     }
-  }
-
-  private SqlResults() {
   }
 }

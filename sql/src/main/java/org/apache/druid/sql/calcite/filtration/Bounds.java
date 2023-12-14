@@ -214,7 +214,4 @@ public class Bounds
         null
     );
   }
-
-  private Bounds() {
-  }
 }

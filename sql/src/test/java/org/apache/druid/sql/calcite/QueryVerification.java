@@ -57,7 +57,4 @@ public class QueryVerification
       };
     }
   }
-
-  private QueryVerification() {
-  }
 }

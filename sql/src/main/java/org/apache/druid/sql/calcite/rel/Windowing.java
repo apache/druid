@@ -87,25 +87,25 @@ public class Windowing
 {
   private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
-      .put("LAG", agg ->
+      .put("LAG", (agg) ->
           new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1)))
-      .put("LEAD", agg ->
+      .put("LEAD", (agg) ->
           new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1, 1)))
-      .put("FIRST_VALUE", agg ->
+      .put("FIRST_VALUE", (agg) ->
           new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
-      .put("LAST_VALUE", agg ->
+      .put("LAST_VALUE", (agg) ->
           new WindowLastProcessor(agg.getColumn(0), agg.getOutputName()))
-      .put("CUME_DIST", agg ->
+      .put("CUME_DIST", (agg) ->
           new WindowCumeDistProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName()))
-      .put("DENSE_RANK", agg ->
+      .put("DENSE_RANK", (agg) ->
           new WindowDenseRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName()))
-      .put("NTILE", agg ->
+      .put("NTILE", (agg) ->
           new WindowPercentileProcessor(agg.getOutputName(), agg.getConstantInt(0)))
-      .put("PERCENT_RANK", agg ->
+      .put("PERCENT_RANK", (agg) ->
           new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), true))
-      .put("RANK", agg ->
+      .put("RANK", (agg) ->
           new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), false))
-      .put("ROW_NUMBER", agg ->
+      .put("ROW_NUMBER", (agg) ->
           new WindowRowNumberProcessor(agg.getOutputName()))
       .build();
   private final List<OperatorFactory> ops;
@@ -139,7 +139,7 @@ public class Windowing
       priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
     }
 
-    for (int i = 0; i < window.groups.size(); i++) {
+    for (int i = 0; i < window.groups.size(); ++i) {
       final WindowGroup group = new WindowGroup(window, window.groups.get(i), sourceRowSignature);
 
       final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
@@ -232,8 +232,8 @@ public class Windowing
       }
 
       ops.add(new WindowOperatorFactory(
-          processors.size() == 1
-          ? processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
+          processors.size() == 1 ?
+          processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
       ));
     }
 
@@ -358,7 +358,7 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
-      return WindowFrame.newWindowFrame(
+      return new WindowFrame(
           group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),
           figureOutOffset(group.lowerBound),

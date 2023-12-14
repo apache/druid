@@ -1614,8 +1614,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testUnauthorizedTable()
   {
     final String query = "SELECT * FROM " + CalciteTests.FORBIDDEN_DATASOURCE;
-    final String expectedError = "Error 2 (00002) : Error while executing SQL \""
-                                 + query + "\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
+    final String expectedError = "Error 2 (00002) : Error while executing SQL \"" +
+                                 query + "\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
     try (Statement statement = client.createStatement()) {
       statement.executeQuery(query);
     }

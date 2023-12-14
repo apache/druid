@@ -2029,8 +2029,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   .build()
                           ),
                           "_j0.",
-                          NullHandling.sqlCompatible()
-                          ? equalsCondition(
+                          NullHandling.sqlCompatible() ?
+                          equalsCondition(
                               DruidExpression.fromExpression("CAST(\"j0.k\", 'LONG')"),
                               DruidExpression.ofColumn(ColumnType.LONG, "_j0.cnt")
                           )
@@ -2042,8 +2042,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(new CountAggregatorFactory("a0"))
                   .filters(
-                      NullHandling.sqlCompatible()
-                      ? expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))")
+                      NullHandling.sqlCompatible() ?
+                      expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))")
                                                    : and(
                                                        expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"),
                                                        expressionFilter("(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")")
@@ -3611,9 +3611,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    boolean isJoinFilterRewriteEnabled = "true"
-                                                     .equals(queryContext.getOrDefault(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-                                                     .toString());
+    boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+                                                     .toString()
+                                                     .equals("true");
     testQuery(
         "SELECT dim1, l1.k\n"
         + "FROM foo\n"
@@ -5616,14 +5616,14 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "select\n"
-        + "count(*) filter (where trim(both from dim1) in (select dim2 from foo)),\n"
-        + "min(m1) filter (where 'A' not in (select m2 from foo))\n"
-        + "from foo as t0\n"
-        + "where __time in (select __time from foo)",
+        "select\n" +
+        "count(*) filter (where trim(both from dim1) in (select dim2 from foo)),\n" +
+        "min(m1) filter (where 'A' not in (select m2 from foo))\n" +
+        "from foo as t0\n" +
+        "where __time in (select __time from foo)",
         queryContext,
-        useDefault
-        ? ImmutableList.of(
+        useDefault ?
+        ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
                       join(
@@ -5700,8 +5700,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                   )
                   .context(queryContext)
                   .build()
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(
                       join(
@@ -6158,8 +6158,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        useDefault
-        ? ImmutableList.of(
+        useDefault ?
+        ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "a", "a"}
         ) : ImmutableList.of(
@@ -6216,8 +6216,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        useDefault
-        ? ImmutableList.of(
+        useDefault ?
+        ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "a", "a"}
         ) : ImmutableList.of(
@@ -6287,8 +6287,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        useDefault
-        ? ImmutableList.of(
+        useDefault ?
+        ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
@@ -6361,8 +6361,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        useDefault
-        ? ImmutableList.of(
+        useDefault ?
+        ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "b", "a"},
             new Object[]{"[\"a\",\"b\"]", "b", ""},
@@ -6425,9 +6425,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     "(\"dim2\" == \"j0.dim2\")",
                                     JoinType.INNER
                                 ),
-                                useDefault
-                                ? new InDimFilter("m1", ImmutableList.of("1", "4"), null)
-                                : or(
+                                useDefault ?
+                                new InDimFilter("m1", ImmutableList.of("1", "4"), null) :
+                                or(
                                     equality("m1", 1.0, ColumnType.FLOAT),
                                     equality("m1", 4.0, ColumnType.FLOAT)
                                 )

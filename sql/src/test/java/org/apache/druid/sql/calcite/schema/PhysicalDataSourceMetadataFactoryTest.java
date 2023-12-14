@@ -66,8 +66,8 @@ public class PhysicalDataSourceMetadataFactoryTest
       @Override
       public boolean isDirectlyJoinable(DataSource dataSource)
       {
-        return dataSource instanceof GlobalTableDataSource
-               && joinableDataSourceNames.contains(((GlobalTableDataSource) dataSource).getName());
+        return dataSource instanceof GlobalTableDataSource &&
+               joinableDataSourceNames.contains(((GlobalTableDataSource) dataSource).getName());
       }
 
       @Override

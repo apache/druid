@@ -39,7 +39,7 @@ public class GroupingTest
                       DruidExpression.ofLiteral(ColumnType.LONG, "100"),
                       DruidExpression.ofExpression(
                           ColumnType.LONG,
-                          args -> StringUtils.format("%s + %s", args.get(0), args.get(1)),
+                          (args) -> StringUtils.format("%s + %s", args.get(0), args.get(1)),
                           ImmutableList.of(
                               DruidExpression.ofLiteral(ColumnType.LONG, "100"),
                               DruidExpression.ofLiteral(ColumnType.LONG, "200")

@@ -124,7 +124,7 @@ public class OperatorConversions
         plannerContext,
         rowSignature,
         rexNode,
-        operands -> DruidExpression.ofExpression(
+        (operands) -> DruidExpression.ofExpression(
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             expressionGenerator,
             operands
@@ -778,8 +778,5 @@ public class OperatorConversions
             .build(),
         druidFunctionName
     );
-  }
-
-  private OperatorConversions() {
   }
 }

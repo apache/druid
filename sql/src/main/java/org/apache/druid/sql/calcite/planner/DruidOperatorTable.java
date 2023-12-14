@@ -583,8 +583,8 @@ public class DruidOperatorTable implements SqlOperatorTable
         return false;
       }
       final OperatorKey that = (OperatorKey) o;
-      return Objects.equals(name, that.name)
-             && syntax == that.syntax;
+      return Objects.equals(name, that.name) &&
+             syntax == that.syntax;
     }
 
     @Override
@@ -596,10 +596,10 @@ public class DruidOperatorTable implements SqlOperatorTable
     @Override
     public String toString()
     {
-      return "OperatorKey{"
-             + "name='" + name + '\''
-             + ", syntax=" + syntax
-             + '}';
+      return "OperatorKey{" +
+             "name='" + name + '\'' +
+             ", syntax=" + syntax +
+             '}';
     }
   }
 }

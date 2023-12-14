@@ -259,7 +259,4 @@ public class QueryFrameworkUtils
   {
     return new LookupSchema(injector.getInstance(LookupExtractorFactoryContainerProvider.class));
   }
-
-  private QueryFrameworkUtils() {
-  }
 }

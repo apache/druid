@@ -103,7 +103,4 @@ public class ExtractionFns
       return new CascadeExtractionFn(extractionFns.toArray(new ExtractionFn[0]));
     }
   }
-
-  private ExtractionFns() {
-  }
 }

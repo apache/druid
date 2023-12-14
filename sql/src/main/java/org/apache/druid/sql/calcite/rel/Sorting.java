@@ -149,9 +149,9 @@ public class Sorting
       return false;
     }
     Sorting sorting = (Sorting) o;
-    return Objects.equals(orderBys, sorting.orderBys)
-           && Objects.equals(projection, sorting.projection)
-           && Objects.equals(offsetLimit, sorting.offsetLimit);
+    return Objects.equals(orderBys, sorting.orderBys) &&
+           Objects.equals(projection, sorting.projection) &&
+           Objects.equals(offsetLimit, sorting.offsetLimit);
   }
 
   @Override
@@ -163,10 +163,10 @@ public class Sorting
   @Override
   public String toString()
   {
-    return "Sorting{"
-           + "orderBys=" + orderBys
-           + ", projection=" + projection
-           + ", offsetLimit=" + offsetLimit
-           + '}';
+    return "Sorting{" +
+           "orderBys=" + orderBys +
+           ", projection=" + projection +
+           ", offsetLimit=" + offsetLimit +
+           '}';
   }
 }

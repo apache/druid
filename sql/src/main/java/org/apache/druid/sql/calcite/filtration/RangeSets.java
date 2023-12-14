@@ -134,7 +134,4 @@ public class RangeSets
 
     return retVal;
   }
-
-  private RangeSets() {
-  }
 }

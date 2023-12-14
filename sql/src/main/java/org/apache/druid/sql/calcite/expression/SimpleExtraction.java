@@ -92,8 +92,8 @@ public class SimpleExtraction
       return false;
     }
     SimpleExtraction that = (SimpleExtraction) o;
-    return column.equals(that.column)
-           && Objects.equals(extractionFn, that.extractionFn);
+    return column.equals(that.column) &&
+           Objects.equals(extractionFn, that.extractionFn);
   }
 
   @Override

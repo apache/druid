@@ -49,25 +49,25 @@ public class PlannerConfig
   private boolean useApproximateTopN = true;
 
   @JsonProperty
-  private boolean requireTimeCondition;
+  private boolean requireTimeCondition = false;
 
   @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
 
   @JsonProperty
-  private boolean useGroupingSetForExactDistinct;
+  private boolean useGroupingSetForExactDistinct = false;
 
   @JsonProperty
   private boolean computeInnerJoinCostAsFilter = true;
 
   @JsonProperty
-  private boolean authorizeSystemTablesDirectly;
+  private boolean authorizeSystemTablesDirectly = false;
 
   @JsonProperty
   private boolean useNativeQueryExplain = true;
 
   @JsonProperty
-  private boolean forceExpressionVirtualColumns;
+  private boolean forceExpressionVirtualColumns = false;
 
   @JsonProperty
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
@@ -168,19 +168,19 @@ public class PlannerConfig
       return false;
     }
     final PlannerConfig that = (PlannerConfig) o;
-    return maxTopNLimit == that.maxTopNLimit
-           && useApproximateCountDistinct == that.useApproximateCountDistinct
-           && useApproximateTopN == that.useApproximateTopN
-           && requireTimeCondition == that.requireTimeCondition
-           && serializeComplexValues == that.serializeComplexValues
-           && Objects.equals(sqlTimeZone, that.sqlTimeZone)
-           && useNativeQueryExplain == that.useNativeQueryExplain
-           && forceExpressionVirtualColumns == that.forceExpressionVirtualColumns
-           && useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct
-           && computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter
-           && authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly
-           && maxNumericInFilters == that.maxNumericInFilters
-           && nativeQuerySqlPlanningMode.equals(that.nativeQuerySqlPlanningMode);
+    return maxTopNLimit == that.maxTopNLimit &&
+           useApproximateCountDistinct == that.useApproximateCountDistinct &&
+           useApproximateTopN == that.useApproximateTopN &&
+           requireTimeCondition == that.requireTimeCondition &&
+           serializeComplexValues == that.serializeComplexValues &&
+           Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
+           useNativeQueryExplain == that.useNativeQueryExplain &&
+           forceExpressionVirtualColumns == that.forceExpressionVirtualColumns &&
+           useGroupingSetForExactDistinct == that.useGroupingSetForExactDistinct &&
+           computeInnerJoinCostAsFilter == that.computeInnerJoinCostAsFilter &&
+           authorizeSystemTablesDirectly == that.authorizeSystemTablesDirectly &&
+           maxNumericInFilters == that.maxNumericInFilters &&
+           nativeQuerySqlPlanningMode.equals(that.nativeQuerySqlPlanningMode);
   }
 
   @Override
@@ -203,16 +203,16 @@ public class PlannerConfig
   @Override
   public String toString()
   {
-    return "PlannerConfig{"
-           + "maxTopNLimit=" + maxTopNLimit
-           + ", useApproximateCountDistinct=" + useApproximateCountDistinct
-           + ", useApproximateTopN=" + useApproximateTopN
-           + ", requireTimeCondition=" + requireTimeCondition
-           + ", sqlTimeZone=" + sqlTimeZone
-           + ", serializeComplexValues=" + serializeComplexValues
-           + ", useNativeQueryExplain=" + useNativeQueryExplain
-           + ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode
-           + '}';
+    return "PlannerConfig{" +
+           "maxTopNLimit=" + maxTopNLimit +
+           ", useApproximateCountDistinct=" + useApproximateCountDistinct +
+           ", useApproximateTopN=" + useApproximateTopN +
+           ", requireTimeCondition=" + requireTimeCondition +
+           ", sqlTimeZone=" + sqlTimeZone +
+           ", serializeComplexValues=" + serializeComplexValues +
+           ", useNativeQueryExplain=" + useNativeQueryExplain +
+           ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
+           '}';
   }
 
   public static Builder builder()

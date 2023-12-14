@@ -74,9 +74,9 @@ public class ColumnMapping
   @Override
   public String toString()
   {
-    return "ColumnMapping{"
-           + "queryColumn='" + queryColumn + '\''
-           + ", outputColumn='" + outputColumn + '\''
-           + '}';
+    return "ColumnMapping{" +
+           "queryColumn='" + queryColumn + '\'' +
+           ", outputColumn='" + outputColumn + '\'' +
+           '}';
   }
 }

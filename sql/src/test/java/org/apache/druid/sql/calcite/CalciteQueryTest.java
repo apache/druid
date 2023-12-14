@@ -1356,8 +1356,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
             new Object[]{null, "10.1"},
             new Object[]{"", "2"},
             new Object[]{"a", ""},
@@ -1390,8 +1390,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
             new Object[]{null, "[b, c]"},
             new Object[]{"", "d"},
             new Object[]{"a", "[a, b]"},
@@ -2404,12 +2404,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"", 3L},
             new Object[]{"a", 2L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{null, 2L},
             new Object[]{"a", 2L}
         )
@@ -2469,12 +2469,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"", 3L},
             new Object[]{"a", 2L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{null, 2L},
             new Object[]{"a", 2L}
         )
@@ -2727,12 +2727,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"", 1.0f, 1L},
             new Object[]{"2", 3.0f, 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"2", 3.0f, 1L}
         )
     );
@@ -3422,11 +3422,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{12L, 3L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{12L, 4L}
         )
     );
@@ -3584,16 +3584,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{false},
             new Object[]{false},
             new Object[]{false},
             new Object[]{false},
             new Object[]{false},
             new Object[]{false}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{false},
             new Object[]{false},
             new Object[]{false},
@@ -3766,14 +3766,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"10.1", 1L},
             new Object[]{"2", 1L},
             new Object[]{"a", 2L},
             new Object[]{"abc", 2L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"", 1L},
             new Object[]{"10.1", 1L},
             new Object[]{"a", 2L},
@@ -3919,15 +3919,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"10.1", "b", 1L},
             new Object[]{"10.1", "c", 1L},
             new Object[]{"2", "d", 1L},
             new Object[]{"a", "a", 3L},
             new Object[]{"abc", "abc", 2L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"", "", 1L},
             new Object[]{"10.1", "b", 1L},
             new Object[]{"10.1", "c", 1L},
@@ -4199,11 +4199,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{3L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{4L}
         )
     );
@@ -4776,11 +4776,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{6L, 6L, 5L, 1.0, 6L, 8L, 3L, 6L, ((1 + 1.7) / 6)}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{6L, 6L, 6L, 1.0, 6L, 8L, 4L, 3L, ((1 + 1.7) / 3)}
         )
     );
@@ -5010,11 +5010,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{1L, 5L, 1L, 2L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, 0L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{1L, 5L, 1L, 3L, 5L, 5L, 2L, 1L, 5L, 1L, 5L, null}
         )
     );
@@ -5085,11 +5085,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{5L, 2L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{5L, 3L}
         )
     );
@@ -5280,13 +5280,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{10.0f, 1L},
             new Object[]{2.0f, 1L},
             new Object[]{0.0f, 4L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{10.0f, 1L},
             new Object[]{2.0f, 1L},
             new Object[]{0.0f, 1L}
@@ -6551,13 +6551,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"", 3L, 3L},
             new Object[]{"a", 2L, 1L},
             new Object[]{"abc", 1L, 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{null, 2L, 2L},
             new Object[]{"", 1L, 1L},
             new Object[]{"a", 2L, 2L},
@@ -6831,11 +6831,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{6L, 3L, 2L, 2L, 2L, 6L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{6L, 3L, 2L, 1L, 1L, 6L}
         )
     );
@@ -7079,11 +7079,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{6L, 3L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{6L, 4L}
         )
     );
@@ -7283,11 +7283,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{3L, 2L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{4L, 3L}
         )
     );
@@ -7374,13 +7374,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"1", 1L},
             new Object[]{"2", 1L},
             new Object[]{"3", 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"1", 2L},
             new Object[]{"2", 2L}
         )
@@ -7429,12 +7429,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"1", 1L},
             new Object[]{"2", 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"1", 2L},
             new Object[]{"2", 2L}
         )
@@ -7664,8 +7664,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     expectedException.expect(DruidException.class);
     expectedException.expectMessage(
-        "An invalid pattern [^(.))] was provided for the REGEXP_EXTRACT function, "
-        + "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"
+        "An invalid pattern [^(.))] was provided for the REGEXP_EXTRACT function, " +
+        "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"
     );
 
     testQuery(
@@ -7822,14 +7822,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"10.1", "", 1L},
             new Object[]{"2", "", 1L},
             new Object[]{"abc", "", 1L},
             new Object[]{"", "a", 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"10.1", null, 1L},
             new Object[]{"abc", null, 1L},
             new Object[]{"2", "", 1L},
@@ -8558,15 +8558,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d0", 0, Granularities.YEAR))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{timestamp("2000"), "", 2L},
             new Object[]{timestamp("2000"), "a", 1L},
             new Object[]{timestamp("2001"), "", 1L},
             new Object[]{timestamp("2001"), "a", 1L},
             new Object[]{timestamp("2001"), "abc", 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{timestamp("2000"), null, 1L},
             new Object[]{timestamp("2000"), "", 1L},
             new Object[]{timestamp("2000"), "a", 1L},
@@ -10212,15 +10212,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(withTimestampResultContext(QUERY_CONTEXT_DEFAULT, "d1", 1, Granularities.MONTH))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"", timestamp("2000-01-01"), 2L},
             new Object[]{"", timestamp("2001-01-01"), 1L},
             new Object[]{"a", timestamp("2000-01-01"), 1L},
             new Object[]{"a", timestamp("2001-01-01"), 1L},
             new Object[]{"abc", timestamp("2001-01-01"), 1L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{null, timestamp("2000-01-01"), 1L},
             new Object[]{null, timestamp("2001-01-01"), 1L},
             new Object[]{"", timestamp("2000-01-01"), 1L},
@@ -10317,14 +10317,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"", timestamp("2001-01-01"), 6.0},
             new Object[]{"", timestamp("2000-01-01"), 5.0},
             new Object[]{"a", timestamp("2001-01-01"), 4.0},
             new Object[]{"abc", timestamp("2001-01-01"), 5.0}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{null, timestamp("2001-01-01"), 6.0},
             new Object[]{null, timestamp("2000-01-01"), 2.0},
             new Object[]{"", timestamp("2000-01-01"), 3.0},
@@ -11754,11 +11754,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{6L, 3L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{6L, 4L}
         )
     );
@@ -11988,9 +11988,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
-        "SELECT exp(count(*)) + 10, sin(pi / 6), cos(pi / 6), tan(pi / 6), cot(pi / 6),"
-        + "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1) "
-        + "FROM druid.foo WHERE  dim2 = 0",
+        "SELECT exp(count(*)) + 10, sin(pi / 6), cos(pi / 6), tan(pi / 6), cot(pi / 6)," +
+        "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1) " +
+        "FROM druid.foo WHERE  dim2 = 0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
@@ -12167,14 +12167,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{"10.1", 1L},
             new Object[]{"2", 1L},
             new Object[]{"a", 2L},
             new Object[]{"abc", 2L}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{"", 1L},
             new Object[]{"10.1", 1L},
             new Object[]{"a", 2L},
@@ -14029,13 +14029,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         ))
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
             new Object[]{0L, false},
             new Object[]{7L, false},
             new Object[]{325323L, false}
-        )
-        : ImmutableList.of(
+        ) :
+        ImmutableList.of(
             new Object[]{null, false},
             new Object[]{0L, false},
             new Object[]{7L, false},
@@ -14356,9 +14356,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
                 .columns(ImmutableList.of("__time", "dim1"))
                 .filters(and(
-                    useDefault
-                    ? not(isNull("dim1"))
-                    : not(equality("dim1", "", ColumnType.STRING)),
+                    useDefault ?
+                    not(isNull("dim1")) :
+                    not(equality("dim1", "", ColumnType.STRING)),
                     not(equality("dim1", "a", ColumnType.STRING))
                 ))
                 .build()
@@ -14401,7 +14401,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
         ),
         ImmutableList.of(
-            new Object[]{"abc", defaultString, "def", defaultString, "def", defaultString}
+            new Object[] {"abc", defaultString, "def", defaultString, "def", defaultString}
         ));
   }
 
@@ -14506,10 +14506,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{3.0D, 1L},
-                new Object[]{4.0D, 1L},
-                new Object[]{5.0D, 1L},
-                new Object[]{6.0D, 1L}
+                new Object[] {3.0D, 1L},
+                new Object[] {4.0D, 1L},
+                new Object[] {5.0D, 1L},
+                new Object[] {6.0D, 1L}
             )
         )
         .run();
@@ -14530,8 +14530,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "GROUP BY 1 \n"
         + "ORDER BY 2 DESC  LIMIT 2 OFFSET 1\n";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{4.0D, 1L},
-        new Object[]{5.0D, 1L}
+        new Object[] {4.0D, 1L},
+        new Object[] {5.0D, 1L}
     );
 
     testBuilder()
@@ -14609,12 +14609,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + ")\n"
         + "select ranking, trend_score from t ORDER BY trend_score";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L},
-        new Object[]{1L, 1L}
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L}
     );
 
     testBuilder()
@@ -14746,12 +14746,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{946684800000L, 1L, 1L},
-                new Object[]{946771200000L, 1L, 2L},
-                new Object[]{946857600000L, 1L, 3L},
-                new Object[]{978307200000L, 1L, 4L},
-                new Object[]{978393600000L, 1L, 5L},
-                new Object[]{978480000000L, 1L, 6L}
+                new Object[] {946684800000L, 1L, 1L},
+                new Object[] {946771200000L, 1L, 2L},
+                new Object[] {946857600000L, 1L, 3L},
+                new Object[] {978307200000L, 1L, 4L},
+                new Object[] {978393600000L, 1L, 5L},
+                new Object[] {978480000000L, 1L, 6L}
             )
         )
         .run();

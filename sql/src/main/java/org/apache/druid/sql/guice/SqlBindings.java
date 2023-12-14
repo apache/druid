@@ -78,7 +78,4 @@ public class SqlBindings
     binder.bind(clazz).in(Scopes.SINGLETON);
     Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().to(clazz);
   }
-
-  private SqlBindings() {
-  }
 }

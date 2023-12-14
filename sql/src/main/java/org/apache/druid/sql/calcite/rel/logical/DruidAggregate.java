@@ -68,8 +68,8 @@ public class DruidAggregate extends Aggregate implements DruidLogicalNode
         cost += CostEstimates.COST_AGGREGATION;
       }
     }
-    if (!plannerContext.getPlannerConfig().isUseApproximateCountDistinct()
-        && getAggCallList().stream().anyMatch(AggregateCall::isDistinct)) {
+    if (!plannerContext.getPlannerConfig().isUseApproximateCountDistinct() &&
+        getAggCallList().stream().anyMatch(AggregateCall::isDistinct)) {
       return planner.getCostFactory().makeInfiniteCost();
     }
     return planner.getCostFactory().makeCost(rowCount, cost, 0);

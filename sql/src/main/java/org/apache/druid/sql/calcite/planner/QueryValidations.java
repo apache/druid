@@ -57,7 +57,7 @@ public class QueryValidations
         && !plannerContext.featureAvailable(EngineFeature.ALLOW_BROADCAST_RIGHTY_JOIN)) {
       class FindRightyJoin extends RelShuttleImpl
       {
-        private Join found;
+        private Join found = null;
 
         @Override
         public RelNode visit(LogicalJoin join)
@@ -86,8 +86,5 @@ public class QueryValidations
         );
       }
     }
-  }
-
-  private QueryValidations() {
   }
 }

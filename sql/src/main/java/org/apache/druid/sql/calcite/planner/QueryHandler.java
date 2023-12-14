@@ -576,8 +576,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         );
       }
       try {
-        log.info("final query : "
-                 + new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery()));
+        log.info("final query : " +
+                 new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery()));
       }
       catch (JsonProcessingException e) {
         throw new RuntimeException(e);

@@ -85,9 +85,9 @@ public class RangeRefKey
   @Override
   public String toString()
   {
-    return "RangeRefKey{"
-           + "column='" + column + '\''
-           + ", matchValueType=" + matchValueType
-           + '}';
+    return "RangeRefKey{" +
+           "column='" + column + '\'' +
+           ", matchValueType=" + matchValueType +
+           '}';
   }
 }

@@ -110,9 +110,9 @@ public class ExternalTable extends DruidTable
   @Override
   public String toString()
   {
-    return "ExternalTable{"
-           + "dataSource=" + dataSource
-           + ", rowSignature=" + getRowSignature()
-           + '}';
+    return "ExternalTable{" +
+           "dataSource=" + dataSource +
+           ", rowSignature=" + getRowSignature() +
+           '}';
   }
 }
