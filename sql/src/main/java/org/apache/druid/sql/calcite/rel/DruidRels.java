@@ -95,4 +95,7 @@ public class DruidRels
       ).toDruidQuery(false).getOutputRowSignature();
     }
   }
+
+  private DruidRels() {
+  }
 }

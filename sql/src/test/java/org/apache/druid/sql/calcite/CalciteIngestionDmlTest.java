@@ -117,7 +117,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
                   .build()
   );
 
-  protected boolean didTest = false;
+  protected boolean didTest;
 
   public CalciteIngestionDmlTest()
   {

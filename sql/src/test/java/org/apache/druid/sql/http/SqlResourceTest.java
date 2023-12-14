@@ -557,15 +557,15 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z")
             // t2 represents Long.MIN converted to a timestamp
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             Maps.transformValues(
                 ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""),
-                (val) -> "".equals(val) ? null : val
+                val -> "".equals(val) ? null : val
             )
         ),
         rows
@@ -611,15 +611,15 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             ImmutableMap.of("x", "", "y", ""),
             ImmutableMap.of("x", "a", "y", "a"),
             ImmutableMap.of("x", "abc", "y", "abc")
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             // x and y both should be null instead of empty string
-            Maps.transformValues(ImmutableMap.of("x", "", "y", ""), (val) -> null),
+            Maps.transformValues(ImmutableMap.of("x", "", "y", ""), val -> null),
             ImmutableMap.of("x", "", "y", ""),
             ImmutableMap.of("x", "a", "y", "a"),
             ImmutableMap.of("x", "abc", "y", "abc")

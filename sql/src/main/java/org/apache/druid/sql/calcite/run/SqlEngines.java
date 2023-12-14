@@ -67,4 +67,7 @@ public class SqlEngines
             unrecognizedFeature
         );
   }
+
+  private SqlEngines() {
+  }
 }

@@ -78,7 +78,7 @@ public class MetadataSegmentView
    * from other threads.
    */
   @MonotonicNonNull
-  private volatile ImmutableSortedSet<SegmentStatusInCluster> publishedSegments = null;
+  private volatile ImmutableSortedSet<SegmentStatusInCluster> publishedSegments;
   /**
    * Caches the replication factor for segment IDs. In case of coordinator restarts or leadership re-elections, the coordinator API returns `null` replication factor until load rules are evaluated.
    * The cache can be used during these periods to continue serving the previously fetched values.

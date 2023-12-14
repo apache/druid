@@ -180,9 +180,9 @@ public class Filtration
   @Override
   public String toString()
   {
-    return "Filtration{" +
-           "intervals=" + intervals +
-           ", dimFilter=" + dimFilter +
-           '}';
+    return "Filtration{"
+           + "intervals=" + intervals
+           + ", dimFilter=" + dimFilter
+           + '}';
   }
 }

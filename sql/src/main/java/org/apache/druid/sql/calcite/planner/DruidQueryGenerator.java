@@ -68,8 +68,8 @@ public class DruidQueryGenerator extends RelShuttleImpl
   private final List<DruidTable> queryTables = new ArrayList<>();
   private final PlannerContext plannerContext;
   private PartialDruidQuery partialDruidQuery;
-  private PartialDruidQuery.Stage currentStage = null;
-  private DruidTable currentTable = null;
+  private PartialDruidQuery.Stage currentStage;
+  private DruidTable currentTable;
   private boolean isRoot = true;
 
   public DruidQueryGenerator(PlannerContext plannerContext)

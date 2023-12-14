@@ -355,7 +355,7 @@ public class DruidPlanner implements Closeable
           final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
           for (int[] expectedTokenSequence : expectedTokenSequences) {
             String[] strings = new String[expectedTokenSequence.length];
-            for (int i = 0; i < expectedTokenSequence.length; ++i) {
+            for (int i = 0; i < expectedTokenSequence.length; i++) {
               strings[i] = tokenDictionary[expectedTokenSequence[i]];
             }
             expectedTokens.add(SPACE_JOINER.join(strings));

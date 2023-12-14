@@ -273,7 +273,7 @@ public class Externals
       throw unsupportedType(name, dataType);
     }
     String simpleName = typeNameIdentifier.getSimple();
-    if (StringUtils.toLowerCase(simpleName).startsWith(("complex<"))) {
+    if (StringUtils.toLowerCase(simpleName).startsWith("complex<")) {
       return simpleName;
     }
     SqlTypeName type = SqlTypeName.get(simpleName);
@@ -359,4 +359,7 @@ public class Externals
   // Resource that allows reading external data via SQL.
   public static final ResourceAction EXTERNAL_RESOURCE_ACTION =
       new ResourceAction(new Resource(ResourceType.EXTERNAL, ResourceType.EXTERNAL), Action.READ);
+
+  private Externals() {
+  }
 }

@@ -120,12 +120,12 @@ public final class ExplainAttributes
   @Override
   public String toString()
   {
-    return "ExplainAttributes{" +
-           "statementType='" + statementType + '\'' +
-           ", targetDataSource=" + targetDataSource +
-           ", partitionedBy=" + partitionedBy +
-           ", clusteredBy=" + clusteredBy +
-           ", replaceTimeChunks=" + replaceTimeChunks +
-           '}';
+    return "ExplainAttributes{"
+           + "statementType='" + statementType + '\''
+           + ", targetDataSource=" + targetDataSource
+           + ", partitionedBy=" + partitionedBy
+           + ", clusteredBy=" + clusteredBy
+           + ", replaceTimeChunks=" + replaceTimeChunks
+           + '}';
   }
 }

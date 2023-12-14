@@ -107,10 +107,10 @@ public class DimensionExpression
       return false;
     }
     final DimensionExpression that = (DimensionExpression) o;
-    return Objects.equals(virtualColumn, that.virtualColumn) &&
-           Objects.equals(outputName, that.outputName) &&
-           Objects.equals(expression, that.expression) &&
-           outputType == that.outputType;
+    return Objects.equals(virtualColumn, that.virtualColumn)
+           && Objects.equals(outputName, that.outputName)
+           && Objects.equals(expression, that.expression)
+           && outputType == that.outputType;
   }
 
   @Override
@@ -122,11 +122,11 @@ public class DimensionExpression
   @Override
   public String toString()
   {
-    return "DimensionExpression{" +
-           "virtualColumn='" + virtualColumn + '\'' +
-           ", outputName='" + outputName + '\'' +
-           ", expression=" + expression +
-           ", outputType=" + outputType +
-           '}';
+    return "DimensionExpression{"
+           + "virtualColumn='" + virtualColumn + '\''
+           + ", outputName='" + outputName + '\''
+           + ", expression=" + expression
+           + ", outputType=" + outputType
+           + '}';
   }
 }

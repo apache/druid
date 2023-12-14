@@ -135,7 +135,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
       final RowSignature outputSignature = results.signature;
       ColumnType[] types = new ColumnType[outputSignature.size()];
-      for (int i = 0; i < outputSignature.size(); ++i) {
+      for (int i = 0; i < outputSignature.size(); i++) {
         types[i] = outputSignature.getColumnType(i).get();
         Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
       }
@@ -173,7 +173,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     private void validateOperators(List<OperatorFactory> expectedOperators, List<OperatorFactory> currentOperators)
         throws Exception
     {
-      for (int i = 0; i < expectedOperators.size(); ++i) {
+      for (int i = 0; i < expectedOperators.size(); i++) {
         final OperatorFactory expectedOperator = expectedOperators.get(i);
         final OperatorFactory actualOperator = currentOperators.get(i);
         if (!expectedOperator.validateEquivalent(actualOperator)) {

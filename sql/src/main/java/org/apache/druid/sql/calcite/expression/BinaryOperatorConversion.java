@@ -90,7 +90,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
 
       return DruidExpression.ofExpression(
           Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-          (args) -> StringUtils.format(
+          args -> StringUtils.format(
               "(%s)",
               joiner.join(
                   args.stream()

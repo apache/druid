@@ -744,7 +744,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(partitionNum, row[6]);
     Assert.assertEquals(numReplicas, row[7]);
     Assert.assertEquals(numRows, row[8]);
-    Assert.assertEquals((((isPublished == 1) && (isOvershadowed == 0)) || (isRealtime == 1)) ? 1L : 0L, row[9]);
+    Assert.assertEquals(((isPublished == 1) && (isOvershadowed == 0)) || (isRealtime == 1) ? 1L : 0L, row[9]);
     Assert.assertEquals(isPublished, row[10]);
     Assert.assertEquals(isAvailable, row[11]);
     Assert.assertEquals(isRealtime, row[12]);
@@ -1521,7 +1521,7 @@ public class SystemSchemaTest extends CalciteTestBase
             expectedClass = Double.class;
             break;
           case STRING:
-            if (signature.getColumnName(i).equals("segment_id")) {
+            if ("segment_id".equals(signature.getColumnName(i))) {
               expectedClass = SegmentId.class;
             } else {
               expectedClass = String.class;

@@ -4575,7 +4575,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "JSON_VALUE(nester, '.array.[1]'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
-        (expected) -> {
+        expected -> {
           expected.expect(
               DruidExceptionMatcher
                   .invalidInput()
@@ -5218,12 +5218,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .build()
         ),
-        NullHandling.sqlCompatible() ?
-        ImmutableList.of(
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
             new Object[]{10L},
             new Object[]{10L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{0L},
             new Object[]{0L},
             new Object[]{10L},
@@ -5273,11 +5273,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible() ?
-        ImmutableList.of(
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
             new Object[]{10L, 2L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{0L, 12L},
             new Object[]{10L, 2L}
         ),
@@ -5742,8 +5742,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .build()
         ),
-        useDefault ?
-        ImmutableList.of(
+        useDefault
+        ? ImmutableList.of(
             new Object[]{
                 1672531200000L,
                 "",
@@ -6010,8 +6010,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
                 1L
             }
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{
                 1672531200000L,
                 null,
@@ -6443,8 +6443,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     testQuery(
         "select coalesce(long,c) as col "
         + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) ",
-        useDefault ?
-        ImmutableList.of(
+        useDefault
+        ? ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(DATA_SOURCE_ALL),
@@ -6457,8 +6457,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
                       new TableDataSource(DATA_SOURCE_ALL),

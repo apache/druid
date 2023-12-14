@@ -553,8 +553,8 @@ public class Expressions
       // themselves, so we check the output type of the expression and compare it to the type of the direct column. a
       // string column might produce additional null values when converting to a number, so we should use the virtual
       // column instead for filtering to ensure that results are correct
-      if (druidExpression.isSimpleExtraction() &&
-          !(isOutputNumeric && !rowSignature.isNumeric(druidExpression.getDirectColumn()))) {
+      if (druidExpression.isSimpleExtraction()
+          && !(isOutputNumeric && !rowSignature.isNumeric(druidExpression.getDirectColumn()))) {
         if (plannerContext.isUseBoundsAndSelectors()) {
           equalFilter = new SelectorDimFilter(
               druidExpression.getSimpleExtraction().getColumn(),

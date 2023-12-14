@@ -279,12 +279,12 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{"", 1.0f, 1L},
             new Object[]{"2", 3.0f, 1L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{"2", 3.0f, 1L}
         ),
         ImmutableList.of(
@@ -711,13 +711,13 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{"a", 2L},
             new Object[]{"abc", 1L},
             new Object[]{"parameter", 3L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{"", 1L},
             new Object[]{"a", 2L},
             new Object[]{"abc", 1L},
@@ -746,13 +746,13 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
             new Object[]{"a", 2L},
             new Object[]{"abc", 1L},
             new Object[]{"parameter", 3L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{"", 1L},
             new Object[]{"a", 2L},
             new Object[]{"abc", 1L},

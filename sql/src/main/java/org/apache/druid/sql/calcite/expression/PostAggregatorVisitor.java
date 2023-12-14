@@ -30,9 +30,9 @@ import java.util.List;
  */
 public class PostAggregatorVisitor
 {
-  private String outputNamePrefix;
-  private int counter = 0;
-  private List<PostAggregator> postAggs = new ArrayList<>();
+  private final String outputNamePrefix;
+  private int counter;
+  private final List<PostAggregator> postAggs = new ArrayList<>();
 
   public PostAggregatorVisitor(
       String outputNamePrefix

@@ -285,12 +285,12 @@ public class Grouping
       return false;
     }
     Grouping grouping = (Grouping) o;
-    return dimensions.equals(grouping.dimensions) &&
-           subtotals.equals(grouping.subtotals) &&
-           aggregations.equals(grouping.aggregations) &&
-           Objects.equals(havingFilter, grouping.havingFilter) &&
-           outputRowSignature.equals(grouping.outputRowSignature) &&
-           groupingDimensionsDropped == grouping.groupingDimensionsDropped;
+    return dimensions.equals(grouping.dimensions)
+           && subtotals.equals(grouping.subtotals)
+           && aggregations.equals(grouping.aggregations)
+           && Objects.equals(havingFilter, grouping.havingFilter)
+           && outputRowSignature.equals(grouping.outputRowSignature)
+           && groupingDimensionsDropped == grouping.groupingDimensionsDropped;
   }
 
   @Override

@@ -66,5 +66,8 @@ public class ResultFormatTest
                     .map(format -> new Object[]{format})
                     .toArray(Object[]::new);
     }
+
+    private ResultFormatTypeProvider() {
+    }
   }
 }

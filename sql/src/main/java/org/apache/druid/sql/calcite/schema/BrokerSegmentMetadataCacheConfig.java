@@ -40,7 +40,7 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
 {
   // A flag indicating whether to cache polled segments from the Coordinator.
   @JsonProperty
-  private boolean metadataSegmentCacheEnable = false;
+  private boolean metadataSegmentCacheEnable;
 
   // Interval for polling segments from the coordinator.
   @JsonProperty
@@ -52,7 +52,7 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
 
   // This is meant to be used when running ITs to disable table schema building in broker.
   @JsonProperty
-  private boolean disableSegmentMetadataQueries = false;
+  private boolean disableSegmentMetadataQueries;
 
   public static BrokerSegmentMetadataCacheConfig create()
   {
@@ -95,13 +95,13 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
   @Override
   public String toString()
   {
-    return "BrokerSegmentMetadataCacheConfig{" +
-           "metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
-           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
-           ", awaitInitializationOnStart=" + awaitInitializationOnStart +
-           ", disableSegmentMetadataQueries=" + disableSegmentMetadataQueries +
-           ", metadataRefreshPeriod=" + getMetadataRefreshPeriod() +
-           ", metadataColumnTypeMergePolicy=" + getMetadataColumnTypeMergePolicy() +
-           '}';
+    return "BrokerSegmentMetadataCacheConfig{"
+           + "metadataSegmentCacheEnable=" + metadataSegmentCacheEnable
+           + ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod
+           + ", awaitInitializationOnStart=" + awaitInitializationOnStart
+           + ", disableSegmentMetadataQueries=" + disableSegmentMetadataQueries
+           + ", metadataRefreshPeriod=" + getMetadataRefreshPeriod()
+           + ", metadataColumnTypeMergePolicy=" + getMetadataColumnTypeMergePolicy()
+           + '}';
   }
 }

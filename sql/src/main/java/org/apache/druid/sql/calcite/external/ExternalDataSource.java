@@ -175,10 +175,10 @@ public class ExternalDataSource implements DataSource
   @Override
   public String toString()
   {
-    return "ExternalDataSource{" +
-           "inputSource=" + inputSource +
-           ", inputFormat=" + inputFormat +
-           ", signature=" + signature +
-           '}';
+    return "ExternalDataSource{"
+           + "inputSource=" + inputSource
+           + ", inputFormat=" + inputFormat
+           + ", signature=" + signature
+           + '}';
   }
 }

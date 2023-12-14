@@ -194,8 +194,8 @@ public class Aggregation
       return false;
     }
     final Aggregation that = (Aggregation) o;
-    return Objects.equals(aggregatorFactories, that.aggregatorFactories) &&
-           Objects.equals(postAggregator, that.postAggregator);
+    return Objects.equals(aggregatorFactories, that.aggregatorFactories)
+           && Objects.equals(postAggregator, that.postAggregator);
   }
 
   @Override
@@ -207,9 +207,9 @@ public class Aggregation
   @Override
   public String toString()
   {
-    return "Aggregation{" +
-           "aggregatorFactories=" + aggregatorFactories +
-           ", postAggregator=" + postAggregator +
-           '}';
+    return "Aggregation{"
+           + "aggregatorFactories=" + aggregatorFactories
+           + ", postAggregator=" + postAggregator
+           + '}';
   }
 }

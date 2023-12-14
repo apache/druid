@@ -33,7 +33,7 @@ import java.util.Map;
 public class WindowOperatorQueryBuilder
 {
   private DataSource dataSource;
-  private QuerySegmentSpec intervals = new LegacySegmentSpec(Intervals.ETERNITY);
+  private final QuerySegmentSpec intervals = new LegacySegmentSpec(Intervals.ETERNITY);
   private Map<String, Object> context;
   private RowSignature rowSignature;
   private List<OperatorFactory> operators;

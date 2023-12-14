@@ -218,7 +218,7 @@ public class NestedDataOperatorConversions
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
+      final DruidExpression.ExpressionGenerator builder = args ->
           "json_query(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
       if (druidExpressions.get(0).isSimpleExtraction()) {
 
@@ -303,8 +303,8 @@ public class NestedDataOperatorConversions
         SqlOperator jsonValueOperator;
         if (SqlTypeName.INT_TYPES.contains(sqlType.getSqlTypeName())) {
           jsonValueOperator = JsonValueBigintOperatorConversion.FUNCTION;
-        } else if (SqlTypeName.DECIMAL.equals(sqlType.getSqlTypeName()) ||
-                   SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
+        } else if (SqlTypeName.DECIMAL.equals(sqlType.getSqlTypeName())
+                   || SqlTypeName.APPROX_TYPES.contains(sqlType.getSqlTypeName())) {
           jsonValueOperator = JsonValueDoubleOperatorConversion.FUNCTION;
         } else if (SqlTypeName.STRING_TYPES.contains(sqlType.getSqlTypeName())) {
           jsonValueOperator = JsonValueVarcharOperatorConversion.FUNCTION;
@@ -402,7 +402,7 @@ public class NestedDataOperatorConversions
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
 
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
+      final DruidExpression.ExpressionGenerator builder = args ->
           "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
@@ -532,7 +532,7 @@ public class NestedDataOperatorConversions
         );
       }
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
+      final DruidExpression.ExpressionGenerator builder = args ->
           "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "', '" + druidType.asTypeString() + "')";
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
@@ -690,7 +690,7 @@ public class NestedDataOperatorConversions
       final String path = (String) pathExpr.eval(InputBindings.nilBindings()).value();
       final List<NestedPathPart> parts = extractNestedPathParts(call, path);
       final String jsonPath = NestedPathFinder.toNormalizedJsonPath(parts);
-      final DruidExpression.ExpressionGenerator builder = (args) ->
+      final DruidExpression.ExpressionGenerator builder = args ->
           "json_value(" + args.get(0).getExpression() + ",'" + jsonPath + "')";
 
       // STRING is the closest thing we have to ANY, though maybe someday this
@@ -905,5 +905,8 @@ public class NestedDataOperatorConversions
           .ofCategory(DruidException.Category.INVALID_INPUT)
           .build(iae, "Error when processing path [%s], operator [%s] is not useable", path, name);
     }
+  }
+
+  private NestedDataOperatorConversions() {
   }
 }

@@ -112,7 +112,7 @@ import static org.junit.Assert.fail;
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  private DrillTestCase testCase = null;
+  private DrillTestCase testCase;
 
   static {
     NullHandling.initializeForTests();
@@ -182,7 +182,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     public Statement apply(Statement base, Description description)
     {
       DrillTest annotation = description.getAnnotation(DrillTest.class);
-      testCase = (annotation == null) ? null : new DrillTestCase(annotation.value());
+      testCase = annotation == null ? null : new DrillTestCase(annotation.value());
       return base;
     }
   }

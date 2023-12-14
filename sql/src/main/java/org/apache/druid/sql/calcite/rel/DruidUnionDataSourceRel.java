@@ -124,8 +124,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
     for (final RelNode relNode : unionRel.getInputs()) {
       final DruidRel<?> druidRel = (DruidRel<?>) relNode;
       if (!DruidRels.isScanOrMapping(druidRel, false)) {
-        getPlannerContext().setPlanningError("SQL requires union between inputs that are not simple table scans " +
-            "and involve a filter or aliasing");
+        getPlannerContext().setPlanningError("SQL requires union between inputs that are not simple table scans "
+            + "and involve a filter or aliasing");
         throw new CannotBuildQueryException(druidRel);
       }
 

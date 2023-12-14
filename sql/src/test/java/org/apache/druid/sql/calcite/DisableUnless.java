@@ -52,4 +52,7 @@ class DisableUnless
       return base;
     }
   }
+
+  private DisableUnless() {
+  }
 }

@@ -128,8 +128,8 @@ public class DruidSchemaCatalog
   @Override
   public String toString()
   {
-    return "DruidSchemaCatalog{" +
-           "schemas=" + getSubSchemaNames() +
-           '}';
+    return "DruidSchemaCatalog{"
+           + "schemas=" + getSubSchemaNames()
+           + '}';
   }
 }

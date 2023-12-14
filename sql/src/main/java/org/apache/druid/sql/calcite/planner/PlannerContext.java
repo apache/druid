@@ -517,8 +517,8 @@ public class PlannerContext
    */
   public boolean featureAvailable(final EngineFeature feature)
   {
-    if (feature == EngineFeature.WINDOW_FUNCTIONS &&
-        !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
+    if (feature == EngineFeature.WINDOW_FUNCTIONS
+        && !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
       // Short-circuit: feature requires context flag.
       return false;
     }

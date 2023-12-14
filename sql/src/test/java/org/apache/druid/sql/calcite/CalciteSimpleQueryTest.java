@@ -672,9 +672,9 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
         .expectedResults(
             useDefault ? ImmutableList.of(
                 new Object[]{"#ar.wikipedia", "", "", "", "", ""},
-                new Object[] {"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"})
+                new Object[]{"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"})
             : ImmutableList.of(
-                new Object[] {"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"})
+                new Object[]{"#ar.wikipedia", "Amman", "Amman", "Amman", "Amman", "Amman"})
         )
         .run();
   }

@@ -1081,8 +1081,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .build()
         )
         .expectedResults(
-            NullHandling.sqlCompatible() ?
-            ImmutableList.of(
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of(
                 new Object[]{"[\"a\",\"b\",\"d\"]"},
                 new Object[]{"[\"b\",\"c\",\"d\"]"},
                 new Object[]{"[\"d\",\"d\"]"},
@@ -1305,14 +1305,14 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        useDefault ?
-        ImmutableList.of(
+        useDefault
+        ? ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 3L},
             new Object[]{"a", 1L},
             new Object[]{"c", 1L},
             new Object[]{"d", 1L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{NullHandling.defaultStringValue(), 2L},
             new Object[]{"", 1L},
             new Object[]{"a", 1L},
@@ -1848,8 +1848,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{ImmutableList.of("a", "b"), 1L},
             new Object[]{ImmutableList.of("b", "c"), 1L},
             new Object[]{ImmutableList.of("d"), 1L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{null, 2L},
             new Object[]{ImmutableList.of(""), 1L},
             new Object[]{ImmutableList.of("a", "b"), 1L},
@@ -1902,8 +1902,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{ImmutableList.of("2"), 1L},
             new Object[]{ImmutableList.of("abc"), 1L},
             new Object[]{ImmutableList.of("def"), 1L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{ImmutableList.of(""), 1L},
             new Object[]{ImmutableList.of("1"), 1L},
             new Object[]{ImmutableList.of("10.1"), 1L},
@@ -1958,8 +1958,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{ImmutableList.of("2"), 1L},
             new Object[]{ImmutableList.of("abc"), 1L},
             new Object[]{ImmutableList.of("def"), 1L}
-        ) :
-        ImmutableList.of(
+        )
+        : ImmutableList.of(
             new Object[]{ImmutableList.of(""), 1L},
             new Object[]{ImmutableList.of("1"), 1L},
             new Object[]{ImmutableList.of("10.1"), 1L},
@@ -2229,7 +2229,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build())
         .expectedResults(
-            ImmutableList.of(new Object[] {NullHandling.defaultStringValue(), 7L}))
+            ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 7L}))
         .run();
 
   }

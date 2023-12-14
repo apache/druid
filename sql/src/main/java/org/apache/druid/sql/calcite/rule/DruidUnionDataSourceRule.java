@@ -139,8 +139,8 @@ public class DruidUnionDataSourceRule extends RelOptRule
     }
     if (!firstColumnNames.equals(secondColumnNames)) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("SQL requires union between two tables and column names queried for " +
-            "each table are different Left: %s, Right: %s.",
+        plannerContext.setPlanningError("SQL requires union between two tables and column names queried for "
+            + "each table are different Left: %s, Right: %s.",
             firstColumnNames.orElse(Collections.emptyList()),
             secondColumnNames.orElse(Collections.emptyList()));
       }
@@ -195,8 +195,8 @@ public class DruidUnionDataSourceRule extends RelOptRule
       return Optional.of(((DruidUnionDataSourceRel) druidRel).getUnionColumnNames());
     } else if (druidTable.isPresent()) {
       if (null != plannerContext) {
-        plannerContext.setPlanningError("SQL requires union between inputs that are not simple table scans " +
-            "and involve a filter or aliasing. Or column types of tables being unioned are not of same type.");
+        plannerContext.setPlanningError("SQL requires union between inputs that are not simple table scans "
+            + "and involve a filter or aliasing. Or column types of tables being unioned are not of same type.");
       }
       return Optional.empty();
     } else {

@@ -105,10 +105,10 @@ public class BoundRefKey
   @Override
   public String toString()
   {
-    return "BoundRefKey{" +
-           "dimension='" + dimension + '\'' +
-           ", extractionFn=" + extractionFn +
-           ", comparator=" + comparator +
-           '}';
+    return "BoundRefKey{"
+           + "dimension='" + dimension + '\''
+           + ", extractionFn=" + extractionFn
+           + ", comparator=" + comparator
+           + '}';
   }
 }

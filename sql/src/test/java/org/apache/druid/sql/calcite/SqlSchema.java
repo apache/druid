@@ -121,10 +121,10 @@ public class SqlSchema
   @Override
   public String toString()
   {
-    return "(" +
-        columns.stream().map(
-            c -> c.toString()).collect(Collectors.joining(", ")) +
-        ")";
+    return "("
+        + columns.stream().map(
+            c -> c.toString()).collect(Collectors.joining(", "))
+        + ")";
   }
 
   @Override

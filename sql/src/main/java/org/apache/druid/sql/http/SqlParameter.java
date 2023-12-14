@@ -99,9 +99,9 @@ public class SqlParameter
   @Override
   public String toString()
   {
-    return "SqlParameter{" +
-           ", value={" + type.name() + ',' + value + '}' +
-           '}';
+    return "SqlParameter{"
+           + ", value={" + type.name() + ',' + value + '}'
+           + '}';
   }
 
   @Override
@@ -114,8 +114,8 @@ public class SqlParameter
       return false;
     }
     SqlParameter that = (SqlParameter) o;
-    return Objects.equals(type, that.type) &&
-           Objects.equals(value, that.value);
+    return Objects.equals(type, that.type)
+           && Objects.equals(value, that.value);
   }
 
   @Override

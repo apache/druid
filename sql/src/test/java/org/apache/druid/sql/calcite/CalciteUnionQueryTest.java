@@ -198,8 +198,8 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
         + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
         + "GROUP BY 1, 2",
-        "SQL requires union between inputs that are not simple table scans and involve a " +
-        "filter or aliasing. Or column types of tables being unioned are not of same type."
+        "SQL requires union between inputs that are not simple table scans and involve a "
+        + "filter or aliasing. Or column types of tables being unioned are not of same type."
     );
   }
 
@@ -214,8 +214,8 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "SQL requires union between two tables " +
-        "and column names queried for each table are different Left: [dim1], Right: [dim2]."
+        "SQL requires union between two tables "
+        + "and column names queried for each table are different Left: [dim1], Right: [dim2]."
     );
   }
 
@@ -239,8 +239,8 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1",
-        "SQL requires union between inputs that are not simple table scans and involve " +
-        "a filter or aliasing. Or column types of tables being unioned are not of same type."
+        "SQL requires union between inputs that are not simple table scans and involve "
+        + "a filter or aliasing. Or column types of tables being unioned are not of same type."
     );
   }
 

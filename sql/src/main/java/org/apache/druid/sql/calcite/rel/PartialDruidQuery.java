@@ -504,6 +504,7 @@ public class PartialDruidQuery
 
           return leafRelTraits.plus(convention).plus(RelCollations.of(sortFields));
         }
+        break;
         // Fall through.
 
       default:
@@ -733,17 +734,17 @@ public class PartialDruidQuery
   @Override
   public String toString()
   {
-    return "PartialDruidQuery{" +
-           "scan=" + scan +
-           ", whereFilter=" + whereFilter +
-           ", selectProject=" + selectProject +
-           ", aggregate=" + aggregate +
-           ", havingFilter=" + havingFilter +
-           ", aggregateProject=" + aggregateProject +
-           ", sort=" + sort +
-           ", sortProject=" + sortProject +
-           ", window=" + window +
-           ", windowProject=" + windowProject +
-           '}';
+    return "PartialDruidQuery{"
+           + "scan=" + scan
+           + ", whereFilter=" + whereFilter
+           + ", selectProject=" + selectProject
+           + ", aggregate=" + aggregate
+           + ", havingFilter=" + havingFilter
+           + ", aggregateProject=" + aggregateProject
+           + ", sort=" + sort
+           + ", sortProject=" + sortProject
+           + ", window=" + window
+           + ", windowProject=" + windowProject
+           + '}';
   }
 }

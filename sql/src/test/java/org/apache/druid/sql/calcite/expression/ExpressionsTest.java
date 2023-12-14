@@ -1028,7 +1028,7 @@ public class ExpressionsTest extends ExpressionTestBase
         testHelper.makeInputRef("a"),
         DruidExpression.ofExpression(
             ColumnType.LONG,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "a")
             )
@@ -1041,7 +1041,7 @@ public class ExpressionsTest extends ExpressionTestBase
         testHelper.makeInputRef("x"),
         DruidExpression.ofExpression(
             ColumnType.FLOAT,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x")
             )
@@ -1054,7 +1054,7 @@ public class ExpressionsTest extends ExpressionTestBase
         testHelper.makeInputRef("y"),
         DruidExpression.ofExpression(
             ColumnType.LONG,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "y")
             )
@@ -1067,7 +1067,7 @@ public class ExpressionsTest extends ExpressionTestBase
         testHelper.makeInputRef("z"),
         DruidExpression.ofExpression(
             ColumnType.FLOAT,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 1,'long'),'double') / 1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z")
             )
@@ -1083,7 +1083,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.ofExpression(
             ColumnType.FLOAT,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "x"),
                 DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
@@ -1100,7 +1100,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.ofExpression(
             ColumnType.FLOAT,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 10.0,'long'),'double') / 10.0)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
                 DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(1))
@@ -1117,7 +1117,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.ofExpression(
             ColumnType.LONG,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "b"),
                 DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
@@ -1134,7 +1134,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.ofExpression(
             ColumnType.FLOAT,
-            (args) -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
+            args -> "(cast(cast(" + args.get(0).getExpression() + " * 0.1,'long'),'double') / 0.1)",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.FLOAT, "z"),
                 DruidExpression.ofLiteral(ColumnType.LONG, DruidExpression.longLiteral(-1))
@@ -1893,7 +1893,7 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.ofExpression(
             ColumnType.LONG,
-            (args) -> "(" + args.get(0).getExpression() + " - " + args.get(1).getExpression() + ")",
+            args -> "(" + args.get(0).getExpression() + " - " + args.get(1).getExpression() + ")",
             ImmutableList.of(
                 DruidExpression.ofColumn(ColumnType.LONG, "t"),
                 DruidExpression.ofLiteral(ColumnType.STRING, "90060000")

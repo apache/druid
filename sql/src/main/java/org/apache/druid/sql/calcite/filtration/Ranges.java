@@ -213,4 +213,7 @@ public class Ranges
         null
     );
   }
+
+  private Ranges() {
+  }
 }

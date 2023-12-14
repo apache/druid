@@ -100,7 +100,7 @@ public abstract class CalciteTestBase
     return DruidExpression.ofExpression(
         columnType,
         simpleExtraction,
-        (args) -> staticExpression,
+        args -> staticExpression,
         Collections.emptyList()
     );
   }

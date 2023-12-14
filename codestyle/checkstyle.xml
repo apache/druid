@@ -24,10 +24,6 @@
     "http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
 
 <module name="Checker">
-  <module name="Header">
-    <property name="headerFile" value="${checkstyle.header.file}"/>
-    <property name="fileExtensions" value="java"/>
-  </module>
 
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>

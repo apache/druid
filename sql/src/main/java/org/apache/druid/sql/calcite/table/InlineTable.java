@@ -70,9 +70,9 @@ public class InlineTable extends DruidTable
   @Override
   public String toString()
   {
-    return "DatasourceMetadata{" +
-           "dataSource=" + dataSource +
-           ", rowSignature=" + getRowSignature() +
-           '}';
+    return "DatasourceMetadata{"
+           + "dataSource=" + dataSource
+           + ", rowSignature=" + getRowSignature()
+           + '}';
   }
 }

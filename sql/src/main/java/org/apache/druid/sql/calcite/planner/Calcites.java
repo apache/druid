@@ -190,8 +190,8 @@ public class Calcites
 
   public static boolean isStringType(SqlTypeName sqlTypeName)
   {
-    return SqlTypeName.CHAR_TYPES.contains(sqlTypeName) ||
-           SqlTypeName.INTERVAL_TYPES.contains(sqlTypeName);
+    return SqlTypeName.CHAR_TYPES.contains(sqlTypeName)
+           || SqlTypeName.INTERVAL_TYPES.contains(sqlTypeName);
   }
 
   public static boolean isDoubleType(SqlTypeName sqlTypeName)
@@ -201,10 +201,10 @@ public class Calcites
 
   public static boolean isLongType(SqlTypeName sqlTypeName)
   {
-    return SqlTypeName.TIMESTAMP == sqlTypeName ||
-           SqlTypeName.DATE == sqlTypeName ||
-           SqlTypeName.BOOLEAN == sqlTypeName ||
-           SqlTypeName.INT_TYPES.contains(sqlTypeName);
+    return SqlTypeName.TIMESTAMP == sqlTypeName
+           || SqlTypeName.DATE == sqlTypeName
+           || SqlTypeName.BOOLEAN == sqlTypeName
+           || SqlTypeName.INT_TYPES.contains(sqlTypeName);
   }
 
   /**

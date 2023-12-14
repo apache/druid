@@ -70,12 +70,12 @@ public class FunctionParameterImpl implements FunctionParameter
   @Override
   public String toString()
   {
-    return "FunctionParameter{" +
-        "name=\"" + name + "\"" +
-        ", ordinal=" + ordinal +
-        ", type=" + type +
-        ", optional=" + isOptional +
-        "}";
+    return "FunctionParameter{"
+        + "name=\"" + name + "\""
+        + ", ordinal=" + ordinal
+        + ", type=" + type
+        + ", optional=" + isOptional
+        + "}";
   }
 
 }

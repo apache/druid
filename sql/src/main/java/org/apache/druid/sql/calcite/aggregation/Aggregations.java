@@ -99,8 +99,8 @@ public class Aggregations
       return null;
     }
 
-    if (druidExpression.isSimpleExtraction() &&
-        (!druidExpression.isDirectColumnAccess()
+    if (druidExpression.isSimpleExtraction()
+        && (!druidExpression.isDirectColumnAccess()
          || rowSignature.getColumnType(druidExpression.getDirectColumn()).map(type -> type.is(ValueType.STRING)).orElse(false))) {
       // Aggregators are unable to implicitly cast strings to numbers.
       // So remove the simple extraction, which forces the expression to be used instead of the direct column access.

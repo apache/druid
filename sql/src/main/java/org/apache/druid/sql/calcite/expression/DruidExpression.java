@@ -427,7 +427,7 @@ public class DruidExpression
         nodeType,
         druidType,
         simpleExtraction == null ? null : extractionMap.apply(simpleExtraction),
-        (args) -> expressionMap.apply(expressionGenerator.compile(args)),
+        args -> expressionMap.apply(expressionGenerator.compile(args)),
         arguments,
         virtualColumnCreator
     );
@@ -443,7 +443,7 @@ public class DruidExpression
         nodeType,
         newType,
         simpleExtraction == null ? null : extractionMap.apply(simpleExtraction),
-        (args) -> expressionMap.apply(expressionGenerator.compile(args)),
+        args -> expressionMap.apply(expressionGenerator.compile(args)),
         arguments,
         virtualColumnCreator
     );
@@ -488,11 +488,11 @@ public class DruidExpression
       return false;
     }
     final DruidExpression that = (DruidExpression) o;
-    return Objects.equals(simpleExtraction, that.simpleExtraction) &&
-           Objects.equals(nodeType, that.nodeType) &&
-           Objects.equals(druidType, that.druidType) &&
-           Objects.equals(arguments, that.arguments) &&
-           Objects.equals(expression.get(), that.expression.get());
+    return Objects.equals(simpleExtraction, that.simpleExtraction)
+           && Objects.equals(nodeType, that.nodeType)
+           && Objects.equals(druidType, that.druidType)
+           && Objects.equals(arguments, that.arguments)
+           && Objects.equals(expression.get(), that.expression.get());
   }
 
   @Override
@@ -504,12 +504,12 @@ public class DruidExpression
   @Override
   public String toString()
   {
-    return "DruidExpression{" +
-           "type=" + (druidType != null ? druidType.asTypeString() : nullLiteral()) +
-           ", simpleExtraction=" + simpleExtraction +
-           ", expression='" + expression.get() + '\'' +
-           ", arguments=" + arguments +
-           '}';
+    return "DruidExpression{"
+           + "type=" + (druidType != null ? druidType.asTypeString() : nullLiteral())
+           + ", simpleExtraction=" + simpleExtraction
+           + ", expression='" + expression.get() + '\''
+           + ", arguments=" + arguments
+           + '}';
   }
 
   @FunctionalInterface

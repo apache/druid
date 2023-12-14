@@ -71,9 +71,9 @@ public class LookupTable extends DruidTable
   @Override
   public String toString()
   {
-    return "LookupTable{" +
-           "dataSource=" + dataSource +
-           ", rowSignature=" + getRowSignature() +
-           '}';
+    return "LookupTable{"
+           + "dataSource=" + dataSource
+           + ", rowSignature=" + getRowSignature()
+           + '}';
   }
 }

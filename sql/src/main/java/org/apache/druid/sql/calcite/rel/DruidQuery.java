@@ -710,7 +710,7 @@ public class DruidQuery
     Set<String> specialized = new HashSet<>();
     final boolean forceExpressionVirtualColumns =
         plannerContext.getPlannerConfig().isForceExpressionVirtualColumns();
-    virtualColumnRegistry.visitAllSubExpressions((expression) -> {
+    virtualColumnRegistry.visitAllSubExpressions(expression -> {
       if (!forceExpressionVirtualColumns && expression.getType() == DruidExpression.NodeType.SPECIALIZED) {
         // add the expression to the top level of the registry as a standalone virtual column
         final String name = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -1052,18 +1052,18 @@ public class DruidQuery
       return null;
     }
 
-    if (grouping.getDimensions().isEmpty() &&
-        grouping.getPostAggregators().isEmpty() &&
-        grouping.getAggregatorFactories().size() == 1) { // currently only handles max(__time) or min(__time) not both
+    if (grouping.getDimensions().isEmpty()
+        && grouping.getPostAggregators().isEmpty()
+        && grouping.getAggregatorFactories().size() == 1) { // currently only handles max(__time) or min(__time) not both
       boolean minTime;
       AggregatorFactory aggregatorFactory = Iterables.getOnlyElement(grouping.getAggregatorFactories());
-      if (aggregatorFactory instanceof LongMaxAggregatorFactory ||
-          aggregatorFactory instanceof LongMinAggregatorFactory) {
+      if (aggregatorFactory instanceof LongMaxAggregatorFactory
+          || aggregatorFactory instanceof LongMinAggregatorFactory) {
         SimpleLongAggregatorFactory minMaxFactory = (SimpleLongAggregatorFactory) aggregatorFactory;
         String fieldName = minMaxFactory.getFieldName();
-        if (fieldName == null ||
-            !fieldName.equals(ColumnHolder.TIME_COLUMN_NAME) ||
-            (minMaxFactory.getExpression() != null && !minMaxFactory.getExpression().isEmpty())) {
+        if (fieldName == null
+            || !fieldName.equals(ColumnHolder.TIME_COLUMN_NAME)
+            || (minMaxFactory.getExpression() != null && !minMaxFactory.getExpression().isEmpty())) {
           return null;
         }
         minTime = aggregatorFactory instanceof LongMinAggregatorFactory;

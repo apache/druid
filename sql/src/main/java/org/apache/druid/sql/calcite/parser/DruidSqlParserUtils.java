@@ -264,8 +264,8 @@ public class DruidSqlParserUtils
       if (!granularity.bucketStart(intervalStart).equals(intervalStart)
           || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
         throw InvalidSqlInput.exception(
-            "OVERWRITE WHERE clause identified interval [%s]" +
-            " which is not aligned with PARTITIONED BY granularity [%s]",
+            "OVERWRITE WHERE clause identified interval [%s]"
+            + " which is not aligned with PARTITIONED BY granularity [%s]",
             interval,
             granularity
         );
@@ -624,5 +624,8 @@ public class DruidSqlParserUtils
   public static DruidException problemParsing(String message)
   {
     return InvalidSqlInput.exception(message);
+  }
+
+  private DruidSqlParserUtils() {
   }
 }

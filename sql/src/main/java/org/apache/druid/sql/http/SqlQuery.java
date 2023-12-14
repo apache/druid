@@ -160,13 +160,13 @@ public class SqlQuery
       return false;
     }
     final SqlQuery sqlQuery = (SqlQuery) o;
-    return header == sqlQuery.header &&
-           typesHeader == sqlQuery.typesHeader &&
-           sqlTypesHeader == sqlQuery.sqlTypesHeader &&
-           Objects.equals(query, sqlQuery.query) &&
-           resultFormat == sqlQuery.resultFormat &&
-           Objects.equals(context, sqlQuery.context) &&
-           Objects.equals(parameters, sqlQuery.parameters);
+    return header == sqlQuery.header
+           && typesHeader == sqlQuery.typesHeader
+           && sqlTypesHeader == sqlQuery.sqlTypesHeader
+           && Objects.equals(query, sqlQuery.query)
+           && resultFormat == sqlQuery.resultFormat
+           && Objects.equals(context, sqlQuery.context)
+           && Objects.equals(parameters, sqlQuery.parameters);
   }
 
   @Override
@@ -178,14 +178,14 @@ public class SqlQuery
   @Override
   public String toString()
   {
-    return "SqlQuery{" +
-           "query='" + query + '\'' +
-           ", resultFormat=" + resultFormat +
-           ", header=" + header +
-           ", typesHeader=" + typesHeader +
-           ", sqlTypesHeader=" + sqlTypesHeader +
-           ", context=" + context +
-           ", parameters=" + parameters +
-           '}';
+    return "SqlQuery{"
+           + "query='" + query + '\''
+           + ", resultFormat=" + resultFormat
+           + ", header=" + header
+           + ", typesHeader=" + typesHeader
+           + ", sqlTypesHeader=" + sqlTypesHeader
+           + ", context=" + context
+           + ", parameters=" + parameters
+           + '}';
   }
 }

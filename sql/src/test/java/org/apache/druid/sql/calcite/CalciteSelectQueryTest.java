@@ -711,13 +711,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandling.replaceWithDefault() ?
-            ImmutableList.of(
+        NullHandling.replaceWithDefault()
+            ? ImmutableList.of(
                 new Object[]{""},
                 new Object[]{"a"},
                 new Object[]{"abc"}
-            ) :
-            ImmutableList.of(
+            )
+            : ImmutableList.of(
                 new Object[]{null},
                 new Object[]{""},
                 new Object[]{"a"},
@@ -742,13 +742,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandling.replaceWithDefault() ?
-            ImmutableList.of(
+        NullHandling.replaceWithDefault()
+            ? ImmutableList.of(
                 new Object[]{""},
                 new Object[]{"a"},
                 new Object[]{"abc"}
-            ) :
-            ImmutableList.of(
+            )
+            : ImmutableList.of(
                 new Object[]{null},
                 new Object[]{""},
                 new Object[]{"a"},
@@ -773,13 +773,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandling.replaceWithDefault() ?
-            ImmutableList.of(
+        NullHandling.replaceWithDefault()
+            ? ImmutableList.of(
                 new Object[]{""},
                 new Object[]{"a"},
                 new Object[]{"abc"}
-            ) :
-            ImmutableList.of(
+            )
+            : ImmutableList.of(
                 new Object[]{null},
                 new Object[]{""},
                 new Object[]{"a"},
@@ -804,13 +804,13 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandling.replaceWithDefault() ?
-            ImmutableList.of(
+        NullHandling.replaceWithDefault()
+            ? ImmutableList.of(
                 new Object[]{""},
                 new Object[]{"abc"},
                 new Object[]{"a"}
-            ) :
-            ImmutableList.of(
+            )
+            : ImmutableList.of(
                 new Object[]{null},
                 new Object[]{"abc"},
                 new Object[]{"a"},
@@ -1932,8 +1932,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "select count(1) filter (where __time > date '2023-01-01') " +
-            " from druid.foo where 'a' = 'b'",
+        "select count(1) filter (where __time > date '2023-01-01') "
+            + " from druid.foo where 'a' = 'b'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                 .dataSource(InlineDataSource.fromIterable(
@@ -1946,7 +1946,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                         new CountAggregatorFactory("a0"), expressionFilter("\"$f1\""))))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()),
-        ImmutableList.of(new Object[] {0L}));
+        ImmutableList.of(new Object[]{0L}));
   }
 
   @Test
@@ -1983,7 +1983,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        ImmutableList.of(new Object[] {0L}));
+        ImmutableList.of(new Object[]{0L}));
   }
 
   @Test
@@ -2019,7 +2019,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        ImmutableList.of(new Object[] {6L}));
+        ImmutableList.of(new Object[]{6L}));
   }
 
   @Test
@@ -2059,7 +2059,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
         ),
         // returning 1 is incorrect result; but with nulls as default that should be expected
-        ImmutableList.of(new Object[] {useDefault ? 1L : 0L}));
+        ImmutableList.of(new Object[]{useDefault ? 1L : 0L}));
   }
 
   @Test

@@ -317,8 +317,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
       // For non-number and non-string type, which is COMPLEX type, we set the return type to VARCHAR.
-      if (!SqlTypeUtil.isNumeric(type) &&
-          !SqlTypeUtil.isString(type)) {
+      if (!SqlTypeUtil.isNumeric(type)
+          && !SqlTypeUtil.isString(type)) {
         return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.VARCHAR);
       } else {
         return type;

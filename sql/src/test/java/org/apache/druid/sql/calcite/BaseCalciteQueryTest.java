@@ -293,8 +293,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule(order = 2)
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  public boolean cannotVectorize = false;
-  public boolean skipVectorize = false;
+  public boolean cannotVectorize;
+  public boolean skipVectorize;
   public boolean msqCompatible = true;
 
   public QueryLogHook queryLogHook;
@@ -972,7 +972,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
   {
-    private boolean isRunningMSQ = false;
+    private boolean isRunningMSQ;
     private Map<String, Object> baseQueryContext;
 
     public CalciteTestConfig()
@@ -1402,6 +1402,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
               .build(),
           };
+    }
+
+    private QueryContextForJoinProvider() {
     }
   }
 

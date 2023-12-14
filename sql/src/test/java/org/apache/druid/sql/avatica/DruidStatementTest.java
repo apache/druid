@@ -64,13 +64,13 @@ import java.util.List;
 
 public class DruidStatementTest extends CalciteTestBase
 {
-  private static String SUB_QUERY_WITH_ORDER_BY =
-        "select T20.F13 as F22\n"
-      + "from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20\n"
-      + "order by T20.F13 ASC";
-  private static String SELECT_FROM_FOO =
+  private static final String SUB_QUERY_WITH_ORDER_BY =
+      "select T20.F13 as F22\n"
+          + "from (SELECT DISTINCT dim1 as F13 FROM druid.foo T10) T20\n"
+          + "order by T20.F13 ASC";
+  private static final String SELECT_FROM_FOO =
       "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
-  private static String SELECT_STAR_FROM_FOO =
+  private static final String SELECT_STAR_FROM_FOO =
       "SELECT * FROM druid.foo";
 
   @ClassRule
@@ -611,7 +611,7 @@ public class DruidStatementTest extends CalciteTestBase
         null,
         AllowAllAuthenticator.ALLOW_ALL_RESULT
     );
-    Meta.Frame expected = Meta.Frame.create(0, true, Collections.singletonList(new Object[] {1L}));
+    Meta.Frame expected = Meta.Frame.create(0, true, Collections.singletonList(new Object[]{1L}));
     List<TypedValue> matchingParams = Collections.singletonList(TypedValue.ofLocal(ColumnMetaData.Rep.STRING, "dummy"));
     try (final DruidJdbcPreparedStatement statement = jdbcPreparedStatement(queryPlus)) {
 
