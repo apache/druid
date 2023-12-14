@@ -105,10 +105,11 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       results = new Object[aggFactories.length][numRows];
     }
 
-    public void write(Interval outputRows, Object[] values)
+    // this is not that nice that the cursor is passed; but it works.
+    public void write(Interval outputRows, AggIntervalCursor aggCursor)
     {
-      for (int col = 0; col < values.length; col++) {
-        Arrays.fill(results[col], outputRows.a, outputRows.b, values[col]);
+      for (int col = 0; col < aggFactories.length; col++) {
+        Arrays.fill(results[col], outputRows.a, outputRows.b, aggCursor.getValue(col));
       }
     }
 
@@ -132,7 +133,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     AggIntervalCursor aggCursor = new AggIntervalCursor(rac, aggFactories);
     for (AggRange xRange : rangeIterator) {
       aggCursor.moveTo(xRange.inputRows);
-      resultRac.write(xRange.outputRows, aggCursor.getValues());
+      resultRac.write(xRange.outputRows, aggCursor);
     }
     resultRac.appendTo(rac);
     return rac;
@@ -307,13 +308,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       newAggregators();
     }
 
-    public Object[] getValues()
+    public Object getValue(int aggIdx)
     {
-      Object[] values = new Object[aggFactories.length];
-      for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
-        values[aggIdx] = aggregators[aggIdx].get();
-      }
-      return values;
+      return aggregators[aggIdx].get();
     }
 
     /**
