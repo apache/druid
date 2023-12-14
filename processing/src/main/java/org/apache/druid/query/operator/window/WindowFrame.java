@@ -243,12 +243,15 @@ public class WindowFrame
   static class WindowFrameRows extends WindowFrame
   {
 
+    @JsonProperty
     public Integer lowerOffset;
+    @JsonProperty
     public Integer upperOffset;
 
     @JsonCreator
-    public WindowFrameRows(@JsonProperty Integer lowerOffset,
-        @JsonProperty Integer upperOffset)
+    public WindowFrameRows(
+        @JsonProperty("lowerOffset") Integer lowerOffset,
+        @JsonProperty("upperOffset") Integer upperOffset)
     {
       super(
           PeerType.ROWS, lowerOffset == null, coalesce(lowerOffset, 0), upperOffset == null, coalesce(upperOffset, 0),
