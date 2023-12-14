@@ -64,7 +64,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       return computeUnboundedAggregates(aggFactories);
     }
 
-
     if (frame.getPeerType() == WindowFrame.PeerType.ROWS) {
       if (frame.isLowerUnbounded()) {
         return computeCumulativeAggregates(aggFactories, frame.getUpperOffset());
@@ -289,7 +288,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       // no need for the hussle
       return value;
     }
-    ;
     Object[] currentValue = new Object[1];
     currentValue[0] = value;
     final CumulativeColumnSelectorFactory combiningFactory = new CumulativeColumnSelectorFactory(
