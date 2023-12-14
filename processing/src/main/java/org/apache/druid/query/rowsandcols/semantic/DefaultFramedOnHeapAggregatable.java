@@ -283,6 +283,26 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
+  public static Object cloneAggValue(AggregatorFactory aggFactory, Object value)
+  {
+    if (value == null || value instanceof Number) {
+      // no need for the hussle
+      return value;
+    }
+    ;
+    Object[] currentValue = new Object[1];
+    currentValue[0] = value;
+    final CumulativeColumnSelectorFactory combiningFactory = new CumulativeColumnSelectorFactory(
+        aggFactory,
+        currentValue,
+        0
+    );
+    Aggregator combiningAgg = aggFactory.getCombiningFactory().factorize(combiningFactory);
+
+    combiningAgg.aggregate();
+    return combiningAgg.get();
+  }
+
   /**
    * Handles computations of aggregates for an {@link Interval}.
    *
@@ -310,7 +330,11 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     public Object getValue(int aggIdx)
     {
-      return aggregators[aggIdx].get();
+      if(true) {
+        return (aggregators[aggIdx].get());
+      } else {
+        return cloneAggValue(aggFactories[aggIdx], aggregators[aggIdx].get());
+      }
     }
 
     /**
