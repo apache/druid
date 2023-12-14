@@ -75,7 +75,7 @@ public class KafkaEmitterConfig
   private final String clusterName;
   @JsonProperty("producer.config")
   private final Map<String, String> kafkaProducerConfig;
-  @JsonProperty("producer.secrets.config")
+  @JsonProperty("producer.hiddenProperties")
   private final DynamicConfigProvider<String> kafkaProducerSecrets;
 
   @JsonCreator
@@ -88,7 +88,7 @@ public class KafkaEmitterConfig
       @Nullable @JsonProperty("segmentMetadata.topic") String segmentMetadataTopic,
       @JsonProperty("clusterName") String clusterName,
       @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig,
-      @JsonProperty("producer.secrets.config") @Nullable DynamicConfigProvider<String> kafkaProducerSecrets
+      @JsonProperty("producer.hiddenProperties") @Nullable DynamicConfigProvider<String> kafkaProducerSecrets
   )
   {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "druid.emitter.kafka.bootstrap.servers can not be null");
@@ -243,7 +243,7 @@ public class KafkaEmitterConfig
            ", segmentMetadata.topic='" + segmentMetadataTopic + '\'' +
            ", clusterName='" + clusterName + '\'' +
            ", producer.config=" + kafkaProducerConfig + '\'' +
-           ", producer.secrets.config=" + kafkaProducerSecrets +
+           ", producer.hiddenProperties=" + kafkaProducerSecrets +
            '}';
   }
 }
