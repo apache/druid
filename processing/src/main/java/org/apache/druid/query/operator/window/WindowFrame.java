@@ -228,4 +228,35 @@ public class WindowFrame
     }
     return Math.min(maxRows, upperOffset);
   }
+
+  @Deprecated
+  private static int coalesce(Integer upperOffset, int i)
+  {
+    if(upperOffset==null) {
+      return i;
+    }
+    return upperOffset;
+  }
+
+  static class WindowFrameRows extends WindowFrame {
+
+    public WindowFrameRows(Integer lowerOffset, Integer upperOffset)
+    {
+      super(
+          PeerType.ROWS, lowerOffset == null, coalesce(lowerOffset, -1), upperOffset == null, coalesce(upperOffset, -1), null
+      );
+    }
+  }
+
+  static class WindowFrameGroups extends WindowFrame {
+
+    public WindowFrameGroups(PeerType peerType, Integer lowerOffset, Integer upperOffset, List<ColumnWithDirection> orderby )
+    {
+      super(
+          PeerType.RANGE, lowerOffset == null, coalesce(lowerOffset, -1), upperOffset == null,
+          coalesce(upperOffset, -1), orderby
+      );
+    }
+  }
+
 }
