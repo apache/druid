@@ -45,6 +45,7 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.window.ComposingProcessor;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.WindowFrame;
+import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowCumeDistProcessor;
@@ -355,6 +356,43 @@ public class Windowing
 
     public WindowFrame getWindowFrame()
     {
+      if(true) {
+        System.out.println("asd");
+      }else {
+        System.out.println("xxx");
+
+      }
+      if(1==2) {
+        System.out.println("asd2");
+      }else {
+        System.out.println("xxx2");
+
+      }
+      if(PeerType.ROWS == PeerType.ROWS) {
+        System.out.println("asd2");
+      }else {
+        System.out.println("xxx2");
+
+      }
+      if(PeerType.ROWS == PeerType.RANGE) {
+        System.out.println("asd2");
+      }else {
+        System.out.println("xxx2");
+
+      }
+      if(WindowFrame.PeerType.ROWS == PeerType.ROWS) {
+        System.out.println("asd2");
+      }else {
+        System.out.println("xxx2");
+
+      }
+      if(WindowFrame.PeerType.ROWS == PeerType.RANGE) {
+        System.out.println("asd2");
+      }else {
+        System.out.println("xxx2");
+
+      }
+
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
