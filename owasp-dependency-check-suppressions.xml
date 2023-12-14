@@ -289,7 +289,7 @@
       -->
 
     <notes><![CDATA[
-    file name:  snakeyaml-1.27.jar
+    file name: snakeyaml-1.27.jar snakeyaml-1.33.jar
     ]]></notes>
     <!-- Snakeyaml is used only in test scope in Druid core with trusted inputs -->
     <cve>CVE-2022-1471</cve>
