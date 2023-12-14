@@ -17,25 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google;
+package org.apache.druid.storage.google.output;
 
-import com.google.common.io.ByteSource;
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Objects;
 
-public class GoogleByteSource extends ByteSource
+public class GoogleInputRange
 {
-  private final GoogleStorage storage;
+  private final long start;
+  private final long size;
   private final String bucket;
   private final String path;
 
-  public GoogleByteSource(final GoogleStorage storage, final String bucket, final String path)
+  public GoogleInputRange(long start, long size, String bucket, String path)
   {
-    this.storage = storage;
+    this.start = start;
+    this.size = size;
     this.bucket = bucket;
     this.path = path;
+  }
+
+  public long getStart()
+  {
+    return start;
+  }
+
+  public long getSize()
+  {
+    return size;
   }
 
   public String getBucket()
@@ -49,17 +57,6 @@ public class GoogleByteSource extends ByteSource
   }
 
   @Override
-  public InputStream openStream() throws IOException
-  {
-    return storage.getInputStream(bucket, path);
-  }
-
-  public InputStream openStream(long start) throws IOException
-  {
-    return storage.getInputStream(bucket, path, start);
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -68,14 +65,27 @@ public class GoogleByteSource extends ByteSource
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GoogleByteSource that = (GoogleByteSource) o;
-    return Objects.equals(bucket, that.bucket) &&
-           Objects.equals(path, that.path);
+    GoogleInputRange that = (GoogleInputRange) o;
+    return start == that.start
+           && size == that.size
+           && Objects.equals(bucket, that.bucket)
+           && Objects.equals(path, that.path);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, path);
+    return Objects.hash(start, size, bucket, path);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GoogleInputRange{" +
+           "start=" + start +
+           ", size=" + size +
+           ", bucket='" + bucket + '\'' +
+           ", path='" + path + '\'' +
+           '}';
   }
 }

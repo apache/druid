@@ -19,44 +19,47 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.common.io.ByteSource;
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Objects;
 
-public class GoogleByteSource extends ByteSource
+public class GoogleStorageObjectMetadata
 {
-  private final GoogleStorage storage;
-  private final String bucket;
-  private final String path;
+  final String bucket;
+  final String name;
+  final Long size;
+  Long lastUpdateTime;
 
-  public GoogleByteSource(final GoogleStorage storage, final String bucket, final String path)
+  public GoogleStorageObjectMetadata(final String bucket, final String name, final Long size, final Long lastUpdateTime)
   {
-    this.storage = storage;
     this.bucket = bucket;
-    this.path = path;
+    this.name = name;
+    this.size = size;
+    this.lastUpdateTime = lastUpdateTime;
   }
+
+  public void setLastUpdateTime(Long lastUpdateTime)
+  {
+    this.lastUpdateTime = lastUpdateTime;
+  }
+
 
   public String getBucket()
   {
     return bucket;
   }
 
-  public String getPath()
+  public String getName()
   {
-    return path;
+    return name;
   }
 
-  @Override
-  public InputStream openStream() throws IOException
+  public Long getSize()
   {
-    return storage.getInputStream(bucket, path);
+    return size;
   }
 
-  public InputStream openStream(long start) throws IOException
+  public Long getLastUpdateTime()
   {
-    return storage.getInputStream(bucket, path, start);
+    return lastUpdateTime;
   }
 
   @Override
@@ -68,14 +71,26 @@ public class GoogleByteSource extends ByteSource
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GoogleByteSource that = (GoogleByteSource) o;
-    return Objects.equals(bucket, that.bucket) &&
-           Objects.equals(path, that.path);
+    GoogleStorageObjectMetadata that = (GoogleStorageObjectMetadata) o;
+    return Objects.equals(bucket, that.bucket)
+           && Objects.equals(name, that.name)
+           && Objects.equals(size, that.size);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucket, path);
+    return Objects.hash(bucket, name, size);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GoogleStorageObjectMetadata{" +
+           "bucket='" + bucket + '\'' +
+           ", name='" + name + '\'' +
+           ", size=" + size +
+           ", lastUpdateTime=" + lastUpdateTime +
+           '}';
   }
 }
