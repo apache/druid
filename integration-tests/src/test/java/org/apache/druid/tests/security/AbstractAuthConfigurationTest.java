@@ -560,7 +560,7 @@ public abstract class AbstractAuthConfigurationTest
   @Test
   public void test_sqlQueryWithContext_datasourceAndContextParamsUser_succeed() throws Exception
   {
-    final String query = "select count(*) from auth_test";
+    final String query = "SELECT COUNT(*) FROM auth_test";
     makeSQLQueryRequest(
         getHttpClient(User.DATASOURCE_AND_CONTEXT_PARAMS_USER),
         query,
