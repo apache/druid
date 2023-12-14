@@ -15,11 +15,9 @@ expectedOperators:
     processor:
       type: "framedAgg"
       frame:
-          peerType: "RANGE"
-          lowUnbounded: false
-          lowOffset: 3
-          uppUnbounded: false
-          uppOffset: 2
+          type: "range"
+          lowerOffset: 3
+          upperOffset: 2
           orderBy: [ {column: "d1", direction: ASC} ]
       aggregations:
         - { type: "longSum", name: "w0", fieldName: "a0" }

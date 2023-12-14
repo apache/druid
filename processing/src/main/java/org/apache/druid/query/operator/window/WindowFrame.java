@@ -21,6 +21,8 @@ package org.apache.druid.query.operator.window;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import java.util.Collections;
@@ -28,6 +30,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "rows", value = WindowFrame.WindowFrameRows.class),
+    @JsonSubTypes.Type(name = "range", value = WindowFrame.WindowFrameGroups.class),
+})
 public class WindowFrame
 {
   public static WindowFrame unbounded()
@@ -35,6 +43,7 @@ public class WindowFrame
     return newWindowFrame(PeerType.ROWS, true, 0, true, 0, null);
   }
 
+  @Deprecated
   @SuppressWarnings("unused")
   public enum PeerType
   {
@@ -60,7 +69,8 @@ public class WindowFrame
   private static WindowFrame newWindowFrameRange(boolean b, int i, boolean c, int j,
       List<ColumnWithDirection> singletonList)
   {
-    return new WindowFrame(PeerType.RANGE, b, i, c, j, singletonList);
+
+    return new WindowFrame.WindowFrameGroups(b?null:i, c?null:j, singletonList);
 
   }
   private static WindowFrame newWindowFrameRows( boolean b, int i, boolean c, int j,
@@ -103,20 +113,18 @@ public class WindowFrame
 
     }
 
-
-
-    return new WindowFrame(PeerType.ROWS, b, i, c, j, singletonList);
+    return new WindowFrame.WindowFrameRows(b?null:i, c?null:j);
+//    return new WindowFrame(PeerType.ROWS, b, i, c, j, singletonList);
 
   }
 
-  @JsonCreator
   public WindowFrame(
-      @JsonProperty("peerType") PeerType peerType,
-      @JsonProperty("lowUnbounded") boolean lowerUnbounded,
-      @JsonProperty("lowOffset") int lowerOffset,
-      @JsonProperty("uppUnbounded") boolean upperUnbounded,
-      @JsonProperty("uppOffset") int upperOffset,
-      @JsonProperty("orderBy") List<ColumnWithDirection> orderBy
+      PeerType peerType,
+      boolean lowerUnbounded,
+      int lowerOffset,
+      boolean upperUnbounded,
+      int upperOffset,
+      List<ColumnWithDirection> orderBy
   )
   {
     this.peerType = peerType;
@@ -127,37 +135,31 @@ public class WindowFrame
     this.orderBy = orderBy;
   }
 
-  @JsonProperty("peerType")
   public PeerType getPeerType()
   {
     return peerType;
   }
 
-  @JsonProperty("lowUnbounded")
   public boolean isLowerUnbounded()
   {
     return lowerUnbounded;
   }
 
-  @JsonProperty("lowOffset")
   public int getLowerOffset()
   {
     return lowerOffset;
   }
 
-  @JsonProperty("uppUnbounded")
   public boolean isUpperUnbounded()
   {
     return upperUnbounded;
   }
 
-  @JsonProperty("uppOffset")
   public int getUpperOffset()
   {
     return upperOffset;
   }
 
-  @JsonProperty("orderBy")
   public List<ColumnWithDirection> getOrderBy()
   {
     return orderBy;
@@ -241,25 +243,45 @@ public class WindowFrame
   static class WindowFrameRows extends WindowFrame
   {
 
-    public WindowFrameRows(Integer lowerOffset, Integer upperOffset)
+    public Integer lowerOffset;
+    public Integer upperOffset;
+
+    @JsonCreator
+    public WindowFrameRows(@JsonProperty Integer lowerOffset,
+        @JsonProperty Integer upperOffset)
     {
       super(
           PeerType.ROWS, lowerOffset == null, coalesce(lowerOffset, 0), upperOffset == null, coalesce(upperOffset, 0),
           null
       );
+      this.lowerOffset = lowerOffset;
+      this.upperOffset = upperOffset;
     }
   }
 
   static class WindowFrameGroups extends WindowFrame
   {
 
-    public WindowFrameGroups(PeerType peerType, Integer lowerOffset, Integer upperOffset,
-        List<ColumnWithDirection> orderby)
+    @JsonProperty     public Integer lowerOffset;
+    @JsonProperty
+    public Integer upperOffset;
+    @JsonProperty
+    public List<ColumnWithDirection> orderBy;
+
+
+    @JsonCreator
+    public WindowFrameGroups(
+        @JsonProperty("lowerOffset") Integer lowerOffset,
+        @JsonProperty("upperOffset") Integer upperOffset,
+        @JsonProperty("orderBy") List<ColumnWithDirection> orderBy)
     {
       super(
           PeerType.RANGE, lowerOffset == null, coalesce(lowerOffset, 0), upperOffset == null,
-          coalesce(upperOffset, 0), orderby
+          coalesce(upperOffset, 0), orderBy
       );
+      this.lowerOffset = lowerOffset;
+      this.upperOffset = upperOffset;
+      this.orderBy = orderBy;
     }
   }
 
