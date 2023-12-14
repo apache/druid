@@ -31,7 +31,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ComparableIntArray;
-import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -90,11 +89,11 @@ public class ArrayStringGroupByColumnSelectorStrategy implements GroupByColumnSe
       final int[] intRepresentation = intListToInt.inverse()
                                                   .get(id)
                                                   .getDelegate();
-      final String[] stringRepresentaion = new String[intRepresentation.length];
+      final Object[] stringRepresentaion = new Object[intRepresentation.length];
       for (int i = 0; i < intRepresentation.length; i++) {
         stringRepresentaion[i] = dictionaryToInt.inverse().get(intRepresentation[i]);
       }
-      resultRow.set(selectorPlus.getResultRowPosition(), ComparableStringArray.of(stringRepresentaion));
+      resultRow.set(selectorPlus.getResultRowPosition(), stringRepresentaion);
     } else {
       resultRow.set(selectorPlus.getResultRowPosition(), null);
     }

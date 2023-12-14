@@ -40,12 +40,11 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -300,6 +299,9 @@ public final class DimensionHandlerUtils
   {
     if (valObj == null) {
       return null;
+    } else if (valObj instanceof Object[]) {
+      // TODO(laksh): Get this change vetted
+      return Arrays.toString((Object[]) valObj);
     }
     return valObj.toString();
   }
@@ -407,11 +409,11 @@ public final class DimensionHandlerUtils
           case STRING:
             return coerceToStringArray(obj);
           case LONG:
-            return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
           case FLOAT:
-            return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
           case DOUBLE:
-            return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
+            return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
         }
 
       default:
@@ -424,21 +426,23 @@ public final class DimensionHandlerUtils
   {
     switch (elementType) {
       case LONG:
-        return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
+        return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
       case FLOAT:
-        return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
+        return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
       case DOUBLE:
-        return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
+        return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
     }
     throw new ISE(
-        "Unable to convert object of type[%s] to [%s]",
-        obj.getClass().getName(),
-        ComparableList.class.getName()
+        "Unable to convert object of type[%s] to Object[]",
+        obj.getClass().getName()
     );
   }
 
 
-  private static Object[] coerceToObjectWithCoercionFunction(Object obj, Function<Object, Object> coercionFunction)
+  public static Object[] coerceToObjectArrayWithElementCoercionFunction(
+      Object obj,
+      Function<Object, Object> coercionFunction
+  )
   {
     if (obj == null) {
       return null;
@@ -455,14 +459,13 @@ public final class DimensionHandlerUtils
       Object[] objects = (Object[]) obj;
       Object[] retVal = new Object[objects.length];
       for (int i = 0; i < objects.length; i++) {
-        retVal[i] = convertObjectToString(objects[i]);
+        retVal[i] = coercionFunction.apply(objects[i]);
       }
       return retVal;
     }
     throw new ISE(
-        "Unable to convert object of type[%s] to [%s]",
-        obj.getClass().getName(),
-        ComparableStringArray.class.getName()
+        "Unable to convert object of type[%s] to Object[]",
+        obj.getClass().getName()
     );
 
   }
@@ -470,7 +473,7 @@ public final class DimensionHandlerUtils
   @Nullable
   public static Object[] coerceToStringArray(Object obj)
   {
-    return coerceToObjectWithCoercionFunction(obj, DimensionHandlerUtils::convertObjectToString);
+    return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToString);
   }
 
   public static int compareObjectsAsType(

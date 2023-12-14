@@ -25,7 +25,6 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.data.ComparableList;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -117,7 +116,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(0);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList<>(ImmutableList.of(1.0, 2.0)), row.get(0));
+    Assert.assertEquals(ImmutableList.of(1.0, 2.0), row.get(0));
   }
 
 
@@ -134,7 +133,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
 
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList<>(ImmutableList.of(4.0, 2.0)), row.get(0));
+    Assert.assertEquals(ImmutableList.of(4.0, 2.0), row.get(0));
   }
 
   @Test
@@ -149,7 +148,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
     ResultRow row = ResultRow.create(1);
     buffer1.putInt(3);
     strategy.processValueFromGroupingKey(groupByColumnSelectorPlus, buffer1, row, 0);
-    Assert.assertEquals(new ComparableList<>(ImmutableList.of(4.0, 2.0)), row.get(0));
+    Assert.assertEquals(ImmutableList.of(4.0, 2.0), row.get(0));
   }
 
   @After

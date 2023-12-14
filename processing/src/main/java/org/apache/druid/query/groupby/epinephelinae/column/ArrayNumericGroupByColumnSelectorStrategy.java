@@ -28,7 +28,6 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.data.ComparableList;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -39,6 +38,7 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T>
 {
   protected static final int GROUP_BY_MISSING_VALUE = -1;
 
+  // TODO(laksh): Keep the dictionary types as List<T> instead of Object[] to allow for equality comparisons
   protected final List<List<T>> dictionary;
   protected final Object2IntMap<List<T>> reverseDictionary;
   protected long estimatedFootprint = 0L;
@@ -83,7 +83,7 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy<T>
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
       final List<T> value = dictionary.get(id);
-      resultRow.set(selectorPlus.getResultRowPosition(), new ComparableList(value));
+      resultRow.set(selectorPlus.getResultRowPosition(), value);
     } else {
       resultRow.set(selectorPlus.getResultRowPosition(), null);
     }
