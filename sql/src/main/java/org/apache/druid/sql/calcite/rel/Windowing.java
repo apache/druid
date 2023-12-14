@@ -362,7 +362,7 @@ public class Windowing
       boolean isRows = group.isRows;
       if (isRows) {
         PeerType peerType = isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE;
-        return new WindowFrame(
+        return WindowFrame.newWindowFrame(
             peerType,
             group.lowerBound.isUnbounded(),
             figureOutOffset(group.lowerBound),
@@ -373,7 +373,7 @@ public class Windowing
 
       } else {
         PeerType peerType = isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE;
-        return new WindowFrame(
+        return WindowFrame.newWindowFrame(
             peerType,
             group.lowerBound.isUnbounded(),
             figureOutOffset(group.lowerBound),
