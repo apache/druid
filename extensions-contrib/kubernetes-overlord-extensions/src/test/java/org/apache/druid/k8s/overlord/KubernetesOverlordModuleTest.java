@@ -24,13 +24,15 @@ import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.mockito.Mockito.when;
 
+@RunWith(MockitoJUnitRunner.class)
 public class KubernetesOverlordModuleTest
 {
 
@@ -46,7 +48,6 @@ public class KubernetesOverlordModuleTest
   @Before
   public void setUp()
   {
-    MockitoAnnotations.initMocks(this);
     module = new KubernetesOverlordModule();
   }
 
