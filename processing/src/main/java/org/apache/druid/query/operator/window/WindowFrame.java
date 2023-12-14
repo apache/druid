@@ -33,8 +33,8 @@ import java.util.stream.Collectors;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "rows", value = WindowFrame.WindowFrameRows.class),
-    @JsonSubTypes.Type(name = "range", value = WindowFrame.WindowFrameGroups.class),
+    @JsonSubTypes.Type(name = "rows", value = WindowFrame.Rows.class),
+    @JsonSubTypes.Type(name = "range", value = WindowFrame.Groups.class),
 })
 public class WindowFrame
 {
@@ -70,7 +70,7 @@ public class WindowFrame
       List<ColumnWithDirection> singletonList)
   {
 
-    return new WindowFrame.WindowFrameGroups(b?null:i, c?null:j, singletonList);
+    return new WindowFrame.Groups(b?null:i, c?null:j, singletonList);
 
   }
   private static WindowFrame newWindowFrameRows( boolean b, int i, boolean c, int j,
@@ -113,7 +113,7 @@ public class WindowFrame
 
     }
 
-    return new WindowFrame.WindowFrameRows(b?null:i, c?null:j);
+    return new WindowFrame.Rows(b?null:i, c?null:j);
 //    return new WindowFrame(PeerType.ROWS, b, i, c, j, singletonList);
 
   }
@@ -240,7 +240,7 @@ public class WindowFrame
     return upperOffset;
   }
 
-  static class WindowFrameRows extends WindowFrame
+  static class Rows extends WindowFrame
   {
 
     @JsonProperty
@@ -249,7 +249,7 @@ public class WindowFrame
     public Integer upperOffset;
 
     @JsonCreator
-    public WindowFrameRows(
+    public Rows(
         @JsonProperty("lowerOffset") Integer lowerOffset,
         @JsonProperty("upperOffset") Integer upperOffset)
     {
@@ -262,18 +262,17 @@ public class WindowFrame
     }
   }
 
-  static class WindowFrameGroups extends WindowFrame
+  static class Groups extends WindowFrame
   {
-
-    @JsonProperty     public Integer lowerOffset;
     @JsonProperty
-    public Integer upperOffset;
+    private final Integer lowerOffset;
     @JsonProperty
-    public List<ColumnWithDirection> orderBy;
-
+    private final Integer upperOffset;
+    @JsonProperty
+    private final List<ColumnWithDirection> orderBy;
 
     @JsonCreator
-    public WindowFrameGroups(
+    public Groups(
         @JsonProperty("lowerOffset") Integer lowerOffset,
         @JsonProperty("upperOffset") Integer upperOffset,
         @JsonProperty("orderBy") List<ColumnWithDirection> orderBy)
