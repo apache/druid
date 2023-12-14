@@ -199,6 +199,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   )
   {
     KafkaSupervisorIOConfig kafkaIoConfig = (KafkaSupervisorIOConfig) ioConfig;
+    
     return new KafkaIndexTaskIOConfig(
         groupId,
         baseSequenceName,

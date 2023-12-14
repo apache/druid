@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class KafkaEmitter implements Emitter
 {
+
   private static Logger log = new Logger(KafkaEmitter.class);
 
   private static final int DEFAULT_SEND_INTERVAL_SECONDS = 10;
