@@ -93,9 +93,10 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   /**
    * Handles population/creation of new RAC columns.
    */
-  static class ResultPopulator {
+  static class ResultPopulator
+  {
 
-    private final Object[][] results ;
+    private final Object[][] results;
     private final AggregatorFactory[] aggFactories;
 
     public ResultPopulator(AggregatorFactory[] aggFactories, int numRows)
@@ -104,7 +105,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       results = new Object[aggFactories.length][numRows];
     }
 
-    // this is not that nice that the cursor is passed; but it works.
     public void write(Interval outputRows, AggIntervalCursor aggCursor)
     {
       for (int col = 0; col < aggFactories.length; col++) {
@@ -144,7 +144,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     return new GroupIteratorForWindowFrame(rac, frame, rangeToRowId1);
   }
 
- static class GroupIteratorForWindowFrame implements Iterable<AggRange>
+  static class GroupIteratorForWindowFrame implements Iterable<AggRange>
   {
     private final int[] rangeToRowId;
     private final int numRows;
@@ -334,7 +334,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     public Object getValue(int aggIdx)
     {
-      if(true) {
+      if (false) {
         return (aggregators[aggIdx].get());
       } else {
         return cloneAggValue(aggFactories[aggIdx], aggregators[aggIdx].get());
