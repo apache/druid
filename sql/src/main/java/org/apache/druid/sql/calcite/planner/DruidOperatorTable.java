@@ -126,6 +126,8 @@ import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -134,8 +136,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
