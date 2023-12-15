@@ -29,33 +29,29 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 
 /**
- * Create the injector used for {@link CalciteTests#INJECTOR}, but in a way
- * that is extensible.
+ * Create the injector used for {@link CalciteTests#INJECTOR}, but in a way that
+ * is extensible.
  */
-public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
+public class CalciteTestInjectorBuilder
 {
-  public CalciteTestInjectorBuilder()
-  {
-    super(new StartupInjectorBuilder()
-              .withEmptyProperties()
-              .build());
-    add(
-        new ExpressionModule(),
-        new SegmentWranglerModule(),
-        new LookylooModule(),
-        new SqlAggregationModule(),
-        new CalciteTestOperatorModule(),
-        new CacheTestHelperModule(ResultCacheMode.DISABLED)
-    );
-  }
-
-  @Override
-  public Injector build()
+  public static Injector build()
   {
     try {
-      return super.build();
-    }
-    catch (Exception e) {
+      CoreInjectorBuilder ci = new CoreInjectorBuilder(
+          new StartupInjectorBuilder()
+              .withEmptyProperties()
+              .build()
+      );
+      ci.add(
+          new ExpressionModule(),
+          new SegmentWranglerModule(),
+          new LookylooModule(),
+          new SqlAggregationModule(),
+          new CalciteTestOperatorModule(),
+          new CacheTestHelperModule(ResultCacheMode.DISABLED)
+      );
+      return ci.build();
+    } catch (Exception e) {
       // Catches failures when used as a static initializer.
       e.printStackTrace();
       System.exit(1);
