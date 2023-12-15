@@ -7686,7 +7686,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM foo\n"
         + "WHERE REGEXP_EXTRACT(dim1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || dim1, '^Z2') IS NOT NULL",
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
+            NullHandling.sqlCompatible()
+            ? Druids.newTimeseriesQueryBuilder()
+                    .dataSource(CalciteTests.DATASOURCE1)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .granularity(Granularities.ALL)
+                    .virtualColumns(
+                        expressionVirtualColumn("v0", "regexp_extract(\"dim1\",'^1')", ColumnType.STRING),
+                        expressionVirtualColumn("v1", "regexp_extract(concat('Z',\"dim1\"),'^Z2')", ColumnType.STRING)
+                    )
+                  .filters(
+                      or(
+                          notNull("v0"),
+                          notNull("v1")
+                      )
+                  )
+                  .aggregators(new CountAggregatorFactory("a0"))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+            : Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
@@ -7695,9 +7713,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .filters(
                       or(
-                          NullHandling.replaceWithDefault()
-                          ? not(selector("dim1", NullHandling.defaultStringValue(), new RegexDimExtractionFn("^1", 0, true, null)))
-                          : expressionFilter("notnull(regexp_extract(\"dim1\",'^1'))"),
+                          not(selector("dim1", NullHandling.defaultStringValue(), new RegexDimExtractionFn("^1", 0, true, null))),
                           notNull("v0")
                       )
                   )

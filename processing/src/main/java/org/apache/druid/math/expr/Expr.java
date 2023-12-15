@@ -21,12 +21,19 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -183,6 +190,38 @@ public interface Expr extends Cacheable
   default <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     throw Exprs.cannotVectorize(this);
+  }
+
+  @Nullable
+  default ColumnIndexSupplier asColumnIndexSupplier(ColumnSelector columnSelector)
+  {
+    final Expr.BindingAnalysis details = analyzeInputs();
+    if (details.getRequiredBindings().size() == 1) {
+      // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
+      // map over the values of the index.
+      final String column = Iterables.getOnlyElement(details.getRequiredBindings());
+
+      final ColumnHolder holder = columnSelector.getColumnHolder(column);
+      if (holder == null) {
+        // column doesn't exist, no index supplier
+        return null;
+      }
+      final ColumnCapabilities capabilities = holder.getCapabilities();
+      final ColumnIndexSupplier delegateIndexSupplier = holder.getIndexSupplier();
+      final DictionaryEncodedValueIndex<?> delegateRawIndex = delegateIndexSupplier.as(
+          DictionaryEncodedValueIndex.class
+      );
+
+      if (delegateRawIndex != null) {
+        return new ExprPredicateIndexSupplier(
+            this,
+            column,
+            ExpressionType.fromColumnTypeStrict(capabilities),
+            delegateRawIndex
+        );
+      }
+    }
+    return NoIndexesColumnIndexSupplier.getInstance();
   }
 
 

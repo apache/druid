@@ -562,11 +562,12 @@ public class Expressions
               druidExpression.getSimpleExtraction().getExtractionFn()
           );
         } else {
-          if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
-            // return null to fallback to using an expression filter
-            return null;
+          if (virtualColumnRegistry != null && druidExpression.getSimpleExtraction().getExtractionFn() != null) {
+            String column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(druidExpression, druidExpression.getDruidType());
+            equalFilter = NullFilter.forColumn(column);
+          } else {
+            equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
           }
-          equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
         }
       } else if (virtualColumnRegistry != null) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
