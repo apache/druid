@@ -230,7 +230,7 @@ public class CalciteTests
       null
   );
 
-  public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
+  public static final Injector INJECTOR = CalciteTestInjectorBuilder.build();
 
   private CalciteTests()
   {
