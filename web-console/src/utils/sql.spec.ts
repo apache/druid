@@ -351,5 +351,237 @@ describe('sql', () => {
         ]
       `);
     });
+
+    it('works with explain plan query', () => {
+      const text = sane`
+        EXPLAIN PLAN FOR
+        INSERT INTO "wikipedia"
+        WITH "ext" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+              '{"type":"json"}'
+            )
+          ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR)
+        )
+        SELECT
+          TIME_PARSE("timestamp") AS "__time",
+          "isRobot",
+          "channel"
+        FROM "ext"
+        PARTITIONED BY DAY
+        CLUSTERED BY "channel"
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "endOffset": 404,
+            "endRowColumn": Object {
+              "column": 22,
+              "row": 17,
+            },
+            "sql": "EXPLAIN PLAN FOR
+        INSERT INTO \\"wikipedia\\"
+        WITH \\"ext\\" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
+              '{\\"type\\":\\"json\\"}'
+            )
+          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+        )
+        SELECT
+          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
+          \\"isRobot\\",
+          \\"channel\\"
+        FROM \\"ext\\"
+        PARTITIONED BY DAY
+        CLUSTERED BY \\"channel\\"",
+            "startOffset": 0,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          Object {
+            "endOffset": 404,
+            "endRowColumn": Object {
+              "column": 22,
+              "row": 17,
+            },
+            "sql": "INSERT INTO \\"wikipedia\\"
+        WITH \\"ext\\" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
+              '{\\"type\\":\\"json\\"}'
+            )
+          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+        )
+        SELECT
+          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
+          \\"isRobot\\",
+          \\"channel\\"
+        FROM \\"ext\\"
+        PARTITIONED BY DAY
+        CLUSTERED BY \\"channel\\"",
+            "startOffset": 17,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 1,
+            },
+          },
+          Object {
+            "endOffset": 362,
+            "endRowColumn": Object {
+              "column": 10,
+              "row": 15,
+            },
+            "sql": "WITH \\"ext\\" AS (
+          SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
+              '{\\"type\\":\\"json\\"}'
+            )
+          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)
+        )
+        SELECT
+          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
+          \\"isRobot\\",
+          \\"channel\\"
+        FROM \\"ext\\"",
+            "startOffset": 41,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 2,
+            },
+          },
+          Object {
+            "endOffset": 278,
+            "endRowColumn": Object {
+              "column": 70,
+              "row": 9,
+            },
+            "sql": "SELECT *
+          FROM TABLE(
+            EXTERN(
+              '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://druid.apache.org/data/wikipedia.json.gz\\"]}',
+              '{\\"type\\":\\"json\\"}'
+            )
+          ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)",
+            "startOffset": 59,
+            "startRowColumn": Object {
+              "column": 2,
+              "row": 3,
+            },
+          },
+          Object {
+            "endOffset": 362,
+            "endRowColumn": Object {
+              "column": 10,
+              "row": 15,
+            },
+            "sql": "SELECT
+          TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
+          \\"isRobot\\",
+          \\"channel\\"
+        FROM \\"ext\\"",
+            "startOffset": 281,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 11,
+            },
+          },
+        ]
+      `);
+    });
+
+    it('works with multiple explain plan queries', () => {
+      const text = sane`
+        EXPLAIN PLAN FOR
+        SELECT *
+        FROM wikipedia
+
+        EXPLAIN PLAN FOR
+        SELECT *
+        FROM w2
+        LIMIT 5
+
+      `;
+
+      const found = findAllSqlQueriesInText(text);
+
+      expect(found).toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "endOffset": 40,
+            "endRowColumn": Object {
+              "column": 14,
+              "row": 2,
+            },
+            "sql": "EXPLAIN PLAN FOR
+        SELECT *
+        FROM wikipedia",
+            "startOffset": 0,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          Object {
+            "endOffset": 40,
+            "endRowColumn": Object {
+              "column": 14,
+              "row": 2,
+            },
+            "sql": "SELECT *
+        FROM wikipedia",
+            "startOffset": 17,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 1,
+            },
+          },
+          Object {
+            "endOffset": 83,
+            "endRowColumn": Object {
+              "column": 7,
+              "row": 7,
+            },
+            "sql": "EXPLAIN PLAN FOR
+        SELECT *
+        FROM w2
+        LIMIT 5",
+            "startOffset": 42,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 4,
+            },
+          },
+          Object {
+            "endOffset": 83,
+            "endRowColumn": Object {
+              "column": 7,
+              "row": 7,
+            },
+            "sql": "SELECT *
+        FROM w2
+        LIMIT 5",
+            "startOffset": 59,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 5,
+            },
+          },
+        ]
+      `);
+    });
   });
 });
