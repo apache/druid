@@ -105,6 +105,7 @@ public class MemoryBoundLinkedBlockingQueue<T>
   {
     final ObjectContainer<T> ret = queue.take();
     currentMemory.addAndGet(-ret.getSize());
+    signalNotFull();
     return ret;
   }
 
@@ -129,24 +130,33 @@ public class MemoryBoundLinkedBlockingQueue<T>
       throws InterruptedException
   {
     Preconditions.checkNotNull(buffer);
-    long deadline = System.nanoTime() + unit.toNanos(timeout);
-    int added = 0;
-    long bytesAdded = 0;
-    while (bytesAdded < bytesToDrain) {
-      ObjectContainer<T> e = queue.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
-      if (e == null) {
-        break;
+    boolean signalNotFull = false;
+    try {
+      long deadline = System.nanoTime() + unit.toNanos(timeout);
+      int added = 0;
+      long bytesAdded = 0;
+      while (bytesAdded < bytesToDrain) {
+        ObjectContainer<T> e = queue.poll(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
+        if (e == null) {
+          break;
+        }
+        currentMemory.addAndGet(-e.getSize());
+        signalNotFull = true;
+        buffer.add(e);
+        ++added;
+        bytesAdded += e.getSize();
+        e = queue.peek();
+        if (e != null && (bytesAdded + e.getSize()) > bytesToDrain) {
+          break;
+        }
       }
-      currentMemory.addAndGet(-e.getSize());
-      buffer.add(e);
-      ++added;
-      bytesAdded += e.getSize();
-      e = queue.peek();
-      if (e != null && (bytesAdded + e.getSize()) > bytesToDrain) {
-        break;
+      return added;
+    }
+    finally {
+      if (signalNotFull) {
+        signalNotFull();
       }
     }
-    return added;
   }
 
   public int size()
@@ -162,6 +172,18 @@ public class MemoryBoundLinkedBlockingQueue<T>
   public long remainingCapacity()
   {
     return memoryBound - currentMemory.get();
+  }
+
+  private void signalNotFull()
+  {
+    final ReentrantLock putLock = this.putLock;
+    putLock.lock();
+    try {
+      notFull.signal();
+    }
+    finally {
+      putLock.unlock();
+    }
   }
 
   public static class ObjectContainer<T>
