@@ -25,6 +25,7 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -54,7 +55,6 @@ import org.apache.druid.sql.calcite.expression.builtin.RegexpReplaceOperatorConv
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
@@ -65,6 +65,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;
@@ -124,6 +125,8 @@ public class ExpressionsTest extends ExpressionTestBase
       .build();
 
   private ExpressionTestHelper testHelper;
+
+  final DruidOperatorTable operatorTable = new DruidOperatorTable(Collections.emptySet(), Collections.emptySet());
 
   @Before
   public void setUp()
@@ -1147,7 +1150,7 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testRound()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = extracted().calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1252,7 +1255,8 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testRoundWithInvalidArgument()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    final SqlOperator roundFunction = extracted().calciteOperator();
 
     if (!NullHandling.sqlCompatible()) {
       expectException(
@@ -1274,10 +1278,21 @@ public class ExpressionsTest extends ExpressionTestBase
     );
   }
 
+  private SqlOperatorConversion extracted()
+  {
+    SqlFunction round = SqlStdOperatorTable.ROUND;
+    return extracted(round);
+  }
+
+  private SqlOperatorConversion extracted(SqlFunction round)
+  {
+    return operatorTable.lookupOperatorConversion(round);
+  }
+
   @Test
   public void testRoundWithInvalidSecondArgument()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = extracted().calciteOperator();
 
     expectException(
         ExpressionValidationException.class,
@@ -1304,7 +1319,7 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testRoundWithNanShouldRoundTo0()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = extracted().calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1335,7 +1350,7 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testRoundWithInfinityShouldRoundTo0()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = extracted().calciteOperator();
 
     //CHECKSTYLE.OFF: Regexp
     testHelper.testExpression(

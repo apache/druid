@@ -108,7 +108,6 @@ import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConver
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SearchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
@@ -128,7 +127,6 @@ import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -137,6 +135,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
@@ -353,6 +353,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.TryParseJsonOperatorConversion())
                    .build();
 
+  public static final DirectOperatorConversion ROUND_OPERATOR_CONVERSION = new DirectOperatorConversion(SqlStdOperatorTable.ROUND, "round");
+
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
@@ -406,7 +408,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
                    .add(new SearchOperatorConversion())
-                   .add(new RoundOperatorConversion())
+                   .add(ROUND_OPERATOR_CONVERSION)
                    .addAll(TIME_OPERATOR_CONVERSIONS)
                    .addAll(STRING_OPERATOR_CONVERSIONS)
                    .addAll(VALUE_COERCION_OPERATOR_CONVERSIONS)
