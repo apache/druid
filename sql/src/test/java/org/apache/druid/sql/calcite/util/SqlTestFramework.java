@@ -33,6 +33,7 @@ import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -373,7 +374,7 @@ public class SqlTestFramework
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
-    private List<Module> extraModules = new ArrayList<>();
+    private List<Module> overrideModules = new ArrayList<>();
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -398,9 +399,9 @@ public class SqlTestFramework
       return this;
     }
 
-    public Builder withExtraModule(Module m)
+    public Builder withOverrideModule(Module m)
     {
-      this.extraModules.add(m);
+      this.overrideModules.add(m);
       return this;
     }
 
@@ -572,7 +573,7 @@ public class SqlTestFramework
     Injector startupInjector = new StartupInjectorBuilder()
         .withProperties(properties)
         .build();
-    DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
+    CoreInjectorBuilder injectorBuilder = (CoreInjectorBuilder) new CoreInjectorBuilder(startupInjector)
         // Ignore load scopes. This is a unit test, not a Druid node. If a
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
@@ -584,8 +585,11 @@ public class SqlTestFramework
         .addModule(new TestSetupModule(builder));
 
     builder.componentSupplier.configureGuice(injectorBuilder);
-    injectorBuilder.addModules(builder.extraModules.toArray(new Module[0]));
-    this.injector = injectorBuilder.build();
+
+    ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
+    serviceInjector.addAll(builder.overrideModules);
+
+    this.injector = serviceInjector.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);

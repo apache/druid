@@ -26,7 +26,6 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.server.EtagProvider;
-import org.apache.druid.server.QueryStackTests.Testrelated;
 
 public class CacheTestHelperModule extends AbstractModule
 {
@@ -105,14 +104,12 @@ public class CacheTestHelperModule extends AbstractModule
   }
 
   @Provides
-  @Testrelated
   CacheConfig getCacheConfig()
   {
     return cacheConfig;
   }
 
   @Provides
-  @Testrelated
   Cache getCache()
   {
     return cache;

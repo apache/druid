@@ -150,7 +150,7 @@ public @interface SqlTestFrameworkConfig
         SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
             .minTopNThreshold(config.minTopNThreshold())
             .mergeBufferCount(config.numMergeBuffers())
-            .withExtraModule(config.resultCache().makeModule());
+            .withOverrideModule(config.resultCache().makeModule());
         framework = builder.build();
       }
       catch (Exception e) {

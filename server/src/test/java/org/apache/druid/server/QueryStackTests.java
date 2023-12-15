@@ -22,9 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.BindingAnnotation;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -100,10 +98,6 @@ import org.junit.Assert;
 
 import javax.annotation.Nullable;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -131,13 +125,6 @@ public class QueryStackTests
     // No instantiation.
   }
 
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.METHOD})
-  @BindingAnnotation
-  public @interface Testrelated
-  {
-  }
-
   public static ClientQuerySegmentWalker createClientQuerySegmentWalker(
       final Injector injector,
       final QuerySegmentWalker clusterWalker,
@@ -163,8 +150,8 @@ public class QueryStackTests
         new RetryQueryRunnerConfig(),
         injector.getInstance(ObjectMapper.class),
         serverConfig,
-        injector.getInstance(Key.get(Cache.class, Testrelated.class)),
-        injector.getInstance(Key.get(CacheConfig.class, Testrelated.class)),
+        injector.getInstance(Cache.class),
+        injector.getInstance(CacheConfig.class),
         new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
         new SubqueryCountStatsProvider()
     );
