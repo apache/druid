@@ -24,6 +24,8 @@ import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
+
 import java.util.Iterator;
 import java.util.List;
 
@@ -155,7 +157,17 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
         throw new ISE("Ran out of objects while reading aggregators from cache!");
       }
 
-      addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
+      ColumnType resultType = aggregator.getResultType();
+      ColumnType intermediateType = aggregator.getIntermediateType();
+
+      boolean needsDeserialize = !isResultLevelCache
+          || (!resultType.isPrimitive() && resultType.equals(intermediateType));
+
+      if (needsDeserialize) {
+        addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
+      } else {
+        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
+      }
     }
   }
 
