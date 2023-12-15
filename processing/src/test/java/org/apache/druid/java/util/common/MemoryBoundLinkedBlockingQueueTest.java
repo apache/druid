@@ -118,6 +118,36 @@ public class MemoryBoundLinkedBlockingQueueTest
   }
 
   @Test
+  public void test_offerWithTimeLimit_fullQueue_waitsTime() throws InterruptedException {
+    long timeoutMillis = 5000L;
+    long byteCapacity = 10L;
+    byte[] item1 = "item1".getBytes(StandardCharsets.UTF_8);
+    byte[] item2 = "item2".getBytes(StandardCharsets.UTF_8);
+    Collection<MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]>> items = buildItemContainers(
+        ImmutableList.of(item1, item2)
+    );
+    MemoryBoundLinkedBlockingQueue<byte[]> queue = setupQueue(
+        byteCapacity,
+        items,
+        new InterruptedExceptionThrowingQueue()
+    );
+    byte[] item = "item".getBytes(StandardCharsets.UTF_8);
+    long start = System.currentTimeMillis();
+    boolean succeeds = queue.offer(
+        new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(item, item.length),
+        timeoutMillis,
+        TimeUnit.MILLISECONDS
+    );
+    long end = System.currentTimeMillis();
+
+    Assert.assertFalse(succeeds);
+    Assert.assertTrue((end - start) > timeoutMillis);
+    Assert.assertEquals(2, queue.size());
+    Assert.assertEquals(10L, queue.byteSize());
+    Assert.assertEquals(0L, queue.remainingCapacity());
+  }
+
+  @Test
   public void test_take_nonEmptyQueue_expected() throws InterruptedException
   {
 

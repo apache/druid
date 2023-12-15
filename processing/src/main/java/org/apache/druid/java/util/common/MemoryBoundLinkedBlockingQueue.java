@@ -26,6 +26,8 @@ import java.util.Collection;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 /**
@@ -37,6 +39,8 @@ public class MemoryBoundLinkedBlockingQueue<T>
   private final long memoryBound;
   private final AtomicLong currentMemory;
   private final LinkedBlockingQueue<ObjectContainer<T>> queue;
+  private final ReentrantLock putLock = new ReentrantLock();
+  private final Condition notFull = putLock.newCondition();
 
   public MemoryBoundLinkedBlockingQueue(long memoryBound)
   {
@@ -69,7 +73,15 @@ public class MemoryBoundLinkedBlockingQueue<T>
   {
     final long itemLength = item.getSize();
 
+    long nanos = unit.toNanos(timeout);
+    final ReentrantLock putLock = this.putLock;
+    putLock.lockInterruptibly();
     try {
+      while (currentMemory.get() + itemLength > memoryBound) {
+        if (nanos <= 0L)
+          return false;
+        nanos = notFull.awaitNanos(nanos);
+      }
       if (currentMemory.addAndGet(itemLength) <= memoryBound) {
         if (queue.offer(item, timeout, unit)) {
           return true;
@@ -79,6 +91,9 @@ public class MemoryBoundLinkedBlockingQueue<T>
     catch (InterruptedException e) {
       currentMemory.addAndGet(-itemLength);
       throw e;
+    }
+    finally {
+      putLock.unlock();
     }
     currentMemory.addAndGet(-itemLength);
     return false;
