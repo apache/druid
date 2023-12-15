@@ -53,7 +53,6 @@ import org.apache.druid.sql.calcite.expression.BinaryOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.WindowSqlAggregate;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayAppendOperatorConversion;
@@ -386,8 +385,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.DEGREES, "toDegrees"))
                    .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.NOT, "!"))
                    .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.UNARY_MINUS, "-"))
-                   .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NULL, "isnull"))
-                   .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NOT_NULL, "notnull"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NULL, "isnull"))
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_NULL, "notnull"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_DISTINCT_FROM, "isdistinctfrom"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, "notdistinctfrom"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_FALSE, "isfalse"))
