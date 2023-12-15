@@ -161,7 +161,7 @@ public class QueryStackTests
         },
         joinableFactory,
         new RetryQueryRunnerConfig(),
-        injector.getInstance(ObjectMapper.class), // TestHelper.makeJsonMapper(), // X$#%$#
+        injector.getInstance(ObjectMapper.class),
         serverConfig,
         injector.getInstance(Key.get(Cache.class, Testrelated.class)),
         injector.getInstance(Key.get(CacheConfig.class, Testrelated.class)),
