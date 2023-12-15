@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,4 +61,18 @@ public class ForeverLoadRule extends LoadRule
     return true;
   }
 
+  @Override
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
+  {
+    return Intervals.ETERNITY;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ForeverLoadRule{" +
+           "tieredReplicants=" + getTieredReplicants() +
+           ", useDefaultTierForNull=" + useDefaultTierForNull() +
+           '}';
+  }
 }

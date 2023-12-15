@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -35,7 +35,6 @@ import java.util.Objects;
  */
 public class PeriodLoadRule extends LoadRule
 {
-  private static final Logger log = new Logger(PeriodLoadRule.class);
   static final boolean DEFAULT_INCLUDE_FUTURE = true;
 
   private final Period period;
@@ -86,6 +85,13 @@ public class PeriodLoadRule extends LoadRule
   }
 
   @Override
+  public Interval getEligibleInterval(DateTime referenceTimestamp)
+  {
+    return includeFuture ? new Interval(referenceTimestamp.minus(period), DateTimes.MAX)
+                         : new Interval(referenceTimestamp.minus(period), referenceTimestamp);
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -105,5 +111,16 @@ public class PeriodLoadRule extends LoadRule
   public int hashCode()
   {
     return Objects.hash(super.hashCode(), period, includeFuture);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PeriodLoadRule{" +
+           "period=" + period +
+           ", includeFuture=" + includeFuture +
+           ", tieredReplicants=" + getTieredReplicants() +
+           ", useDefaultTierForNull=" + useDefaultTierForNull() +
+           '}';
   }
 }

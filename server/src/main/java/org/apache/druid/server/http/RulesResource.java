@@ -28,6 +28,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.rules.Rules;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.joda.time.Interval;
@@ -108,6 +109,7 @@ public class RulesResource
   )
   {
     try {
+      Rules.validateRules(rules);
       final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
       if (databaseRuleManager.overrideRule(dataSourceName, rules, auditInfo)) {
         return Response.ok().build();
@@ -180,5 +182,4 @@ public class RulesResource
     }
     return auditManager.fetchAuditHistory(AUDIT_HISTORY_TYPE, theInterval);
   }
-
 }
