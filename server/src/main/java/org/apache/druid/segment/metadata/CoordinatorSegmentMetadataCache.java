@@ -46,7 +46,7 @@ import java.util.Set;
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
-  private SegmentSchemaPersistQueue schemaPersistQueue;
+  private SegmentSchemaBackfillQueue schemaPersistQueue;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -58,7 +58,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       ServiceEmitter emitter,
       SegmentSchemaCache schemaCache,
       SegmentSchemaIdGenerator schemaIdGenerator,
-      SegmentSchemaPersistQueue schemaPersistQueue
+      SegmentSchemaBackfillQueue schemaPersistQueue
   )
   {
     super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter, schemaCache, schemaIdGenerator);

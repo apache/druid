@@ -46,6 +46,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.metadata.SchemaPayload;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -72,6 +74,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -157,6 +160,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private final Duration periodicPollDelay;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
+  private final SegmentSchemaCache segmentSchemaCache;
 
   /**
    * This field is made volatile to avoid "ghost secondary reads" that may result in NPE, see
@@ -241,13 +245,15 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       ObjectMapper jsonMapper,
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      SQLMetadataConnector connector
+      SQLMetadataConnector connector,
+      SegmentSchemaCache segmentSchemaCache
   )
   {
     this.jsonMapper = jsonMapper;
     this.periodicPollDelay = config.get().getPollDuration().toStandardDuration();
     this.dbTables = dbTables;
     this.connector = connector;
+    this.segmentSchemaCache = segmentSchemaCache;
   }
 
   /**
@@ -989,6 +995,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     log.debug("Starting polling of segment table");
 
+    Map<SegmentId, Pair<Long, Long>> segmentStats = new HashMap<>();
+
     // some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
     //
@@ -1001,7 +1009,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(StringUtils.format("SELECT payload, schema_id, num_rows FROM %s WHERE used=true", getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     new ResultSetMapper<DataSegment>()
@@ -1011,6 +1019,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                          segmentStats.put(segment.getId(), Pair.of(r.getLong("schema_id"), r.getLong("num_rows")));
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
                         catch (IOException e) {
@@ -1026,6 +1035,33 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
         }
     );
+
+    Map<Integer, Pair<SchemaPayload, String>> schemaMap = new HashMap<>();
+    connector.inReadOnlyTransaction(new TransactionCallback<Object>()
+    {
+      @Override
+      public Object inTransaction(Handle handle, TransactionStatus status) throws Exception
+      {
+        return handle.createQuery("SELECT id, fingerprint, payload FROM %s where created_date > %s")
+            .map(new ResultSetMapper<Void>()
+            {
+              @Override
+              public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
+              {
+                try {
+                  schemaMap.put(
+                      r.getInt("id"),
+                      Pair.of(jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class), r.getString("fingerprint"))
+                  );
+                }
+                catch (IOException e) {
+                  log.makeAlert(e, "Failed to read schema from db.").emit();
+                }
+                return null;
+              }
+            }).list();
+      }
+    });
 
     Preconditions.checkNotNull(
         segments,

@@ -1,20 +1,41 @@
 package org.apache.druid.segment.metadata;
 
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.RowSignature;
-
-import java.util.Map;
-
 public class SegmentSchema
 {
-  String schemaId;
+  String fingerprint;
   String segmentId;
-  RowSignature rowSignature;
   Long numRows;
-  Map<String, AggregatorFactory> aggregatorFactoryMap;
+  SchemaPayload schemaPayload;
 
-  public RowSignature getRowSignature()
+  public SegmentSchema(
+      String fingerprint,
+      String segmentId,
+      Long numRows,
+      SchemaPayload schemaPayload)
   {
-    return rowSignature;
+    this.fingerprint = fingerprint;
+    this.segmentId = segmentId;
+    this.numRows = numRows;
+    this.schemaPayload = schemaPayload;
+  }
+
+  public String getFingerprint()
+  {
+    return fingerprint;
+  }
+
+  public String getSegmentId()
+  {
+    return segmentId;
+  }
+
+  public Long getNumRows()
+  {
+    return numRows;
+  }
+
+  public SchemaPayload getSchemaPayload()
+  {
+    return schemaPayload;
   }
 }
