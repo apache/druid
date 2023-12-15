@@ -136,14 +136,14 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
       return new AllTrueBitmapColumnIndex(selector);
     }
     final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
-    if (nullValueIndex == null) {
-      return null;
+    if (nullValueIndex != null) {
+      return nullValueIndex.get();
     }
     final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
     if (predicateIndexes != null) {
       return predicateIndexes.forPredicate(NullPredicateFactory.INSTANCE);
     }
-    return nullValueIndex.get();
+    return null;
   }
 
   @Override
