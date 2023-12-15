@@ -134,6 +134,11 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
   }
 
+  private SqlOperatorConversion getOperatorConversion(SqlFunction round)
+  {
+    return operatorTable.lookupOperatorConversion(round);
+  }
+
   @Test
   public void testConcat()
   {
@@ -1150,7 +1155,7 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testRound()
   {
-    final SqlOperator roundFunction = extracted().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1256,7 +1261,7 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testRoundWithInvalidArgument()
   {
 
-    final SqlOperator roundFunction = extracted().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     if (!NullHandling.sqlCompatible()) {
       expectException(
@@ -1278,21 +1283,10 @@ public class ExpressionsTest extends ExpressionTestBase
     );
   }
 
-  private SqlOperatorConversion extracted()
-  {
-    SqlFunction round = SqlStdOperatorTable.ROUND;
-    return extracted(round);
-  }
-
-  private SqlOperatorConversion extracted(SqlFunction round)
-  {
-    return operatorTable.lookupOperatorConversion(round);
-  }
-
   @Test
   public void testRoundWithInvalidSecondArgument()
   {
-    final SqlOperator roundFunction = extracted().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     expectException(
         ExpressionValidationException.class,
@@ -1319,7 +1313,7 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testRoundWithNanShouldRoundTo0()
   {
-    final SqlOperator roundFunction = extracted().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1350,7 +1344,7 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testRoundWithInfinityShouldRoundTo0()
   {
-    final SqlOperator roundFunction = extracted().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     //CHECKSTYLE.OFF: Regexp
     testHelper.testExpression(
