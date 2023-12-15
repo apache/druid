@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.auth.BasicCredentials;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
@@ -33,7 +32,6 @@ import org.apache.druid.testing.utils.HttpUtil;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -147,37 +145,18 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
 
     // create 100 users
     for (int i = 0; i < 100; i++) {
-      HttpUtil.makeRequest(
-          getHttpClient(User.ADMIN),
-          HttpMethod.POST,
-          getBaseUrl() + "/authentication/db/basic/users/druid" + i,
-          null
-      );
-
-      HttpUtil.makeRequest(
-          getHttpClient(User.ADMIN),
-          HttpMethod.POST,
-          getBaseUrl() + "/authorization/db/basic/users/druid" + i,
-          null
-      );
-
-      LOG.info("Finished creating user druid" + i);
+      final String username = "druid" + i;
+      postAsAdmin(null, "/authentication/db/basic/users/%s", username);
+      postAsAdmin(null, "/authorization/db/basic/users/%s", username);
+      LOG.info("Created user[%s]", username);
     }
 
     // setup the last of 100 users and check that it works
-    HttpUtil.makeRequest(
-        getHttpClient(User.ADMIN),
-        HttpMethod.POST,
-        getBaseUrl() + "/authentication/db/basic/users/druid99/credentials",
-        jsonMapper.writeValueAsBytes(new BasicAuthenticatorCredentialUpdate("helloworld", 5000))
+    postAsAdmin(
+        new BasicAuthenticatorCredentialUpdate("helloworld", 5000),
+        "/authentication/db/basic/users/druid99/credentials"
     );
-
-    HttpUtil.makeRequest(
-        getHttpClient(User.ADMIN),
-        HttpMethod.POST,
-        getBaseUrl() + "/authorization/db/basic/users/druid99/roles/druidrole",
-        null
-    );
+    postAsAdmin(null, "/authorization/db/basic/users/druid99/roles/druidrole");
 
     druid99 = new CredentialedHttpClient(
         new BasicCredentials("druid99", "helloworld"),
@@ -234,41 +213,31 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
       List<ResourceAction> permissions
   ) throws Exception
   {
-    final HttpClient adminClient = getHttpClient(User.ADMIN);
-
     // Setup authentication by creating user and password
-    doPost(adminClient, null, "/authentication/db/basic/users/%s", user);
+    postAsAdmin(null, "/authentication/db/basic/users/%s", user);
 
-    final BasicAuthenticatorCredentialUpdate payload = new BasicAuthenticatorCredentialUpdate(password, 5000);
-    doPost(adminClient, payload, "/authentication/db/basic/users/%s/credentials", user);
+    final BasicAuthenticatorCredentialUpdate credentials
+        = new BasicAuthenticatorCredentialUpdate(password, 5000);
+    postAsAdmin(credentials, "/authentication/db/basic/users/%s/credentials", user);
 
     // Setup authorization by assigning a role to the user
-    doPost(adminClient, null, "/authorization/db/basic/users/%s", user);
-    doPost(adminClient, null, "/authorization/db/basic/roles/%s", role);
-    doPost(adminClient, null, "/authorization/db/basic/users/%s/roles/%s", user, role);
-    doPost(adminClient, permissions, "/authorization/db/basic/roles/%s/permissions", role);
+    postAsAdmin(null, "/authorization/db/basic/users/%s", user);
+    postAsAdmin(null, "/authorization/db/basic/roles/%s", role);
+    postAsAdmin(null, "/authorization/db/basic/users/%s/roles/%s", user, role);
+    postAsAdmin(permissions, "/authorization/db/basic/roles/%s/permissions", role);
   }
 
-  private void doPost(
-      HttpClient httpClient,
+  private void postAsAdmin(
       Object payload,
       String pathFormat,
       Object... pathParams
   ) throws IOException
   {
+    HttpClient adminClient = getHttpClient(User.ADMIN);
+
     byte[] payloadBytes = payload == null ? null : jsonMapper.writeValueAsBytes(payload);
     String url = getBaseUrl() + StringUtils.format(pathFormat, pathParams);
-
-    StatusResponseHolder responseHolder
-        = HttpUtil.makeRequest(httpClient, HttpMethod.POST, url, payloadBytes);
-
-    HttpResponseStatus status = responseHolder.getStatus();
-    if (status.getCode() < 200 || status.getCode() >= 300) {
-      LOG.info(
-          "Post request to url[%s] returned status[%s], content[%s]",
-          url, status, responseHolder.getContent()
-      );
-    }
+    HttpUtil.makeRequest(adminClient, HttpMethod.POST, url, payloadBytes);
   }
 
   private String getBaseUrl()
