@@ -120,7 +120,7 @@ public class MemoryBoundLinkedBlockingQueueTest
   @Test
   public void test_offerWithTimeLimit_fullQueue_waitsTime() throws InterruptedException
   {
-    long timeoutMillis = 5000L;
+    long timeoutMillis = 2000L;
     long byteCapacity = 10L;
     byte[] item1 = "item1".getBytes(StandardCharsets.UTF_8);
     byte[] item2 = "item2".getBytes(StandardCharsets.UTF_8);
@@ -142,7 +142,11 @@ public class MemoryBoundLinkedBlockingQueueTest
     long end = System.currentTimeMillis();
 
     Assert.assertFalse(succeeds);
-    Assert.assertTrue((end - start) > timeoutMillis);
+    Assert.assertTrue(StringUtils.format(
+        "offer only waited at most [%d] millis instead of expected [%d] millis",
+        (end - start),
+        timeoutMillis),
+        (end - start) > timeoutMillis);
     Assert.assertEquals(2, queue.size());
     Assert.assertEquals(10L, queue.byteSize());
     Assert.assertEquals(0L, queue.remainingCapacity());
