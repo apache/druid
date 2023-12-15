@@ -100,4 +100,16 @@ public class TimestampExtractExprMacroTest
         ));
     Assert.assertEquals(3, expression.eval(InputBindings.nilBindings()).asInt());
   }
+
+  @Test
+  public void testApplyExtractDowWithTimeZoneShouldBeFriday()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2023-12-15").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.DOW.toString()).toExpr(),
+            ExprEval.of("UTC").toExpr()
+        ));
+    Assert.assertEquals(5, expression.eval(InputBindings.nilBindings()).asInt());
+  }
 }

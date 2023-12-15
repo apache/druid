@@ -124,6 +124,19 @@ public interface NamedFunction
     }
   }
 
+  /**
+   * Helper method for implementors performing validation to check that an argument is a literal or a Identifier
+   */
+  default void validationHelperCheckArgIsLiteralOrIdentifier(Expr arg, String argName)
+  {
+    if (!arg.isLiteral() && !arg.isIdentifier()) {
+      throw validationFailed(
+          "%s argument must be a literal or identifier",
+          argName
+      );
+    }
+  }
+
 
   /**
    * Helper method for implementors performing validation to check that the argument list is some expected size.

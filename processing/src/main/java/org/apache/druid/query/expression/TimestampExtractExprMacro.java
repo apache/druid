@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -31,6 +32,7 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Optional;
 
 public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -73,38 +75,42 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       throw validationFailed("unit arg must be literal");
     }
 
+    Optional<DateTimeZone> timeZone = Optional.empty();
     if (args.size() > 2) {
-      validationHelperCheckArgIsLiteral(args.get(2), "timezone");
+      validationHelperCheckArgIsLiteralOrIdentifier(args.get(2), "timezone");
+      if (args.get(2).isLiteral()) {
+        timeZone = Optional.of(ExprUtils.toTimeZone(args.get(2)));
+      }
     }
 
-    final Expr arg = args.get(0);
     final Unit unit = Unit.valueOf(StringUtils.toUpperCase((String) args.get(1).getLiteralValue()));
-    final DateTimeZone timeZone;
 
-    if (args.size() > 2) {
-      timeZone = ExprUtils.toTimeZone(args.get(2));
-    } else {
-      timeZone = DateTimeZone.UTC;
-    }
+    final Optional<ISOChronology> chronologyOptional = timeZone.map(value -> ISOChronology.getInstance(value));
 
-    final ISOChronology chronology = ISOChronology.getInstance(timeZone);
-
-    class TimestampExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class TimestampExtractExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private TimestampExtractExpr(Expr arg)
+      private TimestampExtractExpr(List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(FN_NAME, args);
       }
 
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        Object val = arg.eval(bindings).value();
+        Object val = args.get(0).eval(bindings).value();
         if (val == null) {
           // Return null if the argument if null.
           return ExprEval.of(null);
         }
+        final ISOChronology chronology = chronologyOptional.orElseGet(() -> {
+          Optional<String> timeZoneOptional = args.size() > 2
+                                              ? Optional.ofNullable((String) args.get(2).eval(bindings).value())
+                                              : Optional.empty();
+          DateTimeZone timeZoneVal = timeZoneOptional.map(value -> DateTimes.inferTzFromString(value))
+                                                     .orElse(DateTimeZone.UTC);
+          return ISOChronology.getInstance(timeZoneVal);
+        });
         final DateTime dateTime = new DateTime(val, chronology);
         long epoch = dateTime.getMillis() / 1000;
 
@@ -179,15 +185,15 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           return StringUtils.format(
               "%s(%s, %s, %s)",
               FN_NAME,
-              arg.stringify(),
+              args.get(0).stringify(),
               args.get(1).stringify(),
               args.get(2).stringify()
           );
         }
-        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
+        return StringUtils.format("%s(%s, %s)", FN_NAME, args.get(0).stringify(), args.get(1).stringify());
       }
     }
 
-    return new TimestampExtractExpr(arg);
+    return new TimestampExtractExpr(args);
   }
 }
