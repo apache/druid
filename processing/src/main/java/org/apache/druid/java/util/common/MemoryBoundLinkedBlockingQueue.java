@@ -78,8 +78,9 @@ public class MemoryBoundLinkedBlockingQueue<T>
     putLock.lockInterruptibly();
     try {
       while (currentMemory.get() + itemLength > memoryBound) {
-        if (nanos <= 0L)
+        if (nanos <= 0L) {
           return false;
+        }
         nanos = notFull.awaitNanos(nanos);
       }
       if (currentMemory.addAndGet(itemLength) <= memoryBound) {

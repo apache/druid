@@ -118,7 +118,8 @@ public class MemoryBoundLinkedBlockingQueueTest
   }
 
   @Test
-  public void test_offerWithTimeLimit_fullQueue_waitsTime() throws InterruptedException {
+  public void test_offerWithTimeLimit_fullQueue_waitsTime() throws InterruptedException
+  {
     long timeoutMillis = 5000L;
     long byteCapacity = 10L;
     byte[] item1 = "item1".getBytes(StandardCharsets.UTF_8);
