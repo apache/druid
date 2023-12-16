@@ -22,13 +22,14 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.query.filter.DruidDoublePredicate;
+import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
@@ -43,18 +44,21 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
   private final Expr expr;
   private final String inputColumn;
   private final ExpressionType inputType;
+  private final ColumnType outputType;
   private final DictionaryEncodedValueIndex<?> inputColumnIndexes;
 
   public ExprPredicateIndexSupplier(
       Expr expr,
       String inputColumn,
       ExpressionType inputType,
+      ColumnType outputType,
       DictionaryEncodedValueIndex<?> inputColumnValueIndexes
   )
   {
     this.expr = expr;
     this.inputColumn = inputColumn;
     this.inputType = inputType;
+    this.outputType = outputType;
     this.inputColumnIndexes = inputColumnValueIndexes;
   }
 
@@ -75,28 +79,27 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       final Supplier<NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>>> bitmapsSupplier;
-      switch (inputType.getType()) {
+      java.util.function.Function<Object, ExprEval<?>> evalFunction =
+          inputValue -> expr.eval(InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue));
+
+      switch (outputType.getType()) {
         case STRING:
-          bitmapsSupplier = Suppliers.memoize(() -> computeStringBitmaps(matcherFactory));
+          bitmapsSupplier = Suppliers.memoize(() -> computeStringBitmaps(matcherFactory, evalFunction));
           break;
         case LONG:
-          bitmapsSupplier = Suppliers.memoize(() -> computeLongBitmaps(matcherFactory));
+          bitmapsSupplier = Suppliers.memoize(() -> computeLongBitmaps(matcherFactory, evalFunction));
           break;
         case DOUBLE:
-          bitmapsSupplier = Suppliers.memoize(() -> computeDoubleBitmaps(matcherFactory));
+          bitmapsSupplier = Suppliers.memoize(() -> computeDoubleBitmaps(matcherFactory, evalFunction));
+          break;
+        case FLOAT:
+          bitmapsSupplier = Suppliers.memoize(() -> computeFloatBitmaps(matcherFactory, evalFunction));
           break;
         case ARRAY:
-          ExpressionType outputType = expr.getOutputType(
-              InputBindings.inspectorFromTypeMap(ImmutableMap.of(inputColumn, inputType))
-          );
-          if (outputType == null) {
-            // just don't use indexes if we can't compute the output type
-            return null;
-          }
-          bitmapsSupplier = Suppliers.memoize(() -> computeArrayBitmaps(outputType, matcherFactory));
+          bitmapsSupplier = Suppliers.memoize(() -> computeArrayBitmaps(matcherFactory, evalFunction));
           break;
         default:
-          bitmapsSupplier = Suppliers.memoize(() -> computeComplexBitmaps(matcherFactory));
+          bitmapsSupplier = Suppliers.memoize(() -> computeComplexBitmaps(matcherFactory, evalFunction));
           break;
       }
 
@@ -119,7 +122,8 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
   }
 
   private NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>> computeStringBitmaps(
-      DruidPredicateFactory matcherFactory
+      DruidPredicateFactory matcherFactory,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction
   )
   {
     Predicate<String> predicate = matcherFactory.makeStringPredicate();
@@ -129,9 +133,7 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
 
     for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
       final Object inputValue = inputColumnIndexes.getValue(i);
-      final String result = expr.eval(
-          InputBindings.forInputSupplier(inputColumn, ExpressionType.STRING, () -> inputValue)
-      ).asString();
+      final String result = evalFunction.apply(inputValue).asString();
       if (result == null && matcherFactory.isNullInputUnknown()) {
         unknowns.add(inputColumnIndexes.getBitmap(i));
       } else if (predicate.apply(result)) {
@@ -143,7 +145,8 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
   }
 
   private NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>> computeLongBitmaps(
-      DruidPredicateFactory matcherFactory
+      DruidPredicateFactory matcherFactory,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction
   )
   {
     DruidLongPredicate predicate = matcherFactory.makeLongPredicate();
@@ -153,9 +156,7 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
 
     for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
       final Object inputValue = inputColumnIndexes.getValue(i);
-      final ExprEval<?> result = expr.eval(
-          InputBindings.forInputSupplier(inputColumn, ExpressionType.LONG, () -> inputValue)
-      );
+      final ExprEval<?> result = evalFunction.apply(inputValue);
       if (result.isNumericNull() && matcherFactory.isNullInputUnknown()) {
         unknowns.add(inputColumnIndexes.getBitmap(i));
       } else if (result.isNumericNull() && predicate.applyNull()) {
@@ -169,7 +170,8 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
   }
 
   private NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>> computeDoubleBitmaps(
-      DruidPredicateFactory matcherFactory
+      DruidPredicateFactory matcherFactory,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction
   )
   {
     DruidDoublePredicate predicate = matcherFactory.makeDoublePredicate();
@@ -179,9 +181,7 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
 
     for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
       final Object inputValue = inputColumnIndexes.getValue(i);
-      final ExprEval<?> result = expr.eval(
-          InputBindings.forInputSupplier(inputColumn, ExpressionType.STRING, () -> inputValue)
-      );
+      final ExprEval<?> result = evalFunction.apply(inputValue);
       if (result.isNumericNull() && matcherFactory.isNullInputUnknown()) {
         unknowns.add(inputColumnIndexes.getBitmap(i));
       } else if (result.isNumericNull() && predicate.applyNull()) {
@@ -194,21 +194,44 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
     return new NonnullPair<>(matches, unknowns);
   }
 
-  private NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>> computeArrayBitmaps(
-      ExpressionType outputType,
-      DruidPredicateFactory matcherFactory
+  private NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>> computeFloatBitmaps(
+      DruidPredicateFactory matcherFactory,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction
   )
   {
-    Predicate<Object[]> predicate = matcherFactory.makeArrayPredicate(ExpressionType.toColumnType(outputType));
+    DruidFloatPredicate predicate = matcherFactory.makeFloatPredicate();
 
     List<ImmutableBitmap> matches = new ArrayList<>();
     List<ImmutableBitmap> unknowns = new ArrayList<>();
 
     for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
       final Object inputValue = inputColumnIndexes.getValue(i);
-      final Object[] result = expr.eval(
-          InputBindings.forInputSupplier(inputColumn, ExpressionType.STRING, () -> inputValue)
-      ).asArray();
+      final ExprEval<?> result = evalFunction.apply(inputValue);
+      if (result.isNumericNull() && matcherFactory.isNullInputUnknown()) {
+        unknowns.add(inputColumnIndexes.getBitmap(i));
+      } else if (result.isNumericNull() && predicate.applyNull()) {
+        matches.add(inputColumnIndexes.getBitmap(i));
+      } else if (!result.isNumericNull() && predicate.applyFloat((float) result.asDouble())) {
+        matches.add(inputColumnIndexes.getBitmap(i));
+      }
+    }
+
+    return new NonnullPair<>(matches, unknowns);
+  }
+
+  private NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>> computeArrayBitmaps(
+      DruidPredicateFactory matcherFactory,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction
+  )
+  {
+    Predicate<Object[]> predicate = matcherFactory.makeArrayPredicate(outputType);
+
+    List<ImmutableBitmap> matches = new ArrayList<>();
+    List<ImmutableBitmap> unknowns = new ArrayList<>();
+
+    for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
+      final Object inputValue = inputColumnIndexes.getValue(i);
+      final Object[] result = evalFunction.apply(inputValue).asArray();
       if (result == null && matcherFactory.isNullInputUnknown()) {
         unknowns.add(inputColumnIndexes.getBitmap(i));
       } else if (predicate.apply(result)) {
@@ -220,7 +243,8 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
   }
 
   private NonnullPair<List<ImmutableBitmap>, List<ImmutableBitmap>> computeComplexBitmaps(
-      DruidPredicateFactory matcherFactory
+      DruidPredicateFactory matcherFactory,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction
   )
   {
     Predicate<Object> predicate = matcherFactory.makeObjectPredicate();
@@ -230,9 +254,7 @@ public class ExprPredicateIndexSupplier implements ColumnIndexSupplier
 
     for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
       final Object inputValue = inputColumnIndexes.getValue(i);
-      final Object result = expr.eval(
-          InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue)
-      ).valueOrDefault();
+      final Object result = evalFunction.apply(inputValue).valueOrDefault();
       if (result == null && matcherFactory.isNullInputUnknown()) {
         unknowns.add(inputColumnIndexes.getBitmap(i));
       } else if (predicate.apply(result)) {

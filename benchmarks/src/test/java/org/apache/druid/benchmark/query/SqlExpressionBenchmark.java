@@ -379,7 +379,7 @@ public class SqlExpressionBenchmark
       final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
       final Yielder<Object[]> yielder = Yielders.each(resultSequence);
       int rowCounter = 0;
-      while (!yielder.isDone() && !yielder.isDone()) {
+      while (!yielder.isDone()) {
         rowCounter++;
         yielder.next(yielder.get());
       }

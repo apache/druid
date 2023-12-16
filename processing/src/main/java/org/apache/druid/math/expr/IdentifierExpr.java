@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -157,7 +158,7 @@ class IdentifierExpr implements Expr
 
   @Nullable
   @Override
-  public ColumnIndexSupplier asColumnIndexSupplier(ColumnSelector columnSelector)
+  public ColumnIndexSupplier asColumnIndexSupplier(ColumnSelector columnSelector, @Nullable ColumnType outputType)
   {
     // identifier just wraps a column, we can return its index supplier directly if the column exists
     final ColumnHolder holder = columnSelector.getColumnHolder(binding);

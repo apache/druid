@@ -32,6 +32,7 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 
@@ -193,7 +194,7 @@ public interface Expr extends Cacheable
   }
 
   @Nullable
-  default ColumnIndexSupplier asColumnIndexSupplier(ColumnSelector columnSelector)
+  default ColumnIndexSupplier asColumnIndexSupplier(ColumnSelector columnSelector, @Nullable ColumnType outputType)
   {
     final Expr.BindingAnalysis details = analyzeInputs();
     if (details.getRequiredBindings().size() == 1) {
@@ -212,11 +213,20 @@ public interface Expr extends Cacheable
           DictionaryEncodedValueIndex.class
       );
 
-      if (delegateRawIndex != null) {
+      final ExpressionType inputType = ExpressionType.fromColumnTypeStrict(capabilities);
+      final ColumnType outType;
+      if (outputType == null) {
+        outType = ExpressionType.toColumnType(getOutputType(InputBindings.inspectorForColumn(column, inputType)));
+      } else {
+        outType = outputType;
+      }
+
+      if (delegateRawIndex != null && outputType != null) {
         return new ExprPredicateIndexSupplier(
             this,
             column,
-            ExpressionType.fromColumnTypeStrict(capabilities),
+            inputType,
+            outType,
             delegateRawIndex
         );
       }

@@ -246,7 +246,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
   {
-    return getParsedExpression().get().asColumnIndexSupplier(columnSelector);
+    return getParsedExpression().get().asColumnIndexSupplier(columnSelector, outputType);
   }
 
   @Override
