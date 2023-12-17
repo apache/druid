@@ -55,12 +55,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,9 +71,6 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class SegmentAllocateActionTest
 {
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
-
   @Rule
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
@@ -402,6 +399,72 @@ public class SegmentAllocateActionTest
     assertSameIdentifier(id2, id5);
     Assert.assertNull(id6);
     assertSameIdentifier(id2, id7);
+  }
+
+  @Test
+  public void testSegmentIsAllocatedForLatestUsedSegmentVersion() throws IOException
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final String sequenceName = "sequence_1";
+
+    // Allocate segments when there are no committed segments
+    final SegmentIdWithShardSpec pendingSegmentV01 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    final SegmentIdWithShardSpec pendingSegmentV02 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+
+    assertSameIdentifier(pendingSegmentV01, pendingSegmentV02);
+
+    // Commit a segment for version V1
+    final DataSegment segmentV1
+        = DataSegment.builder()
+                     .dataSource(DATA_SOURCE)
+                     .interval(Granularities.HOUR.bucket(PARTY_TIME))
+                     .version(PARTY_TIME.plusDays(1).toString())
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(100)
+                     .build();
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
+        Collections.singleton(segmentV1)
+    );
+
+    // Verify that new allocations use version V1
+    final SegmentIdWithShardSpec pendingSegmentV11 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    final SegmentIdWithShardSpec pendingSegmentV12 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+
+    assertSameIdentifier(pendingSegmentV11, pendingSegmentV12);
+    Assert.assertEquals(segmentV1.getVersion(), pendingSegmentV11.getVersion());
+
+    Assert.assertNotEquals(pendingSegmentV01, pendingSegmentV11);
+
+    // Commit a segment for version V2 to overshadow V1
+    final DataSegment segmentV2
+        = DataSegment.builder()
+                     .dataSource(DATA_SOURCE)
+                     .interval(Granularities.HOUR.bucket(PARTY_TIME))
+                     .version(PARTY_TIME.plusDays(2).toString())
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(100)
+                     .build();
+    taskActionTestKit.getMetadataStorageCoordinator().commitSegments(
+        Collections.singleton(segmentV2)
+    );
+    Assert.assertTrue(segmentV2.getVersion().compareTo(segmentV1.getVersion()) > 0);
+
+    // Verify that new segment allocations use version V2
+    final SegmentIdWithShardSpec pendingSegmentV21 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    final SegmentIdWithShardSpec pendingSegmentV22 =
+        allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, sequenceName, null);
+    assertSameIdentifier(pendingSegmentV21, pendingSegmentV22);
+    Assert.assertEquals(segmentV2.getVersion(), pendingSegmentV21.getVersion());
+
+    Assert.assertNotEquals(pendingSegmentV21, pendingSegmentV01);
+    Assert.assertNotEquals(pendingSegmentV21, pendingSegmentV11);
   }
 
   @Test
