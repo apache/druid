@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -272,8 +273,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
     // segment granularity. Try that first, and then progressively smaller ones if it fails.
+    // Consider trying with WEEK granularity only if the preferred granularity is WEEK
     final List<Interval> tryIntervals = Granularity.granularitiesFinerThan(preferredSegmentGranularity)
                                                    .stream()
+                                                   .filter(granularity ->
+                                                               Granularities.WEEK.equals(preferredSegmentGranularity)
+                                                               || !Granularities.WEEK.equals(granularity))
                                                    .map(granularity -> granularity.bucket(timestamp))
                                                    .collect(Collectors.toList());
     for (Interval tryInterval : tryIntervals) {
