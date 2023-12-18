@@ -142,11 +142,14 @@ public class MemoryBoundLinkedBlockingQueueTest
     long end = System.currentTimeMillis();
 
     Assert.assertFalse(succeeds);
-    Assert.assertTrue(StringUtils.format(
-        "offer only waited at most [%d] millis instead of expected [%d] millis",
-        (end - start),
-        timeoutMillis),
-        (end - start) > timeoutMillis);
+    Assert.assertTrue(
+        StringUtils.format(
+            "offer only waited at most [%d] nanos instead of expected [%d] nanos",
+            TimeUnit.MILLISECONDS.toNanos(end - start),
+            TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+        ),
+        TimeUnit.MILLISECONDS.toNanos(end - start) > TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+    );
     Assert.assertEquals(2, queue.size());
     Assert.assertEquals(10L, queue.byteSize());
     Assert.assertEquals(0L, queue.remainingCapacity());
