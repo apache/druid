@@ -104,6 +104,7 @@ public class NativeSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
       case UNNEST:
+      case EXPLAIN_ANALYZE:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
       case ALLOW_TOP_LEVEL_UNION_ALL:
         return true;
