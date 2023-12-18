@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
@@ -97,8 +96,7 @@ public class OverlordClientImpl implements OverlordClient
     return FutureUtils.transform(
         client.asyncRequest(
             new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/task")
-                .jsonContent(jsonMapper, taskObject)
-                .header(AuditManager.X_DRUID_AUTHOR, AuditManager.AUTHOR_DRUID_SYSTEM),
+                .jsonContent(jsonMapper, taskObject),
             new BytesFullResponseHandler()
         ),
         holder -> {

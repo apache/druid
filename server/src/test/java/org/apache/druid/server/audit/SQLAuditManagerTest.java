@@ -73,7 +73,7 @@ public class SQLAuditManagerTest
   {
     return new SQLAuditManager(
         config,
-        new AuditSerdeHelper(config, mapper, mapperSkipNull),
+        new AuditSerdeHelper(config, null, mapper, mapperSkipNull),
         connector,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         serviceEmitter,

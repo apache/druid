@@ -32,20 +32,6 @@ public interface AuditManager
   String X_DRUID_AUTHOR = "X-Druid-Author";
   String X_DRUID_COMMENT = "X-Druid-Comment";
 
-  /**
-   * Value of header {@link #X_DRUID_AUTHOR} used by Druid services so that they
-   * can be distinguished from external requests.
-   */
-  String AUTHOR_DRUID_SYSTEM = "druid_system";
-
-  /**
-   * @return true if the audited event was initiated by the Druid system itself.
-   */
-  default boolean isSystemRequest(AuditInfo auditInfo)
-  {
-    return AUTHOR_DRUID_SYSTEM.equals(auditInfo.getAuthor());
-  }
-
   void doAudit(AuditEntry event);
 
   /**

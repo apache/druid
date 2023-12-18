@@ -26,6 +26,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.security.Escalator;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -50,11 +51,13 @@ public class AuditSerdeHelper
   private final ObjectMapper jsonMapper;
   private final ObjectMapper jsonMapperSkipNulls;
 
+  private final String systemIdentity;
   private final AuditManagerConfig config;
 
   @Inject
   public AuditSerdeHelper(
       AuditManagerConfig config,
+      Escalator escalator,
       @Json ObjectMapper jsonMapper,
       @JsonNonNull ObjectMapper jsonMapperSkipNulls
   )
@@ -62,6 +65,21 @@ public class AuditSerdeHelper
     this.config = config;
     this.jsonMapper = jsonMapper;
     this.jsonMapperSkipNulls = jsonMapperSkipNulls;
+    this.systemIdentity = escalator == null
+                          ? null : escalator.createEscalatedAuthenticationResult().getIdentity();
+  }
+
+  /**
+   * Checks if the given audit event needs to be handled.
+   *
+   * @return true only if the event was not initiated by the Druid system OR if
+   * system requests should be audited too.
+   */
+  public boolean shouldProcessAuditEntry(AuditEntry entry)
+  {
+    final boolean isSystemRequest = systemIdentity != null
+                                    && systemIdentity.equals(entry.getAuditInfo().getIdentity());
+    return config.isAuditSystemRequests() || !isSystemRequest;
   }
 
   /**

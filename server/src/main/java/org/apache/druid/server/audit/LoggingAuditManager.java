@@ -56,7 +56,7 @@ public class LoggingAuditManager implements AuditManager
   @Override
   public void doAudit(AuditEntry entry)
   {
-    if (managerConfig.isAuditSystemRequests() || !isSystemRequest(entry.getAuditInfo())) {
+    if (serdeHelper.shouldProcessAuditEntry(entry)) {
       auditLogger.log(serdeHelper.processAuditEntry(entry));
     }
   }

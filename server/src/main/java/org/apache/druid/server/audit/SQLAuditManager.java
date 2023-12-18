@@ -136,7 +136,7 @@ public class SQLAuditManager implements AuditManager
   @Override
   public void doAudit(AuditEntry event, Handle handle) throws IOException
   {
-    if (isSystemRequest(event.getAuditInfo()) && !config.isAuditSystemRequests()) {
+    if (!serdeHelper.shouldProcessAuditEntry(event)) {
       return;
     }
 

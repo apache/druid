@@ -75,7 +75,7 @@ public class SQLMetadataRuleManagerTest
     final SQLAuditManagerConfig auditManagerConfig = new SQLAuditManagerConfig(null, null, null, null, null);
     auditManager = new SQLAuditManager(
         auditManagerConfig,
-        new AuditSerdeHelper(auditManagerConfig, mapper, mapper),
+        new AuditSerdeHelper(auditManagerConfig, null, mapper, mapper),
         connector,
         Suppliers.ofInstance(tablesConfig),
         new NoopServiceEmitter(),
