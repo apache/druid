@@ -118,7 +118,9 @@ const Redirects=[
     "from": [
       "/docs/latest/development/community-extensions/kafka-simple.html",
       "/docs/latest/development/community-extensions/rabbitmq.html",
-      "/docs/latest/development/kafka-simple-consumer-firehose.html"
+      "/docs/latest/development/kafka-simple-consumer-firehose.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-operations.html",
+      "/docs/latest/development/extensions-core/kafka-supervisor-reference.html"
     ],
     "to": "/docs/latest/development/extensions-core/kafka-ingestion"
   },
