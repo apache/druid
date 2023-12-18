@@ -107,8 +107,8 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
         StringUtils.toUpperCase(RexLiteral.stringValue(call.getOperands().get(1)))
     );
 
-    final RexNode timeZoneArg = call.getOperands().get(2);
-    if (timeZoneArg instanceof RexInputRef) {
+    if (call.getOperands().size() > 2 && call.getOperands().get(2) instanceof RexInputRef) {
+      final RexNode timeZoneArg = call.getOperands().get(2);
       final DruidExpression timeZoneExpression = Expressions.toDruidExpression(
           plannerContext,
           rowSignature,

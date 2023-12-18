@@ -76,11 +76,8 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     }
 
     Optional<DateTimeZone> timeZone = Optional.empty();
-    if (args.size() > 2) {
-      validationHelperCheckArgIsLiteralOrIdentifier(args.get(2), "timezone");
-      if (args.get(2).isLiteral()) {
-        timeZone = Optional.of(ExprUtils.toTimeZone(args.get(2)));
-      }
+    if (args.size() > 2 && args.get(2).isLiteral()) {
+      timeZone = Optional.of(ExprUtils.toTimeZone(args.get(2)));
     }
 
     final Unit unit = Unit.valueOf(StringUtils.toUpperCase((String) args.get(1).getLiteralValue()));
