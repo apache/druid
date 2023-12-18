@@ -30,6 +30,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
@@ -357,9 +360,9 @@ public abstract class ExprEval<T>
    * instead.
    */
   @Deprecated
-  public static ExprEval ofBoolean(boolean value, ExprType type)
+  public static ExprEval ofBoolean(boolean value, ExpressionType type)
   {
-    switch (type) {
+    switch (type.getType()) {
       case DOUBLE:
         return ExprEval.of(Evals.asDouble(value));
       case LONG:
@@ -367,7 +370,7 @@ public abstract class ExprEval<T>
       case STRING:
         return ExprEval.of(String.valueOf(value));
       default:
-        throw new IllegalArgumentException("Invalid type, cannot coerce [" + type + "] to boolean");
+        throw new Types.InvalidCastBooleanException(type);
     }
   }
 
@@ -501,6 +504,13 @@ public abstract class ExprEval<T>
     if (val instanceof List || val instanceof Object[]) {
       final List<?> theList = val instanceof List ? ((List<?>) val) : Arrays.asList((Object[]) val);
       return bestEffortArray(theList);
+    }
+    // handle leaky group by array types
+    if (val instanceof ComparableStringArray) {
+      return new ArrayExprEval(ExpressionType.STRING_ARRAY, ((ComparableStringArray) val).getDelegate());
+    }
+    if (val instanceof ComparableList) {
+      return bestEffortArray(((ComparableList) val).getDelegate());
     }
 
     // in 'best effort' mode, we couldn't possibly use byte[] as a complex or anything else useful without type
@@ -1569,8 +1579,8 @@ public abstract class ExprEval<T>
     }
   }
 
-  public static IAE invalidCast(ExpressionType fromType, ExpressionType toType)
+  public static Types.InvalidCastException invalidCast(ExpressionType fromType, ExpressionType toType)
   {
-    return new IAE("Invalid type, cannot cast [" + fromType + "] to [" + toType + "]");
+    return new Types.InvalidCastException(fromType, toType);
   }
 }
