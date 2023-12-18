@@ -204,7 +204,6 @@ public class SegmentAllocationQueue
       }
     });
 
-    scheduleQueuePoll(maxWaitTimeMillis);
     return futureReference.get();
   }
 
@@ -238,6 +237,7 @@ public class SegmentAllocationQueue
       return false;
     } else if (processingQueue.offer(batch.key)) {
       log.debug("Added a new batch [%s] to queue.", batch.key);
+      scheduleQueuePoll(maxWaitTimeMillis);
       return true;
     } else {
       batch.failPendingRequests(
