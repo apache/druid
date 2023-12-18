@@ -75,10 +75,14 @@ public class SegmentAllocationQueue
   private final long maxWaitTimeMillis;
 
   private final TaskLockbox taskLockbox;
-  private final ScheduledExecutorService executor;
   private final IndexerMetadataStorageCoordinator metadataStorage;
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
   private final ServiceEmitter emitter;
+
+  /**
+   * Single-threaded executor to process allocation queue.
+   */
+  private final ScheduledExecutorService executor;
 
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestKey> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
@@ -149,6 +153,10 @@ public class SegmentAllocationQueue
     return executor != null && !executor.isShutdown();
   }
 
+  /**
+   * Schedules a poll of the allocation queue that runs on the {@link #executor}.
+   * It is okay to schedule multiple polls since the executor is single threaded.
+   */
   private void scheduleQueuePoll(long delay)
   {
     executor.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
@@ -196,6 +204,7 @@ public class SegmentAllocationQueue
       }
     });
 
+    scheduleQueuePoll(maxWaitTimeMillis);
     return futureReference.get();
   }
 
@@ -262,6 +271,7 @@ public class SegmentAllocationQueue
   {
     clearQueueIfNotLeader();
 
+    // Process all the batches that are already due
     int numProcessedBatches = 0;
     AllocateRequestKey nextKey = processingQueue.peekFirst();
     while (nextKey != null && nextKey.isDue()) {
@@ -289,17 +299,16 @@ public class SegmentAllocationQueue
       nextKey = processingQueue.peek();
     }
 
-    // Schedule the next round of processing
-    final long nextScheduleDelay;
+    // Schedule the next round of processing if the queue is not empty
     if (processingQueue.isEmpty()) {
-      nextScheduleDelay = maxWaitTimeMillis;
+      log.debug("Processed [%d] batches, not scheduling again since queue is empty.", numProcessedBatches);
     } else {
       nextKey = processingQueue.peek();
       long timeElapsed = System.currentTimeMillis() - nextKey.getQueueTime();
-      nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
+      long nextScheduleDelay = Math.max(0, maxWaitTimeMillis - timeElapsed);
+      scheduleQueuePoll(nextScheduleDelay);
+      log.debug("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
     }
-    scheduleQueuePoll(nextScheduleDelay);
-    log.debug("Processed [%d] batches, next execution in [%d ms]", numProcessedBatches, nextScheduleDelay);
   }
 
   /**
