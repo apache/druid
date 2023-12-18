@@ -42,7 +42,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFac
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -170,15 +169,6 @@ public class BoundFilter implements Filter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        return Math.min(
-            1.0,
-            rangeIndex.estimateSelectivity(totalRows) + nullBitmap.estimateSelectivity(totalRows)
-        );
-      }
-
-      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         return bitmapResultFactory.union(
@@ -223,12 +213,6 @@ public class BoundFilter implements Filter
   public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return true;
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, boundDimFilter.getDimension(), columnSelector, indexSelector);
   }
 
   @Override

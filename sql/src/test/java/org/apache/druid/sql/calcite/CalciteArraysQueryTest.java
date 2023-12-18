@@ -53,6 +53,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -64,6 +65,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
@@ -859,7 +861,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(expressionFilter("array_overlap(\"arrayStringNulls\",array('a','b'))"))
+                .filters(
+                    or(
+                        new ArrayContainsElementFilter("arrayStringNulls", ColumnType.STRING, "a", null),
+                        new ArrayContainsElementFilter("arrayStringNulls", ColumnType.STRING, "b", null)
+                    )
+                )
                 .columns("arrayStringNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -885,7 +892,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(expressionFilter("array_overlap(\"arrayLongNulls\",array(1,2))"))
+                .filters(
+                    or(
+                        new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 1L, null),
+                        new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 2L, null)
+                    )
+                )
                 .columns("arrayLongNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -911,7 +923,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(expressionFilter("array_overlap(\"arrayDoubleNulls\",array(1.1,2.2))"))
+                .filters(
+                    or(
+                        new ArrayContainsElementFilter("arrayDoubleNulls", ColumnType.DOUBLE, 1.1, null),
+                        new ArrayContainsElementFilter("arrayDoubleNulls", ColumnType.DOUBLE, 2.2, null)
+                    )
+                )
                 .columns("arrayDoubleNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
@@ -1091,7 +1108,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    expressionFilter("array_contains(\"arrayStringNulls\",array('a','b'))")
+                    and(
+                        new ArrayContainsElementFilter("arrayStringNulls", ColumnType.STRING, "a", null),
+                        new ArrayContainsElementFilter("arrayStringNulls", ColumnType.STRING, "b", null)
+                    )
+
                 )
                 .columns("arrayStringNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1117,7 +1138,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    expressionFilter("array_contains(\"arrayLongNulls\",array(1,null))")
+                    and(
+                        new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 1L, null),
+                        new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, null, null)
+                    )
                 )
                 .columns("arrayLongNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1142,7 +1166,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(DATA_SOURCE_ARRAYS)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    expressionFilter("array_contains(\"arrayDoubleNulls\",array(1.1,null))")
+                    and(
+                        new ArrayContainsElementFilter("arrayDoubleNulls", ColumnType.DOUBLE, 1.1, null),
+                        new ArrayContainsElementFilter("arrayDoubleNulls", ColumnType.DOUBLE, null, null)
+                    )
                 )
                 .columns("arrayDoubleNulls")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -3389,10 +3416,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
   {
-    requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
         "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, count(*) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
@@ -3462,10 +3489,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
   {
-    requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
         "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as VARCHAR ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
@@ -3528,10 +3555,10 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
   public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
   {
-    requireMergeBuffers(3);
     cannotVectorize();
     testQuery(
         "select cntarray, count(*) from ( select dim1, dim2, ARRAY_AGG(cnt) as cntarray from ( select dim1, dim2, dim3, cast( count(*) as DOUBLE ) as cnt from foo group by 1, 2, 3 ) group by 1, 2 ) group by 1",
@@ -6980,7 +7007,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .filters(
-                      expressionFilter("array_contains(\"arrayLongNulls\",array(2))")
+                      new ArrayContainsElementFilter("arrayLongNulls", ColumnType.LONG, 2L, null)
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
@@ -7102,6 +7129,67 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a", "xa", "xa"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestWithGroupByOnExpression()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "WITH X as \n"
+        + "(\n"
+        + "SELECT\n"
+        + "ARRAY[1,2,3] as allNums\n"
+        + "FROM foo\n"
+        + "GROUP BY 1\n"
+        + ")\n"
+        + "select * from X CROSS JOIN UNNEST(X.allNums) as ud(num)",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                                  new QueryDataSource(
+                                      GroupByQuery.builder()
+                                                  .setDataSource(CalciteTests.DATASOURCE1)
+                                                  .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(
+                                                      Filtration.eternity())))
+                                                  .setVirtualColumns(expressionVirtualColumn(
+                                                      "v0",
+                                                      "array(1,2,3)",
+                                                      ColumnType.LONG_ARRAY
+                                                  ))
+                                                  .setDimensions(dimensions(
+                                                      new DefaultDimensionSpec(
+                                                          "v0",
+                                                          "d0",
+                                                          ColumnType.LONG_ARRAY
+                                                      )
+                                                  ))
+                                                  .setGranularity(Granularities.ALL)
+                                                  .setContext(QUERY_CONTEXT_DEFAULT)
+                                                  .build()),
+                                  expressionVirtualColumn(
+                                      "j0.unnest",
+                                      "array(1,2,3)",
+                                      ColumnType.LONG_ARRAY
+                                  ),
+                                  null
+                              )
+                  )
+                  .eternityInterval()
+                  .columns("d0", "j0.unnest")
+                  .legacy(false)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{ImmutableList.of(1L, 2L, 3L), 1},
+            new Object[]{ImmutableList.of(1L, 2L, 3L), 2},
+            new Object[]{ImmutableList.of(1L, 2L, 3L), 3}
         )
     );
   }

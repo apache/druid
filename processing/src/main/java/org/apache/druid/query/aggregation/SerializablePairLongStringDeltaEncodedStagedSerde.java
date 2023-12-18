@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.serde.cell.StorableBuffer;
 
 import javax.annotation.Nullable;
@@ -37,15 +36,11 @@ import java.nio.ByteOrder;
  * otherwise
  * Long:Integer:bytes
  */
-public class SerializablePairLongStringDeltaEncodedStagedSerde implements StagedSerde<SerializablePairLongString>
+public class SerializablePairLongStringDeltaEncodedStagedSerde extends AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<SerializablePairLongString>
 {
-  private final long minValue;
-  private final boolean useIntegerDelta;
-
   public SerializablePairLongStringDeltaEncodedStagedSerde(long minValue, boolean useIntegerDelta)
   {
-    this.minValue = minValue;
-    this.useIntegerDelta = useIntegerDelta;
+    super(minValue, useIntegerDelta, SerializablePairLongString.class);
   }
 
   @Override

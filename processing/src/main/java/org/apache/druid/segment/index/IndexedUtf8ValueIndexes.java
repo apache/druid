@@ -82,11 +82,6 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     final ByteBuffer utf8 = StringUtils.toUtf8ByteBuffer(value);
     return new SimpleBitmapColumnIndex()
     {
-      @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        return Math.min(1, (double) getBitmapForValue().size() / totalRows);
-      }
 
       @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

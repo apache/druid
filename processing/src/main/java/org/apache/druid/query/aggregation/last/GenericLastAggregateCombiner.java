@@ -19,42 +19,48 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import com.google.common.primitives.Longs;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
-import org.apache.druid.query.aggregation.SerializablePairLongString;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-public class StringLastAggregateCombiner extends ObjectAggregateCombiner<SerializablePairLongString>
+public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
 {
-  private SerializablePairLongString lastValue;
+  private T lastValue;
+  private final Class<T> pairClass;
+
+  public GenericLastAggregateCombiner(Class<T> pairClass)
+  {
+    this.pairClass = pairClass;
+  }
 
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    lastValue = (SerializablePairLongString) selector.getObject();
+    lastValue = (T) selector.getObject();
   }
 
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    SerializablePairLongString newValue = (SerializablePairLongString) selector.getObject();
-    if (StringFirstAggregatorFactory.TIME_COMPARATOR.compare(lastValue, newValue) < 0) {
-      lastValue = (SerializablePairLongString) selector.getObject();
+    T newValue = (T) selector.getObject();
+    if (Longs.compare(lastValue.lhs, newValue.lhs) < 0) {
+      lastValue = newValue;
     }
   }
 
   @Nullable
   @Override
-  public SerializablePairLongString getObject()
+  public T getObject()
   {
     return lastValue;
   }
 
   @Override
-  public Class<SerializablePairLongString> classOfObject()
+  public Class<? extends T> classOfObject()
   {
-    return SerializablePairLongString.class;
+    return pairClass;
   }
 }

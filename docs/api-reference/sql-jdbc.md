@@ -68,6 +68,10 @@ String url = "jdbc:avatica:remote:url=http://localhost:8888/druid/v2/sql/avatica
 // Any property from https://druid.apache.org/docs/latest/querying/sql-query-context.html can go here.
 Properties connectionProperties = new Properties();
 connectionProperties.setProperty("sqlTimeZone", "Etc/UTC");
+//To connect to a Druid deployment protected by basic authentication,
+//you can incorporate authentication details from https://druid.apache.org/docs/latest/operations/security-overview   
+connectionProperties.setProperty("user", "admin");                
+connectionProperties.setProperty("password", "password1");     
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   try (

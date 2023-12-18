@@ -242,15 +242,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int id = dictionary.indexOf(doubleValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -285,28 +276,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (doubleValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
-              return (double) getBitmap(0).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          if (NullHandling.replaceWithDefault() && doubleValue.equals(NullHandling.defaultDoubleValue())) {
-            if (defaultValueIndex >= 0) {
-              return ((double) getBitmap(0).size() + (double) getBitmap(defaultValueIndex).size()) / totalRows;
-            }
-            return (double) getBitmap(0).size() / totalRows;
-          }
-          final int id = dictionary.indexOf(doubleValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

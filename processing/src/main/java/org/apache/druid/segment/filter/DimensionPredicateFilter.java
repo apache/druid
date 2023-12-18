@@ -37,7 +37,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -122,12 +121,6 @@ public class DimensionPredicateFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   @Override

@@ -17,19 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.storage.google.output;
 
-public abstract class SearchQueryDecisionHelper
+
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+
+public class GoogleOutputConfigTest
 {
-  private final double bitmapIntersectCost;
 
-  protected SearchQueryDecisionHelper(final double bitmapIntersectCost)
-  {
-    this.bitmapIntersectCost = bitmapIntersectCost;
-  }
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  public double getBitmapIntersectCost()
+  private static final String BUCKET = "bucket";
+  private static final String PREFIX = "prefix";
+  private static final int MAX_RETRY_COUNT = 0;
+
+  @Test
+  public void testTooLargeChunkSize()
   {
-    return bitmapIntersectCost;
+    HumanReadableBytes chunkSize = new HumanReadableBytes("17MiB");
+    Assert.assertThrows(
+        DruidException.class,
+        () -> new GoogleOutputConfig(BUCKET, PREFIX, temporaryFolder.newFolder(), chunkSize, MAX_RETRY_COUNT)
+    );
   }
 }

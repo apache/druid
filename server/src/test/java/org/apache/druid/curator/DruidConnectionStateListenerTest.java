@@ -19,31 +19,22 @@
 
 package org.apache.druid.curator;
 
-import com.google.common.collect.ImmutableList;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.curator.framework.state.ConnectionState;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 public class DruidConnectionStateListenerTest
 {
-  private TestEmitter emitter;
+  private StubServiceEmitter emitter;
   private DruidConnectionStateListener listener;
 
   @Before
   public void setUp()
   {
-    emitter = new TestEmitter();
+    emitter = new StubServiceEmitter("DruidConnectionStateListenerTest", "localhost");
     listener = new DruidConnectionStateListener(emitter);
   }
 
@@ -70,10 +61,7 @@ public class DruidConnectionStateListenerTest
   {
     listener.doMonitor(emitter);
     Assert.assertEquals(1, emitter.getEvents().size());
-
-    final Map<String, Object> eventMap = emitter.getEvents().get(0).toMap();
-    Assert.assertEquals("zk/connected", eventMap.get("metric"));
-    Assert.assertEquals(0, eventMap.get("value"));
+    emitter.verifyValue("zk/connected", 0);
   }
 
   @Test
@@ -83,9 +71,7 @@ public class DruidConnectionStateListenerTest
     listener.doMonitor(emitter);
     Assert.assertEquals(1, emitter.getEvents().size());
 
-    final Map<String, Object> eventMap = emitter.getEvents().get(0).toMap();
-    Assert.assertEquals("zk/connected", eventMap.get("metric"));
-    Assert.assertEquals(1, eventMap.get("value"));
+    emitter.verifyValue("zk/connected", 1);
   }
 
   @Test
@@ -95,9 +81,7 @@ public class DruidConnectionStateListenerTest
     listener.doMonitor(emitter);
     Assert.assertEquals(2, emitter.getEvents().size()); // 2 because stateChanged emitted an alert
 
-    final Map<String, Object> eventMap = emitter.getEvents().get(1).toMap();
-    Assert.assertEquals("zk/connected", eventMap.get("metric"));
-    Assert.assertEquals(0, eventMap.get("value"));
+    emitter.verifyValue("zk/connected", 0);
   }
 
   @Test
@@ -106,9 +90,9 @@ public class DruidConnectionStateListenerTest
     listener.stateChanged(null, ConnectionState.SUSPENDED);
     Assert.assertEquals(1, emitter.getEvents().size());
 
-    final Map<String, Object> alertMap = emitter.getEvents().get(0).toMap();
-    Assert.assertEquals("alerts", alertMap.get("feed"));
-    Assert.assertEquals("ZooKeeper connection[SUSPENDED]", alertMap.get("description"));
+    final AlertEvent alert = emitter.getAlerts().get(0);
+    Assert.assertEquals("alerts", alert.getFeed());
+    Assert.assertEquals("ZooKeeper connection[SUSPENDED]", alert.getDescription());
   }
 
   @Test
@@ -120,31 +104,8 @@ public class DruidConnectionStateListenerTest
     listener.stateChanged(null, ConnectionState.RECONNECTED);
     Assert.assertEquals(2, emitter.getEvents().size()); // the second stateChanged emits a metric
 
-    final Map<String, Object> eventMap = emitter.getEvents().get(1).toMap();
-    Assert.assertEquals("metrics", eventMap.get("feed"));
-    Assert.assertEquals("zk/reconnect/time", eventMap.get("metric"));
-    MatcherAssert.assertThat(eventMap.get("value"), CoreMatchers.instanceOf(Long.class));
-    MatcherAssert.assertThat(((Number) eventMap.get("value")).longValue(), Matchers.greaterThanOrEqualTo(0L));
+    long observedReconnectTime = emitter.getValue("zk/reconnect/time", null).longValue();
+    Assert.assertTrue(observedReconnectTime >= 0);
   }
 
-  private static class TestEmitter extends NoopServiceEmitter
-  {
-    @GuardedBy("events")
-    private final List<Event> events = new ArrayList<>();
-
-    @Override
-    public void emit(Event event)
-    {
-      synchronized (events) {
-        events.add(event);
-      }
-    }
-
-    public List<Event> getEvents()
-    {
-      synchronized (events) {
-        return ImmutableList.copyOf(events);
-      }
-    }
-  }
 }
