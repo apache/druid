@@ -85,6 +85,8 @@ public class PlannerContext
   public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = NullHandling.replaceWithDefault();
 
+  // CONTEXT KEY FOR EXPLAIN ANALYZE CASES
+  public static final String CTX_EXPLAIN_ANALYZE = "analyze";
 
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
@@ -519,6 +521,11 @@ public class PlannerContext
   {
     if (feature == EngineFeature.WINDOW_FUNCTIONS &&
         !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
+      // Short-circuit: feature requires context flag.
+      return false;
+    }
+    if (feature == EngineFeature.EXPLAIN_ANALYZE &&
+        !QueryContexts.getAsBoolean(CTX_EXPLAIN_ANALYZE, queryContext.get(CTX_EXPLAIN_ANALYZE), false)) {
       // Short-circuit: feature requires context flag.
       return false;
     }
