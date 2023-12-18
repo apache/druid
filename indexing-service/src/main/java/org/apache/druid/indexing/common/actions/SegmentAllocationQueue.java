@@ -190,8 +190,10 @@ public class SegmentAllocationQueue
     // t2 -> executor pops batch, processes all requests in it
     // t1 -> new request is added to dangling batch and is never picked up
     // Solution: Perform the following operations only inside keyToBatch.compute():
-    // 1. Add or remove from map, add batch to queue
-    // 2. Mark batch as started
+    // 1. Add or remove from map
+    // 2. Add batch to queue
+    // 3. Mark batch as started
+    // 4. Update requests in batch
     keyToBatch.compute(requestKey, (key, existingBatch) -> {
       if (existingBatch == null || existingBatch.isStarted() || existingBatch.isFull()) {
         AllocateRequestBatch newBatch = new AllocateRequestBatch(key);
@@ -266,7 +268,7 @@ public class SegmentAllocationQueue
       catch (Throwable t) {
         currentBatch.failPendingRequests(t);
         processed = true;
-        log.error(t, "Error while processing batch [%s]", currentBatch);
+        log.error(t, "Error while processing batch [%s]", currentBatch.key);
       }
 
       // Requeue if not fully processed yet
@@ -552,10 +554,6 @@ public class SegmentAllocationQueue
     /**
      * Map from allocate requests (represents a single SegmentAllocateAction)
      * to the future of allocated segment id.
-     * <p>
-     * This must be accessed through methods synchronized on this batch.
-     * It is to avoid races between a new request being added just when the batch
-     * is being processed.
      */
     private final Map<SegmentAllocateRequest, CompletableFuture<SegmentIdWithShardSpec>>
         requestToFuture = new HashMap<>();
@@ -575,7 +573,7 @@ public class SegmentAllocationQueue
       return System.currentTimeMillis() - queueTimeMillis >= maxWaitTimeMillis;
     }
 
-    synchronized void resetQueueTime()
+    void resetQueueTime()
     {
       queueTimeMillis = System.currentTimeMillis();
       started = false;
