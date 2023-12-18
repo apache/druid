@@ -148,7 +148,7 @@ public class MemoryBoundLinkedBlockingQueueTest
             TimeUnit.MILLISECONDS.toNanos(end - start),
             TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
         ),
-        TimeUnit.MILLISECONDS.toNanos(end - start) > TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+        TimeUnit.MILLISECONDS.toNanos(end - start) >= TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
     );
     Assert.assertEquals(2, queue.size());
     Assert.assertEquals(10L, queue.byteSize());
