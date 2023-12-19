@@ -32,7 +32,6 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Optional;
 
 public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -75,20 +74,22 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       throw validationFailed("unit arg must be literal");
     }
 
-    Optional<DateTimeZone> timeZone = Optional.empty();
+    ISOChronology chronology = null;
     if (args.size() > 2 && args.get(2).isLiteral()) {
-      timeZone = Optional.of(ExprUtils.toTimeZone(args.get(2)));
+      DateTimeZone timeZone = ExprUtils.toTimeZone(args.get(2));
+      chronology = ISOChronology.getInstance(timeZone);
     }
 
     final Unit unit = Unit.valueOf(StringUtils.toUpperCase((String) args.get(1).getLiteralValue()));
 
-    final Optional<ISOChronology> chronologyOptional = timeZone.map(value -> ISOChronology.getInstance(value));
-
     class TimestampExtractExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private TimestampExtractExpr(List<Expr> args)
+      private ISOChronology chronology;
+
+      private TimestampExtractExpr(List<Expr> args, ISOChronology chronology)
       {
         super(FN_NAME, args);
+        this.chronology = chronology;
       }
 
       @Nonnull
@@ -100,14 +101,12 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           // Return null if the argument if null.
           return ExprEval.of(null);
         }
-        final ISOChronology chronology = chronologyOptional.orElseGet(() -> {
-          Optional<String> timeZoneOptional = args.size() > 2
-                                              ? Optional.ofNullable((String) args.get(2).eval(bindings).value())
-                                              : Optional.empty();
-          DateTimeZone timeZoneVal = timeZoneOptional.map(value -> DateTimes.inferTzFromString(value))
-                                                     .orElse(DateTimeZone.UTC);
-          return ISOChronology.getInstance(timeZoneVal);
-        });
+        if (args.size() > 2 && null == chronology) {
+          String timeZoneVal = (String) args.get(2).eval(bindings).value();
+          DateTimeZone timeZone = timeZoneVal != null ? DateTimes.inferTzFromString(timeZoneVal) : DateTimeZone.UTC;
+          chronology = ISOChronology.getInstance(timeZone);
+        }
+
         final DateTime dateTime = new DateTime(val, chronology);
         long epoch = dateTime.getMillis() / 1000;
 
@@ -191,6 +190,6 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       }
     }
 
-    return new TimestampExtractExpr(args);
+    return new TimestampExtractExpr(args, chronology);
   }
 }
