@@ -66,6 +66,11 @@ public class SqlExecutionReporter
     this.startNs = System.nanoTime();
   }
 
+  public long getStartNs()
+  {
+    return startNs;
+  }
+
   public void failed(Throwable e)
   {
     this.e = e;

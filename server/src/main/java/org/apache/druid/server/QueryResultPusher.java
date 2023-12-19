@@ -53,6 +53,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public abstract class QueryResultPusher
 {
@@ -104,6 +105,8 @@ public abstract class QueryResultPusher
    * @return a new ResultsWriter
    */
   public abstract ResultsWriter start();
+
+  public abstract long getStartNs();
 
   public abstract void writeException(Exception e, OutputStream out) throws IOException;
 
@@ -159,6 +162,9 @@ public abstract class QueryResultPusher
             final QueryRuntimeAnalysis analysis;
 
             analysis = (QueryRuntimeAnalysis) queryResponse.getResponseContext().getQueryMetrics();
+            // build our own query/time for this guy, the real one happens after the stream is closed
+            final long queryTimeNs = System.nanoTime() - getStartNs();
+            analysis.addDiagnosticMeasurement("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
             String runtimeAnalysis = jsonMapper.writeValueAsString(analysis);
             HttpField runtimeAnalysisField = new HttpField("X-Druid-Query-Runtime-Analysis", runtimeAnalysis);
             fields.add(runtimeAnalysisField);

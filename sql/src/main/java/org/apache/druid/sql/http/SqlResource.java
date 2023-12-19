@@ -333,6 +333,12 @@ public class SqlResource
     }
 
     @Override
+    public long getStartNs()
+    {
+      return stmt.reporter().getStartNs();
+    }
+
+    @Override
     public void writeException(Exception ex, OutputStream out) throws IOException
     {
       if (ex instanceof SanitizableException) {

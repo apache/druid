@@ -131,6 +131,11 @@ public class QueryLifecycle
     this.startNs = startNs;
   }
 
+  public long getStartNs()
+  {
+    return startNs;
+  }
+
   /**
    * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
    * does it all in one call. Logs and metrics are emitted when the Sequence is either fully iterated or throws an

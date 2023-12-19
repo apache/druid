@@ -10,28 +10,29 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class QueryRuntimeAnalysis<QueryType extends Query<?>, V extends QueryMetrics<QueryType> > implements QueryMetrics<QueryType>
 {
   protected V delegate;
-  protected Map<String, Object> debugInfo;
-  protected Map<String, Number> metrics;
-  protected List<QueryRuntimeAnalysis> children;
+  protected ConcurrentMap<String, Object> debugInfo;
+  protected ConcurrentMap<String, Number> metrics;
+  protected ConcurrentLinkedQueue<QueryRuntimeAnalysis> children;
 
   public QueryRuntimeAnalysis(V delegate)
   {
     this.delegate = delegate;
-    this.debugInfo = new HashMap<>();
-    this.metrics = new HashMap<>();
-    this.children = new ArrayList<>();
+    this.debugInfo = new ConcurrentHashMap<>();
+    this.metrics = new ConcurrentHashMap<>();
+    this.children = new ConcurrentLinkedQueue<>();
   }
 
   @JsonCreator
@@ -42,9 +43,9 @@ public class QueryRuntimeAnalysis<QueryType extends Query<?>, V extends QueryMet
   )
   {
     this.delegate = null;
-    this.debugInfo = debugInfo;
-    this.metrics = metrics;
-    this.children = children;
+    this.debugInfo = new ConcurrentHashMap<>(debugInfo);
+    this.metrics = new ConcurrentHashMap<>(metrics);
+    this.children = new ConcurrentLinkedQueue<>(children);
   }
 
   /**
@@ -447,7 +448,7 @@ public class QueryRuntimeAnalysis<QueryType extends Query<?>, V extends QueryMet
   }
 
   @JsonProperty
-  public List<QueryRuntimeAnalysis> getChildren()
+  public ConcurrentLinkedQueue<QueryRuntimeAnalysis> getChildren()
   {
     return children;
   }
