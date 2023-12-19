@@ -22,6 +22,7 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -44,6 +45,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManagerProvider;
+import org.apache.druid.server.audit.AuditManagerConfig;
+import org.apache.druid.server.audit.AuditSerdeHelper;
+import org.apache.druid.server.audit.SQLAuditManager;
 
 public class SQLMetadataStorageDruidModule implements Module
 {
@@ -78,6 +82,8 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageActionHandlerFactory.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageUpdaterJobHandler.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
+
+    configureAuditManager(binder);
   }
 
   @Override
@@ -127,5 +133,23 @@ public class SQLMetadataStorageDruidModule implements Module
             .addBinding(type)
             .to(SQLMetadataSupervisorManager.class)
             .in(LazySingleton.class);
+  }
+
+  private void configureAuditManager(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.audit.manager", AuditManagerConfig.class);
+
+    PolyBind.createChoice(
+        binder,
+        "druid.audit.manager.type",
+        Key.get(AuditManager.class),
+        Key.get(SQLAuditManager.class)
+    );
+    PolyBind.optionBinder(binder, Key.get(AuditManager.class))
+        .addBinding("sql")
+        .to(SQLAuditManager.class)
+        .in(LazySingleton.class);
+
+    binder.bind(AuditSerdeHelper.class).in(LazySingleton.class);
   }
 }
