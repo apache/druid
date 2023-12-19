@@ -57,7 +57,7 @@ import java.util.Set;
     @Type(name = LocalInputSource.TYPE_KEY, value = LocalInputSource.class),
     @Type(name = HttpInputSource.TYPE_KEY, value = HttpInputSource.class),
     @Type(name = InlineInputSource.TYPE_KEY, value = InlineInputSource.class),
-    @Type(name = CombiningInputSource.TYPE_KEY, value = CombiningInputSource.class)
+    @Type(name = CombiningInputSource.TYPE_KEY, value = CombiningInputSource.class),
     @Type(name = DeltaInputSource.TYPE_KEY, value = DeltaInputSource.class)
 })
 public interface InputSource
