@@ -1183,6 +1183,10 @@ public class StreamAppenderator implements Appenderator
     if (intermediateTempExecutor != null) {
       intermediateTempExecutor.shutdownNow();
     }
+
+    if (exec != null) {
+      exec.shutdownNow();
+    }
   }
 
   private void resetNextFlush()
@@ -1413,12 +1417,6 @@ public class StreamAppenderator implements Appenderator
                  .emit();
             }
 
-            log.info(
-                "Unannounced segment[%s], scheduling drop in [%d] millisecs",
-                identifier,
-                segmentLoaderConfig.getDropSegmentDelayMillis()
-            );
-
             Runnable removeRunnable = () -> {
               droppingSinks.remove(identifier);
               sinkTimeline.remove(
@@ -1441,8 +1439,17 @@ public class StreamAppenderator implements Appenderator
             };
 
             if (segmentLoaderConfig == null) {
+              log.info(
+                  "Unannounced segment[%s]",
+                  identifier
+              );
               removeRunnable.run();
             } else {
+              log.info(
+                  "Unannounced segment[%s], scheduling drop in [%d] millisecs",
+                  identifier,
+                  segmentLoaderConfig.getDropSegmentDelayMillis()
+              );
               // Keep the segments in the cache and sinkTimeline for dropSegmentDelay after unannouncing the segments
               // This way, in transit queries which still see the segments in this peon would be able to query the
               // segments and not throw NullPtr exceptions.
