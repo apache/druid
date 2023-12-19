@@ -140,7 +140,7 @@ public class OverlordResource
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
   private static final Set<String> AUDITED_TASK_TYPES
-      = ImmutableSet.of("index", "index_parallel", "compact", "index_hadoop");
+      = ImmutableSet.of("index", "index_parallel", "compact", "index_hadoop", "kill");
 
   private enum TaskStateLookup
   {

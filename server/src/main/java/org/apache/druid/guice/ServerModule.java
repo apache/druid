@@ -23,7 +23,10 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.MapBinder;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DruidServiceSerializerModifier;
@@ -33,6 +36,10 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.audit.AuditManagerConfig;
+import org.apache.druid.server.audit.AuditSerdeHelper;
+import org.apache.druid.server.audit.LoggingAuditManager;
+import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import java.util.List;
@@ -48,6 +55,8 @@ public class ServerModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, ZK_PATHS_PROPERTY_BASE, ZkPathsConfig.class);
     JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
+
+    configureAuditManager(binder);
   }
 
   @Provides @LazySingleton
@@ -64,5 +73,29 @@ public class ServerModule implements DruidModule
             .addDeserializer(StringObjectPairList.class, new ToStringObjectPairListDeserializer())
             .setSerializerModifier(new DruidServiceSerializerModifier())
     );
+  }
+
+  private void configureAuditManager(Binder binder)
+  {
+    JsonConfigProvider.bind(binder, "druid.audit.manager", AuditManagerConfig.class);
+
+    PolyBind.createChoice(
+        binder,
+        "druid.audit.manager.type",
+        Key.get(AuditManager.class),
+        Key.get(SQLAuditManager.class)
+    );
+    final MapBinder<String, AuditManager> auditManagerBinder
+        = PolyBind.optionBinder(binder, Key.get(AuditManager.class));
+    auditManagerBinder
+        .addBinding("log")
+        .to(LoggingAuditManager.class)
+        .in(LazySingleton.class);
+    auditManagerBinder
+        .addBinding("sql")
+        .to(SQLAuditManager.class)
+        .in(LazySingleton.class);
+
+    binder.bind(AuditSerdeHelper.class).in(LazySingleton.class);
   }
 }
