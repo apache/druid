@@ -65,10 +65,12 @@ data: {
       "CLUSTERED"
       "OVERWRITE"
       "PARTITIONED"
+      "ANALYZE"
     ]
 
     nonReservedKeywordsToAdd: [
       "OVERWRITE"
+      "ANALYZE"
     ]
 
     # List of methods for parsing custom SQL statements.
@@ -78,6 +80,7 @@ data: {
       "DruidSqlInsertEof()"
       "DruidSqlExplain()"
       "DruidSqlReplaceEof()"
+      "DruidSqlExplainAnalyze()"
     ]
 
     # List of methods for parsing custom data types.
@@ -95,6 +98,7 @@ data: {
       "common.ftl"
       "insert.ftl"
       "explain.ftl"
+      "explain-analyze.ftl"
       "replace.ftl"
       "from.ftl"
     ]
