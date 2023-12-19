@@ -326,7 +326,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public GroupByQueryMetrics makeMetrics(GroupByQuery query)
   {
     GroupByQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
-    if (query.context().isDebug()) {
+    if (query.context().isAnalyze()) {
       queryMetrics = new GroupByQueryRuntimeAnalysis(queryMetrics);
     }
     queryMetrics.query(query);
