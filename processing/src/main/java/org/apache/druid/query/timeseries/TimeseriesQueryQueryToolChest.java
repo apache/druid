@@ -266,7 +266,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public TimeseriesQueryMetrics makeMetrics(TimeseriesQuery query)
   {
     TimeseriesQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
-    if (query.context().isDebug()) {
+    if (query.context().isAnalyze()) {
       queryMetrics = new TimeseriesQueryRuntimeAnalysis(queryMetrics);
     }
     queryMetrics.query(query);
