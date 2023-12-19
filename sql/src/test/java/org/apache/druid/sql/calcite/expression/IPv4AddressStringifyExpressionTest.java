@@ -25,6 +25,8 @@ import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class IPv4AddressStringifyExpressionTest extends ExpressionTestBase
+public class IPv4AddressStringifyExpressionTest extends CalciteTestBase
 {
   private static final long VALID = 3232235521L;
   private static final String EXPECTED = "192.168.0.1";
@@ -57,28 +59,32 @@ public class IPv4AddressStringifyExpressionTest extends ExpressionTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(ExpressionValidationException.class, "requires 1 argument");
-
-    testExpression(
-        Collections.emptyList(),
-        buildExpectedExpression(),
-        IGNORE_EXPECTED_RESULT
+    Throwable t = Assert.assertThrows(
+        ExpressionValidationException.class,
+        () -> testExpression(
+            Collections.emptyList(),
+            buildExpectedExpression(),
+            IGNORE_EXPECTED_RESULT
+        )
     );
+    Assert.assertEquals("Function[ipv4_stringify] requires 1 argument", t.getMessage());
   }
 
   @Test
   public void testTooManyArgs()
   {
-    expectException(ExpressionValidationException.class, "requires 1 argument");
-
-    testExpression(
-        Arrays.asList(
-            testHelper.makeLiteral(VALID),
-            testHelper.makeLiteral(VALID)
-        ),
-        buildExpectedExpression(VALID, VALID),
-        IGNORE_EXPECTED_RESULT
+    Throwable t = Assert.assertThrows(
+        ExpressionValidationException.class,
+        () -> testExpression(
+            Arrays.asList(
+                testHelper.makeLiteral(VALID),
+                testHelper.makeLiteral(VALID)
+            ),
+            buildExpectedExpression(VALID, VALID),
+            IGNORE_EXPECTED_RESULT
+        )
     );
+    Assert.assertEquals("Function[ipv4_stringify] requires 1 argument", t.getMessage());
   }
 
   @Test
