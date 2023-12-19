@@ -88,6 +88,7 @@ public class SimpleServerView implements TimelineServerView
                 warehouse,
                 NOOP_QUERY_WATCHER,
                 objectMapper,
+                objectMapper,
                 httpClient,
                 server.getScheme(),
                 server.getHost(),

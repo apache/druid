@@ -101,6 +101,7 @@ public class DirectDruidClientTest
         new ReflectionQueryToolChestWarehouse(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new DefaultObjectMapper(),
+        new DefaultObjectMapper(),
         httpClient,
         "http",
         hostName,
@@ -165,6 +166,7 @@ public class DirectDruidClientTest
     DirectDruidClient client2 = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        new DefaultObjectMapper(),
         new DefaultObjectMapper(),
         httpClient,
         "http",

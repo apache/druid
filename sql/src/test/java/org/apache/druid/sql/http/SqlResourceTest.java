@@ -2261,7 +2261,7 @@ public class SqlResourceTest extends CalciteTestBase
               executeLatch.lhs.countDown();
               final ResponseContext respContext = resp.getResponseContext();
               respContext.merge(responseContextSupplier.get());
-              return new QueryResponse<>(sequence, respContext, null);
+              return new QueryResponse<>(sequence, respContext);
             } else {
               try {
                 if (!executeLatch.lhs.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
@@ -2278,7 +2278,7 @@ public class SqlResourceTest extends CalciteTestBase
           Sequence<Object[]> sequence = sequenceMapFn.apply(resp.getResults());
           final ResponseContext respContext = resp.getResponseContext();
           respContext.merge(responseContextSupplier.get());
-          return new QueryResponse<>(sequence, respContext, null);
+          return new QueryResponse<>(sequence, respContext);
         }
       };
     }
