@@ -97,6 +97,7 @@ public class ExpressionsTest extends ExpressionTestBase
       .add("newliney", ColumnType.STRING)
       .add("tstr", ColumnType.STRING)
       .add("dstr", ColumnType.STRING)
+      .add("timezone", ColumnType.STRING)
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
@@ -121,6 +122,7 @@ public class ExpressionsTest extends ExpressionTestBase
       .put("newliney", "beep\nboop")
       .put("tstr", "2000-02-03 04:05:06")
       .put("dstr", "2000-02-03")
+      .put("timezone", "America/Los_Angeles")
       .build();
 
   private ExpressionTestHelper testHelper;
@@ -1834,6 +1836,17 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("America/Los_Angeles")
         ),
         makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
+        2L
+    );
+
+    testHelper.testExpressionString(
+        new TimeExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("DAY"),
+            testHelper.makeInputRef("timezone")
+        ),
+        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY',\"timezone\")"),
         2L
     );
   }
