@@ -95,6 +95,8 @@ public enum EngineFeature
    */
   UNNEST,
 
+  EXPLAIN_ANALYZE,
+
   /**
    * Planner is permitted to use {@link org.apache.druid.sql.calcite.planner.JoinAlgorithm#BROADCAST} with RIGHT
    * and FULL join. Not guaranteed to produce correct results in either the native or MSQ engines, but we allow

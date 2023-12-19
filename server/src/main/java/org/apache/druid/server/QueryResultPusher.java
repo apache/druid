@@ -34,10 +34,13 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryRuntimeAnalysis;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpFields;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -50,6 +53,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public abstract class QueryResultPusher
 {
@@ -66,7 +70,7 @@ public abstract class QueryResultPusher
 
   private StreamingHttpResponseAccumulator accumulator;
   private AsyncContext asyncContext;
-  private HttpServletResponse response;
+  private org.eclipse.jetty.server.Response response;
 
   public QueryResultPusher(
       HttpServletRequest request,
@@ -101,6 +105,8 @@ public abstract class QueryResultPusher
    * @return a new ResultsWriter
    */
   public abstract ResultsWriter start();
+
+  public abstract long getStartNs();
 
   public abstract void writeException(Exception e, OutputStream out) throws IOException;
 
@@ -137,7 +143,7 @@ public abstract class QueryResultPusher
       // accumulator, we cannot properly stream results back, because the accumulator won't release control of the
       // Response until it has consumed the underlying Sequence.
       asyncContext = request.startAsync();
-      response = (HttpServletResponse) asyncContext.getResponse();
+      response = (org.eclipse.jetty.server.Response) asyncContext.getResponse();
       response.setHeader(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
       for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
         response.setHeader(entry.getKey(), entry.getValue());
@@ -149,6 +155,27 @@ public abstract class QueryResultPusher
       accumulator.flush();
 
       counter.incrementSuccess();
+      if (queryResponse.getResponseContext().getQueryMetrics() instanceof QueryRuntimeAnalysis) {
+        response.setTrailers(() -> {
+          HttpFields fields = new HttpFields();
+          try {
+            final QueryRuntimeAnalysis analysis;
+
+            analysis = (QueryRuntimeAnalysis) queryResponse.getResponseContext().getQueryMetrics();
+            // build our own query/time for this guy, the real one happens after the stream is closed
+            final long queryTimeNs = System.nanoTime() - getStartNs();
+            analysis.addDiagnosticMeasurement("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+            String runtimeAnalysis = jsonMapper.writeValueAsString(analysis);
+            HttpField runtimeAnalysisField = new HttpField("X-Druid-Query-Runtime-Analysis", runtimeAnalysis);
+            fields.add(runtimeAnalysisField);
+          }
+          catch (JsonProcessingException e) {
+            log.warn(e, "Unable to serialize query runtime analysis for query [%s]", queryId);
+          }
+
+          return fields;
+        });
+      }
       accumulator.close();
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }
@@ -385,7 +412,7 @@ public abstract class QueryResultPusher
         // and encodes the string using ASCII, so 1 char is = 1 byte
         ResponseContext.SerializationResult serializationResult;
         try {
-          serializationResult = responseContext.serializeWith(
+          serializationResult = responseContext.serializeHeadersWith(
               jsonMapper,
               responseContextConfig.getMaxResponseContextHeaderSize()
           );

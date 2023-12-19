@@ -59,6 +59,7 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.groupby.GroupByQueryRuntimeAnalysis;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
@@ -265,6 +266,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public TimeseriesQueryMetrics makeMetrics(TimeseriesQuery query)
   {
     TimeseriesQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics();
+    if (query.context().isDebug()) {
+      queryMetrics = new TimeseriesQueryRuntimeAnalysis(queryMetrics);
+    }
     queryMetrics.query(query);
     return queryMetrics;
   }

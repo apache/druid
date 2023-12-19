@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.http.client.response;
 
 import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunkTrailer;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
@@ -72,6 +73,22 @@ public interface HttpResponseHandler<IntermediateType, FinalType>
       HttpChunk chunk,
       long chunkNum
   );
+
+  /**
+   * Called for chunked responses, indicating that response trailer has arrived.
+   *
+   * @param clientResponse last response returned by the prior handleResponse() or handleChunk()
+   * @param trailer        the response trailer
+   *
+   * @return response that may be "finished" or "unfinished".
+   */
+  default ClientResponse<IntermediateType> handleTrailer(
+      ClientResponse<IntermediateType> clientResponse,
+      HttpChunkTrailer trailer
+  )
+  {
+    return clientResponse;
+  }
 
   /**
    * Called after the final handleResponse() or handleChunk() call, signifying that no more data

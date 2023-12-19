@@ -62,7 +62,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -130,6 +129,11 @@ public class QueryLifecycle
     this.authConfig = authConfig;
     this.startMs = startMs;
     this.startNs = startNs;
+  }
+
+  public long getStartNs()
+  {
+    return startNs;
   }
 
   /**
@@ -278,11 +282,11 @@ public class QueryLifecycle
     transition(State.AUTHORIZED, State.EXECUTING);
 
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
+    final QueryPlus<T> queryPlus = QueryPlus.wrap((Query<T>) baseQuery)
+                                           .withIdentity(authenticationResult.getIdentity());
 
     @SuppressWarnings("unchecked")
-    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
-                                  .withIdentity(authenticationResult.getIdentity())
-                                  .run(texasRanger, responseContext);
+    final Sequence<T> res = queryPlus.run(texasRanger, responseContext);
 
     return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
   }

@@ -45,6 +45,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
 import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunkTrailer;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -262,6 +263,8 @@ public class NettyHttpClient extends AbstractHttpClient
                 }
 
                 if (httpChunk.isLast()) {
+                  HttpChunkTrailer trailer = (HttpChunkTrailer) httpChunk;
+                  handler.handleTrailer(response, trailer);
                   finishRequest();
                 } else {
                   response = handler.handleChunk(response, httpChunk, ++currentChunkNum);

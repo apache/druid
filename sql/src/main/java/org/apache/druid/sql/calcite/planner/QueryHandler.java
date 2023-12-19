@@ -335,7 +335,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
         final Enumerable<?> enumerable = theRel.bind(dataContext);
         final Enumerator<?> enumerator = enumerable.enumerator();
-        return QueryResponse.withEmptyContext(
+        return QueryResponse.withEmptyContextAndDebugInfo(
             Sequences.withBaggage(new BaseSequence<>(
                 new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
                 {
@@ -419,7 +419,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     }
 
     final Supplier<QueryResponse<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        QueryResponse.withEmptyContext(
+        QueryResponse.withEmptyContextAndDebugInfo(
             Sequences.simple(ImmutableList.of(new Object[]{explanation, resourcesString, explainAttributesString}))
         )
     );

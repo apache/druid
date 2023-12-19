@@ -20,6 +20,7 @@
 
 exports.SQL_KEYWORDS = [
   'EXPLAIN PLAN FOR',
+  'EXPLAIN ANALYZE',
   'WITH',
   'AS',
   'SELECT',

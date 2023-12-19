@@ -424,4 +424,19 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.
    */
   void emit(ServiceEmitter emitter);
+
+  default void addDiagnostic(String identifier, Object value)
+  {
+    // no op
+  }
+
+  default void addDiagnosticMeasurement(String identifier, Number value)
+  {
+    // no op
+  }
+
+  default void addChildDiagnostic(QueryRuntimeAnalysis child)
+  {
+    // no op
+  }
 }
