@@ -87,6 +87,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   {
     QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
     final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
+    responseContext.setQueryMetrics(queryMetrics);
 
     applyCustomDimensions.accept(queryMetrics);
 

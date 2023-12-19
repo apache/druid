@@ -74,6 +74,8 @@ public class QueryContexts
   public static final String USE_CACHE_KEY = "useCache";
   public static final String SECONDARY_PARTITION_PRUNING_KEY = "secondaryPartitionPruning";
   public static final String ENABLE_DEBUG = "debug";
+  public static final String ENABLE_ANALYZE = "analyze";
+
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
   public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
@@ -115,6 +117,8 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
+
+  public static final boolean DEFAULT_ENABLE_ANALYZE = false;
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = 20;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
 

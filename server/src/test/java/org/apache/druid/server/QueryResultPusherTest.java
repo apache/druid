@@ -127,6 +127,12 @@ public class QueryResultPusherTest
       {
         return resultWriter;
       }
+
+      @Override
+      public long getStartNs()
+      {
+        return 0;
+      }
     };
 
     pusher.push();

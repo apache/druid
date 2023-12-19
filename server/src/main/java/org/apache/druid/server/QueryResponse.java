@@ -33,7 +33,7 @@ public class QueryResponse<T>
     this.responseContext = responseContext;
   }
 
-  public static <T> QueryResponse<T> withEmptyContext(Sequence<T> results)
+  public static <T> QueryResponse<T> withEmptyContextAndDebugInfo(Sequence<T> results)
   {
     return new QueryResponse<T>(results, ResponseContext.createEmpty());
   }

@@ -583,6 +583,12 @@ public class QueryResource implements QueryCountStatsProvider
     }
 
     @Override
+    public long getStartNs()
+    {
+      return queryLifecycle.getStartNs();
+    }
+
+    @Override
     public void writeException(Exception e, OutputStream out) throws IOException
     {
       final ObjectWriter objectWriter = queryLifecycle.newOutputWriter(io);

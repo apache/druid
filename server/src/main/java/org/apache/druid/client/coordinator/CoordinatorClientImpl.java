@@ -161,4 +161,9 @@ public class CoordinatorClientImpl implements CoordinatorClient
   {
     return new CoordinatorClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
   }
+
+  public static void main(String[] args)
+  {
+    System.out.println(Math.ulp(0.2f));
+  }
 }

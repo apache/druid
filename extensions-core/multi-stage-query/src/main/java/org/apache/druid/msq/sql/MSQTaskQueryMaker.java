@@ -279,7 +279,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     );
 
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);
-    return QueryResponse.withEmptyContext(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
+    return QueryResponse.withEmptyContextAndDebugInfo(Sequences.simple(Collections.singletonList(new Object[]{taskId})));
   }
 
   private static Map<String, ColumnType> buildAggregationIntermediateTypeMap(final DruidQuery druidQuery)

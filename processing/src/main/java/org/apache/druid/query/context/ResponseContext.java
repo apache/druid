@@ -34,6 +34,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
@@ -95,6 +96,7 @@ import java.util.stream.Collectors;
 @PublicApi
 public abstract class ResponseContext
 {
+
   /**
    * The base interface of a response context key.
    * Should be implemented by every context key.
@@ -555,6 +557,8 @@ public abstract class ResponseContext
     }
   }
 
+  private QueryMetrics<?> queryMetrics;
+
   protected abstract Map<Key, Object> getDelegate();
 
   public Map<String, Object> toMap()
@@ -761,6 +765,16 @@ public abstract class ResponseContext
     });
   }
 
+  public void setQueryMetrics(QueryMetrics<?> queryMetrics)
+  {
+    this.queryMetrics = queryMetrics;
+  }
+
+  public QueryMetrics<?> getQueryMetrics()
+  {
+    return queryMetrics;
+  }
+
   /**
    * Serializes the context given that the resulting string length is less than the provided limit.
    * This method removes some elements from context collections if it's needed to satisfy the limit.
@@ -771,7 +785,7 @@ public abstract class ResponseContext
    * the array which serialized value length is the biggest.
    * The resulting string will be correctly deserialized to {@link ResponseContext}.
    */
-  public SerializationResult serializeWith(ObjectMapper objectMapper, int maxCharsNumber)
+  public SerializationResult serializeHeadersWith(ObjectMapper objectMapper, int maxCharsNumber)
       throws JsonProcessingException
   {
     final Map<Key, Object> headerMap =

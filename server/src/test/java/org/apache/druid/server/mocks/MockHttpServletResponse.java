@@ -21,6 +21,11 @@ package org.apache.druid.server.mocks;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.server.HttpChannel;
+import org.eclipse.jetty.server.HttpOutput;
+import org.eclipse.jetty.server.Response;
 
 import javax.annotation.Nullable;
 import javax.servlet.ServletOutputStream;
@@ -34,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /**
  * A fake HttpServletResponse used in tests.  A lot of methods are implemented as
@@ -42,8 +48,13 @@ import java.util.Locale;
  * {@code throw new UnsupportedOperationException} gets thrown out from one of these methods in a test, it is expected
  * that the developer will implement the necessary methods.
  */
-public class MockHttpServletResponse implements HttpServletResponse
+public class MockHttpServletResponse extends Response
 {
+  public MockHttpServletResponse()
+  {
+    super(null, null);
+  }
+
   public static MockHttpServletResponse forRequest(MockHttpServletRequest req)
   {
     MockHttpServletResponse response = new MockHttpServletResponse();
@@ -64,6 +75,8 @@ public class MockHttpServletResponse implements HttpServletResponse
   private int statusCode;
   private String contentType;
   private String characterEncoding;
+
+  private String runtimeAnalysis;
 
   @Override
   public void reset()
@@ -313,6 +326,17 @@ public class MockHttpServletResponse implements HttpServletResponse
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public void setTrailers(Supplier<HttpFields> trailers)
+  {
+    if (null != trailers) {
+      HttpField httpField = trailers.get().getField("X-Druid-Query-Runtime-Analysis");
+      if (null != httpField) {
+        runtimeAnalysis = httpField.getValue();
+      }
+    }
+  }
+
   public void forceCommitted()
   {
     if (!isCommitted()) {
@@ -336,5 +360,9 @@ public class MockHttpServletResponse implements HttpServletResponse
   public Locale getLocale()
   {
     throw new UnsupportedOperationException();
+  }
+
+  public String getQueryRuntimeAnalysis() {
+    return runtimeAnalysis;
   }
 }

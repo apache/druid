@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedClient;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -37,6 +38,7 @@ public class DirectDruidClientFactory
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
   private final ObjectMapper smileMapper;
+  private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
 
   @Inject
@@ -45,6 +47,7 @@ public class DirectDruidClientFactory
       final QueryToolChestWarehouse warehouse,
       final QueryWatcher queryWatcher,
       final @Smile ObjectMapper smileMapper,
+      final @Json ObjectMapper jsonMapper,
       final @EscalatedClient HttpClient httpClient
   )
   {
@@ -52,6 +55,7 @@ public class DirectDruidClientFactory
     this.warehouse = warehouse;
     this.queryWatcher = queryWatcher;
     this.smileMapper = smileMapper;
+    this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
   }
 
@@ -61,6 +65,7 @@ public class DirectDruidClientFactory
         warehouse,
         queryWatcher,
         smileMapper,
+        jsonMapper,
         httpClient,
         server.getScheme(),
         server.getHost(),

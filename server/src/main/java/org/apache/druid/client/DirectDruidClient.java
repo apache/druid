@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
@@ -47,6 +48,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRuntimeAnalysis;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -60,6 +62,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunkTrailer;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -94,7 +97,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
-  private final ObjectMapper objectMapper;
+  private final ObjectMapper smileMapper;
+  private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String scheme;
   private final String host;
@@ -123,7 +127,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public DirectDruidClient(
       QueryToolChestWarehouse warehouse,
       QueryWatcher queryWatcher,
-      ObjectMapper objectMapper,
+      ObjectMapper smileMapper,
+      ObjectMapper jsonMapper,
       HttpClient httpClient,
       String scheme,
       String host,
@@ -132,13 +137,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   {
     this.warehouse = warehouse;
     this.queryWatcher = queryWatcher;
-    this.objectMapper = objectMapper;
+    this.smileMapper = smileMapper;
+    this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.scheme = scheme;
     this.host = host;
     this.emitter = emitter;
 
-    this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
+    this.isSmile = this.smileMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
     this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
   }
@@ -233,9 +239,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           checkQueryTimeout();
           checkTotalBytesLimit(response.getContent().readableBytes());
 
+
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
-          acquireResponseMetrics().reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
+          acquireResponseMetrics().reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs)
+                                  .emit(emitter);
 
           final boolean continueReading;
           try {
@@ -249,7 +257,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             context.addRemainingResponse(query.getMostSpecificId(), VAL_TO_REDUCE_REMAINING_RESPONSES);
             // context may be null in case of error or query timeout
             if (responseContext != null) {
-              context.merge(ResponseContext.deserialize(responseContext, objectMapper));
+              context.merge(ResponseContext.deserialize(responseContext, smileMapper));
             }
             continueReading = enqueue(response.getContent(), 0L);
           }
@@ -340,6 +348,28 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
 
           return ClientResponse.finished(clientResponse.getObj(), continueReading);
+        }
+
+        @Override
+        public ClientResponse<InputStream> handleTrailer(
+            ClientResponse<InputStream> clientResponse,
+            HttpChunkTrailer trailer
+        )
+        {
+          if (trailer != null && context.getQueryMetrics() != null) {
+            final String trailerRaw = trailer.trailingHeaders().get("X-Druid-Query-Runtime-Analysis");
+            if (trailerRaw != null && queryMetrics instanceof QueryRuntimeAnalysis) {
+              try {
+                final QueryRuntimeAnalysis remote = jsonMapper.readValue(trailerRaw, QueryRuntimeAnalysis.class);
+                context.getQueryMetrics().addChildDiagnostic(((QueryRuntimeAnalysis) queryMetrics).merge(remote));
+              }
+              catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+              }
+            }
+          }
+
+          return ClientResponse.finished(clientResponse.getObj());
         }
 
         @Override
@@ -457,7 +487,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           new Request(
               HttpMethod.POST,
               new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
+          ).setContent(smileMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
@@ -508,7 +538,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 url,
                 query,
                 host,
-                toolChest.decorateObjectMapper(objectMapper, query)
+                toolChest.decorateObjectMapper(smileMapper, query)
             );
           }
 
@@ -541,7 +571,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(
             new Request(HttpMethod.DELETE, new URL(cancelUrl))
-            .setContent(objectMapper.writeValueAsBytes(query))
+            .setContent(smileMapper.writeValueAsBytes(query))
             .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
             StatusResponseHandler.getInstance(),
             Duration.standardSeconds(1));

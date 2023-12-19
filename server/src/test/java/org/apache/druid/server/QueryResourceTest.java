@@ -180,7 +180,6 @@ public class QueryResourceTest
       + "    \"context\": { \"priority\": -1 }"
       + "}";
 
-
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
   private static final DruidNode DRUID_NODE = new DruidNode(
       "broker",

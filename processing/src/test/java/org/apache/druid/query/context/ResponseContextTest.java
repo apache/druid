@@ -230,7 +230,7 @@ public class ResponseContextTest
         mapper.writeValueAsString(ImmutableMap.of(
             EXTN_STRING_KEY.getName(),
             "string-value")),
-        ctx1.serializeWith(mapper, Integer.MAX_VALUE).getResult());
+        ctx1.serializeHeadersWith(mapper, Integer.MAX_VALUE).getResult());
 
     final ResponseContext ctx2 = ResponseContext.createEmpty();
     // Add two non-header fields, and one that will be in the header
@@ -240,7 +240,7 @@ public class ResponseContextTest
     Assert.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of(
             EXTN_COUNTER_KEY.getName(), 100)),
-        ctx2.serializeWith(mapper, Integer.MAX_VALUE).getResult());
+        ctx2.serializeHeadersWith(mapper, Integer.MAX_VALUE).getResult());
   }
 
   private Map<ResponseContext.Key, Object> deserializeContext(String input, ObjectMapper mapper) throws IOException
@@ -255,14 +255,14 @@ public class ResponseContextTest
     ctx.put(EXTN_COUNTER_KEY, 100L);
     ctx.put(EXTN_STRING_KEY, "long-string-that-is-supposed-to-be-removed-from-result");
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
+    final ResponseContext.SerializationResult res1 = ctx.serializeHeadersWith(objectMapper, Integer.MAX_VALUE);
     Assert.assertEquals(ctx.getDelegate(), deserializeContext(res1.getResult(), objectMapper));
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     ctxCopy.merge(ctx);
     final int target = EXTN_COUNTER_KEY.getName().length() + 3 +
                        Keys.TRUNCATED.getName().length() + 5 +
                        15; // Fudge factor for quotes, separators, etc.
-    final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, target);
+    final ResponseContext.SerializationResult res2 = ctx.serializeHeadersWith(objectMapper, target);
     ctxCopy.remove(EXTN_STRING_KEY);
     ctxCopy.put(Keys.TRUNCATED, true);
     Assert.assertEquals(
@@ -320,13 +320,13 @@ public class ResponseContextTest
         Strings.repeat("x", INTERVAL_LEN * 7)
     );
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
+    final ResponseContext.SerializationResult res1 = ctx.serializeHeadersWith(objectMapper, Integer.MAX_VALUE);
     Assert.assertEquals(ctx.getDelegate(),
         deserializeContext(res1.getResult(), objectMapper)
     );
     final int maxLen = INTERVAL_LEN * 4 + Keys.UNCOVERED_INTERVALS.getName().length() + 4 +
                        Keys.TRUNCATED.getName().length() + 6;
-    final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, maxLen);
+    final ResponseContext.SerializationResult res2 = ctx.serializeHeadersWith(objectMapper, maxLen);
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     // The resulting key array length will be half the start
     // length.
