@@ -301,6 +301,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         EasyMock.createMock(QueryToolChestWarehouse.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
+        new DefaultObjectMapper(),
         EasyMock.createMock(HttpClient.class)
     );
 

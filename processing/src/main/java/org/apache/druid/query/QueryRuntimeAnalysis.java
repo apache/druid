@@ -1,5 +1,6 @@
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -9,25 +10,42 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class QueryRuntimeAnalysis<QueryType extends Query<?>, V extends QueryMetrics<QueryType> > implements QueryMetrics<QueryType>
 {
   protected V delegate;
-  protected Map<String, Object> debugInfo;
-  protected Map<String, Number> metrics;
+  protected ConcurrentMap<String, Object> debugInfo;
+  protected ConcurrentMap<String, Number> metrics;
+  protected ConcurrentLinkedQueue<QueryRuntimeAnalysis> children;
 
   public QueryRuntimeAnalysis(V delegate)
   {
     this.delegate = delegate;
-    this.debugInfo = new HashMap<>();
-    this.metrics = new HashMap<>();
+    this.debugInfo = new ConcurrentHashMap<>();
+    this.metrics = new ConcurrentHashMap<>();
+    this.children = new ConcurrentLinkedQueue<>();
+  }
+
+  @JsonCreator
+  public QueryRuntimeAnalysis(
+      @JsonProperty("debugInfo") Map<String, Object> debugInfo,
+      @JsonProperty("metrics") Map<String, Number> metrics,
+      @JsonProperty("children") List<QueryRuntimeAnalysis> children
+  )
+  {
+    this.delegate = null;
+    this.debugInfo = new ConcurrentHashMap<>(debugInfo);
+    this.metrics = new ConcurrentHashMap<>(metrics);
+    this.children = new ConcurrentLinkedQueue<>(children);
   }
 
   /**
@@ -427,5 +445,37 @@ public class QueryRuntimeAnalysis<QueryType extends Query<?>, V extends QueryMet
   public Map<String, Number> getMetrics()
   {
     return metrics;
+  }
+
+  @JsonProperty
+  public ConcurrentLinkedQueue<QueryRuntimeAnalysis> getChildren()
+  {
+    return children;
+  }
+
+  @Override
+  public void addDiagnostic(String identifier, Object value)
+  {
+    debugInfo.put(identifier, value);
+  }
+
+  @Override
+  public void addDiagnosticMeasurement(String identifier, Number value)
+  {
+    metrics.put(identifier, value);
+  }
+
+  @Override
+  public void addChildDiagnostic(QueryRuntimeAnalysis child)
+  {
+    this.children.add(child);
+  }
+
+  public QueryRuntimeAnalysis merge(QueryRuntimeAnalysis other)
+  {
+    this.debugInfo.putAll(other.getDebugInfo());
+    this.metrics.putAll(other.getMetrics());
+    this.children.addAll(other.getChildren());
+    return this;
   }
 }

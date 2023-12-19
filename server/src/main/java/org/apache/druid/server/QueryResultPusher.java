@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryRuntimeAnalysis;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
@@ -52,6 +53,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public abstract class QueryResultPusher
 {
@@ -104,6 +106,8 @@ public abstract class QueryResultPusher
    */
   public abstract ResultsWriter start();
 
+  public abstract long getStartNs();
+
   public abstract void writeException(Exception e, OutputStream out) throws IOException;
 
   /**
@@ -151,21 +155,27 @@ public abstract class QueryResultPusher
       accumulator.flush();
 
       counter.incrementSuccess();
-      response.setTrailers(() -> {
-        HttpFields fields = new HttpFields();
-        try {
-          if (queryResponse.getQueryRuntimeAnalysis() != null) {
-            String runtimeAnalysis = jsonMapper.writeValueAsString(queryResponse.getQueryRuntimeAnalysis());
+      if (queryResponse.getResponseContext().getQueryMetrics() instanceof QueryRuntimeAnalysis) {
+        response.setTrailers(() -> {
+          HttpFields fields = new HttpFields();
+          try {
+            final QueryRuntimeAnalysis analysis;
+
+            analysis = (QueryRuntimeAnalysis) queryResponse.getResponseContext().getQueryMetrics();
+            // build our own query/time for this guy, the real one happens after the stream is closed
+            final long queryTimeNs = System.nanoTime() - getStartNs();
+            analysis.addDiagnosticMeasurement("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
+            String runtimeAnalysis = jsonMapper.writeValueAsString(analysis);
             HttpField runtimeAnalysisField = new HttpField("X-Druid-Query-Runtime-Analysis", runtimeAnalysis);
             fields.add(runtimeAnalysisField);
           }
-        }
-        catch (JsonProcessingException e) {
-          log.warn(e, "Unable to serialize query runtime analysis for query [%s]", queryId);
-        }
+          catch (JsonProcessingException e) {
+            log.warn(e, "Unable to serialize query runtime analysis for query [%s]", queryId);
+          }
 
-        return fields;
-      });
+          return fields;
+        });
+      }
       accumulator.close();
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }
