@@ -61,7 +61,8 @@ public class DeltaInputSourceReader implements InputSourceReader
     @Override
     public InputRow next()
     {
-      return currentBatch.next();
+      return null;
+//      return currentBatch.next(); fixme type mismatch
     }
 
     @Override

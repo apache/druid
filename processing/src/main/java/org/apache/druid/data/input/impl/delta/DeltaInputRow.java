@@ -34,7 +34,7 @@ public class DeltaInputRow implements InputRow
   public DateTime getTimestamp()
   {
     String tsCol = schema.getTimestampSpec().getTimestampColumn();
-    return new DateTime(row.getLong(tsCol));
+    // return new DateTime(row.getLong(tsCol)); fixme
     return null;
   }
 
