@@ -38,7 +38,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.hadoop.conf.Configuration;
 
-
+// TODO
 public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 {
   public static final String TYPE_KEY = "delta";
