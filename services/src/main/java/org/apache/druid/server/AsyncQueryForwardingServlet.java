@@ -60,6 +60,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.HttpResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.client.api.Result;
@@ -577,6 +578,19 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   {
     StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
+  }
+
+  @Override
+  protected void onProxyResponseSuccess(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Response serverResponse
+  )
+  {
+    if (proxyResponse instanceof org.eclipse.jetty.server.Response && serverResponse instanceof HttpResponse) {
+      ((org.eclipse.jetty.server.Response) proxyResponse).setTrailers(() -> ((HttpResponse) serverResponse).getTrailers());
+    }
+    super.onProxyResponseSuccess(clientRequest, proxyResponse, serverResponse);
   }
 
   @VisibleForTesting
