@@ -47,7 +47,7 @@ public class AuditManagerConfigTest
     Assert.assertTrue(config instanceof SQLAuditManagerConfig);
 
     final SQLAuditManagerConfig sqlAuditConfig = (SQLAuditManagerConfig) config;
-    Assert.assertFalse(sqlAuditConfig.isAuditSystemRequests());
+    Assert.assertTrue(sqlAuditConfig.isAuditSystemRequests());
     Assert.assertFalse(sqlAuditConfig.isSkipNullField());
     Assert.assertFalse(sqlAuditConfig.isIncludePayloadAsDimensionInMetric());
     Assert.assertEquals(-1, sqlAuditConfig.getMaxPayloadSizeBytes());
@@ -71,7 +71,7 @@ public class AuditManagerConfigTest
     Assert.assertTrue(config instanceof LoggingAuditManagerConfig);
 
     final LoggingAuditManagerConfig logAuditConfig = (LoggingAuditManagerConfig) config;
-    Assert.assertFalse(logAuditConfig.isAuditSystemRequests());
+    Assert.assertTrue(logAuditConfig.isAuditSystemRequests());
     Assert.assertFalse(logAuditConfig.isSkipNullField());
     Assert.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
     Assert.assertEquals(AuditLogger.Level.INFO, logAuditConfig.getLogLevel());

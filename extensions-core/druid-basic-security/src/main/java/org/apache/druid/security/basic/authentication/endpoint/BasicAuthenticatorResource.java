@@ -25,6 +25,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.AuthValidator;
@@ -41,7 +42,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Collections;
 
 @Path("/druid-ext/basic-security/authentication")
 @LazySingleton
@@ -160,7 +160,7 @@ public class BasicAuthenticatorResource
     authValidator.validateAuthenticatorName(authenticatorName);
 
     final Response response = handler.createUser(authenticatorName, userName);
-    performAuditIfSuccess(authenticatorName, userName, req, response);
+    performAuditIfSuccess(authenticatorName, req, response, "Create user[%s]", userName);
 
     return response;
   }
@@ -186,7 +186,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.deleteUser(authenticatorName, userName);
-    performAuditIfSuccess(authenticatorName, userName, req, response);
+    performAuditIfSuccess(authenticatorName, req, response, "Delete user[%s]", userName);
 
     return response;
   }
@@ -213,7 +213,7 @@ public class BasicAuthenticatorResource
   {
     authValidator.validateAuthenticatorName(authenticatorName);
     final Response response = handler.updateUserCredentials(authenticatorName, userName, update);
-    performAuditIfSuccess(authenticatorName, userName, req, response);
+    performAuditIfSuccess(authenticatorName, req, response, "Update credentials for user[%s]", userName);
 
     return response;
   }
@@ -267,19 +267,20 @@ public class BasicAuthenticatorResource
 
   private void performAuditIfSuccess(
       String authenticatorName,
-      String updatedUser,
       HttpServletRequest request,
-      Response response
+      Response response,
+      String payloadFormat,
+      Object... payloadArgs
   )
   {
-    if (updatedUser != null && isSuccess(response)) {
+    if (isSuccess(response)) {
       auditManager.doAudit(
           AuditEntry.builder()
                     .key(authenticatorName)
-                    .type("basicAuthentication")
+                    .type("basic.authenticator")
                     .auditInfo(AuthorizationUtils.buildAuditInfo(request))
                     .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
-                    .payload(Collections.singletonMap("username", updatedUser))
+                    .payload(StringUtils.format(payloadFormat, payloadArgs))
                     .build()
       );
     }

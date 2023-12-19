@@ -256,7 +256,7 @@ public class DataSourcesResource
       auditManager.doAudit(
           AuditEntry.builder()
                     .key(dataSourceName)
-                    .type("markSegmentsAsUnused")
+                    .type("segment.markUnused")
                     .payload(auditPayload)
                     .auditInfo(AuthorizationUtils.buildAuditInfo(req))
                     .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
@@ -375,7 +375,7 @@ public class DataSourcesResource
       auditManager.doAudit(
           AuditEntry.builder()
                     .key(dataSourceName)
-                    .type("killUnusedSegmentsInInterval")
+                    .type("segment.kill")
                     .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
                     .auditInfo(AuthorizationUtils.buildAuditInfo(req))
                     .request(AuthorizationUtils.buildRequestInfo("coordinator", req))

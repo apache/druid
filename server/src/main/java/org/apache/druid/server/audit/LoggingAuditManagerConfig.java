@@ -52,7 +52,7 @@ public class LoggingAuditManagerConfig implements AuditManagerConfig
   )
   {
     this.logLevel = Configs.valueOrDefault(logLevel, AuditLogger.Level.INFO);
-    this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, false);
+    this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, true);
     this.maxPayloadSizeBytes = Configs.valueOrDefault(maxPayloadSizeBytes, HumanReadableBytes.valueOf(-1));
     this.skipNullField = Configs.valueOrDefault(skipNullField, false);
   }

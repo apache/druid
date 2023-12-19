@@ -57,7 +57,7 @@ public class SQLAuditManagerConfig implements AuditManagerConfig
       @JsonProperty("includePayloadAsDimensionInMetric") Boolean includePayloadAsDimensionInMetric
   )
   {
-    this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, false);
+    this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, true);
     this.maxPayloadSizeBytes = Configs.valueOrDefault(maxPayloadSizeBytes, HumanReadableBytes.valueOf(-1));
     this.skipNullField = Configs.valueOrDefault(skipNullField, false);
     this.auditHistoryMillis = Configs.valueOrDefault(auditHistoryMillis, 7 * 24 * 60 * 60 * 1000L);

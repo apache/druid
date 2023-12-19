@@ -690,7 +690,7 @@ public class BasicAuthorizerResource
       auditManager.doAudit(
           AuditEntry.builder()
                     .key(authorizerName)
-                    .type("basicAuthorization")
+                    .type("basic.authorizer")
                     .auditInfo(AuthorizationUtils.buildAuditInfo(request))
                     .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
                     .payload(StringUtils.format(msgFormat, args))

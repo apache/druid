@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -138,6 +139,8 @@ public class OverlordResource
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
+  private static final Set<String> AUDITED_TASK_TYPES
+      = ImmutableSet.of("index", "index_parallel", "compact", "index_hadoop");
 
   private enum TaskStateLookup
   {
@@ -223,15 +226,17 @@ public class OverlordResource
           try {
             taskQueue.add(task);
 
-            auditManager.doAudit(
-                AuditEntry.builder()
-                          .key(task.getDataSource())
-                          .type("task")
-                          .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                          .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
-                          .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                          .build()
-            );
+            if (AUDITED_TASK_TYPES.contains(task.getType())) {
+              auditManager.doAudit(
+                  AuditEntry.builder()
+                            .key(task.getDataSource())
+                            .type("task")
+                            .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                            .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
+                            .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                            .build()
+              );
+            }
 
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
