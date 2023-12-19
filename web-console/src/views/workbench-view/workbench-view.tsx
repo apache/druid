@@ -62,6 +62,7 @@ import { TabRenameDialog } from './tab-rename-dialog/tab-rename-dialog';
 import { WorkbenchHistoryDialog } from './workbench-history-dialog/workbench-history-dialog';
 
 import './workbench-view.scss';
+import { ExplainAndAnalyseDialog } from './explain-and-analyse-dialog/explain-and-analyse-dialog';
 
 function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
@@ -98,6 +99,7 @@ export interface WorkbenchViewState {
 
   connectExternalDataDialogOpen: boolean;
   explainDialogOpen: boolean;
+  explainAndAnalyseDialogOpen: boolean;
   historyDialogOpen: boolean;
   specDialogOpen: boolean;
   executionSubmitDialogOpen: boolean;
@@ -149,6 +151,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
       connectExternalDataDialogOpen: externalDataTabId(props.tabId) && hasSqlTask,
       explainDialogOpen: false,
+      explainAndAnalyseDialogOpen: false,
       historyDialogOpen: false,
       specDialogOpen: false,
       executionSubmitDialogOpen: false,
@@ -198,6 +201,10 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
   private readonly openExplainDialog = () => {
     this.setState({ explainDialogOpen: true });
+  };
+
+  private readonly openExplainAndAnalyseDialog = () => {
+    this.setState({ explainAndAnalyseDialogOpen: true });
   };
 
   private readonly openHistoryDialog = () => {
@@ -298,6 +305,40 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             'Explained query',
           );
         }}
+      />
+    );
+  }
+
+  private renderExplainAndAnalyseDialog() {
+    const { queryEngines } = this.props;
+    const { explainAndAnalyseDialogOpen } = this.state;
+    if (!explainAndAnalyseDialogOpen) return;
+
+    const query = this.getCurrentQuery();
+
+    const { engine, query: apiQuery } = query.getApiQuery();
+    if (typeof apiQuery.query !== 'string') return;
+
+    return (
+      <ExplainAndAnalyseDialog
+        queryWithContext={{
+          engine,
+          queryString: apiQuery.query,
+          queryContext: apiQuery.context,
+        }}
+        mandatoryQueryContext={{}}
+        onClose={() => {
+          this.setState({ explainAndAnalyseDialogOpen: false });
+        }}
+        openQueryLabel={
+          engine === 'sql-native' && queryEngines.includes('native') ? 'Open in new tab' : undefined
+        }
+        // onOpenQuery={queryString => {
+        //   this.handleNewTab(
+        //     WorkbenchQuery.blank().changeQueryString(queryString),
+        //     'Explained query',
+        //   );
+        // }}
       />
     );
   }
@@ -657,6 +698,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                   onClick={this.openExplainDialog}
                 />
               )}
+              {allowExplain && (
+                <MenuItem
+                  icon={IconNames.CLEAN}
+                  text="Explain and analyse SQL query"
+                  onClick={this.openExplainAndAnalyseDialog}
+                />
+              )}
               {currentTabEntry.query.getEffectiveEngine() !== 'sql-msq-task' && (
                 <MenuItem
                   icon={IconNames.HISTORY}
@@ -799,6 +847,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         )}
         {this.renderExecutionDetailsDialog()}
         {this.renderExplainDialog()}
+        {this.renderExplainAndAnalyseDialog()}
         {this.renderHistoryDialog()}
         {this.renderConnectExternalDataDialog()}
         {this.renderTabRenameDialog()}
