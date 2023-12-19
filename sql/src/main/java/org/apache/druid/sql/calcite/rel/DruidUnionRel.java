@@ -111,7 +111,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   {
     // Lazy: run each query in sequence, not all at once.
     if (limit == 0) {
-      return new QueryResponse<Object[]>(Sequences.empty(), ResponseContext.createEmpty(), null);
+      return new QueryResponse<>(Sequences.empty(), ResponseContext.createEmpty());
     } else {
 
       // We run the first rel here for two reasons:
@@ -149,8 +149,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
       final Sequence returnSequence = Sequences.concat(recombinedSequences);
       return new QueryResponse<Object[]>(
           limit > 0 ? returnSequence.limit(limit) : returnSequence,
-          queryResponse.getResponseContext(),
-          queryResponse.getQueryRuntimeAnalysis()
+          queryResponse.getResponseContext()
       );
     }
   }

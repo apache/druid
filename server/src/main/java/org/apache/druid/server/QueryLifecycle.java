@@ -42,7 +42,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRuntimeAnalysis;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
@@ -63,7 +62,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -187,8 +185,7 @@ public class QueryLifecycle
               }
             }
         ),
-        queryResponse.getResponseContext(),
-        queryResponse.getQueryRuntimeAnalysis()
+        queryResponse.getResponseContext()
     );
   }
 
@@ -285,11 +282,8 @@ public class QueryLifecycle
 
     @SuppressWarnings("unchecked")
     final Sequence<T> res = queryPlus.run(texasRanger, responseContext);
-    final QueryRuntimeAnalysis runtimeAnalysis = (responseContext.getQueryMetrics() instanceof QueryRuntimeAnalysis) ?
-                                                 (QueryRuntimeAnalysis) responseContext.getQueryMetrics() :
-                                                 null;
 
-    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext, runtimeAnalysis);
+    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
   }
 
   /**

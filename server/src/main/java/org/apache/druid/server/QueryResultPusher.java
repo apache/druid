@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryRuntimeAnalysis;
 import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
@@ -151,21 +152,24 @@ public abstract class QueryResultPusher
       accumulator.flush();
 
       counter.incrementSuccess();
-      response.setTrailers(() -> {
-        HttpFields fields = new HttpFields();
-        try {
-          if (queryResponse.getQueryRuntimeAnalysis() != null) {
-            String runtimeAnalysis = jsonMapper.writeValueAsString(queryResponse.getQueryRuntimeAnalysis());
+      if (queryResponse.getResponseContext().getQueryMetrics() instanceof QueryRuntimeAnalysis) {
+        response.setTrailers(() -> {
+          HttpFields fields = new HttpFields();
+          try {
+            final QueryRuntimeAnalysis analysis;
+
+            analysis = (QueryRuntimeAnalysis) queryResponse.getResponseContext().getQueryMetrics();
+            String runtimeAnalysis = jsonMapper.writeValueAsString(analysis);
             HttpField runtimeAnalysisField = new HttpField("X-Druid-Query-Runtime-Analysis", runtimeAnalysis);
             fields.add(runtimeAnalysisField);
           }
-        }
-        catch (JsonProcessingException e) {
-          log.warn(e, "Unable to serialize query runtime analysis for query [%s]", queryId);
-        }
+          catch (JsonProcessingException e) {
+            log.warn(e, "Unable to serialize query runtime analysis for query [%s]", queryId);
+          }
 
-        return fields;
-      });
+          return fields;
+        });
+      }
       accumulator.close();
       resultsWriter.recordSuccess(accumulator.getNumBytesSent());
     }
