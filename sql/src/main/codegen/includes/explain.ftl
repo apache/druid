@@ -66,6 +66,8 @@ SqlNode DruidQueryOrSqlQueryOrDml() :
     stmt = DruidSqlReplaceEof()
   |
     stmt = SqlQueryOrDml()
+  |
+    stmt = DruidSqlExplainAnalyze()
   )
   {
     return stmt;

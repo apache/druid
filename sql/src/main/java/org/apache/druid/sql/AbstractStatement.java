@@ -93,6 +93,10 @@ public abstract class AbstractStatement implements Closeable
     for (Map.Entry<String, Object> entry : sqlToolbox.defaultQueryConfig.getContext().entrySet()) {
       this.queryContext.putIfAbsent(entry.getKey(), entry.getValue());
     }
+    final String queryStr = queryPlus.sql().toLowerCase();
+    if (queryStr.startsWith("explain analyze") || queryStr.startsWith("explain plan for explain analyze")) {
+      this.queryContext.putIfAbsent(QueryContexts.ENABLE_ANALYZE, true);
+    }
   }
 
   public String sqlQueryId()

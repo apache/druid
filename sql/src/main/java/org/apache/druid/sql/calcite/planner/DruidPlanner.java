@@ -165,6 +165,7 @@ public class DruidPlanner implements Closeable
     }
 
     SqlStatementHandler.HandlerContext handlerContext = new HandlerContextImpl();
+
     if (query.getKind() == SqlKind.INSERT) {
       if (query instanceof DruidSqlInsert) {
         return new IngestHandler.InsertHandler(handlerContext, (DruidSqlInsert) query, explain);
