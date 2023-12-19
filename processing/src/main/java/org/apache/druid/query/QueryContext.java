@@ -244,12 +244,12 @@ public class QueryContext
 
   public boolean isDebug()
   {
-    return getBoolean(QueryContexts.ENABLE_ANALYZE, QueryContexts.DEFAULT_ENABLE_ANALYZE);
+    return getBoolean(QueryContexts.ENABLE_DEBUG, QueryContexts.DEFAULT_ENABLE_DEBUG);
   }
 
   public boolean isAnalyze()
   {
-    return getBoolean(QueryContexts.CTX, QueryContexts.DEFAULT_ENABLE_DEBUG);
+    return getBoolean(QueryContexts.ENABLE_ANALYZE, QueryContexts.DEFAULT_ENABLE_ANALYZE);
   }
 
   public boolean isBySegment()
