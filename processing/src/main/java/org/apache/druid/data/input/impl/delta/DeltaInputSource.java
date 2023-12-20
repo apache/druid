@@ -76,16 +76,13 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     try {
       final Row scanState;
       final List<Row> scanRowList;
-      final StructType schema;
 
       if (deltaSplit != null) {
         scanState = deserialize(tableClient, deltaSplit.getStateRow());
         scanRowList = deltaSplit.getFile().stream().map(row -> deserialize(tableClient, row)).collect(Collectors.toList());
-        schema = scanRowList.stream().findFirst().map(Row::getSchema).orElse(null);
       } else {
         Table table = Table.forPath(tableClient, tablePath);
         Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
-        schema = latestSnapshot.getSchema(tableClient);
 
         Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
         scanState = scan.getScanState(tableClient);
@@ -104,8 +101,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
               scanState,
               Utils.toCloseableIterator(scanRowList.iterator()),
           Optional.empty()
-          ),
-          schema
+          )
       );
     }
     catch (TableNotFoundException e) {

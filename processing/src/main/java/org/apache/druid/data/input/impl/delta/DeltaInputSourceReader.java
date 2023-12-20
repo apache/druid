@@ -34,21 +34,18 @@ import java.util.stream.IntStream;
 public class DeltaInputSourceReader implements InputSourceReader
 {
   private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
-  private final StructType snapshotSchema;
 
   public DeltaInputSourceReader(
-      io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
-      StructType snapshotSchema
+      io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator
       )
   {
     this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
-    this.snapshotSchema = snapshotSchema;
   }
 
   @Override
   public CloseableIterator<InputRow> read()
   {
-    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, snapshotSchema);
+    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator);
   }
 
   @Override
@@ -66,16 +63,13 @@ public class DeltaInputSourceReader implements InputSourceReader
   private static class DeltaInputSourceIterator implements CloseableIterator<InputRow>
   {
     private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
-    private final StructType snapshotSchema;
 
     private io.delta.kernel.utils.CloseableIterator<Row> currentBatch = null;
 
-    public DeltaInputSourceIterator(io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
-                                    StructType snapshotSchema
+    public DeltaInputSourceIterator(io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator
     )
     {
       this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
-      this.snapshotSchema = snapshotSchema;
     }
 
     @Override
