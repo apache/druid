@@ -950,6 +950,83 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test(timeout = 10_000L)
+  public void testDelayedDrop() throws Exception
+  {
+    try (
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .enablePushFailure(true)
+                                                  .withSegmentDropDelayInMilli(1000)
+                                                  .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
+
+      // Query1: 2000/2001
+      final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .build();
+
+      appenderator.drop(IDENTIFIERS.get(0)).get();
+
+      // segment 0 won't be dropped immediately
+      final List<Result<TimeseriesResultValue>> results1 =
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query1",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 3L, "met", 7L))
+              )
+          ),
+          results1
+      );
+
+      // segment 0 would eventually be dropped at some time after 1 secs drop delay
+      boolean dropped = false;
+      int loopCount = 0;
+      while (true) {
+        Thread.sleep(1000);
+        final List<Result<TimeseriesResultValue>> results = QueryPlus.wrap(query1)
+                                                                     .run(appenderator, ResponseContext.createEmpty())
+                                                                     .toList();
+        List<Result<TimeseriesResultValue>> expectedResult =
+            ImmutableList.of(
+                new Result<>(
+                    DateTimes.of("2000"),
+                    new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
+                )
+            );
+        dropped = expectedResult.equals(results);
+        if (dropped) {
+          break;
+        }
+        loopCount++;
+        if (loopCount >= 10) {
+          break;
+        }
+      }
+      Assert.assertTrue("segment dropped after configured delay", dropped);
+    }
+  }
+
   @Test
   public void testQueryByIntervals() throws Exception
   {
