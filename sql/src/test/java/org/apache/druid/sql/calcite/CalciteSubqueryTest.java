@@ -346,7 +346,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(
                       NullHandling.replaceWithDefault()
-                      ? null
+                      ? VirtualColumns.EMPTY
                       : VirtualColumns.create(
                           expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
                       )

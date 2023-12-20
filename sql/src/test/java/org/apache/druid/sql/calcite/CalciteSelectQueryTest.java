@@ -630,7 +630,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                         .setVirtualColumns(
                             NullHandling.replaceWithDefault()
-                            ? null
+                            ? VirtualColumns.EMPTY
                             : VirtualColumns.create(
                                 expressionVirtualColumn("v0", "substring(substring(\"dim1\", 1, -1), 0, 1)", ColumnType.STRING)
                             )
