@@ -174,7 +174,7 @@ public class StreamAppenderator implements Appenderator
   private volatile Throwable persistError;
 
   private final SegmentLoaderConfig segmentLoaderConfig;
-  private final ScheduledExecutorService exec;
+  private ScheduledExecutorService exec;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -234,6 +234,15 @@ public class StreamAppenderator implements Appenderator
         1,
         Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
     );
+  }
+
+  @VisibleForTesting
+  void setExec(ScheduledExecutorService testExec)
+  {
+    if (exec != null) {
+      exec.shutdown();
+    }
+    exec = testExec;
   }
 
   @Override

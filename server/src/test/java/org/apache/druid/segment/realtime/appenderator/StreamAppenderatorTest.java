@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -59,8 +60,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StreamAppenderatorTest extends InitializedNullHandlingTest
@@ -950,9 +957,35 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
-  @Test(timeout = 10_000L)
+  @Test
   public void testDelayedDrop() throws Exception
   {
+    class TestScheduledThreadPoolExecutor extends ScheduledThreadPoolExecutor
+    {
+      ScheduledFuture<?> scheduledFuture;
+
+      public TestScheduledThreadPoolExecutor()
+      {
+        super(1);
+      }
+
+      @Override
+      public ScheduledFuture<?> schedule(
+          Runnable command,
+          long delay, TimeUnit unit
+      )
+      {
+        ScheduledFuture<?> future = super.schedule(command, delay, unit);
+        scheduledFuture = future;
+        return future;
+      }
+
+      ScheduledFuture<?> getLastScheduledFuture()
+      {
+        return scheduledFuture;
+      }
+    }
+
     try (
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
@@ -961,6 +994,9 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                                                   .withSegmentDropDelayInMilli(1000)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
+      TestScheduledThreadPoolExecutor testExec = new TestScheduledThreadPoolExecutor();
+      ((StreamAppenderator) appenderator).setExec(testExec);
+
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
@@ -1000,30 +1036,19 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // segment 0 would eventually be dropped at some time after 1 secs drop delay
-      boolean dropped;
-      int loopCount = 0;
-      while (true) {
-        Thread.sleep(1000);
-        final List<Result<TimeseriesResultValue>> results = QueryPlus.wrap(query1)
-                                                                     .run(appenderator, ResponseContext.createEmpty())
-                                                                     .toList();
-        List<Result<TimeseriesResultValue>> expectedResult =
-            ImmutableList.of(
-                new Result<>(
-                    DateTimes.of("2000"),
-                    new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
-                )
-            );
-        dropped = expectedResult.equals(results);
-        if (dropped) {
-          break;
-        }
-        loopCount++;
-        if (loopCount >= 10) {
-          break;
-        }
-      }
-      Assert.assertTrue("segment dropped after configured delay", dropped);
+      testExec.getLastScheduledFuture().get();
+
+      final List<Result<TimeseriesResultValue>> results = QueryPlus.wrap(query1)
+                                                                   .run(appenderator, ResponseContext.createEmpty())
+                                                                   .toList();
+      List<Result<TimeseriesResultValue>> expectedResults =
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
+              )
+          );
+      Assert.assertEquals("query after dropped", expectedResults, results);
     }
   }
 
