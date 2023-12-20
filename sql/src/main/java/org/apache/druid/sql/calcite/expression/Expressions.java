@@ -667,7 +667,7 @@ public class Expressions
         );
       }
 
-      final String column;
+      String column;
       final ExtractionFn extractionFn;
       if (lhsExpression.isSimpleExtraction()) {
         column = lhsExpression.getSimpleExtraction().getColumn();
@@ -756,9 +756,17 @@ public class Expressions
       } else {
         final Object val = rhsParsed.getLiteralValue();
 
-        if (extractionFn != null || val == null) {
+        if (val == null) {
           // fall back to expression filter
           return null;
+        }
+
+        // extractionFn are not supported by equality/range filter
+        if (extractionFn != null) {
+          column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+              lhsExpression,
+              lhs.getType()
+          );
         }
 
         final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
