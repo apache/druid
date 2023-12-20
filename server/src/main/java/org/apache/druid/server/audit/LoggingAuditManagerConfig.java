@@ -25,15 +25,10 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 
-/**
- */
-public class SQLAuditManagerConfig implements AuditManagerConfig
+public class LoggingAuditManagerConfig implements AuditManagerConfig
 {
   @JsonProperty
-  private final long auditHistoryMillis;
-
-  @JsonProperty
-  private final boolean includePayloadAsDimensionInMetric;
+  private final AuditLogger.Level logLevel;
 
   @JsonProperty
   @HumanReadableBytesRange(
@@ -49,35 +44,17 @@ public class SQLAuditManagerConfig implements AuditManagerConfig
   private final boolean auditSystemRequests;
 
   @JsonCreator
-  public SQLAuditManagerConfig(
+  public LoggingAuditManagerConfig(
+      @JsonProperty("logLevel") AuditLogger.Level logLevel,
       @JsonProperty("auditSystemRequests") Boolean auditSystemRequests,
       @JsonProperty("maxPayloadSizeBytes") HumanReadableBytes maxPayloadSizeBytes,
-      @JsonProperty("skipNullField") Boolean skipNullField,
-      @JsonProperty("auditHistoryMillis") Long auditHistoryMillis,
-      @JsonProperty("includePayloadAsDimensionInMetric") Boolean includePayloadAsDimensionInMetric
+      @JsonProperty("skipNullField") Boolean skipNullField
   )
   {
+    this.logLevel = Configs.valueOrDefault(logLevel, AuditLogger.Level.INFO);
     this.auditSystemRequests = Configs.valueOrDefault(auditSystemRequests, true);
     this.maxPayloadSizeBytes = Configs.valueOrDefault(maxPayloadSizeBytes, HumanReadableBytes.valueOf(-1));
     this.skipNullField = Configs.valueOrDefault(skipNullField, false);
-    this.auditHistoryMillis = Configs.valueOrDefault(auditHistoryMillis, 7 * 24 * 60 * 60 * 1000L);
-    this.includePayloadAsDimensionInMetric = Configs.valueOrDefault(includePayloadAsDimensionInMetric, false);
-  }
-
-  public long getAuditHistoryMillis()
-  {
-    return auditHistoryMillis;
-  }
-
-  public boolean isIncludePayloadAsDimensionInMetric()
-  {
-    return includePayloadAsDimensionInMetric;
-  }
-
-  @Override
-  public long getMaxPayloadSizeBytes()
-  {
-    return maxPayloadSizeBytes.getBytes();
   }
 
   @Override
@@ -87,8 +64,19 @@ public class SQLAuditManagerConfig implements AuditManagerConfig
   }
 
   @Override
+  public long getMaxPayloadSizeBytes()
+  {
+    return maxPayloadSizeBytes.getBytes();
+  }
+
+  @Override
   public boolean isAuditSystemRequests()
   {
     return auditSystemRequests;
+  }
+
+  public AuditLogger.Level getLogLevel()
+  {
+    return logLevel;
   }
 }

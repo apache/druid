@@ -19,299 +19,200 @@
 
 package org.apache.druid.server.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.audit.AuditManager;
-import org.apache.druid.common.config.ConfigSerde;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SQLAuditManagerTest
 {
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
+      = new TestDerbyConnector.DerbyConnectorRule();
 
   private TestDerbyConnector connector;
-  private AuditManager auditManager;
-  private ConfigSerde<String> stringConfigSerde;
+  private SQLAuditManager auditManager;
+  private StubServiceEmitter serviceEmitter;
 
   private final ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapperSkipNull
+      = new DefaultObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
   @Before
   public void setUp()
   {
+    serviceEmitter = new StubServiceEmitter("audit-test", "localhost");
     connector = derbyConnectorRule.getConnector();
     connector.createAuditTable();
-    auditManager = new SQLAuditManager(
+    auditManager = createAuditManager(new SQLAuditManagerConfig(null, null, null, null, null));
+  }
+
+  private SQLAuditManager createAuditManager(SQLAuditManagerConfig config)
+  {
+    return new SQLAuditManager(
+        config,
+        new AuditSerdeHelper(config, null, mapper, mapperSkipNull),
         connector,
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        new NoopServiceEmitter(),
-        mapper,
-        new SQLAuditManagerConfig()
+        serviceEmitter,
+        mapper
     );
-    stringConfigSerde = new ConfigSerde<String>()
-    {
-      @Override
-      public byte[] serialize(String obj)
-      {
-        try {
-          return mapper.writeValueAsBytes(obj);
-        }
-        catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public String serializeToString(String obj, boolean skipNull)
-      {
-        // In our test, payload Object is already a String
-        // So to serialize to String, we just return a String
-        return obj;
-      }
-
-      @Override
-      public String deserialize(byte[] bytes)
-      {
-        return JacksonUtils.readValue(mapper, bytes, String.class);
-      }
-    };
   }
 
   @Test
-  public void testAuditMetricEventBuilderConfig()
+  public void testAuditMetricEventWithPayload() throws IOException
   {
-    AuditEntry entry = new AuditEntry(
-        "testKey",
-        "testType",
-        new AuditInfo("testAuthor", "testComment", "127.0.0.1"),
-        "testPayload",
-        DateTimes.of("2013-01-01T00:00:00Z")
+    SQLAuditManager auditManager = createAuditManager(
+        new SQLAuditManagerConfig(null, null, null, null, true)
     );
 
-    SQLAuditManager auditManagerWithPayloadAsDimension = new SQLAuditManager(
-        connector,
-        derbyConnectorRule.metadataTablesConfigSupplier(),
-        new NoopServiceEmitter(),
-        mapper,
-        new SQLAuditManagerConfig()
-        {
-          @Override
-          public boolean getIncludePayloadAsDimensionInMetric()
-          {
-            return true;
-          }
-        }
-    );
+    final AuditEntry entry = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
-    ServiceMetricEvent.Builder auditEntryBuilder = ((SQLAuditManager) auditManager).getAuditMetricEventBuilder(entry);
-    final String payloadDimensionKey = "payload";
-    Assert.assertNull(auditEntryBuilder.getDimension(payloadDimensionKey));
+    Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
+    Assert.assertEquals(1, metricEvents.size());
 
-    ServiceMetricEvent.Builder auditEntryBuilderWithPayload = auditManagerWithPayloadAsDimension.getAuditMetricEventBuilder(entry);
-    Assert.assertEquals("testPayload", auditEntryBuilderWithPayload.getDimension(payloadDimensionKey));
+    List<ServiceMetricEvent> auditMetricEvents = metricEvents.get("config/audit");
+    Assert.assertNotNull(auditMetricEvents);
+    Assert.assertEquals(1, auditMetricEvents.size());
+
+    ServiceMetricEvent metric = auditMetricEvents.get(0);
+
+    final AuditEntry dbEntry = lookupAuditEntryForKey("testKey");
+    Assert.assertNotNull(dbEntry);
+    Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
+    Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
+    Assert.assertEquals(dbEntry.getPayload().serialized(), metric.getUserDims().get("payload"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getAuthor(), metric.getUserDims().get("author"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getComment(), metric.getUserDims().get("comment"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getIp(), metric.getUserDims().get("remote_address"));
   }
 
   @Test(timeout = 60_000L)
   public void testCreateAuditEntry() throws IOException
   {
-    String entry1Key = "testKey";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "testPayload";
+    final AuditEntry entry = createAuditEntry("key1", "type1", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
+    Assert.assertEquals(entry, dbEntry);
 
-    byte[] payload = connector.lookup(
-        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
-        "audit_key",
-        "payload",
-        "testKey"
-    );
-    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry1Key, dbEntry.getKey());
-    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
-    Assert.assertEquals(entry1Type, dbEntry.getType());
-    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+    // Verify emitted metrics
+    Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
+    Assert.assertEquals(1, metricEvents.size());
+
+    List<ServiceMetricEvent> auditMetricEvents = metricEvents.get("config/audit");
+    Assert.assertNotNull(auditMetricEvents);
+    Assert.assertEquals(1, auditMetricEvents.size());
+
+    ServiceMetricEvent metric = auditMetricEvents.get(0);
+    Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
+    Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
+    Assert.assertNull(metric.getUserDims().get("payload"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getAuthor(), metric.getUserDims().get("author"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getComment(), metric.getUserDims().get("comment"));
+    Assert.assertEquals(dbEntry.getAuditInfo().getIp(), metric.getUserDims().get("remote_address"));
   }
 
   @Test(timeout = 60_000L)
   public void testFetchAuditHistory()
   {
-    String entry1Key = "testKey";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "testPayload";
-
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
+    final AuditEntry event = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
+    auditManager.doAudit(event);
+    auditManager.doAudit(event);
 
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
         "testKey",
         "testType",
         Intervals.of("2000-01-01T00:00:00Z/2100-01-03T00:00:00Z")
     );
+
     Assert.assertEquals(2, auditEntries.size());
-
-    Assert.assertEquals(entry1Key, auditEntries.get(0).getKey());
-    Assert.assertEquals(entry1Payload, auditEntries.get(0).getPayload());
-    Assert.assertEquals(entry1Type, auditEntries.get(0).getType());
-    Assert.assertEquals(entry1AuditInfo, auditEntries.get(0).getAuditInfo());
-
-    Assert.assertEquals(entry1Key, auditEntries.get(1).getKey());
-    Assert.assertEquals(entry1Payload, auditEntries.get(1).getPayload());
-    Assert.assertEquals(entry1Type, auditEntries.get(1).getType());
-    Assert.assertEquals(entry1AuditInfo, auditEntries.get(1).getAuditInfo());
+    Assert.assertEquals(event, auditEntries.get(0));
+    Assert.assertEquals(event, auditEntries.get(1));
   }
 
   @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByKeyAndTypeWithLimit()
   {
-    String entry1Key = "testKey1";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "testPayload";
+    final AuditEntry entry1 = createAuditEntry("key1", "type1", DateTimes.nowUtc());
+    final AuditEntry entry2 = createAuditEntry("key2", "type2", DateTimes.nowUtc());
 
-    String entry2Key = "testKey2";
-    String entry2Type = "testType";
-    AuditInfo entry2AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry2Payload = "testPayload";
+    auditManager.doAudit(entry1);
+    auditManager.doAudit(entry2);
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
-    auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, stringConfigSerde);
-    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("testKey1", "testType", 1);
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(entry1.getKey(), entry1.getType(), 1);
     Assert.assertEquals(1, auditEntries.size());
-    Assert.assertEquals(entry1Key, auditEntries.get(0).getKey());
-    Assert.assertEquals(entry1Payload, auditEntries.get(0).getPayload());
-    Assert.assertEquals(entry1Type, auditEntries.get(0).getType());
-    Assert.assertEquals(entry1AuditInfo, auditEntries.get(0).getAuditInfo());
+    Assert.assertEquals(entry1, auditEntries.get(0));
   }
 
   @Test(timeout = 60_000L)
   public void testRemoveAuditLogsOlderThanWithEntryOlderThanTime() throws IOException
   {
-    String entry1Key = "testKey";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "testPayload";
+    final AuditEntry entry = createAuditEntry("key1", "type1", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
-    byte[] payload = connector.lookup(
-        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
-        "audit_key",
-        "payload",
-        "testKey"
-    );
-    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry1Key, dbEntry.getKey());
-    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
-    Assert.assertEquals(entry1Type, dbEntry.getType());
-    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
+    Assert.assertEquals(entry, dbEntry);
 
-    // Do delete
+    // Verify that the audit entry gets deleted
     auditManager.removeAuditLogsOlderThan(System.currentTimeMillis());
-    // Verify the delete
-    payload = connector.lookup(
-        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
-        "audit_key",
-        "payload",
-        "testKey"
-    );
-    Assert.assertNull(payload);
+    Assert.assertNull(lookupAuditEntryForKey(entry.getKey()));
   }
 
   @Test(timeout = 60_000L)
   public void testRemoveAuditLogsOlderThanWithEntryNotOlderThanTime() throws IOException
   {
-    String entry1Key = "testKey";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "testPayload";
+    AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
-    byte[] payload = connector.lookup(
-        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
-        "audit_key",
-        "payload",
-        "testKey"
-    );
-    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry1Key, dbEntry.getKey());
-    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
-    Assert.assertEquals(entry1Type, dbEntry.getType());
-    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
-    // Do delete
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
+    Assert.assertEquals(entry, dbEntry);
+
+    // Delete old audit logs
     auditManager.removeAuditLogsOlderThan(DateTimes.of("2012-01-01T00:00:00Z").getMillis());
-    // Verify that entry was not delete
-    payload = connector.lookup(
-        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
-        "audit_key",
-        "payload",
-        "testKey"
-    );
-    dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry1Key, dbEntry.getKey());
-    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
-    Assert.assertEquals(entry1Type, dbEntry.getType());
-    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+
+    dbEntry = lookupAuditEntryForKey(entry.getKey());
+    Assert.assertEquals(entry, dbEntry);
   }
 
   @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByTypeWithLimit()
   {
-    String entry1Key = "testKey";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "testPayload1";
+    final AuditEntry entry1 = createAuditEntry("testKey", "testType", DateTimes.of("2022-01"));
+    final AuditEntry entry2 = createAuditEntry("testKey", "testType", DateTimes.of("2022-03"));
+    final AuditEntry entry3 = createAuditEntry("testKey", "testType", DateTimes.of("2022-02"));
 
-    String entry2Key = "testKey";
-    String entry2Type = "testType";
-    AuditInfo entry2AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry2Payload = "testPayload2";
-
-    String entry3Key = "testKey";
-    String entry3Type = "testType";
-    AuditInfo entry3AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry3Payload = "testPayload3";
-
-    auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
-    auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, stringConfigSerde);
-    auditManager.doAudit(entry3Key, entry3Type, entry3AuditInfo, entry3Payload, stringConfigSerde);
+    auditManager.doAudit(entry1);
+    auditManager.doAudit(entry2);
+    auditManager.doAudit(entry3);
 
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("testType", 2);
     Assert.assertEquals(2, auditEntries.size());
-    Assert.assertEquals(entry3Key, auditEntries.get(0).getKey());
-    Assert.assertEquals(entry3Payload, auditEntries.get(0).getPayload());
-    Assert.assertEquals(entry3Type, auditEntries.get(0).getType());
-    Assert.assertEquals(entry3AuditInfo, auditEntries.get(0).getAuditInfo());
-
-    Assert.assertEquals(entry2Key, auditEntries.get(1).getKey());
-    Assert.assertEquals(entry2Payload, auditEntries.get(1).getPayload());
-    Assert.assertEquals(entry2Type, auditEntries.get(1).getType());
-    Assert.assertEquals(entry2AuditInfo, auditEntries.get(1).getAuditInfo());
+    Assert.assertEquals(entry2, auditEntries.get(0));
+    Assert.assertEquals(entry3, auditEntries.get(1));
   }
 
   @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
@@ -329,123 +230,64 @@ public class SQLAuditManagerTest
   @Test(timeout = 60_000L)
   public void testCreateAuditEntryWithPayloadOverSkipPayloadLimit() throws IOException
   {
-    int maxPayloadSize = 10;
-    SQLAuditManager auditManagerWithMaxPayloadSizeBytes = new SQLAuditManager(
-        connector,
-        derbyConnectorRule.metadataTablesConfigSupplier(),
-        new NoopServiceEmitter(),
-        mapper,
-        new SQLAuditManagerConfig()
-        {
-          @Override
-          public long getMaxPayloadSizeBytes()
-          {
-            return maxPayloadSize;
-          }
-        }
+    final SQLAuditManager auditManager = createAuditManager(
+        new SQLAuditManagerConfig(null, HumanReadableBytes.valueOf(10), null, null, null)
     );
 
-    String entry1Key = "testKey";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "payload audit to store";
+    final AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
-    auditManagerWithMaxPayloadSizeBytes.doAudit(
-        entry1Key,
-        entry1Type,
-        entry1AuditInfo,
-        entry1Payload,
-        stringConfigSerde
+    // Verify that all the fields are the same except for the payload
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
+    Assert.assertEquals(entry.getKey(), dbEntry.getKey());
+    // Assert.assertNotEquals(entry.getPayload(), dbEntry.getPayload());
+    Assert.assertEquals(
+        "Payload truncated as it exceeds 'druid.audit.manager.maxPayloadSizeBytes'[10].",
+        dbEntry.getPayload().serialized()
     );
-
-    byte[] payload = connector.lookup(
-        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
-        "audit_key",
-        "payload",
-        "testKey"
-    );
-
-    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry1Key, dbEntry.getKey());
-    Assert.assertNotEquals(entry1Payload, dbEntry.getPayload());
-    Assert.assertEquals(StringUtils.format(AuditManager.PAYLOAD_SKIP_MSG_FORMAT, maxPayloadSize), dbEntry.getPayload());
-    Assert.assertEquals(entry1Type, dbEntry.getType());
-    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+    Assert.assertEquals(entry.getType(), dbEntry.getType());
+    Assert.assertEquals(entry.getAuditInfo(), dbEntry.getAuditInfo());
   }
 
   @Test(timeout = 60_000L)
   public void testCreateAuditEntryWithPayloadUnderSkipPayloadLimit() throws IOException
   {
-    SQLAuditManager auditManagerWithMaxPayloadSizeBytes = new SQLAuditManager(
-        connector,
-        derbyConnectorRule.metadataTablesConfigSupplier(),
-        new NoopServiceEmitter(),
-        mapper,
-        new SQLAuditManagerConfig()
-        {
-          @Override
-          public long getMaxPayloadSizeBytes()
-          {
-            return 500;
-          }
-        }
-    );
-    String entry1Key = "testKey";
-    String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    String entry1Payload = "payload audit to store";
-
-    auditManagerWithMaxPayloadSizeBytes.doAudit(
-        entry1Key,
-        entry1Type,
-        entry1AuditInfo,
-        entry1Payload,
-        stringConfigSerde
+    SQLAuditManager auditManager = createAuditManager(
+        new SQLAuditManagerConfig(null, HumanReadableBytes.valueOf(500), null, null, null)
     );
 
-    byte[] payload = connector.lookup(
-        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
-        "audit_key",
-        "payload",
-        "testKey"
-    );
+    final AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
+    auditManager.doAudit(entry);
 
-    AuditEntry dbEntry = mapper.readValue(payload, AuditEntry.class);
-    Assert.assertEquals(entry1Key, dbEntry.getKey());
-    Assert.assertEquals(entry1Payload, dbEntry.getPayload());
-    Assert.assertEquals(entry1Type, dbEntry.getType());
-    Assert.assertEquals(entry1AuditInfo, dbEntry.getAuditInfo());
+    // Verify that the actual payload has been persisted
+    AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
+    Assert.assertEquals(entry, dbEntry);
   }
 
   @Test(timeout = 60_000L)
-  public void testCreateAuditEntryWithSkipNullConfigTrue()
+  public void testCreateAuditEntryWithSkipNullsInPayload() throws IOException
   {
-    ConfigSerde<Map<String, String>> mockConfigSerde = Mockito.mock(ConfigSerde.class);
-    SQLAuditManager auditManagerWithSkipNull = new SQLAuditManager(
-        connector,
-        derbyConnectorRule.metadataTablesConfigSupplier(),
-        new NoopServiceEmitter(),
-        mapper,
-        new SQLAuditManagerConfig()
-        {
-          @Override
-          public boolean isSkipNullField()
-          {
-            return true;
-          }
-        }
+    final SQLAuditManager auditManagerSkipNull = createAuditManager(
+        new SQLAuditManagerConfig(null, null, true, null, null)
     );
 
-    String entry1Key = "test1Key";
-    String entry1Type = "test1Type";
-    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
-    // Entry 1 payload has a null field for one of the property
-    Map<String, String> entryPayload1WithNull = new HashMap<>();
-    entryPayload1WithNull.put("version", "x");
-    entryPayload1WithNull.put("something", null);
+    AuditInfo auditInfo = new AuditInfo("testAuthor", "testIdentity", "testComment", "127.0.0.1");
 
-    auditManagerWithSkipNull.doAudit(entry1Key, entry1Type, entry1AuditInfo, entryPayload1WithNull, mockConfigSerde);
-    Mockito.verify(mockConfigSerde).serializeToString(ArgumentMatchers.eq(entryPayload1WithNull), ArgumentMatchers.eq(true));
+    final Map<String, String> payloadMap = new TreeMap<>();
+    payloadMap.put("version", "x");
+    payloadMap.put("something", null);
+
+    auditManager.doAudit(
+        AuditEntry.builder().key("key1").type("type1").auditInfo(auditInfo).payload(payloadMap).build()
+    );
+    AuditEntry entryWithNulls = lookupAuditEntryForKey("key1");
+    Assert.assertEquals("{\"something\":null,\"version\":\"x\"}", entryWithNulls.getPayload().serialized());
+
+    auditManagerSkipNull.doAudit(
+        AuditEntry.builder().key("key2").type("type2").auditInfo(auditInfo).payload(payloadMap).build()
+    );
+    AuditEntry entryWithoutNulls = lookupAuditEntryForKey("key2");
+    Assert.assertEquals("{\"version\":\"x\"}", entryWithoutNulls.getPayload().serialized());
   }
 
   @After
@@ -456,12 +298,37 @@ public class SQLAuditManagerTest
 
   private void dropTable(final String tableName)
   {
-    Assert.assertEquals(
-        0,
-        connector.getDBI().withHandle(
-            handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
+    int rowsAffected = connector.getDBI().withHandle(
+        handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                         .execute()
-        ).intValue()
     );
+    Assert.assertEquals(0, rowsAffected);
+  }
+
+  private AuditEntry lookupAuditEntryForKey(String key) throws IOException
+  {
+    byte[] payload = connector.lookup(
+        derbyConnectorRule.metadataTablesConfigSupplier().get().getAuditTable(),
+        "audit_key",
+        "payload",
+        key
+    );
+
+    if (payload == null) {
+      return null;
+    } else {
+      return mapper.readValue(payload, AuditEntry.class);
+    }
+  }
+
+  private AuditEntry createAuditEntry(String key, String type, DateTime auditTime)
+  {
+    return AuditEntry.builder()
+                     .key(key)
+                     .type(type)
+                     .serializedPayload(StringUtils.format("Test payload for key[%s], type[%s]", key, type))
+                     .auditInfo(new AuditInfo("author", "identity", "comment", "127.0.0.1"))
+                     .auditTime(auditTime)
+                     .build();
   }
 }
