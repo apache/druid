@@ -137,7 +137,7 @@ export function getIngestionComboType(
       switch (inputSource.type) {
         case 'local':
         case 'http':
-        case 'deltaLake':
+        case 'delta':
         case 'druid':
         case 'inline':
         case 's3':
