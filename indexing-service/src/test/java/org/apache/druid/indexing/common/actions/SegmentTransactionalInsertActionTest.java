@@ -151,10 +151,7 @@ public class SegmentTransactionalInsertActionTest
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.fail(
-          "org.apache.druid.metadata.RetryTransactionException: Failed to update the metadata Store. " +
-          "The new start metadata: [ObjectMetadata{theObject=[1]}] is ahead of last commited end state: [null]."
-        ),
+        SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."),
         result
     );
   }
