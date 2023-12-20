@@ -166,7 +166,8 @@ public class TaskToolboxTest
   }
 
   @Test
-  public void testGetSegmentLoaderConfig() {
+  public void testGetSegmentLoaderConfig()
+  {
     Assert.assertEquals(segmentLoaderConfig, taskToolbox.build(task).getSegmentLoaderConfig());
   }
 

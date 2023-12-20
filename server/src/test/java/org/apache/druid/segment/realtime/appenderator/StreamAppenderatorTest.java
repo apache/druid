@@ -1000,7 +1000,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // segment 0 would eventually be dropped at some time after 1 secs drop delay
-      boolean dropped = false;
+      boolean dropped;
       int loopCount = 0;
       while (true) {
         Thread.sleep(1000);
