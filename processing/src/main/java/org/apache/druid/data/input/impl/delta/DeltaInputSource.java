@@ -107,7 +107,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
               scanState,
               Utils.toCloseableIterator(scanRowList.iterator()),
           Optional.empty()
-          )
+          ),
+          inputRowSchema
       );
     }
     catch (TableNotFoundException e) {

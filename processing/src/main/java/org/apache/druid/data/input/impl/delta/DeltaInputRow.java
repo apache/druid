@@ -20,8 +20,11 @@ import io.delta.kernel.types.TimestampType;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
@@ -31,6 +34,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,8 +44,9 @@ public class DeltaInputRow implements InputRow
   private final StructType schema;
   private final Object2IntMap<String> fieldNameToOrdinal = new Object2IntOpenHashMap<>();
   private static final ZoneId ZONE_ID = ZoneId.systemDefault(); // TIMEZONE HANDLING?????
+  private final InputRow delegateRow;
 
-  public DeltaInputRow(io.delta.kernel.data.Row row)
+  public DeltaInputRow(io.delta.kernel.data.Row row, InputRowSchema inputRowSchema)
   {
     this.row = row;
     this.schema = row.getSchema();
@@ -50,35 +55,47 @@ public class DeltaInputRow implements InputRow
       fieldNameToOrdinal.put(fieldNames.get(i), i);
     }
     fieldNameToOrdinal.defaultReturnValue(-1);
+
+    Map<String, Object> theMap = new HashMap<>();
+    for (String fieldName : fieldNames) {
+      theMap.put(fieldName, _getRaw(fieldName));
+    }
+    delegateRow = MapInputRowParser.parse(inputRowSchema, theMap);
+
   }
   @Override
   public List<String> getDimensions()
   {
-    return schema.fieldNames();
+    return delegateRow.getDimensions();
   }
 
   @Override
   public long getTimestampFromEpoch()
   {
-    Object type = getRaw(ColumnHolder.TIME_COLUMN_NAME);
-    return type == null ? 0 : (long) type;
+    return delegateRow.getTimestampFromEpoch();
   }
 
   @Override
   public DateTime getTimestamp()
   {
-    return DateTimes.utc(getTimestampFromEpoch());
+    return delegateRow.getTimestamp();
   }
 
   @Override
   public List<String> getDimension(String dimension)
   {
-    return Rows.objectToStrings(getRaw(dimension));
+    return delegateRow.getDimension(dimension);
   }
 
   @Nullable
   @Override
   public Object getRaw(String dimension)
+  {
+    return delegateRow.getRaw(dimension);
+  }
+
+  @Nullable
+  public Object _getRaw(String dimension)
   {
     StructField field = schema.get(dimension);
     if (field == null) {
@@ -86,6 +103,8 @@ public class DeltaInputRow implements InputRow
     } else if (field.isMetadataColumn()) {
       return null;
     }
+
+
 
     int ordinal = fieldNameToOrdinal.getInt(dimension);
     if (ordinal < 0) {
@@ -99,7 +118,7 @@ public class DeltaInputRow implements InputRow
   @Override
   public Number getMetric(String metric)
   {
-    return Rows.objectToNumber(metric, getRaw(metric), true);
+    return delegateRow.getMetric(metric);
   }
 
   @Override
