@@ -2,6 +2,7 @@ package org.apache.druid.data.input.impl.delta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.delta.kernel.data.Row;
 
 import java.util.List;
 
@@ -24,17 +25,18 @@ public class DeltaSplit
   }
 
   @JsonProperty("file")
-  public List<String> getFileRows()
+  public List<String> getFile()
   {
     return fileRows;
   }
+
 
   @Override
   public String toString()
   {
      return "DeltaSplit{" +
             "stateRow=" + stateRow +
-            ", fileRow=" + fileRows +
+            ", file=" + fileRows +
             "}";
   }
 }

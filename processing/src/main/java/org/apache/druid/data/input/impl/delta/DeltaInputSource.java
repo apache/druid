@@ -2,6 +2,9 @@ package org.apache.druid.data.input.impl.delta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
+import com.google.common.primitives.Ints;
 import io.delta.kernel.Scan;
 import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
@@ -11,38 +14,36 @@ import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
 import io.delta.kernel.internal.util.Utils;
+import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
-import io.delta.kernel.utils.*;
-
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.utils.Streams;
+import org.apache.hadoop.conf.Configuration;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.druid.error.InvalidInput;
-import org.apache.druid.java.util.common.CloseableIterators;
-import org.apache.hadoop.conf.Configuration;
 
-// TODO
 public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 {
   public static final String TYPE_KEY = "delta";
+
   private final String tablePath;
+
   @Nullable
   private final DeltaSplit deltaSplit;
 
@@ -52,7 +53,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       @JsonProperty("deltaSplit") @Nullable DeltaSplit deltaSplit
   )
   {
-    this.tablePath = tablePath;
+    this.tablePath = Preconditions.checkNotNull(tablePath, "tablePath cannot be null");
     this.deltaSplit = deltaSplit;
   }
 
@@ -70,37 +71,45 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    String myTablePath = tablePath; // fully qualified table path. Ex: file:/user/tables/myTable
     Configuration hadoopConf = new Configuration();
-    TableClient myTableClient = DefaultTableClient.create(hadoopConf);
+    TableClient tableClient = DefaultTableClient.create(hadoopConf);
     try {
-      Row scanState = null;
-      List<Row> scanRowList = null;
+      final Row scanState;
+      final List<Row> scanRowList;
+      final StructType schema;
+
       if (deltaSplit != null) {
-        scanState = deserialize(myTableClient, deltaSplit.getStateRow());
-        scanRowList = deltaSplit.getFileRows().stream().map(row -> deserialize(myTableClient, row)).collect(Collectors.toList());
+        scanState = deserialize(tableClient, deltaSplit.getStateRow());
+        scanRowList = deltaSplit.getFile().stream().map(row -> deserialize(tableClient, row)).collect(Collectors.toList());
+        schema = scanRowList.stream().findFirst().map(Row::getSchema).orElse(null);
       } else {
-        Table myTable = Table.forPath(myTableClient, myTablePath);
-        Snapshot mySnapshot = myTable.getLatestSnapshot(myTableClient);
-        Scan myScan = mySnapshot.getScanBuilder(myTableClient).build();
-        scanState = myScan.getScanState(myTableClient);
-        CloseableIterator<FilteredColumnarBatch> myScanFilesAsBatches = myScan.getScanFiles(myTableClient);
+        Table table = Table.forPath(tableClient, tablePath);
+        Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
+        schema = latestSnapshot.getSchema(tableClient);
+
+        Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
+        scanState = scan.getScanState(tableClient);
+        CloseableIterator<FilteredColumnarBatch> scanFiles = scan.getScanFiles(tableClient);
         scanRowList = new ArrayList<>();
-        while (myScanFilesAsBatches.hasNext()) {
-          FilteredColumnarBatch scanFileBatch = myScanFilesAsBatches.next();
-          CloseableIterator<Row> myScanFilesAsRows = scanFileBatch.getRows();
-          myScanFilesAsRows.forEachRemaining(scanRowList::add);
+
+        while (scanFiles.hasNext()) {
+          FilteredColumnarBatch scanFileBatch = scanFiles.next();
+          CloseableIterator<Row> scanFileRows = scanFileBatch.getRows();
+          scanFileRows.forEachRemaining(scanRowList::add);
         }
       }
-      return new DeltaInputSourceReader(Scan.readData(
-          myTableClient,
-          scanState,
-          Utils.toCloseableIterator(scanRowList.iterator()),
+      return new DeltaInputSourceReader(
+          Scan.readData(
+              tableClient,
+              scanState,
+              Utils.toCloseableIterator(scanRowList.iterator()),
           Optional.empty()
-      ));
+          ),
+          schema
+      );
     }
     catch (TableNotFoundException e) {
-      throw InvalidInput.exception(e, "Table not found: %s", myTablePath);
+      throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -111,19 +120,52 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   public Stream<InputSplit<DeltaSplit>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
       throws IOException
   {
-    return null;
+    TableClient tableClient = DefaultTableClient.create(new Configuration());
+    final Snapshot latestSnapshot;
+    final Table table;
+    try {
+      table = Table.forPath(tableClient, tablePath);
+      latestSnapshot = table.getLatestSnapshot(tableClient);
+    }
+    catch (TableNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+    Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
+    // scan files iterator for the current snapshot
+    CloseableIterator<FilteredColumnarBatch> scanFilesIterator = scan.getScanFiles(tableClient);
+
+    Row scanState = scan.getScanState(tableClient);
+    String scanStateStr = RowSerde.serializeRowToJson(scanState);
+
+    Iterator<DeltaSplit> deltaSplitIterator = Iterators.transform(
+        scanFilesIterator,
+        scanFile -> {
+          CloseableIterator<Row> rows = scanFile.getRows();
+          List<String> fileRows = new ArrayList<>();
+          while (rows.hasNext()) {
+            fileRows.add(RowSerde.serializeRowToJson(rows.next()));
+          }
+          return new DeltaSplit(scanStateStr, fileRows);
+        }
+    );
+
+    // TODO: account for the split spec as well -- getSplitHintSpecOrDefault(splitHintSpec).split()
+    return Streams.sequentialStreamFrom(deltaSplitIterator).map(InputSplit::new);
   }
 
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
   {
-    return 0;
+    return Ints.checkedCast(createSplits(inputFormat, splitHintSpec).count());
   }
 
   @Override
   public InputSource withSplit(InputSplit<DeltaSplit> split)
   {
-    return null;
+    return new DeltaInputSource(
+        tablePath,
+        split.get()
+    );
   }
 
   private Row deserialize(TableClient myTableClient, String row)
