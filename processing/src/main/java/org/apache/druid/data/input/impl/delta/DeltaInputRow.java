@@ -7,6 +7,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 public class DeltaInputRow implements InputRow
 {
@@ -62,5 +63,10 @@ public class DeltaInputRow implements InputRow
   public int compareTo(Row o)
   {
     return 0;
+  }
+
+  public Map<String, Object> getRawRowAsMap()
+  {
+    return RowSerde.convertRowToJsonObject(row);
   }
 }

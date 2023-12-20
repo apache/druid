@@ -57,6 +57,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       @JsonProperty("deltaSplit") @Nullable DeltaSplit deltaSplit
   )
   {
+    log.info("CONST Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     this.tablePath = Preconditions.checkNotNull(tablePath, "tablePath cannot be null");
     this.deltaSplit = deltaSplit;
   }
@@ -75,7 +76,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    log.info("Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
+    log.info("READER Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     Configuration hadoopConf = new Configuration();
     TableClient tableClient = DefaultTableClient.create(hadoopConf);
     try {
@@ -121,6 +122,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   public Stream<InputSplit<DeltaSplit>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
       throws IOException
   {
+    log.info("CREATE SPLITS Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     TableClient tableClient = DefaultTableClient.create(new Configuration());
     final Snapshot latestSnapshot;
     final Table table;
@@ -163,6 +165,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   @Override
   public InputSource withSplit(InputSplit<DeltaSplit> split)
   {
+    log.info("WITH SPLIT Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     return new DeltaInputSource(
         tablePath,
         split.get()
