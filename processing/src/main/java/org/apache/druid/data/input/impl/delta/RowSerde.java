@@ -73,7 +73,7 @@ public class RowSerde {
     }
   }
 
-  private static Map<String, Object> convertRowToJsonObject(Row row) {
+  public static Map<String, Object> convertRowToJsonObject(Row row) {
     StructType rowType = row.getSchema();
     Map<String, Object> rowObject = new HashMap<>();
     for (int fieldId = 0; fieldId < rowType.length(); fieldId++) {

@@ -1,5 +1,6 @@
 package org.apache.druid.data.input.impl.delta;
 
+import com.google.common.collect.Iterators;
 import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.types.ArrayType;
@@ -22,6 +23,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
@@ -51,13 +53,34 @@ public class DeltaInputSourceReader implements InputSourceReader
   @Override
   public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
   {
-    return null;
+    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator);
   }
 
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
-    return null;
+    CloseableIterator<InputRow> inner = read();
+    return new CloseableIterator<InputRowListPlusRawValues>()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        inner.close();
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        return inner.hasNext();
+      }
+
+      @Override
+      public InputRowListPlusRawValues next()
+      {
+        DeltaInputRow deltaInputRow = (DeltaInputRow) inner.next();
+        return InputRowListPlusRawValues.of(deltaInputRow, deltaInputRow.getRawRowAsMap());
+      }
+    };
   }
 
   private static class DeltaInputSourceIterator implements CloseableIterator<InputRow>

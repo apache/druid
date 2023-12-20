@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 
 public class DeltaInputRow implements InputRow
 {
@@ -152,5 +153,10 @@ public class DeltaInputRow implements InputRow
     } else {
       throw new UnsupportedOperationException("unsupported data type: " + dataType);
     }
+  }
+
+  public Map<String, Object> getRawRowAsMap()
+  {
+    return RowSerde.convertRowToJsonObject(row);
   }
 }
