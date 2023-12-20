@@ -46,6 +46,8 @@
         <configuration>
           <skip>${web.console.skip}</skip>
           <skipTests>${skipUTs}</skipTests>
+          <installDirectory>${project.build.directory}</installDirectory>
+          <npmVersion>${npm.version}</npmVersion>
         </configuration>
         <executions>
           <execution>

@@ -19,11 +19,20 @@
 
 package org.apache.druid.server.audit;
 
-import com.google.inject.Provider;
-import org.apache.druid.audit.AuditManager;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-public interface AuditManagerProvider extends Provider<AuditManager>
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SQLAuditManagerConfig.class)
+@JsonSubTypes(value = {
+    @Type(name = "log", value = LoggingAuditManagerConfig.class),
+    @Type(name = "sql", value = SQLAuditManagerConfig.class)
+})
+public interface AuditManagerConfig
 {
-  @Override
-  AuditManager get();
+  boolean isSkipNullField();
+
+  long getMaxPayloadSizeBytes();
+
+  boolean isAuditSystemRequests();
 }

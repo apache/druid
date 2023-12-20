@@ -1022,7 +1022,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.33
+version: 2.2
 libraries:
   - org.yaml: snakeyaml
 
@@ -2887,6 +2887,18 @@ libraries:
 
 ---
 
+name: org.yaml snakeyaml
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+version: 2.0
+libraries:
+  - org.yaml: snakeyaml
+
+
+
+---
+
 name: Confluent Kafka Client
 version: 6.2.12-ccs
 license_category: binary
@@ -3883,19 +3895,9 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20230301-2.0.0
+version: v1-rev20231028-2.0.0
 libraries:
   - com.google.apis: google-api-services-storage
-
----
-
-name: Google Compute Engine API
-license_category: binary
-module: extensions/gce-extensions
-license_name: Apache License version 2.0
-version: v1-rev20230606-2.0.0
-libraries:
-  - com.google.apis: google-api-services-compute
 
 ---
 
@@ -3909,14 +3911,193 @@ libraries:
 
 ---
 
-name: Google HTTP Client Library For Java
+name: Google Storage Client Library For Java
 license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.42.3
+module: extensions/druid-google-extensions
+license_name: Apache-2.0
+version: 2.29.1
 libraries:
-  - com.google.http-client: google-http-client
-  - com.google.http-client: google-http-client-jackson2
+  - com.google.cloud: google-cloud-storage
+
+---
+
+name: Google Cloud Storage API
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 2.20.0
+libraries:
+  - com.google.cloud: google-cloud-storage
+  - com.google.api: api-common
+
+---
+
+name: gax
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 2.37.0
+libraries:
+  - com.google.api: gax
+  - com.google.api: gax-grpc
+  - com.google.api: gax-httpjson
+
+---
+
+name: grpc-api
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 2.29.1-alpha
+libraries:
+  - com.google.api.grpc: gapic-google-cloud-storage-v2
+  - com.google.api.grpc: grpc-google-cloud-storage-v2
+  - com.google.api.grpc: proto-google-cloud-storage-v2
+
+---
+
+name: grpc-io
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.59.0
+libraries:
+  - io.grpc: grpc-alts
+  - io.grpc: grpc-api
+  - io.grpc: grpc-auth
+  - io.grpc: grpc-context
+  - io.grpc: grpc-core
+  - io.grpc: grpc-grpclib
+  - io.grpc: grpc-inprocess
+  - io.grpc: grpc-protobuf
+  - io.grpc: grpc-protobuf-lite
+  - io.grpc: grpc-stub
+
+---
+
+name: proto-google-common-protos
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 2.28.0
+libraries:
+  - com.google.api.grpc: proto-google-common-protos
+
+---
+
+name: proto-google-iam-v1
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.23.0
+libraries:
+  - com.google.api.grpc: proto-google-iam-v1
+
+---
+
+name: google-auth
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 1.20.0
+libraries:
+  - com.google.auth: google-auth-library-credentials
+  - com.google.auth: google-auth-library-oauth2-http
+
+---
+
+name: google-auto-value
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.10.4
+libraries:
+  - com.google.auto.value: auto-value-annotations
+
+---
+
+name: google-cloud
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 2.27.0
+libraries:
+  - com.google.cloud: google-cloud-core
+  - com.google.cloud: google-cloud-core-grpc
+  - com.google.cloud: google-cloud-core-http
+
+---
+
+name: listenablefuture
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 9999.0-empty-to-avoid-conflict-with-guava
+libraries:
+  - com.google.guava: listenablefuture
+
+---
+
+name: google-http-client
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.43.3
+libraries:
+  - com.google.http-client: google-http-client-apache-v2
+  - com.google.http-client: google-http-client-appengine
+  - com.google.http-client: google-http-client-gson
+
+---
+
+name: google-protobuf
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 3.24.4
+libraries:
+  - com.google.protobuf: protobuf-java-util
+
+---
+
+name: google-grpc
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.59.0
+libraries:
+  - io.grpc: grpc-grpclb
+
+---
+
+name: io-opencensus
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.31.1
+libraries:
+  - io.opencensus: opencensus-api
+  - io.opencensus: opencensus-contrib-http-util
+
+---
+
+name: conscrypt-openjdk-uber
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 2.5.2
+libraries:
+  - org.conscrypt: conscrypt-openjdk-uber
+
+---
+
+name: threetenbp
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 1.6.8
+libraries:
+  - org.threeten: threetenbp
 
 ---
 

@@ -30,13 +30,12 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -102,13 +101,11 @@ public class RulesResource
   public Response setDatasourceRules(
       @PathParam("dataSourceName") final String dataSourceName,
       final List<Rule> rules,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
     try {
-      final AuditInfo auditInfo = new AuditInfo(author, comment, req.getRemoteAddr());
+      final AuditInfo auditInfo = AuthorizationUtils.buildAuditInfo(req);
       if (databaseRuleManager.overrideRule(dataSourceName, rules, auditInfo)) {
         return Response.ok().build();
       } else {

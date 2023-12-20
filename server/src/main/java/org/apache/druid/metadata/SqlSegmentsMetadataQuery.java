@@ -504,8 +504,8 @@ public class SqlSegmentsMetadataQuery
     for (int i = 0; i < segmentChanges.length; i++) {
       int numUpdatedRows = segmentChanges[i];
       if (numUpdatedRows < 0) {
-        log.assertionError(
-            "Negative number of rows updated for segment id [%s]: %d",
+        log.error(
+            "ASSERTION_ERROR: Negative number of rows updated for segment id [%s]: %d",
             segmentIds.get(i),
             numUpdatedRows
         );
