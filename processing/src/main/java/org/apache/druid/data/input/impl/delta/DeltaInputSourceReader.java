@@ -128,7 +128,7 @@ public class DeltaInputSourceReader implements InputSourceReader
       for (Object rowValue : rowValues) {
         log.info("RowValue[%s]", rowValue);
       }
-      return new DeltaInputRow(dataRow, null);
+      return new DeltaInputRow(dataRow);
     }
 
     @Override
