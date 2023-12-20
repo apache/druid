@@ -214,6 +214,7 @@ public class TaskToolboxFactory
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()
         .config(config)
+        .config(segmentLoaderConfig)
         .taskExecutorNode(taskExecutorNode)
         .taskActionClient(taskActionClientFactory.create(task))
         .emitter(emitter)
