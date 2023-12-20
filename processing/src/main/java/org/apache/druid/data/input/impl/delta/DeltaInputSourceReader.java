@@ -22,17 +22,22 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
+import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.stream.IntStream;
 
 public class DeltaInputSourceReader implements InputSourceReader
 {
+  private static final Logger log = new Logger(DeltaInputSourceReader.class);
+
   private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
 
   public DeltaInputSourceReader(
@@ -51,13 +56,16 @@ public class DeltaInputSourceReader implements InputSourceReader
   @Override
   public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
   {
-    return null;
+    log.info("read(inputStats) -> re-routing to read()"); // todo: input stats need to be accounted for
+    return read();
   }
 
   @Override
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
-    return null;
+    log.info("sample() -> noop");
+    return CloseableIterators.wrap(Collections.emptyIterator(), () -> {
+    });
   }
 
   private static class DeltaInputSourceIterator implements CloseableIterator<InputRow>
@@ -99,7 +107,7 @@ public class DeltaInputSourceReader implements InputSourceReader
 
       // TODO: construct schema? remove this after debugging
       for (Object rowValue : rowValues) {
-        System.out.println(rowValue);
+        log.info("RowValue[%s]", rowValue);
       }
       return new DeltaInputRow(dataRow, null);
     }
