@@ -14,7 +14,6 @@ import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
 import io.delta.kernel.internal.util.Utils;
-import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -24,6 +23,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
 
@@ -42,10 +42,14 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 {
   public static final String TYPE_KEY = "delta";
 
+  @JsonProperty
   private final String tablePath;
 
+  @JsonProperty
   @Nullable
   private final DeltaSplit deltaSplit;
+
+  private static final Logger log = new Logger(DeltaInputSource.class);
 
   @JsonCreator
   public DeltaInputSource(
@@ -71,6 +75,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
+    log.info("Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     Configuration hadoopConf = new Configuration();
     TableClient tableClient = DefaultTableClient.create(hadoopConf);
     try {
