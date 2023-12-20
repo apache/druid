@@ -125,16 +125,8 @@ public class DeltaInputSourceReader implements InputSourceReader
       }
 
       Row dataRow = currentBatch.next();
-      int numCols = dataRow.getSchema().length();
-
-      Object[] rowValues = IntStream.range(0, numCols)
-                                    .mapToObj(colOrdinal -> getValue(dataRow, colOrdinal))
-                                    .toArray();
 
       // TODO: construct schema? remove this after debugging
-      for (Object rowValue : rowValues) {
-        log.info("RowValue[%s]", rowValue);
-      }
       return new DeltaInputRow(dataRow, inputRowSchema);
     }
 

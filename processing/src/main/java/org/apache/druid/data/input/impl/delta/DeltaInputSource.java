@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -123,6 +124,11 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   public Stream<InputSplit<DeltaSplit>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
       throws IOException
   {
+    if (null != deltaSplit) {
+      // can't split a split
+      return Collections.singletonList(new InputSplit<>(deltaSplit)).stream();
+    }
+    
     log.info("CREATE SPLITS Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     TableClient tableClient = DefaultTableClient.create(new Configuration());
     final Snapshot latestSnapshot;
