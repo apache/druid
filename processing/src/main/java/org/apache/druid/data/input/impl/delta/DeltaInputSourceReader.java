@@ -73,19 +73,14 @@ public class DeltaInputSourceReader implements InputSourceReader
     }
 
     @Override
-    public boolean hasNext()
-    {
-      if (currentBatch == null)
-      {
-        while (filteredColumnarBatchCloseableIterator.hasNext())
-        {
-          currentBatch = filteredColumnarBatchCloseableIterator.next().getRows();
-          if (currentBatch.hasNext()) {
-            return true;
-          }
+    public boolean hasNext() {
+      while (currentBatch == null || !currentBatch.hasNext()) {
+        if (!filteredColumnarBatchCloseableIterator.hasNext()) {
+          return false; // No more batches or records to read!
         }
+        currentBatch = filteredColumnarBatchCloseableIterator.next().getRows();
       }
-      return currentBatch != null && currentBatch.hasNext();
+      return true;
     }
 
     @Override
@@ -101,10 +96,11 @@ public class DeltaInputSourceReader implements InputSourceReader
       Object[] rowValues = IntStream.range(0, numCols)
                                     .mapToObj(colOrdinal -> getValue(dataRow, colOrdinal))
                                     .toArray();
+
+      // TODO: construct schema? remove this after debugging
       for (Object rowValue : rowValues) {
         System.out.println(rowValue);
       }
-      // TODO: construct schema?
       return new DeltaInputRow(dataRow, null);
     }
 
