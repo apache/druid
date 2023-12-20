@@ -763,10 +763,14 @@ public class Expressions
 
         // extractionFn are not supported by equality/range filter
         if (extractionFn != null) {
-          column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-              lhsExpression,
-              lhs.getType()
-          );
+          if (virtualColumnRegistry != null) {
+            column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                lhsExpression,
+                lhs.getType()
+            );
+          } else {
+            // if this happens for some reason, bail and use an expression filter
+          }
         }
 
         final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
