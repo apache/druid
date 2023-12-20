@@ -38,6 +38,7 @@ import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -61,6 +62,7 @@ import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -565,7 +567,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
-  )
+  ) throws Exception
   {
     final Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
     if (tombstones != null) {
@@ -595,7 +597,9 @@ public abstract class BaseAppenderatorDriver implements Closeable
     final Object callerMetadata = metadata == null
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
-    return executor.submit(
+
+    return RetryUtils.retry(
+      () -> executor.submit(
         () -> {
           try {
             final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
@@ -652,19 +656,16 @@ public abstract class BaseAppenderatorDriver implements Closeable
                   segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
                 }
               } else {
+                log.errorSegments(ourSegments, "Failed to publish segments");
+                if (publishResult.getErrorMsg() != null && publishResult.getErrorMsg().contains(("Failed to update the metadata Store. The new start metadata is ahead of last commited end state."))) {
+                  throw new ISE(publishResult.getErrorMsg());
+                }
                 // Our segments aren't active. Publish failed for some reason. Clean them up and then throw an error.
                 segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
-
                 if (publishResult.getErrorMsg() != null) {
-                  log.errorSegments(ourSegments, "Failed to publish segments");
-                  throw new ISE(
-                      "Failed to publish segments because of [%s]",
-                      publishResult.getErrorMsg()
-                  );
-                } else {
-                  log.errorSegments(ourSegments, "Failed to publish segments");
-                  throw new ISE("Failed to publish segments");
+                  throw new ISE("Failed to publish segments because of [%s]", publishResult.getErrorMsg());
                 }
+                throw new ISE("Failed to publish segments");
               }
             }
           }
@@ -675,12 +676,19 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 segmentsAndCommitMetadata.getSegments(),
                 "Failed publish, not removing segments"
             );
-            Throwables.propagateIfPossible(e);
-            throw new RuntimeException(e);
+            if (e.getMessage() != null && e.getMessage().contains("Failed to update the metadata Store. The new start metadata is ahead of last commited end state.")) {
+              // we can recover from this error.
+              throw new ExecutionException(e);
+            } else {
+              Throwables.propagateIfPossible(e);
+              throw new RuntimeException(e);
+            }
           }
-
           return segmentsAndCommitMetadata;
         }
+      ),
+      e -> (e instanceof ExecutionException),
+      RetryUtils.DEFAULT_MAX_TRIES
     );
   }
 

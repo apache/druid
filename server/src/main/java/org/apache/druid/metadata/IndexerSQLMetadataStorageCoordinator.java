@@ -2077,12 +2077,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (startMetadataGreaterThanExisting == 1 && !startMetadataMatchesExisting) {
       // Offset stored in StartMetadata is Greater than the last commited metadata,
       // Then retry multiple task might be trying to publish the segment for same partitions.
-
-      return new DataStoreMetadataUpdateResult(true, true, StringUtils.format(
-          "Failed to update the metadata Store. The new start metadata: [%s] is ahead of last commited end state: [%s].",
+      log.info("Failed to update the metadata Store. The new start metadata: [%s] is ahead of last commited end state: [%s].",
           startMetadata,
-          oldCommitMetadataFromDb
-      ));
+          oldCommitMetadataFromDb);
+      return new DataStoreMetadataUpdateResult(true, false,
+          "Failed to update the metadata Store. The new start metadata is ahead of last commited end state."
+      );
     }
 
     if (!startMetadataMatchesExisting) {

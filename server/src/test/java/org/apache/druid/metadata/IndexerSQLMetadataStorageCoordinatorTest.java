@@ -891,12 +891,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("org.apache.druid.metadata.RetryTransactionException: Failed to update the metadata Store. " +
-            "The new start metadata: [ObjectMetadata{theObject={foo=bar}}] is ahead of last commited end state: [null]."), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."), result1);
 
     // Should only be tried once.
-    // The code will retry for this test case as well, So it will be equal to total retries available which is 2.
-    Assert.assertEquals(2, metadataUpdateCounter.get());
+    Assert.assertEquals(1, metadataUpdateCounter.get());
   }
 
   @Test
