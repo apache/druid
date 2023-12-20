@@ -21,6 +21,7 @@ import io.delta.kernel.types.StructType;
 import io.delta.kernel.types.TimestampType;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -36,24 +37,27 @@ import java.util.stream.IntStream;
 public class DeltaInputSourceReader implements InputSourceReader
 {
   private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
+  private final InputRowSchema inputRowSchema;
 
   public DeltaInputSourceReader(
-      io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator
-      )
+      io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
+      InputRowSchema inputRowSchema
+  )
   {
     this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
+    this.inputRowSchema = inputRowSchema;
   }
 
   @Override
   public CloseableIterator<InputRow> read()
   {
-    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator);
+    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, inputRowSchema);
   }
 
   @Override
   public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
   {
-    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator);
+    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, inputRowSchema);
   }
 
   @Override
@@ -88,11 +92,14 @@ public class DeltaInputSourceReader implements InputSourceReader
     private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
 
     private io.delta.kernel.utils.CloseableIterator<Row> currentBatch = null;
+    private final InputRowSchema inputRowSchema;
 
-    public DeltaInputSourceIterator(io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator
+    public DeltaInputSourceIterator(io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
+                                    InputRowSchema inputRowSchema
     )
     {
       this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
+      this.inputRowSchema = inputRowSchema;
     }
 
     @Override
@@ -124,7 +131,7 @@ public class DeltaInputSourceReader implements InputSourceReader
       for (Object rowValue : rowValues) {
         System.out.println(rowValue);
       }
-      return new DeltaInputRow(dataRow);
+      return new DeltaInputRow(dataRow, inputRowSchema);
     }
 
     @Override
