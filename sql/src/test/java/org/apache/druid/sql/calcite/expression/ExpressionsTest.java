@@ -99,34 +99,33 @@ public class ExpressionsTest extends CalciteTestBase
       .add("newliney", ColumnType.STRING)
       .add("tstr", ColumnType.STRING)
       .add("dstr", ColumnType.STRING)
+      .add("timezone", ColumnType.STRING)
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
-                                                                  .put(
-                                                                      "t",
-                                                                      DateTimes.of("2000-02-03T04:05:06").getMillis()
-                                                                  )
-                                                                  .put("a", 10)
-                                                                  .put("b", 25)
-                                                                  .put("p", 3)
-                                                                  .put("x", 2.25)
-                                                                  .put("y", 3.0)
-                                                                  .put("z", -2.25)
-                                                                  .put("o", 0)
-                                                                  .put("nan", Double.NaN)
-                                                                  .put("inf", Double.POSITIVE_INFINITY)
-                                                                  .put("-inf", Double.NEGATIVE_INFINITY)
-                                                                  .put("fnan", Float.NaN)
-                                                                  .put("finf", Float.POSITIVE_INFINITY)
-                                                                  .put("-finf", Float.NEGATIVE_INFINITY)
-                                                                  .put("s", "foo")
-                                                                  .put("hexstr", "EF")
-                                                                  .put("intstr", "-100")
-                                                                  .put("spacey", "  hey there  ")
-                                                                  .put("newliney", "beep\nboop")
-                                                                  .put("tstr", "2000-02-03 04:05:06")
-                                                                  .put("dstr", "2000-02-03")
-                                                                  .build();
+      .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
+      .put("a", 10)
+      .put("b", 25)
+      .put("p", 3)
+      .put("x", 2.25)
+      .put("y", 3.0)
+      .put("z", -2.25)
+      .put("o", 0)
+      .put("nan", Double.NaN)
+      .put("inf", Double.POSITIVE_INFINITY)
+      .put("-inf", Double.NEGATIVE_INFINITY)
+      .put("fnan", Float.NaN)
+      .put("finf", Float.POSITIVE_INFINITY)
+      .put("-finf", Float.NEGATIVE_INFINITY)
+      .put("s", "foo")
+      .put("hexstr", "EF")
+      .put("intstr", "-100")
+      .put("spacey", "  hey there  ")
+      .put("newliney", "beep\nboop")
+      .put("tstr", "2000-02-03 04:05:06")
+      .put("dstr", "2000-02-03")
+      .put("timezone", "America/Los_Angeles")
+      .build();
 
   private ExpressionTestHelper testHelper;
 
@@ -1842,6 +1841,17 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("America/Los_Angeles")
         ),
         makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
+        2L
+    );
+
+    testHelper.testExpressionString(
+        new TimeExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("DAY"),
+            testHelper.makeInputRef("timezone")
+        ),
+        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY',\"timezone\")"),
         2L
     );
   }
