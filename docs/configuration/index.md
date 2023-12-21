@@ -1577,6 +1577,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|`[]`|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 |`druid.server.http.acceptQueueSize`|Value of the backlog parameter passed to listen() by the Jetty server for TCP connections.|`System Default`|
+
 #### Indexer processing resources
 
 |Property|Description|Default|
