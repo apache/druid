@@ -1032,7 +1032,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       );
 
       // segment 0 would eventually be dropped at some time after 1 secs drop delay
-      testExec.getLastScheduledFuture().get();
+      testExec.getLastScheduledFuture().get(5000, TimeUnit.MILLISECONDS);
 
       final List<Result<TimeseriesResultValue>> results = QueryPlus.wrap(query1)
                                                                    .run(appenderator, ResponseContext.createEmpty())
