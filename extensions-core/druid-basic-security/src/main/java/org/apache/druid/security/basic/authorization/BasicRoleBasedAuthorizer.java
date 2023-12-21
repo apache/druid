@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicAuthDBConfig;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
@@ -108,13 +107,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
       }
     }
 
-    return new Access(
-        false,
-        StringUtils.format(
-            "User[%s] does not have [%s] access to resource[%s]",
-            authenticationResult.getIdentity(), action, resource
-        )
-    );
+    return new Access(false);
   }
 
   private boolean permissionCheck(Resource resource, Action action, BasicAuthorizerPermission permission)

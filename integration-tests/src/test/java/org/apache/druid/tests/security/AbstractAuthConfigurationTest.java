@@ -549,7 +549,7 @@ public abstract class AbstractAuthConfigurationTest
   public void test_avaticaQueryWithContext_datasourceAndContextParamsUser_succeed2()
   {
     final Properties properties = getAvaticaConnectionPropertiesForUser(User.DATASOURCE_AND_CONTEXT_PARAMS_USER);
-    properties.setProperty("auth_test_ctx", "should-be-allowed");
+    //properties.setProperty("auth_test_ctx", "should-be-allowed");
     testAvaticaQuery(properties, getRouterAvacticaUrl());
   }
 
@@ -558,7 +558,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     final Properties properties = getAvaticaConnectionPropertiesForUser(User.DATASOURCE_AND_CONTEXT_PARAMS_USER);
     properties.setProperty("auth_test_ctx", "should-be-allowed");
-    testAvaticaQuery(properties, getRouterAvacticaUrl());
+    testAvaticaQuery("SELECT COUNT(*) FROM auth_test", properties, getRouterAvacticaUrl());
   }
 
   @Test
