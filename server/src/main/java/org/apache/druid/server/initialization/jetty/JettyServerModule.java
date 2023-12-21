@@ -231,7 +231,6 @@ public class JettyServerModule extends JerseyServletModule
         connector.setHost(node.getHost());
       }
       connector.setPort(node.getPlaintextPort());
-      connector.setAcceptQueueSize(config.getAcceptQueueSize());
       serverConnectors.add(connector);
     }
 
@@ -322,7 +321,6 @@ public class JettyServerModule extends JerseyServletModule
         connector.setHost(node.getHost());
       }
       connector.setPort(node.getTlsPort());
-      connector.setAcceptQueueSize(tlsServerConfig.getAcceptQueueSize());
       serverConnectors.add(connector);
       if (tlsServerConfig.isReloadSslContext()) {
         KeyStoreScanner keyStoreScanner = new KeyStoreScanner(sslContextFactory);
@@ -341,7 +339,7 @@ public class JettyServerModule extends JerseyServletModule
       // workaround suggested in -
       // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
       connector.setAcceptorPriorityDelta(-1);
-
+      connector.setAcceptQueueSize(config.getAcceptQueueSize());
       List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
       for (ConnectionFactory cf : connector.getConnectionFactories()) {
         // we only want to monitor the first connection factory, since it will pass the connection to subsequent

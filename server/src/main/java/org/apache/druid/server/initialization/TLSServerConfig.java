@@ -86,9 +86,6 @@ public class TLSServerConfig
   @JsonProperty
   private int reloadSslContextSeconds = 60;
 
-  @JsonProperty
-  private int acceptQueueSize = 0;
-
   public String getKeyStorePath()
   {
     return keyStorePath;
@@ -189,11 +186,6 @@ public class TLSServerConfig
     return reloadSslContext;
   }
 
-  public int getAcceptQueueSize()
-  {
-    return acceptQueueSize;
-  }
-
   @Override
   public String toString()
   {
@@ -215,7 +207,6 @@ public class TLSServerConfig
            ", crlPath='" + crlPath + '\'' +
            ", reloadSslContext='" + reloadSslContext + '\'' +
            ", reloadSslContextSeconds='" + reloadSslContextSeconds + '\'' +
-           ", acceptQueueSize='" + acceptQueueSize + '\'' +
            '}';
   }
 }
