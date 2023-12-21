@@ -231,6 +231,7 @@ public class JettyServerModule extends JerseyServletModule
         connector.setHost(node.getHost());
       }
       connector.setPort(node.getPlaintextPort());
+      connector.setAcceptQueueSize(config.getAcceptQueueSize());
       serverConnectors.add(connector);
     }
 
@@ -321,6 +322,7 @@ public class JettyServerModule extends JerseyServletModule
         connector.setHost(node.getHost());
       }
       connector.setPort(node.getTlsPort());
+      connector.setAcceptQueueSize(tlsServerConfig.getAcceptQueueSize());
       serverConnectors.add(connector);
       if (tlsServerConfig.isReloadSslContext()) {
         KeyStoreScanner keyStoreScanner = new KeyStoreScanner(sslContextFactory);

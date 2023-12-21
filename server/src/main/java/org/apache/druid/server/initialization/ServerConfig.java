@@ -196,6 +196,9 @@ public class ServerConfig
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
 
+  @JsonProperty
+  private int acceptQueueSize = 0;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -307,6 +310,10 @@ public class ServerConfig
     return enableQueryRequestsQueuing;
   }
 
+  public int getAcceptQueueSize()
+  {
+    return acceptQueueSize;
+  }
   @Override
   public boolean equals(Object o)
   {
@@ -338,7 +345,8 @@ public class ServerConfig
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
            enableHSTS == that.enableHSTS &&
-           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing;
+           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
+           acceptQueueSize == that.acceptQueueSize;
   }
 
   @Override
@@ -366,7 +374,8 @@ public class ServerConfig
         showDetailedJettyErrors,
         contentSecurityPolicy,
         enableHSTS,
-        enableQueryRequestsQueuing
+        enableQueryRequestsQueuing,
+        acceptQueueSize
     );
   }
 
@@ -396,6 +405,7 @@ public class ServerConfig
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
+           ", acceptQueueSize=" + acceptQueueSize +
            '}';
   }
 
