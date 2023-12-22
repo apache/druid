@@ -94,6 +94,16 @@ public interface DataSegmentKiller
   }
 
   /**
+   * A more stoic killer who doesn't throw a tantrum if things get messy. Use when killing segments for best-effort
+   * cleanup. This can be leveraged to kill segments more efficiently if segment storage system offers batch deletion.
+   * @param segments the segments to kill
+   */
+  default void killQuietly(List<DataSegment> segments)
+  {
+    segments.forEach(this::killQuietly);
+  }
+
+  /**
    * Like a nuke. Use wisely. Used by the 'reset-cluster' command, and of the built-in deep storage implementations, it
    * is only implemented by local and HDFS.
    */

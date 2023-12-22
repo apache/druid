@@ -502,7 +502,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 "Removing segments due to failed sanity check"
             );
 
-            segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+            dataSegmentKiller.killQuietly(segmentsAndMetadata.getSegments());
 
             throw new ISE(
                 "Pushed different segments than requested. Pushed[%s], requested[%s].",
@@ -649,11 +649,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 ).isEmpty();
 
                 if (physicallyDisjoint) {
-                  segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                  dataSegmentKiller.killQuietly(segmentsAndCommitMetadata.getSegments());
                 }
               } else {
                 // Our segments aren't active. Publish failed for some reason. Clean them up and then throw an error.
-                segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                dataSegmentKiller.killQuietly(segmentsAndCommitMetadata.getSegments());
 
                 if (publishResult.getErrorMsg() != null) {
                   log.errorSegments(ourSegments, "Failed to publish segments");
