@@ -26,6 +26,8 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.AuthValidator;
@@ -45,11 +47,15 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Path("/druid-ext/basic-security/authorization")
 @LazySingleton
 public class BasicAuthorizerResource
 {
+  private ExecutorService executor;
+
   private final BasicAuthorizerResourceHandler resourceHandler;
   private final AuthValidator authValidator;
   private final AuditManager auditManager;
@@ -687,15 +693,29 @@ public class BasicAuthorizerResource
   )
   {
     if (isSuccess(response)) {
-      auditManager.doAudit(
-          AuditEntry.builder()
-                    .key(authorizerName)
-                    .type("basic.authorizer")
-                    .auditInfo(AuthorizationUtils.buildAuditInfo(request))
-                    .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
-                    .payload(StringUtils.format(msgFormat, args))
-                    .build()
+      executor.submit(
+          () -> auditManager.doAudit(
+              AuditEntry.builder()
+                        .key(authorizerName)
+                        .type("basic.authorizer")
+                        .auditInfo(AuthorizationUtils.buildAuditInfo(request))
+                        .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
+                        .payload(StringUtils.format(msgFormat, args))
+                        .build()
+          )
       );
     }
+  }
+
+  @LifecycleStart
+  public void start()
+  {
+    executor = Executors.newSingleThreadExecutor();
+  }
+
+  @LifecycleStop
+  public void stop()
+  {
+    executor.shutdownNow();
   }
 }
